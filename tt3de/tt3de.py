@@ -2,6 +2,7 @@ import math
 from math import radians
 from typing import Iterable, List
 
+
 class Point2Di:
     def __init__(self, x: int, y: int):
         self.x = x
@@ -51,7 +52,7 @@ class Point2D:
 
 
 class PPoint2D(Point2D):
-    def __init__(self, x: float, y: float, depth: float=-1, bars: List[float]=None):
+    def __init__(self, x: float, y: float, depth: float = -1, bars: List[float] = None):
         self.x = x
         self.y = y
         self.depth = depth
@@ -75,6 +76,7 @@ class PPoint2D(Point2D):
 
     def __repr__(self):
         return str(self)
+
 
 class Line2D:
     def __init__(self, p1: PPoint2D, p2: PPoint2D):
@@ -347,7 +349,6 @@ class FPSCamera(Camera):
         self._rotation = q_yaw * q_pitch
         self._rotation_invers = self._rotation.inverse()
 
-
     def move_forward(self, dist: float):
         forward = self.direction_vector()
         delta = Point3D(forward.x * dist, forward.y * dist, forward.z * dist)
@@ -410,8 +411,10 @@ class FPSCamera(Camera):
     def __repr__(self):
         return str(self)
 
+
 class Drawable3D:
     texture: "TextureTT3DE"
+
     def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]: ...
 
     @staticmethod
@@ -454,61 +457,60 @@ class PointElem(Drawable3D):
 
 class Triangle3D(Drawable3D):
     def __init__(
-        self,
-        pos1: Point3D,
-        pos2: Point3D,
-        pos3: Point3D,
-        texture: "TextureTT3DE"
+        self, pos1: Point3D, pos2: Point3D, pos3: Point3D, texture: "TextureTT3DE"
     ):
         self.pos1 = pos1
         self.pos2 = pos2
         self.pos3 = pos3
         self.texture: "TextureTT3DE" = texture
 
-        self.uvmap:List[tuple[PPoint2D,PPoint2D,PPoint2D]] = [(PPoint2D(0,0),PPoint2D(0,0),PPoint2D(0,0))]
+        self.uvmap: List[tuple[PPoint2D, PPoint2D, PPoint2D]] = [
+            (PPoint2D(0, 0), PPoint2D(0, 0), PPoint2D(0, 0))
+        ]
         self.normal = self.normal_vector()
-
 
     def uvcalc(self, w1: float, w2: float, w3: float) -> Point2D:
         # Calculate the UV coordinates based on the weights
 
-        r1,r2,r3 = self.uvmap[0]
+        r1, r2, r3 = self.uvmap[0]
         u = w1 * r1.x + w2 * r2.x + w3 * r3.x
         v = w1 * r1.y + w2 * r2.y + w3 * r3.y
         return Point2D(u, v)
+
     def normal_vector(self) -> Point3D:
         # Calculate the normal vector of the triangle using the cross product
         # Vector AB
         ab_x = self.pos2.x - self.pos1.x
         ab_y = self.pos2.y - self.pos1.y
         ab_z = self.pos2.z - self.pos1.z
-        
+
         # Vector AC
         ac_x = self.pos3.x - self.pos1.x
         ac_y = self.pos3.y - self.pos1.y
         ac_z = self.pos3.z - self.pos1.z
-        
+
         # Cross product AB x AC
         normal_x = ab_y * ac_z - ab_z * ac_y
         normal_y = ab_z * ac_x - ab_x * ac_z
         normal_z = ab_x * ac_y - ab_y * ac_x
-        
+
         # Normalize the vector to get the unit normal vector
-        norm = math.sqrt(normal_x**2+ normal_y**2+ normal_z**2)
+        norm = math.sqrt(normal_x**2 + normal_y**2 + normal_z**2)
         if norm == 0:
             return Point3D(0, 0, 0)
         normal_unit_x = normal_x / norm
         normal_unit_y = normal_y / norm
         normal_unit_z = normal_z / norm
-        
+
         return Point3D(normal_unit_x, normal_unit_y, normal_unit_z)
+
     def center_point(self) -> Point3D:
         # Calculate the centroid of the triangle
         cx = (self.pos1.x + self.pos2.x + self.pos3.x) / 3
         cy = (self.pos1.y + self.pos2.y + self.pos3.y) / 3
         cz = (self.pos1.z + self.pos2.z + self.pos3.z) / 3
         return Point3D(cx, cy, cz)
-    
+
     def draw(self, camera: Camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         # vertex modifier can be applied here.
 
@@ -521,7 +523,7 @@ class Triangle3D(Drawable3D):
             # p1,p2,p3 = [_.to_screen_space(screen_width,screen_height) for _ in [pp1,pp2,pp3]]
             # self.tri = Triangle2D(pp1,pp2,pp3,pp1.depth,pp2.depth,pp3.depth)
             # border_points = tri.draw_border(screen_width,screen_height)
-            return self.draw_inner(camera,pp1, pp2, pp3, screen_width, screen_height)
+            return self.draw_inner(camera, pp1, pp2, pp3, screen_width, screen_height)
 
             # uvs = tri.uvcalc(inner_points,[p1,p2,p3])
             # now pixel shader can happen
@@ -539,7 +541,13 @@ class Triangle3D(Drawable3D):
         yield from Line2D(pp3, pp1).draw(screen_width, screen_height)
 
     def draw_inner(
-        self, camera:Camera, pp1: PPoint2D, pp2: PPoint2D, pp3: PPoint2D, screen_width, screen_height
+        self,
+        camera: Camera,
+        pp1: PPoint2D,
+        pp2: PPoint2D,
+        pp3: PPoint2D,
+        screen_width,
+        screen_height,
     ) -> Iterable[PPoint2D]:
 
         p1i = pp1.to_screen_space(screen_width, screen_height)
@@ -572,10 +580,8 @@ class Triangle3D(Drawable3D):
                     d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) / 3
 
                     uvpoint = self.uvcalc(w1, w2, w3)
-                    self.normal.dot(self.center_point()-camera.pos)
+                    self.normal.dot(self.center_point() - camera.pos)
                     yield PPoint2D(px, py, d, [w1, w2, w3])
-
-
 
 
 def exp_grad(maxv, alpha=0.1, minv=0):
@@ -588,9 +594,10 @@ def exp_grad(maxv, alpha=0.1, minv=0):
     return f
 
 
-class TextureTT3DE():
+class TextureTT3DE:
     def render_point(self, p: PPoint2D) -> object:
         pass
+
 
 class Line3D(Drawable3D):
     def __init__(self, pos1: Point3D, pos2: Point3D, texture: "TextureTT3DE"):
@@ -598,7 +605,7 @@ class Line3D(Drawable3D):
         self.pos2 = pos2
         self.texture: "TextureTT3DE" = texture
 
-    def draw(self, camera: Camera, screen_width, screen_height) -> List[PPoint2D]:
+    def draw(self, camera: Camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         pp1 = camera.project(self.pos1)
         pp2 = camera.project(self.pos2)
         if self.is_in_scree(pp1) or self.is_in_scree(pp1):
@@ -608,3 +615,12 @@ class Line3D(Drawable3D):
         return []
 
 
+class Mesh3D(Drawable3D):
+    def __init__(self):
+        self.vertices: List[Point3D] = []
+        self.triangles: List[Triangle3D] = []
+        self.texture: "TextureTT3DE" = None
+
+    def draw(self, camera: Camera, screen_width, screen_height) -> Iterable[PPoint2D]:
+        for t in self.triangles:
+            yield from t.draw(camera, screen_width, screen_height)

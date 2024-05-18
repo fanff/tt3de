@@ -1,10 +1,20 @@
-
 import array
 from typing import Iterable, List
-from tt3de.tt3de import Camera, Drawable3D, PPoint2D, Point3D, TextureTT3DE, Triangle3D, exp_grad
+from tt3de.tt3de import (
+    Camera,
+    Drawable3D,
+    Line3D,
+    PPoint2D,
+    Point3D,
+    PointElem,
+    TextureTT3DE,
+    Triangle3D,
+    exp_grad,
+)
 from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
+
 
 class TextureAscii(TextureTT3DE):
     def render_point(self, p: PPoint2D) -> Segment:
@@ -24,7 +34,6 @@ class StaticTexture(TextureAscii):
 
     def cache_output(self, segmap: "Segmap"):
         self.value = segmap.add_char(self.s)
-
 
 
 class DistGradBGShade(TextureAscii):
@@ -50,23 +59,27 @@ class DistGradBGShade(TextureAscii):
 
             self.shade_to_idx[i] = charidx
 
+
 class DistanceCharShare(TextureAscii):
     def __init__(self, bgcolor="red"):
         self.native_color = Color.parse(bgcolor)
-        self.shader_chars= [" ","░","▒","▓","█"]
+        self.shader_chars = [" ", "░", "▒", "▓", "█"]
         self.shade_count = len(self.shader_chars)
         self.shade_to_idx: dict[int, int] = {}
 
     def render_point(self, p: PPoint2D) -> int:
         f = exp_grad(self.shade_count - 1, 0.5, minv=1)
         return self.shade_to_idx[f(p.depth)]
+
     def cache_output(self, segmap: "Segmap"):
-        black = Color.from_rgb(0,0,0)
+        black = Color.from_rgb(0, 0, 0)
         for i in range(self.shade_count):
-            s = Segment(self.shader_chars[i], style=Style(color=black, bgcolor=self.native_color))
+            s = Segment(
+                self.shader_chars[i],
+                style=Style(color=black, bgcolor=self.native_color),
+            )
             charidx = segmap.add_char(s)
             self.shade_to_idx[i] = charidx
-
 
 
 class DotProductGradBGShade(TextureAscii):
@@ -77,7 +90,6 @@ class DotProductGradBGShade(TextureAscii):
 
     def render_point(self, p: PPoint2D) -> int:
 
-        
         f = exp_grad(self.shade_count - 1, 0.3, minv=1)
         return self.shade_to_idx[f(p.depth)]
 
@@ -90,6 +102,7 @@ class DotProductGradBGShade(TextureAscii):
             s = Segment(" ", style=Style(color="white", bgcolor=c))
             charidx = segmap.add_char(s)
             self.shade_to_idx[i] = charidx
+
 
 class RenderContext:
 
@@ -165,7 +178,6 @@ class RenderContext:
             self.append(e)
 
 
-
 class Segmap(dict):
 
     def init(self):
@@ -187,9 +199,35 @@ class Segmap(dict):
         return idx
 
 
+def build_gizmo_arrows(center: Point3D):
+    xline = Line3D(
+        center + Point3D(0.1, 0, 0),
+        center + Point3D(0.9, 0, 0),
+        StaticTexture("x", "red"),
+    )
+    yline = Line3D(
+        center + Point3D(0, 0.1, 0),
+        center + Point3D(0, 0.9, 0),
+        StaticTexture("y", "blue"),
+    )
+    zline = Line3D(
+        center + Point3D(0, 0, 0.1),
+        center + Point3D(0, 0, 0.9),
+        StaticTexture("z", "green"),
+    )
+
+    p = PointElem(
+        center,
+        StaticTexture("O", "white"),
+    )
+    px = PointElem(center + Point3D(1, 0, 0), StaticTexture("X", "red"))
+    py = PointElem(center + Point3D(0, 1, 0), StaticTexture("Y", "blue"))
+    pz = PointElem(center + Point3D(0, 0, 1), StaticTexture("Z", "green"))
+
+    return [xline, yline, zline, p, px, py, pz]
 
 
-def get_cube_vertices(center: Point3D, width: float,shade_class=DistanceCharShare):
+def get_cube_vertices(center: Point3D, width: float, shade_class=DistanceCharShare):
     half_width = width / 2
 
     # Calculate the 8 vertices of the cube
@@ -251,4 +289,3 @@ def get_cube_vertices(center: Point3D, width: float,shade_class=DistanceCharShar
     t12 = Triangle3D(btm_right_back, top_right_front, top_right_back, rtext)
 
     return [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
-
