@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "tt3de"
+version = "0.1.0"
+description = ""
+authors = ["fanf <fanf@fanf>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+textual = "^0.60.1"
+
+[tool.poetry.group.dev.dependencies]
+pyinstrument = "^4.6.2"
+isort = "^5.13.2"
+black = "^24.4.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
