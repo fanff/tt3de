@@ -75,7 +75,6 @@ class MyView(TT3DView):
         l.update(f"Render: {(1000*mean(spark.data)):.2f} ms")
         #.update(str(self.last_frame_data_info))
 
-
     async def on_event(self,event:events.Event):
         # await super().on_event(event)
         info_box:Static= self.parent.query_one(".lastevent")

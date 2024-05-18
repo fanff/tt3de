@@ -2,7 +2,7 @@
 from pyinstrument import Profiler
 
 from context import tt3de 
-from tt3de.richtexture import RenderContext, StaticTexture
+from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.textual_widget import Cwr
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem,Triangle3D
 camera = FPSCamera(pos=Point3D(5, 2, 5))
@@ -33,8 +33,11 @@ rc.extend(get_cube_vertices(Point3D(1,0,0),0.7))
 profiler = Profiler()
 profiler.start()
 
-for i in range(1000):
+for i in range(100):
     rc.render(camera)
+
+    for _ in rc.iter_canvas():
+        pass
     #triangle.draw(camera,100,100)
 profiler.stop()
 

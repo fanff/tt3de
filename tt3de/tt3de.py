@@ -1,7 +1,5 @@
-import array
 import math
 from math import radians
-from time import monotonic, time
 from typing import Iterable, List
 
 class Point2Di:
@@ -338,7 +336,7 @@ class FPSCamera(Camera):
     def rotate_left_right(self, angle: float):
         self.yaw += angle
         self.update_rotation()
-        
+
     def rotate_up_down(self, angle: float):
         self.pitch = max(min(self.pitch + angle, 80), -80)
         self.update_rotation()
