@@ -1,4 +1,5 @@
 import array
+from math import exp
 from typing import Iterable, List
 from tt3de.tt3de import (
     Camera,
@@ -10,6 +11,7 @@ from tt3de.tt3de import (
     TextureTT3DE,
     Triangle3D,
     exp_grad,
+    extract_palette,
 )
 from rich.color import Color
 from rich.style import Style
@@ -17,7 +19,7 @@ from rich.text import Segment
 
 
 class TextureAscii(TextureTT3DE):
-    def render_point(self, p: PPoint2D) -> Segment:
+    def render_point(self, p: PPoint2D) -> int:
         pass
 
     def cache_output(self, segmap: "Segmap"):
@@ -49,7 +51,7 @@ class DistGradBGShade(TextureAscii):
     def cache_output(self, segmap: "Segmap"):
 
         for i in range(self.shade_count):
-            colorshade = 1.0 - (i / 8.0)
+            colorshade = 1.0 - (i / self.shade_count)
             r, g, b = self.native_color.triplet.normalized
             triplet = (r * colorshade * 255, g * colorshade * 255, b * colorshade * 255)
 
@@ -81,33 +83,73 @@ class DistanceCharShare(TextureAscii):
             charidx = segmap.add_char(s)
             self.shade_to_idx[i] = charidx
 
+def clip(v,mv,maxv):
+    return max(min(v,maxv),mv)
 
-class DotProductGradBGShade(TextureAscii):
-    def __init__(self, bgcolor="red"):
-        self.native_color = Color.parse(bgcolor)
-        self.shade_to_idx: dict[int, int] = {}
-        self.shade_count = 8
+class ImageTexture(TextureAscii):
+    def __init__(self, img_data):
+        self.img_data = img_data
+        self.image_height = len(self.img_data)
+        self.image_width = len(self.img_data[0])
 
+        self.color_palette = extract_palette(self.img_data)
+        
+        self.img_color=[]
+        
+        # the shading , then the color idx
+        self.shade_to_idx: List[List[int]]
+        self.shade_count = 4
+        
     def render_point(self, p: PPoint2D) -> int:
+        
+        shade_factor = abs(p.dotval)*5
 
-        f = exp_grad(self.shade_count - 1, 0.3, minv=1)
-        return self.shade_to_idx[f(p.depth)]
+        shade_factor = 3* shade_factor**2 - 2*shade_factor**3
+
+        # y=3x2−2x3 ~= y=0.5−0.5cos⁡(πx)
+
+        shade_idx = clip(self.shade_count-round(shade_factor*self.shade_count),0,self.shade_count-1)
+        imgx:int = (self.image_width-1) - int(p.uv.x *  self.image_width) 
+        imgy:int = (self.image_height-1) - int(p.uv.y *  self.image_height) 
+
+        palette_idx:int = self.img_color[imgy][imgx]
+        return self.shade_to_idx[shade_idx][palette_idx]
 
     def cache_output(self, segmap: "Segmap"):
+
+
+
+        buff_color_to_int = {}
+
+        self.shade_to_idx = []
         for i in range(self.shade_count):
-            colorshade = 1.0 - (i / 8.0)
-            r, g, b = self.native_color.triplet.normalized
-            triplet = (r * colorshade * 255, g * colorshade * 255, b * colorshade * 255)
-            c = Color.from_rgb(*triplet)
-            s = Segment(" ", style=Style(color="white", bgcolor=c))
-            charidx = segmap.add_char(s)
-            self.shade_to_idx[i] = charidx
+            colorshade = 1.0 - (i / self.shade_count)
+            self.shade_to_idx.append([0]*len(self.color_palette))
+            
+            
+            for palette_idx,(r, g, b) in enumerate(self.color_palette):
+                c = Color.from_rgb(r * colorshade , g * colorshade , b * colorshade )
+                s = Segment(" ", style=Style(color="white", bgcolor=c))
+                charidx = segmap.add_char(s)
+                self.shade_to_idx[i][palette_idx] = charidx
+
+                if i == 0:
+                    # keep the color unshaded with the palette_idx value of the color
+                    buff_color_to_int[c] = palette_idx
+
+        for r in self.img_data:
+            crow = []
+            for _ in r:
+                c = Color.from_rgb(*_)
+                palette_idx = buff_color_to_int[c]
+                crow.append(palette_idx)
+            self.img_color.append(crow)
 
 
 class RenderContext:
 
-    LINE_RETURN_SEG = Segment("\n")
-    EMPTY_SEGMENT = Segment(" ")
+    LINE_RETURN_SEG = Segment("\n",Style(color="white"))
+    EMPTY_SEGMENT = Segment(" ",Style(color="white"))
 
     def __init__(self, screen_width, screen_height):
         self.elements: List[Drawable3D] = []
@@ -161,6 +203,17 @@ class RenderContext:
                 yield self.LINE_RETURN_SEG
             yield self.segmap[i]
 
+    def iter_segments(self) -> Iterable[List[Segment]]:
+        currentLine = []
+        for idx, i in enumerate(self.canvas_array):
+
+            if idx > 0 and (idx % self.screen_width == 0):
+                yield currentLine
+                currentLine = []
+            currentLine.append( self.segmap[i] )
+            #yield self.segmap[i]
+        yield currentLine
+
     def write_text(self, txt: str, x=0, y=0):
         for idx, c in enumerate(txt):
             if c.isprintable():
@@ -181,7 +234,7 @@ class RenderContext:
 class Segmap(dict):
 
     def init(self):
-        self[0] = Segment(" ")
+        self[0] = Segment(" ",Style(color="white"))
         for i in range(1, 10):
             self[i] = Segment(str(i), Style(color="white"))
 

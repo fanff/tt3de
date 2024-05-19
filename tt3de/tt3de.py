@@ -1,7 +1,7 @@
 import math
 from math import radians
-from typing import Iterable, List
-
+from typing import Iterable, List, Tuple
+import struct
 
 class Point2Di:
     def __init__(self, x: int, y: int):
@@ -47,32 +47,34 @@ class Point2D:
     def __rmul__(self, scalar: float) -> "Point2D":
         return self.__mul__(scalar)
 
+    def __repr__(self):
+        return str(self)
     def __str__(self):
         return f"Point2D({self.x:.2f},{self.y:.2f})"
 
 
 class PPoint2D(Point2D):
-    def __init__(self, x: float, y: float, depth: float = -1, bars: List[float] = None):
+    def __init__(self, x: float, y: float, depth: float = -1):
         self.x = x
         self.y = y
         self.depth = depth
-        self.bars = bars
+        self.uv:Point2D = None
+        self.dotval:float= 0.0
 
     def __add__(self, other: "Point2D") -> "PPoint2D":
-        return PPoint2D(self.x + other.x, self.y + other.y, self.depth, self.bars)
+        return PPoint2D(self.x + other.x, self.y + other.y, self.depth)
 
     def __sub__(self, other: "Point2D") -> "PPoint2D":
-        return PPoint2D(self.x - other.x, self.y - other.y, self.depth, self.bars)
+        return PPoint2D(self.x - other.x, self.y - other.y, self.depth)
 
     def __mul__(self, scalar: float) -> "PPoint2D":
-        return PPoint2D(self.x * scalar, self.y * scalar, self.depth, self.bars)
+        return PPoint2D(self.x * scalar, self.y * scalar, self.depth)
 
     def __rmul__(self, scalar: float) -> "PPoint2D":
         return self.__mul__(scalar)
 
     def __str__(self):
-        b = "".join([f"{_:.2f}" for _ in self.bars])
-        return f"PPoint2D({self.x},{self.y},{self.depth:.1f}; w:{b})"
+        return f"PPoint2D({self.x},{self.y},{self.depth:.1f}; uv:{self.uv})"
 
     def __repr__(self):
         return str(self)
@@ -198,7 +200,7 @@ class Point3D:
     def normalize(self) -> "Point3D":
         return normalize(self)
 
-    def dot(self, other):
+    def dot(self, other) -> float:
         return self.x * other.x + self.y * other.y + self.z * other.z
 
     def cross(self, other):
@@ -308,7 +310,6 @@ class Camera:
 
     def recalc_fov_h(self, w, h):
         r = (w / h) * 0.5
-
         self.fov_h = self.fov_w * r
 
     def move(self, delta: Point3D):
@@ -390,9 +391,9 @@ class FPSCamera(Camera):
 
         # Check if the point is in front of the camera
         if camera_space_point.z <= 0:
-            return PPoint2D(0, 0, -1, [])  # Point is behind the camera
+            return PPoint2D(0, 0, -1)  # Point is behind the camera
 
-        # Perspective projection
+        # Perspective projection onto the screen space (0,1)
         x = (camera_space_point.x / camera_space_point.z) * (
             radians(self.fov_w) / 2
         ) + 0.5
@@ -403,7 +404,7 @@ class FPSCamera(Camera):
         # Calculate the distance from the camera to the point
         distance = camera_space_point.magnitude()
 
-        return PPoint2D(x, y, distance, [distance])
+        return PPoint2D(x, y, distance)
 
     def __str__(self):
         return f"Camera({self.pos,self.direction_vector()})"
@@ -451,13 +452,13 @@ class PointElem(Drawable3D):
         pp = camera.project(self.p)
         if self.is_in_scree(pp):
             pi: Point2Di = pp.to_screen_space(screen_width, screen_height)
-            ppr = PPoint2D(pi.x, pi.y, pp.depth, [1])
+            ppr = PPoint2D(pi.x, pi.y, pp.depth)
             yield ppr
 
 
 class Triangle3D(Drawable3D):
     def __init__(
-        self, pos1: Point3D, pos2: Point3D, pos3: Point3D, texture: "TextureTT3DE"
+        self, pos1: Point3D, pos2: Point3D, pos3: Point3D, texture: "TextureTT3DE"=None
     ):
         self.pos1 = pos1
         self.pos2 = pos2
@@ -469,9 +470,16 @@ class Triangle3D(Drawable3D):
         ]
         self.normal = self.normal_vector()
 
+
+    def __str__(self):
+        return f"Triangle3D({self.pos1,self.pos2,self.pos3}, {self.uvmap}, {self.normal})"
+
+    def __repr__(self):
+        return str(self)
+    
+
     def uvcalc(self, w1: float, w2: float, w3: float) -> Point2D:
         # Calculate the UV coordinates based on the weights
-
         r1, r2, r3 = self.uvmap[0]
         u = w1 * r1.x + w2 * r2.x + w3 * r3.x
         v = w1 * r1.y + w2 * r2.y + w3 * r3.y
@@ -519,17 +527,27 @@ class Triangle3D(Drawable3D):
         pp2 = camera.project(self.pos2)
         pp3 = camera.project(self.pos3)
 
-        if self.is_in_scree(pp1) or self.is_in_scree(pp2) or self.is_in_scree(pp3):
-            # p1,p2,p3 = [_.to_screen_space(screen_width,screen_height) for _ in [pp1,pp2,pp3]]
-            # self.tri = Triangle2D(pp1,pp2,pp3,pp1.depth,pp2.depth,pp3.depth)
-            # border_points = tri.draw_border(screen_width,screen_height)
-            return self.draw_inner(camera, pp1, pp2, pp3, screen_width, screen_height)
+        dotp1 = self.normal.dot(self.pos1 - camera.pos)/pp1.depth
+        dotp2 = self.normal.dot(self.pos2 - camera.pos)/pp2.depth
+        dotp3 = self.normal.dot(self.pos3 - camera.pos)/pp3.depth
 
-            # uvs = tri.uvcalc(inner_points,[p1,p2,p3])
-            # now pixel shader can happen
-            # like calculate the depth of the pixel
-            # like calculate the UV coord
 
+        
+        if dotp1<0:
+            
+
+            c = (pp1.depth<.1 and pp2.depth<.1 and pp3.depth<.1)or (
+                pp1.x<0 and pp2.x < 0 and pp3.x < 0) or (
+                pp1.y<0 and pp2.y < 0 and pp3.y < 0) or (
+                pp1.x>1 and pp2.x >1 and pp3.x >1) or (
+                pp1.y>1 and pp2.y >1 and pp3.y >1)
+            
+            if not c:
+                return self.draw_inner(camera, 
+                                       pp1, pp2, pp3, 
+                                       screen_width, screen_height,
+                                       dotp1,dotp2,dotp3)
+            return []
         else:
             return []
 
@@ -548,6 +566,7 @@ class Triangle3D(Drawable3D):
         pp3: PPoint2D,
         screen_width,
         screen_height,
+        dotp1,dotp2,dotp3
     ) -> Iterable[PPoint2D]:
 
         p1i = pp1.to_screen_space(screen_width, screen_height)
@@ -559,7 +578,8 @@ class Triangle3D(Drawable3D):
         p3fx, p3fy = pp3.to_screen_space_flt(screen_width, screen_height)
 
         bd = (p2fy - p3fy) * (p1fx - p3fx) + (p3fx - p2fx) * (p1fy - p3fy)
-
+        if -0.00001 < bd < 0.00001:
+            return []
         # Bounding box coordinates
         min_x = max(0, min(p1i.x, p2i.x, p3i.x))
         max_x = min(screen_width - 1, max(p1i.x, p2i.x, p3i.x))
@@ -577,11 +597,14 @@ class Triangle3D(Drawable3D):
                 if w1 >= 0 and w2 >= 0 and w3 >= 0:
                     # if bars := is_point_in_triangle(px, py, p1fx,p1fy, p2fx, p2fy, p3fx, p3fy,bd):
                     #    w1,w2,w3 = bars
-                    d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) / 3
+                    d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) 
 
                     uvpoint = self.uvcalc(w1, w2, w3)
-                    self.normal.dot(self.center_point() - camera.pos)
-                    yield PPoint2D(px, py, d, [w1, w2, w3])
+                    ddot_prod = (dotp1 * w1 +dotp2 * w2 +dotp3 * w3) / d #  
+                    p = PPoint2D(px, py, d)
+                    p.uv = uvpoint
+                    p.dotval = ddot_prod
+                    yield p
 
 
 def exp_grad(maxv, alpha=0.1, minv=0):
@@ -595,7 +618,7 @@ def exp_grad(maxv, alpha=0.1, minv=0):
 
 
 class TextureTT3DE:
-    def render_point(self, p: PPoint2D) -> object:
+    def render_point(self, p: PPoint2D) -> int:
         pass
 
 
@@ -613,14 +636,204 @@ class Line3D(Drawable3D):
             lpoint2D = l2d.draw(screen_width, screen_height)
             return lpoint2D
         return []
-
+class TextureCoordinate(Point2D):
+    pass
 
 class Mesh3D(Drawable3D):
     def __init__(self):
         self.vertices: List[Point3D] = []
+        self.texture_coords: List[List[TextureCoordinate]] = [[] for _ in range(8)]
+        self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
-        self.texture: "TextureTT3DE" = None
+        self.texture=None
 
-    def draw(self, camera: Camera, screen_width, screen_height) -> Iterable[PPoint2D]:
+
+    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         for t in self.triangles:
             yield from t.draw(camera, screen_width, screen_height)
+
+
+    def set_texture(self,t):
+        self.texture=t
+        for t in self.triangles:
+            t.texture = t
+
+    @classmethod
+    def from_square(cls,p1:Point3D):
+        t1 = Triangle3D( p1 , p1+Point3D(1,0,0), p1+Point3D(1,0,1))
+        t2 = Triangle3D( p1 , p1+Point3D(0,0,1), p1+Point3D(1,0,1))
+
+        t1.uvmap = [(TextureCoordinate(0,0),TextureCoordinate(1,0),TextureCoordinate(1,1))]
+        t2.uvmap = [(TextureCoordinate(0,0),TextureCoordinate(0,1),TextureCoordinate(1,1))]
+        s = cls()
+        s.triangles=[t1,t2]
+    @classmethod
+    def from_obj(cls, obj_file):
+        with open(obj_file, 'rb') as fin:
+            obj_bytes = fin.read()
+
+
+        vertices = []
+        texture_coords = [[] for _ in range(8)]
+        normals = []
+        triangles = []
+
+        lines = obj_bytes.decode('utf-8').split('\n')
+
+        for line in lines:
+            parts = line.split()
+            if not parts:
+                continue
+            # print(len(normals))
+            if parts[0] == 'v':
+                # Vertex definition
+                x, y, z = map(float, parts[1:4])
+                vertices.append(Point3D(x, y, z))
+            elif parts[0] == 'vt':
+                # Texture coordinate definition
+                u, v = map(float, parts[1:3])
+                texture_coords[0].append(TextureCoordinate(u, v))
+            elif parts[0] == 'vn':
+                # Normal vector definition
+                x, y, z = map(float, parts[1:4])
+                normals.append(Point3D(x, y, z))
+            elif parts[0] == 'f':
+                # Face definition
+                face_vertices = []
+                face_tex_coords = [[] for _ in range(8)]
+                face_normals = []
+                for part in parts[1:]:
+                    # print("part is "+part)
+                    vertex_indices = part.split('/')
+                    vertex_index = int(vertex_indices[0]) - 1
+                    face_vertices.append(vertices[vertex_index])
+
+                    if len(vertex_indices) > 1 and vertex_indices[1]:
+                        tex_coord_index = int(vertex_indices[1]) - 1
+                        face_tex_coords[0].append(texture_coords[0][tex_coord_index])
+                    else:
+                        face_tex_coords[0].append(None)
+                    
+                    if len(vertex_indices) > 2 and vertex_indices[2]:
+                        normal_index = int(vertex_indices[2]) - 1
+                        # print(f"normal_index {normal_index}")
+                        face_normals.append(normals[normal_index])
+                    else:
+                        face_normals.append(None)
+                
+                if len(face_vertices) == 3:
+                    
+                    uv_vectors = [face_tex_coords[layer][0:3] for layer in range(8)]
+                    t = Triangle3D(
+                        face_vertices[0], face_vertices[1], face_vertices[2],None
+                    )   
+                    t.uvmap = uv_vectors
+
+                    FNnormals = face_normals[0:3]
+
+                    #print(f"norml {FNnormals}")
+                    triangles.append(t)
+                else:
+                    
+                    for i in range(1, len(face_vertices) - 1):
+                        uv_vectors = [[face_tex_coords[layer][0], face_tex_coords[layer][i], face_tex_coords[layer][i + 1]] for layer in range(1)]
+
+                        FNnormals = face_normals[0:3]
+
+
+                        t = Triangle3D(
+                            face_vertices[0], face_vertices[i], face_vertices[i + 1],None ,
+                        )
+
+                        t.uvmap = uv_vectors
+                        triangles.append(t)
+
+        s = cls()
+        #s.vertices = vertices
+        s.texture_coords = texture_coords
+        s.normals = normals
+        s.triangles = triangles
+        return s
+    
+
+
+def load_bmp(filename):
+    def read_bytes(f, num):
+        return struct.unpack('<' + 'B' * num, f.read(num))
+
+    def read_int(f):
+        return struct.unpack('<I', f.read(4))[0]
+
+    def read_short(f):
+        return struct.unpack('<H', f.read(2))[0]
+
+    with open(filename, 'rb') as f:
+        # Read BMP header
+        header_field = read_bytes(f, 2)
+        if header_field != (0x42, 0x4D):  # 'BM'
+            raise ValueError('Not a BMP file')
+
+        file_size = read_int(f)
+        reserved1 = read_short(f)
+        reserved2 = read_short(f)
+        pixel_array_offset = read_int(f)
+
+        # Read DIB header
+        dib_header_size = read_int(f)
+        width = read_int(f)
+        height = read_int(f)
+        planes = read_short(f)
+        bit_count = read_short(f)
+        compression = read_int(f)
+        image_size = read_int(f)
+        x_pixels_per_meter = read_int(f)
+        y_pixels_per_meter = read_int(f)
+        colors_used = read_int(f)
+        important_colors = read_int(f)
+
+        # Check if it's a 24-bit BMP
+        if bit_count != 24:
+            raise ValueError('Only 24-bit BMP files are supported')
+
+        # Move to pixel array
+        f.seek(pixel_array_offset)
+
+        # Read pixel data
+        row_padded = (width * 3 + 3) & ~3  # Row size is padded to the nearest 4-byte boundary
+        pixel_data:List[List[int]] = []
+
+        for y in range(height):
+            row = []
+            for x in range(width):
+                b, g, r = read_bytes(f, 3)
+                row.append((r, g, b))
+            pixel_data.insert(0, row)  # BMP files are bottom to top
+            f.read(row_padded - width * 3)  # Skip padding
+
+        return pixel_data
+    
+
+def load_palette(filename):
+    return extract_palette(load_bmp(filename))
+
+def round_to_palette(pixel_data: List[List[Tuple[int, int, int]]], palette: List[Tuple[int, int, int]]) -> List[List[Tuple[int, int, int]]]:
+    def color_distance(c1: Tuple[int, int, int], c2: Tuple[int, int, int]) -> float:
+        return ((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2) ** 0.5
+
+    def find_closest_color(pixel: Tuple[int, int, int], palette: List[Tuple[int, int, int]]) -> Tuple[int, int, int]:
+        return min(palette, key=lambda color: color_distance(pixel, color))
+
+    rounded_pixel_data = []
+    for row in pixel_data:
+        rounded_row = [find_closest_color(pixel, palette) for pixel in row]
+        rounded_pixel_data.append(rounded_row)
+    
+    return rounded_pixel_data
+
+
+def extract_palette(pixel_data: List[List[Tuple[int, int, int]]]) -> List[Tuple[int, int, int]]:
+    unique_colors = set()
+    for row in pixel_data:
+        for pixel in row:
+            unique_colors.add(pixel)
+    return list(unique_colors)

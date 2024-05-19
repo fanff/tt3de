@@ -1,6 +1,6 @@
 import math
 from statistics import mean
-from time import monotonic
+from time import monotonic, time
 from typing import Sequence
 
 from context import tt3de
@@ -21,13 +21,14 @@ from textual.widgets import (
 
 from tt3de.richtexture import (
     DistGradBGShade,
+    ImageTexture,
     RenderContext,
     StaticTexture,
     build_gizmo_arrows,
     get_cube_vertices,
 )
 from tt3de.textual_widget import Cwr, TT3DView
-from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem, Triangle3D
+from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3D, load_bmp, load_palette, round_to_palette
 
 
 class MyView(TT3DView):
@@ -35,22 +36,37 @@ class MyView(TT3DView):
         super().__init__()
 
     def initialize(self):
-        self.rc.extend(build_gizmo_arrows(Point3D(0, 0, 0)))
-        for i in range(3):
-            self.rc.extend(get_cube_vertices(Point3D(0, i, 0), 0.7, DistGradBGShade))
-        self.rc.extend(get_cube_vertices(Point3D(2, 0, 0), 0.7, DistGradBGShade))
-        self.rc.extend(get_cube_vertices(Point3D(3, 0, 0), 0.7, DistGradBGShade))
-        self.rc.extend(get_cube_vertices(Point3D(1, 0, 0), 0.7, DistGradBGShade))
 
+        
+        #self.rc.extend(build_gizmo_arrows(Point3D(0, 0, 0)))
+        #for i in range(3):
+        #    self.rc.extend(get_cube_vertices(Point3D(0, i, 0), 0.7, DistGradBGShade))
+        # self.rc.extend(get_cube_vertices(Point3D(11, 0, 1), 0.7, DistGradBGShade))
+        # self.rc.extend(get_cube_vertices(Point3D(3, 0, 0), 0.7, DistGradBGShade))
+        # self.rc.extend(get_cube_vertices(Point3D(1, 0, 0), 0.7, DistGradBGShade))
+
+
+        m = Mesh3D.from_obj("models/cube.obj")
+        palette = load_palette("models/RGB_6bits.bmp")
+        #roundedimg = round_to_palette(load_bmp("models/cube_texture.bmp"),palette)
+        #roundedimg = round_to_palette(load_bmp("models/cubetest2.bmp"),palette)
+        texture1 = ImageTexture(load_bmp("models/cube_texture.bmp"))
+        texture2 = ImageTexture(load_bmp("models/cubetest2.bmp"))
+
+
+        m.set_texture(texture2)
+        #m.triangles=m.triangles[3:4]
+        self.rc.append(m)
         self.write_debug_inside = True
 
     def update_step(self, timediff):
-        ts = monotonic()
-        amp = 4
-        tf = 0.8
-        c1 = math.cos(tf * ts) * amp
-        c2 = math.sin(tf * ts) * amp
-        self.camera.move_at(Point3D(c1, 1 + math.cos(tf * ts / 2) * 3, c2))
+        ts = time()
+        ampxz = 5
+        ampy = 1
+        tf = 1
+        c1 = math.cos(tf * ts) * ampxz
+        c2 = math.sin(tf * ts) * ampxz
+        self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
         self.camera.point_at(Point3D(0.0, 0, 0))
         self.camera.recalc_fov_h(self.size.width, self.size.height)
         self.rc.update_wh(self.size.width, self.size.height)
@@ -59,15 +75,15 @@ class MyView(TT3DView):
 
         spark: Sparkline = self.parent.query_one(".tsrender_dur")
         spark.data = spark.data[1:] + [self.last_frame_data_info.get("tsrender_dur", 0)]
+
         l: Label = self.parent.query_one(".frame_idx")
         l.update(f"Frame: {self.frame_idx}")
 
         l: Label = self.parent.query_one(".render_label")
         l.update(f"Render: {(1000*mean(spark.data)):.2f} ms")
-        # .update(str(self.last_frame_data_info))
 
     async def on_event(self, event: events.Event):
-        # await super().on_event(event)
+        await super().on_event(event)
         info_box: Static = self.parent.query_one(".lastevent")
         info_box.update(str(event))
 
@@ -127,4 +143,5 @@ async def run():
 if __name__ == "__main__":
 
     app = Demo3dView()
+    app._disable_tooltips=True
     app.run()
