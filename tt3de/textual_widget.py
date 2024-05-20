@@ -88,7 +88,7 @@ class TT3DView(Widget):
                 self.camera.update_rotation()
 
         elif isinstance(event,events.Click):
-            pass
+            self.mouse_fps_camera_mode = True
             
         elif isinstance(event, events.Key):
             match event.key:
@@ -112,10 +112,6 @@ class TT3DView(Widget):
                     self.update_timer.pause()
                 case "P":
                     self.update_timer.resume()
-                case "m":
-                    self.mouse_fps_camera_mode = True
-                case "M":
-                    self.mouse_fps_camera_mode = False
                 case "escape":
                     self.mouse_fps_camera_mode = False
 

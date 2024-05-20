@@ -5,6 +5,7 @@ from tt3de.tt3de import (
     Camera,
     Drawable3D,
     Line3D,
+    Node3D,
     PPoint2D,
     Point3D,
     PointElem,
@@ -188,6 +189,7 @@ class RenderContext:
 
     def render(self, camera: Camera):
         for elemnt in self.elements:
+
             allpix = elemnt.draw(camera, self.screen_width, self.screen_height)
             for p in allpix:
                 try:
@@ -195,7 +197,7 @@ class RenderContext:
                     currdepth = self.depth_array[aidx]
                     if p.depth < currdepth:
                         # self.canvas[p.y][p.x] = p.render_pixel(txt)
-                        self.canvas_array[aidx] = elemnt.texture.render_point(p)
+                        self.canvas_array[aidx] = elemnt.render_point(p)
                         self.depth_array[aidx] = p.depth
                 except IndexError as e:
                     pass
@@ -232,6 +234,11 @@ class RenderContext:
     def extend(self, elems: List[Drawable3D]):
         for e in elems:
             self.append(e)
+
+    def append_node(self, elem: Node3D):
+        for k in elem.elems:
+            k.texture.cache_output(self.segmap)
+        self.elements.append(elem)
 
 
 class Segmap(dict):

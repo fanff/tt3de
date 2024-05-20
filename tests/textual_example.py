@@ -28,10 +28,13 @@ from tt3de.richtexture import (
     get_cube_vertices,
 )
 from tt3de.textual_widget import Cwr, TT3DView
-from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3D, load_bmp, load_palette, round_to_palette
+from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D, load_bmp, load_palette, round_to_palette
 
 
 class MyView(TT3DView):
+
+
+
     def __init__(self):
         super().__init__()
 
@@ -56,7 +59,11 @@ class MyView(TT3DView):
 
         m.set_texture(texture2)
         #m.triangles=m.triangles[3:4]
-        self.rc.append(m)
+        #self.rc.append(m)
+
+        n = Node3D()
+        n.elems.append(m)
+        self.rc.append_node(n)
         self.write_debug_inside = True
 
         
@@ -76,6 +83,9 @@ class MyView(TT3DView):
         c2 = math.sin(tf * ts) * ampxz
         #self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
         #self.camera.point_at(Point3D(0.0, 0, 0))
+
+        self.rc.elements[0].rotation = Quaternion.from_euler(tf*ts,0,0)
+
         self.camera.recalc_fov_h(self.size.width, self.size.height)
         self.rc.update_wh(self.size.width, self.size.height)
 
@@ -113,6 +123,7 @@ class Content(Static):
             yield Sparkline(
                 [0] * keep_count, summary_function=mean, classes="tsrender_dur"
             )
+            yield Button("sds")
 
         yield MyView()
 

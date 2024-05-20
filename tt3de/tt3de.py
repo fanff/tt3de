@@ -334,6 +334,11 @@ class FPSCamera(Camera):
         super().__init__(pos, fov_w, fov_h)
         self.pitch = 0
         self.yaw = 0
+        self._rotation:Quaternion
+        self._rotation_invers:Quaternion
+
+
+        self.worldobj_rotation:Quaternion = Quaternion.from_euler(0,0,0)
         self.update_rotation()
 
     def rotate_left_right(self, angle: float):
@@ -386,8 +391,10 @@ class FPSCamera(Camera):
         return self._rotation
 
     def project(self, point: Point3D) -> PPoint2D:
+        self.worldobj_rotation.rotate_point(point)
+        
         # Transform the point to camera space
-        camera_space_point = self._rotation_invers.rotate_point(point - self.pos)
+        camera_space_point = self._rotation_invers.rotate_point(self.worldobj_rotation.rotate_point(point) - self.pos)
 
         # Check if the point is in front of the camera
         if camera_space_point.z <= 0:
@@ -421,6 +428,10 @@ class Drawable3D:
     @staticmethod
     def is_in_scree(pp: PPoint2D):
         return pp.depth > 1 and pp.x >= 0 and pp.x < 1 and pp.y >= 0 and pp.y < 1
+
+    def render_point(self,pp: PPoint2D):
+        return self.texture.render_point(pp)
+    
 
 
 def is_point_in_triangle(px, py, ax, ay, bx, by, cx, cy, d) -> tuple[float]:
@@ -836,3 +847,33 @@ def extract_palette(pixel_data: List[List[Tuple[int, int, int]]]) -> List[Tuple[
         for pixel in row:
             unique_colors.add(pixel)
     return list(unique_colors)
+
+
+class Node3D(Drawable3D):
+
+    def __init__(self):
+        
+        self.translation = Point3D(0,2,0)
+
+        self.rotation = Quaternion.from_euler(0.5,0,0)
+        self.elems:list[Drawable3D] = []
+
+
+    def draw(self, camera:FPSCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
+        p = camera.pos
+        prev_rot = camera.worldobj_rotation
+
+
+        camera.move(self.translation * (-1))
+        camera.worldobj_rotation = self.rotation
+        for elemidx,t in enumerate(self.elems):
+            yield from t.draw(camera, screen_width, screen_height)
+
+        camera.move_at(p)
+        camera.worldobj_rotation = prev_rot
+
+        
+    def render_point(self,pp: PPoint2D):
+        idx=0
+        return self.elems[idx].render_point(pp)
+        return 1 # self.texture.render_point(pp)
