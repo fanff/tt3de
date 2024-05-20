@@ -595,8 +595,7 @@ class Triangle3D(Drawable3D):
                 w3 = 1 - w1 - w2
 
                 if w1 >= 0 and w2 >= 0 and w3 >= 0:
-                    # if bars := is_point_in_triangle(px, py, p1fx,p1fy, p2fx, p2fy, p3fx, p3fy,bd):
-                    #    w1,w2,w3 = bars
+                    # this is like the pixel shader. 
                     d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) 
 
                     uvpoint = self.uvcalc(w1, w2, w3)

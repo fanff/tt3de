@@ -16,7 +16,7 @@ from tt3de.tt3de import (
 from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
-
+from textual.strip import Strip
 
 class TextureAscii(TextureTT3DE):
     def render_point(self, p: PPoint2D) -> int:
@@ -103,10 +103,9 @@ class ImageTexture(TextureAscii):
     def render_point(self, p: PPoint2D) -> int:
         
         shade_factor = abs(p.dotval)*5
-
+        # y=3x2−2x3 ~= y=0.5−0.5cos⁡(πx)
         shade_factor = 3* shade_factor**2 - 2*shade_factor**3
 
-        # y=3x2−2x3 ~= y=0.5−0.5cos⁡(πx)
 
         shade_idx = clip(self.shade_count-round(shade_factor*self.shade_count),0,self.shade_count-1)
         imgx:int = (self.image_width-1) - int(p.uv.x *  self.image_width) 
@@ -162,6 +161,10 @@ class RenderContext:
 
         self.setup_canvas()
         self.segmap = Segmap().init()
+        self.split_map = dict[int:object]
+
+    def setup_segment_cache(self,console):
+        self.split_map = self.segmap.to_split_map(console)
 
     def setup_canvas(self):
         w, h = self.screen_width, self.screen_height
@@ -219,7 +222,7 @@ class RenderContext:
             if c.isprintable():
                 ordc = ord(c)
                 if ordc in self.segmap:
-                    aidx = (self.screen_height - y - 1) * self.screen_width + idx
+                    aidx = (self.screen_height - y - 1) * self.screen_width + idx + x
                     self.canvas_array[aidx] = ordc
 
     def append(self, elem: Drawable3D):
@@ -251,6 +254,13 @@ class Segmap(dict):
         self[idx] = seg
         return idx
 
+    def to_split_map(self,console):
+        strip_map = dict()
+        for k,segment in self.items():
+            s = Strip([segment])
+            s = s.render(console)
+            strip_map[k] = s
+        return strip_map
 
 def build_gizmo_arrows(center: Point3D):
     xline = Line3D(

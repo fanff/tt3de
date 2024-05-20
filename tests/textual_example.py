@@ -47,7 +47,7 @@ class MyView(TT3DView):
 
 
         m = Mesh3D.from_obj("models/cube.obj")
-        palette = load_palette("models/RGB_6bits.bmp")
+        # palette = load_palette("models/RGB_6bits.bmp")
         #roundedimg = round_to_palette(load_bmp("models/cube_texture.bmp"),palette)
         #roundedimg = round_to_palette(load_bmp("models/cubetest2.bmp"),palette)
         texture1 = ImageTexture(load_bmp("models/cube_texture.bmp"))
@@ -59,6 +59,14 @@ class MyView(TT3DView):
         self.rc.append(m)
         self.write_debug_inside = True
 
+        
+
+        self.camera.move_at(Point3D(5,  0, 5))
+        self.camera.point_at(Point3D(0.0, 0, 0))
+
+        self.capture_mouse_events=False
+
+
     def update_step(self, timediff):
         ts = time()
         ampxz = 5
@@ -66,8 +74,8 @@ class MyView(TT3DView):
         tf = 1
         c1 = math.cos(tf * ts) * ampxz
         c2 = math.sin(tf * ts) * ampxz
-        self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
-        self.camera.point_at(Point3D(0.0, 0, 0))
+        #self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
+        #self.camera.point_at(Point3D(0.0, 0, 0))
         self.camera.recalc_fov_h(self.size.width, self.size.height)
         self.rc.update_wh(self.size.width, self.size.height)
 
@@ -84,8 +92,13 @@ class MyView(TT3DView):
 
     async def on_event(self, event: events.Event):
         await super().on_event(event)
-        info_box: Static = self.parent.query_one(".lastevent")
-        info_box.update(str(event))
+
+        match event.__class__:
+            case events.MouseMove:
+                pass
+            case _:
+                info_box: Static = self.parent.query_one(".lastevent")
+                info_box.update(str(event))
 
 
 class Content(Static):
