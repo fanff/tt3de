@@ -49,21 +49,51 @@ class MyView(TT3DView):
         # self.rc.extend(get_cube_vertices(Point3D(1, 0, 0), 0.7, DistGradBGShade))
 
 
-        m = Mesh3D.from_obj("models/cube.obj")
         # palette = load_palette("models/RGB_6bits.bmp")
         #roundedimg = round_to_palette(load_bmp("models/cube_texture.bmp"),palette)
         #roundedimg = round_to_palette(load_bmp("models/cubetest2.bmp"),palette)
         texture1 = ImageTexture(load_bmp("models/cube_texture.bmp"))
         texture2 = ImageTexture(load_bmp("models/cubetest2.bmp"))
+        texture3 = ImageTexture(load_bmp("models/cubetest3.bmp"))
 
-
+        m = Mesh3D.from_obj("models/cube.obj")
         m.set_texture(texture2)
         #m.triangles=m.triangles[3:4]
         #self.rc.append(m)
 
+        
         n = Node3D()
         n.elems.append(m)
+        n.set_translation(Point3D(0,2,0))
+        
+        
+
+        cube2 = Mesh3D.from_obj("models/cube.obj")
+        cube2.set_texture(texture3)
+        n2 = Node3D()
+        n2.set_translation(Point3D(2,0,0))
+        n2.elems.append(cube2)
+
+        n.elems.append(n2)
+
+
+        cube3 = Mesh3D.from_obj("models/cube.obj")
+        cube3.set_texture(texture1)
+        n3 = Node3D()
+        n3.set_translation(Point3D(6,0,0))
+        n3.elems.append(cube3)
+
+
+        
+#       
+
+
         self.rc.append_node(n)
+        self.rc.append_node(n3)
+        #n2.set_translation(Point3D(1.5,0,0))
+        #n2.elems.append(n)
+        #self.rc.append_node(n2)
+
         self.write_debug_inside = True
 
         
@@ -84,7 +114,7 @@ class MyView(TT3DView):
         #self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
         #self.camera.point_at(Point3D(0.0, 0, 0))
 
-        self.rc.elements[0].rotation = Quaternion.from_euler(tf*ts,0,0)
+        self.rc.elements[0].rotation = Quaternion.from_euler(0,0,tf * ts)
 
         self.camera.recalc_fov_h(self.size.width, self.size.height)
         self.rc.update_wh(self.size.width, self.size.height)
@@ -123,7 +153,6 @@ class Content(Static):
             yield Sparkline(
                 [0] * keep_count, summary_function=mean, classes="tsrender_dur"
             )
-            yield Button("sds")
 
         yield MyView()
 

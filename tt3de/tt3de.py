@@ -189,7 +189,7 @@ class Point3D:
         return Point3D(self.x * scalar, self.y * scalar, self.z * scalar)
 
     def __rmul__(self, scalar: float) -> "Point3D":
-        return self.__mul__(scalar)
+        return Point3D(self.x * scalar, self.y * scalar, self.z * scalar)
 
     def __repr__(self):
         return f"Point3D({self.x:.2f},{self.y:.2f},{self.z:.2f})"
@@ -330,6 +330,8 @@ class Camera:
 
 
 class FPSCamera(Camera):
+
+    NO_PROJECT = PPoint2D(0,0,0)
     def __init__(self, pos: Point3D, fov_w: float = 90, fov_h: float = 90):
         super().__init__(pos, fov_w, fov_h)
         self.pitch = 0
@@ -391,14 +393,16 @@ class FPSCamera(Camera):
         return self._rotation
 
     def project(self, point: Point3D) -> PPoint2D:
-        self.worldobj_rotation.rotate_point(point)
-        
+
+
         # Transform the point to camera space
-        camera_space_point = self._rotation_invers.rotate_point(self.worldobj_rotation.rotate_point(point) - self.pos)
+        camera_space_point = self._rotation_invers.rotate_point(point - self.pos)
 
         # Check if the point is in front of the camera
         if camera_space_point.z <= 0:
-            return PPoint2D(0, 0, -1)  # Point is behind the camera
+            return self.NO_PROJECT  # Point is behind the camera
+
+            return PPoint2D(.2, .5, camera_space_point.z)  # Point is behind the camera
 
         # Perspective projection onto the screen space (0,1)
         x = (camera_space_point.x / camera_space_point.z) * (
@@ -424,13 +428,17 @@ class Drawable3D:
     texture: "TextureTT3DE"
 
     def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]: ...
+    def cache_output(self,segmap):
+        raise NotImplemented("")
+
 
     @staticmethod
     def is_in_scree(pp: PPoint2D):
         return pp.depth > 1 and pp.x >= 0 and pp.x < 1 and pp.y >= 0 and pp.y < 1
 
     def render_point(self,pp: PPoint2D):
-        return self.texture.render_point(pp)
+        raise NotImplemented("")
+
     
 
 
@@ -530,37 +538,42 @@ class Triangle3D(Drawable3D):
         cz = (self.pos1.z + self.pos2.z + self.pos3.z) / 3
         return Point3D(cx, cy, cz)
 
-    def draw(self, camera: Camera, screen_width, screen_height) -> Iterable[PPoint2D]:
+    def draw(self, camera: FPSCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
         # vertex modifier can be applied here.
 
         # project
-        pp1 = camera.project(self.pos1)
-        pp2 = camera.project(self.pos2)
-        pp3 = camera.project(self.pos3)
-
-        dotp1 = self.normal.dot(self.pos1 - camera.pos)/pp1.depth
-        dotp2 = self.normal.dot(self.pos2 - camera.pos)/pp2.depth
-        dotp3 = self.normal.dot(self.pos3 - camera.pos)/pp3.depth
+        rrp1 = camera.worldobj_rotation.rotate_point(self.pos1)
+        rrp2 = camera.worldobj_rotation.rotate_point(self.pos2)
+        rrp3 = camera.worldobj_rotation.rotate_point(self.pos3)
 
 
+        pp1 = camera.project(rrp1)
+        pp2 = camera.project(rrp2)
+        pp3 = camera.project(rrp3)
+
+
+
+        rnormal = camera.worldobj_rotation.rotate_point(self.normal)
+        dotp1 = rnormal.dot(rrp1 - camera.pos) 
+        dotp2 = rnormal.dot(rrp2 - camera.pos) 
+        dotp3 = rnormal.dot(rrp3 - camera.pos) 
+
+        c = (dotp1>0 or dotp2>0 or dotp3>0) or (
+            pp1.depth<1 and pp2.depth<1 and pp3.depth<1)or (
+            pp1.x<=0 and pp2.x <=0 and pp3.x <= 0) or (
+            pp1.y<=0 and pp2.y <=0 and pp3.y <= 0) or (
+            pp1.x>=1 and pp2.x >=1 and pp3.x >=1) or (
+            pp1.y>=1 and pp2.y >=1 and pp3.y >=1) or (
+                pp1==camera.NO_PROJECT or pp2 == camera.NO_PROJECT or pp3==camera.NO_PROJECT
+            )
         
-        if dotp1<0:
-            
-
-            c = (pp1.depth<.1 and pp2.depth<.1 and pp3.depth<.1)or (
-                pp1.x<0 and pp2.x < 0 and pp3.x < 0) or (
-                pp1.y<0 and pp2.y < 0 and pp3.y < 0) or (
-                pp1.x>1 and pp2.x >1 and pp3.x >1) or (
-                pp1.y>1 and pp2.y >1 and pp3.y >1)
-            
-            if not c:
-                return self.draw_inner(camera, 
-                                       pp1, pp2, pp3, 
-                                       screen_width, screen_height,
-                                       dotp1,dotp2,dotp3)
-            return []
-        else:
-            return []
+        if not c:
+            return self.draw_inner(camera, 
+                                    pp1, pp2, pp3, 
+                                    screen_width, screen_height,
+                                    rnormal,
+                                    rrp1,rrp2,rrp3)
+        return []
 
     def draw_border(
         self, pp1, pp2, pp3, screen_width, screen_height
@@ -568,6 +581,11 @@ class Triangle3D(Drawable3D):
         yield from Line2D(pp1, pp2).draw(screen_width, screen_height)
         yield from Line2D(pp2, pp3).draw(screen_width, screen_height)
         yield from Line2D(pp3, pp1).draw(screen_width, screen_height)
+
+    def render_point(self,pp: PPoint2D):
+        return self.texture.render_point(pp)
+    def cache_output(self,segmap):
+        self.texture.cache_output(segmap)
 
     def draw_inner(
         self,
@@ -577,7 +595,8 @@ class Triangle3D(Drawable3D):
         pp3: PPoint2D,
         screen_width,
         screen_height,
-        dotp1,dotp2,dotp3
+        rnormal:Point3D,
+        rrp1,rrp2,rrp3
     ) -> Iterable[PPoint2D]:
 
         p1i = pp1.to_screen_space(screen_width, screen_height)
@@ -590,7 +609,7 @@ class Triangle3D(Drawable3D):
 
         bd = (p2fy - p3fy) * (p1fx - p3fx) + (p3fx - p2fx) * (p1fy - p3fy)
         if -0.00001 < bd < 0.00001:
-            return []
+            return None
         # Bounding box coordinates
         min_x = max(0, min(p1i.x, p2i.x, p3i.x))
         max_x = min(screen_width - 1, max(p1i.x, p2i.x, p3i.x))
@@ -605,13 +624,19 @@ class Triangle3D(Drawable3D):
                 w2 = ((p3fy - p1fy) * (px - p3fx) + (p1fx - p3fx) * (py - p3fy)) / bd
                 w3 = 1 - w1 - w2
 
-                if w1 >= 0 and w2 >= 0 and w3 >= 0:
+                if w1 > 0 and w2 > 0 and w3 > 0:
                     # this is like the pixel shader. 
+
+                    appxp = rrp1*w1 + rrp2*w2 + rrp3*w3
+                    
+
                     d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) 
 
-                    uvpoint = self.uvcalc(w1, w2, w3)
-                    ddot_prod = (dotp1 * w1 +dotp2 * w2 +dotp3 * w3) / d #  
+
+                    ddot_prod = rnormal.dot(appxp-camera.pos) / d
+                    
                     p = PPoint2D(px, py, d)
+                    uvpoint = self.uvcalc(w1, w2, w3)
                     p.uv = uvpoint
                     p.dotval = ddot_prod
                     yield p
@@ -655,13 +680,20 @@ class Mesh3D(Drawable3D):
         self.texture_coords: List[List[TextureCoordinate]] = [[] for _ in range(8)]
         self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
-        self.texture=None
+        self.texture:TextureTT3DE=None
 
 
     def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         for t in self.triangles:
             yield from t.draw(camera, screen_width, screen_height)
 
+
+    def cache_output(self,segmap):
+        self.texture.cache_output(segmap)
+
+
+    def render_point(self,pp: PPoint2D):
+        return self.texture.render_point(pp)
 
     def set_texture(self,t):
         self.texture=t
@@ -853,27 +885,33 @@ class Node3D(Drawable3D):
 
     def __init__(self):
         
-        self.translation = Point3D(0,2,0)
+        self.translation = Point3D(0,0,0)
 
-        self.rotation = Quaternion.from_euler(0.5,0,0)
+        self.rotation = Quaternion.from_euler(0,0,0)
         self.elems:list[Drawable3D] = []
 
+
+    def set_translation(self,translation:Point3D):
+        self.translation = translation
 
     def draw(self, camera:FPSCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
         p = camera.pos
         prev_rot = camera.worldobj_rotation
-
-
         camera.move(self.translation * (-1))
-        camera.worldobj_rotation = self.rotation
+        camera.worldobj_rotation = camera.worldobj_rotation*self.rotation
         for elemidx,t in enumerate(self.elems):
             yield from t.draw(camera, screen_width, screen_height)
 
         camera.move_at(p)
         camera.worldobj_rotation = prev_rot
 
-        
+
     def render_point(self,pp: PPoint2D):
         idx=0
         return self.elems[idx].render_point(pp)
-        return 1 # self.texture.render_point(pp)
+    
+    def cache_output(self,segmap):
+        for e in self.elems:
+            e.cache_output(segmap)
+
+

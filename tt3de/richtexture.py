@@ -88,7 +88,7 @@ def clip(v,mv,maxv):
     return max(min(v,maxv),mv)
 
 class ImageTexture(TextureAscii):
-    def __init__(self, img_data):
+    def __init__(self, img_data,shade_count=4):
         self.img_data = img_data
         self.image_height = len(self.img_data)
         self.image_width = len(self.img_data[0])
@@ -99,16 +99,12 @@ class ImageTexture(TextureAscii):
         
         # the shading , then the color idx
         self.shade_to_idx: List[List[int]]
-        self.shade_count = 4
+        self.shade_count = shade_count
         
     def render_point(self, p: PPoint2D) -> int:
         
-        shade_factor = abs(p.dotval)*5
-        # y=3x2−2x3 ~= y=0.5−0.5cos⁡(πx)
-        shade_factor = 3* shade_factor**2 - 2*shade_factor**3
+        shade_idx = clip(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
 
-
-        shade_idx = clip(self.shade_count-round(shade_factor*self.shade_count),0,self.shade_count-1)
         imgx:int = (self.image_width-1) - int(p.uv.x *  self.image_width) 
         imgy:int = (self.image_height-1) - int(p.uv.y *  self.image_height) 
 
@@ -116,9 +112,6 @@ class ImageTexture(TextureAscii):
         return self.shade_to_idx[shade_idx][palette_idx]
 
     def cache_output(self, segmap: "Segmap"):
-
-
-
         buff_color_to_int = {}
 
         self.shade_to_idx = []
@@ -126,16 +119,16 @@ class ImageTexture(TextureAscii):
             colorshade = 1.0 - (i / self.shade_count)
             self.shade_to_idx.append([0]*len(self.color_palette))
             
-            
             for palette_idx,(r, g, b) in enumerate(self.color_palette):
-                c = Color.from_rgb(r * colorshade , g * colorshade , b * colorshade )
-                s = Segment(" ", style=Style(color="white", bgcolor=c))
+                background_c = Color.from_rgb(r * colorshade , g * colorshade , b * colorshade )
+                front_c = Color.from_rgb(r , g , b )
+                s = Segment("▒", style=Style(color=front_c, bgcolor=background_c))
                 charidx = segmap.add_char(s)
                 self.shade_to_idx[i][palette_idx] = charidx
 
                 if i == 0:
                     # keep the color unshaded with the palette_idx value of the color
-                    buff_color_to_int[c] = palette_idx
+                    buff_color_to_int[background_c] = palette_idx
 
         for r in self.img_data:
             crow = []
@@ -228,7 +221,7 @@ class RenderContext:
                     self.canvas_array[aidx] = ordc
 
     def append(self, elem: Drawable3D):
-        elem.texture.cache_output(self.segmap)
+        elem.cache_output(self.segmap)
         self.elements.append(elem)
 
     def extend(self, elems: List[Drawable3D]):
@@ -236,8 +229,7 @@ class RenderContext:
             self.append(e)
 
     def append_node(self, elem: Node3D):
-        for k in elem.elems:
-            k.texture.cache_output(self.segmap)
+        elem.cache_output(self.segmap)
         self.elements.append(elem)
 
 

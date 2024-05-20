@@ -185,12 +185,8 @@ class TT3DView(Widget):
             self.tsrender_dur = time() - ts
 
             if self.write_debug_inside:
-                self.rc.write_text("0", 0, 0)
-                l = f"F:{self.frame_idx}: size: {self.size.width} x {self.size.height}" 
-                self.rc.write_text(l, 5, 0)
-
-                r = f"{self.screen.get_offset(self)}"
-                self.rc.write_text(r , 5, 1)
+                l = f"Frame:{self.frame_idx}: size: {self.size.width} x {self.size.height}" 
+                self.rc.write_text(l, 5, 6)
 
                 self.rc.write_text(f"U:{self.update_dur*1000:.2f} ms", 1, 5)
                 self.rc.write_text(f"C:{self.render_clear_dur*1000:.2f} ms", 1, 4)
