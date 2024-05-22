@@ -210,7 +210,6 @@ class Point3D:
             self.x * other.y - self.y * other.x,
         )
 
-
 def normalize(v: "Point3D"):
     n2 = v.x**2 + v.y**2 + v.z**2
 
@@ -329,7 +328,7 @@ class Camera:
         pass
 
 
-class FPSCamera(Camera):
+class FPSCamera():
 
     NO_PROJECT = PPoint2D(0,0,0)
     def __init__(self, pos: Point3D, fov_w: float = 90, fov_h: float = 90):
@@ -463,7 +462,7 @@ def is_point_in_triangle(px, py, ax, ay, bx, by, cx, cy, d) -> tuple[float]:
 
 
 class PointElem(Drawable3D):
-    def __init__(self, p: Point3D, texture: "TextureTT3DE"):
+    def __init__(self, p: Point3D, texture: "TextureTT3DE"=None):
         self.p = p
         self.texture: "TextureTT3DE" = texture
 
@@ -474,6 +473,9 @@ class PointElem(Drawable3D):
             ppr = PPoint2D(pi.x, pi.y, pp.depth)
             yield ppr
 
+    def proj_vertices(self, camera: Camera, screen_width, screen_height) :
+        return camera.project(self.p)
+    
 
 class Triangle3D(Drawable3D):
     def __init__(
@@ -546,11 +548,9 @@ class Triangle3D(Drawable3D):
         rrp2 = camera.worldobj_rotation.rotate_point(self.pos2)
         rrp3 = camera.worldobj_rotation.rotate_point(self.pos3)
 
-
         pp1 = camera.project(rrp1)
         pp2 = camera.project(rrp2)
         pp3 = camera.project(rrp3)
-
 
 
         rnormal = camera.worldobj_rotation.rotate_point(self.normal)
@@ -558,6 +558,8 @@ class Triangle3D(Drawable3D):
         dotp2 = rnormal.dot(rrp2 - camera.pos) 
         dotp3 = rnormal.dot(rrp3 - camera.pos) 
 
+
+        
         c = (dotp1>0 or dotp2>0 or dotp3>0) or (
             pp1.depth<1 and pp2.depth<1 and pp3.depth<1)or (
             pp1.x<=0 and pp2.x <=0 and pp3.x <= 0) or (
@@ -680,8 +682,23 @@ class Mesh3D(Drawable3D):
         self.texture_coords: List[List[TextureCoordinate]] = [[] for _ in range(8)]
         self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
+
+        self.triangles_vindex: List[tuple[int]] = []
+
+
         self.texture:TextureTT3DE=None
 
+    def proj_vertices(self, camera: Camera, screen_width, screen_height) :
+
+        for t in self.triangles:
+            #rrp1 = camera.worldobj_rotation.rotate_point(t.pos1)
+            #rrp2 = camera.worldobj_rotation.rotate_point(t.pos2)
+            #rrp3 = camera.worldobj_rotation.rotate_point(t.pos3)
+
+            pp1 = camera.project(t.pos1)
+            pp2 = camera.project(t.pos2)
+            pp3 = camera.project(t.pos3)
+            yield [pp1, pp2, pp3]
 
     def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         for t in self.triangles:
@@ -713,13 +730,16 @@ class Mesh3D(Drawable3D):
     def from_obj(cls, obj_file):
         with open(obj_file, 'rb') as fin:
             obj_bytes = fin.read()
-
+        return cls.from_obj_bytes(obj_bytes)
+    
+    @classmethod
+    def from_obj_bytes(cls, obj_bytes):
 
         vertices = []
         texture_coords = [[] for _ in range(8)]
         normals = []
         triangles = []
-
+        triangles_vindex = []
         lines = obj_bytes.decode('utf-8').split('\n')
 
         for line in lines:
@@ -744,11 +764,18 @@ class Mesh3D(Drawable3D):
                 face_vertices = []
                 face_tex_coords = [[] for _ in range(8)]
                 face_normals = []
+
+                # list of vertex indices
+                face_vertices_index = [] 
+
+
                 for part in parts[1:]:
                     # print("part is "+part)
                     vertex_indices = part.split('/')
                     vertex_index = int(vertex_indices[0]) - 1
                     face_vertices.append(vertices[vertex_index])
+                    face_vertices_index.append(vertex_index)
+
 
                     if len(vertex_indices) > 1 and vertex_indices[1]:
                         tex_coord_index = int(vertex_indices[1]) - 1
@@ -762,13 +789,15 @@ class Mesh3D(Drawable3D):
                         face_normals.append(normals[normal_index])
                     else:
                         face_normals.append(None)
-                
+                    
                 if len(face_vertices) == 3:
                     
                     uv_vectors = [face_tex_coords[layer][0:3] for layer in range(8)]
                     t = Triangle3D(
                         face_vertices[0], face_vertices[1], face_vertices[2],None
-                    )   
+                    )
+
+                    triangles_vindex.append(tuple(face_vertices_index))
                     t.uvmap = uv_vectors
 
                     FNnormals = face_normals[0:3]
@@ -786,99 +815,19 @@ class Mesh3D(Drawable3D):
                         t = Triangle3D(
                             face_vertices[0], face_vertices[i], face_vertices[i + 1],None ,
                         )
+                        triangles_vindex.append((face_vertices_index[0],face_vertices_index[i],face_vertices_index[i+1]))
 
                         t.uvmap = uv_vectors
                         triangles.append(t)
 
         s = cls()
-        #s.vertices = vertices
+        s.vertices = vertices
         s.texture_coords = texture_coords
         s.normals = normals
         s.triangles = triangles
+        s.triangles_vindex = triangles_vindex
         return s
     
-
-
-def load_bmp(filename):
-    def read_bytes(f, num):
-        return struct.unpack('<' + 'B' * num, f.read(num))
-
-    def read_int(f):
-        return struct.unpack('<I', f.read(4))[0]
-
-    def read_short(f):
-        return struct.unpack('<H', f.read(2))[0]
-
-    with open(filename, 'rb') as f:
-        # Read BMP header
-        header_field = read_bytes(f, 2)
-        if header_field != (0x42, 0x4D):  # 'BM'
-            raise ValueError('Not a BMP file')
-
-        file_size = read_int(f)
-        reserved1 = read_short(f)
-        reserved2 = read_short(f)
-        pixel_array_offset = read_int(f)
-
-        # Read DIB header
-        dib_header_size = read_int(f)
-        width = read_int(f)
-        height = read_int(f)
-        planes = read_short(f)
-        bit_count = read_short(f)
-        compression = read_int(f)
-        image_size = read_int(f)
-        x_pixels_per_meter = read_int(f)
-        y_pixels_per_meter = read_int(f)
-        colors_used = read_int(f)
-        important_colors = read_int(f)
-
-        # Check if it's a 24-bit BMP
-        if bit_count != 24:
-            raise ValueError('Only 24-bit BMP files are supported')
-
-        # Move to pixel array
-        f.seek(pixel_array_offset)
-
-        # Read pixel data
-        row_padded = (width * 3 + 3) & ~3  # Row size is padded to the nearest 4-byte boundary
-        pixel_data:List[List[int]] = []
-
-        for y in range(height):
-            row = []
-            for x in range(width):
-                b, g, r = read_bytes(f, 3)
-                row.append((r, g, b))
-            pixel_data.insert(0, row)  # BMP files are bottom to top
-            f.read(row_padded - width * 3)  # Skip padding
-
-        return pixel_data
-    
-
-def load_palette(filename):
-    return extract_palette(load_bmp(filename))
-
-def round_to_palette(pixel_data: List[List[Tuple[int, int, int]]], palette: List[Tuple[int, int, int]]) -> List[List[Tuple[int, int, int]]]:
-    def color_distance(c1: Tuple[int, int, int], c2: Tuple[int, int, int]) -> float:
-        return ((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2) ** 0.5
-
-    def find_closest_color(pixel: Tuple[int, int, int], palette: List[Tuple[int, int, int]]) -> Tuple[int, int, int]:
-        return min(palette, key=lambda color: color_distance(pixel, color))
-
-    rounded_pixel_data = []
-    for row in pixel_data:
-        rounded_row = [find_closest_color(pixel, palette) for pixel in row]
-        rounded_pixel_data.append(rounded_row)
-    
-    return rounded_pixel_data
-
-
-def extract_palette(pixel_data: List[List[Tuple[int, int, int]]]) -> List[Tuple[int, int, int]]:
-    unique_colors = set()
-    for row in pixel_data:
-        for pixel in row:
-            unique_colors.add(pixel)
-    return list(unique_colors)
 
 
 class Node3D(Drawable3D):

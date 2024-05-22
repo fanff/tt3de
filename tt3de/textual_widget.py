@@ -1,6 +1,7 @@
 import math
 from time import monotonic,time
 from typing import Iterable
+import glm
 from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
@@ -13,6 +14,7 @@ from textual.widgets import (
     Static,
 )
 from abc import ABC, abstractmethod
+from tt3de.pyglmtexture import GLMCamera, GLMRenderContext
 from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
@@ -21,6 +23,9 @@ from textual.geometry import Region
 
 class TT3DView(Widget):
     can_focus = True
+
+
+    use_native_python = True
 
     write_debug_inside = False
     mouse_fps_camera_mode = False
@@ -48,10 +53,16 @@ class TT3DView(Widget):
 
     def __init__(self):
         super().__init__()
-        self.camera = FPSCamera(pos=Point3D(0, 0, 0))
-        self.camera.point_at(Point3D(0, 0, 1))
-        self.rc = RenderContext(self.size.width, self.size.height)
-        self.cwr = Cwr(self.rc)
+
+        if self.use_native_python:
+            self.camera = FPSCamera(pos=Point3D(0, 0, 0))
+            self.camera.point_at(Point3D(0, 0, 1))
+            self.rc = RenderContext(self.size.width, self.size.height)
+
+        else:
+            self.camera = GLMCamera(Point3D(0, 0, 0), 90, 90)
+            self.camera.point_at(glm.vec3(0, 0, 1))
+            self.rc = GLMRenderContext(self.size.width, self.size.height)
         self.initialize()
         self.update_timer = self.set_interval(1.0 / 30, self.calc_frame, pause=False)
         self.last_frame_data_info = {}  
@@ -73,7 +84,7 @@ class TT3DView(Widget):
         self.frame_idx += 1
     
 
-    # override
+    # override for some performance gain
     def get_style_at(self,x,y):
         return Style()
 
@@ -81,10 +92,10 @@ class TT3DView(Widget):
     async def on_event(self, event: events.Event):
         if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
             if event.delta_x!=0:
-                self.camera.rotate_left_right(event.delta_x *(800.0/self.size.width))
+                self.camera.rotate_left_right(math.radians(event.delta_x *(800.0/self.size.width)))
             if event.delta_y!=0:
                 offset = self.screen.get_offset(self)
-                self.camera.pitch=((((event.y-offset.y)/self.size.height)-.5) * 160)
+                self.camera.pitch=math.radians((((event.y-offset.y)/self.size.height)-.5) * 160)
                 self.camera.update_rotation()
 
         elif isinstance(event,events.Click):
@@ -164,10 +175,7 @@ class TT3DView(Widget):
         return result
 
     def render(self):
-        if self.render_step():
-            return self.cwr
-        else:
-            return ""
+        return "render called, should not happen actually :/"
 
     def render_step(self):
         if self.size.width > 1 and self.size.height > 1 and self.update_timer._active.is_set():
@@ -203,11 +211,3 @@ class TT3DView(Widget):
             return True
         return False
     
-
-
-class Cwr:
-    def __init__(self, rc):
-        self.rc: RenderContext = rc
-
-    def __rich_console__(self, console, options) -> Iterable[Segment]:
-        yield from self.rc.iter_canvas()

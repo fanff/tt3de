@@ -1,6 +1,7 @@
 import array
 from math import exp
 from typing import Iterable, List
+from tt3de.asset_load import extract_palette
 from tt3de.tt3de import (
     Camera,
     Drawable3D,
@@ -12,7 +13,6 @@ from tt3de.tt3de import (
     TextureTT3DE,
     Triangle3D,
     exp_grad,
-    extract_palette,
 )
 from rich.color import Color
 from rich.style import Style
@@ -100,7 +100,18 @@ class ImageTexture(TextureAscii):
         # the shading , then the color idx
         self.shade_to_idx: List[List[int]]
         self.shade_count = shade_count
+
+    def unshaded_render(self, uvpoint):
+
+        import glm
+        tranf = glm.vec2(1,1)+(glm.vec2(-1,-1)*uvpoint)
+        imgspace = tranf*glm.vec2(self.image_width-1,self.image_height-1)
+        cuv = glm.clamp(imgspace, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
         
+        palette_idx:int = self.img_color[round(cuv.y)][round(cuv.x)]
+
+        return self.shade_to_idx[0][palette_idx]
+
     def render_point(self, p: PPoint2D) -> int:
         
         shade_idx = clip(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
@@ -185,16 +196,13 @@ class RenderContext:
 
             allpix = elemnt.draw(camera, self.screen_width, self.screen_height)
             for p in allpix:
-                try:
-                    aidx = (self.screen_height - p.y - 1) * self.screen_width + p.x
-                    currdepth = self.depth_array[aidx]
-                    if p.depth < currdepth:
-                        # self.canvas[p.y][p.x] = p.render_pixel(txt)
-                        self.canvas_array[aidx] = elemnt.render_point(p)
-                        self.depth_array[aidx] = p.depth
-                except IndexError as e:
-                    pass
-
+                aidx = (self.screen_height - p.y - 1) * self.screen_width + p.x
+                currdepth = self.depth_array[aidx]
+                if p.depth < currdepth:
+                    # self.canvas[p.y][p.x] = p.render_pixel(txt)
+                    self.canvas_array[aidx] = elemnt.render_point(p)
+                    self.depth_array[aidx] = p.depth
+                
     def iter_canvas(self) -> Iterable[Segment]:
         for idx, i in enumerate(self.canvas_array):
             if idx > 0 and (idx % self.screen_width == 0):
