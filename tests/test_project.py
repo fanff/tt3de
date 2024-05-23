@@ -6,7 +6,7 @@ import unittest
 from context import tt3de
 import glm
 from tt3de.asset_fastloader import fast_load
-from tt3de.pyglmtexture import GLMCamera, GLMMesh3D
+from tt3de.glm.pyglmtexture import GLMCamera, GLMMesh3D
 from tt3de.richtexture import Segmap
 from tt3de.tt3de import Camera, FPSCamera, Mesh3D, Point3D, PointElem, Quaternion, Triangle3D
 from glm import vec3

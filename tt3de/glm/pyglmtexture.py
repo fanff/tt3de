@@ -12,6 +12,7 @@ from tt3de.tt3de import (
     Mesh3D,
     Node3D,
     PPoint2D,
+    Point2D,
     Point3D,
     PointElem,
     TextureCoordinate,
@@ -43,9 +44,16 @@ def quat_from_axis_angle(axis, angle):
 def mat_from_axis_angle(axis, angle):
     return glm.rotate(angle, axis) 
 
+GLMTexturecoord = glm.vec2
+
+
 
 class GLMCamera():
-    def __init__(self, pos: Point3D, screen_width: int = 70, screen_height: int = 80):
+    def __init__(self, pos: Point3D, screen_width: int = 100, screen_height: int = 100, 
+                 fov_radians=70, 
+                 dist_min=1, 
+                 dist_max=100,
+                 character_factor=1.8):
         self.pos = glm.vec3(pos.x, pos.y, pos.z)
 
         self.screen_width = screen_width
@@ -54,15 +62,42 @@ class GLMCamera():
         self.pitch = 0
         self.yaw = 0
 
-        self._rotation:glm.mat4 = glm.mat4(1.0)
+        self.fov_radians=fov_radians
+        self.dist_min=dist_min
+        self.dist_max=dist_max
+        self.character_factor = 1.8
 
+
+        self.perspective:glm.mat4 = glm.mat4(1.0)
+        self._rotation:glm.mat4 = glm.mat4(1.0)
         self.update_rotation()
-        self.perspective = glm.perspectiveFovZO(math.radians(90), self.screen_width, self.screen_height, 1, 100.0)
-    
+        self.update_perspective()
+
     def recalc_fov_h(self, w, h):
-        self.screen_width = w
-        self.screen_height = h
-        self.perspective = glm.perspectiveFovZO(math.radians(90), self.screen_width, self.screen_height*3.0, 1, 100.0)
+        if self.screen_width!=w or self.screen_height!=h:
+            self.screen_width = w
+            self.screen_height = h
+            self.update_perspective()
+
+    def set_projectioninfo(self, fov_radians:float=None, 
+                 dist_min:float=None, 
+                 dist_max:float=None,
+                 character_factor:float=None):
+        
+        if fov_radians is not None:
+            self.fov_radians=fov_radians
+        if dist_min is not None:
+            self.dist_min=dist_min
+        if dist_max is not None:
+            self.dist_max=dist_max
+        if character_factor is not None:
+            self.character_factor=character_factor
+            
+        self.update_perspective()
+
+
+    def update_perspective(self):
+        self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
 
         #self.perspective = glm.orthoZO(-self.screen_width, self.screen_width, -self.screen_height, self.screen_height, 1, 100.0)
     
@@ -76,7 +111,7 @@ class GLMCamera():
         self.update_rotation()
 
     def move_side(self, dist: float):
-        self.pos += glm.cross(self.direction_vector(), glm.vec3(0,1,0))*dist
+        self.pos -= glm.cross(self.direction_vector(), glm.vec3(0,1,0))*dist
         self.update_rotation()
 
 
@@ -128,44 +163,7 @@ class GLMCamera():
     def __repr__(self):
         return str(self)
 
-class GLMTriangle3D(Triangle3D):
-    def draw(self, camera:GLMCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
-        
-        for p in range(3):
-            yield PPoint2D(.5,.5,5)
-        return []
-GLMTexturecoord = glm.vec2
 
-def prefab_mesh_single_triangle():
-    
-    vertices = [
-        Point3D(0, 1, 0),
-        Point3D(-1, -1, 0),
-        Point3D(1, -1, 0),
-    ]
-    texture_coords = [
-        GLMTexturecoord(0.5, 0),
-        GLMTexturecoord(0, 1),
-        GLMTexturecoord(1, 1),
-    ]
-    normals = [
-        Point3D(0, 0, 1),
-        Point3D(0, 0, 1),
-        Point3D(0, 0, 1),
-    ]
-    triangle_vindex = [
-        (0, 1, 2)
-    ]
-    triangles=[Triangle3D(*vertices)]
-
-    
-    m = GLMMesh3D()
-    m.vertices = vertices
-    m.texture_coords[0] = texture_coords
-    m.normals = normals
-    m.triangles_vindex = triangle_vindex
-    m.triangles = triangles
-    return m
 
 
 
@@ -177,8 +175,16 @@ class GLMMesh3D(Mesh3D):
         self.triangles: List[Triangle3D] = []
         self.texture:ImageTexture=None
 
+    def cache_output(self,segmap):
+        self.glm_verticesv4 = glma([vec4(p.x,p.y,p.z,1) for p in self.vertices])
+        self.glm_vertices = glma([vec3(p.x,p.y,p.z) for p in self.vertices])
+        self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
+        self.texture_coords = [[GLMTexturecoord(p.x,p.y) for p in coordlayer] for coordlayer in self.texture_coords]
+        self.texture.cache_output(segmap)
 
-    def render_point(self,weight_to_vertex:glm.vec3,vertex_idx:tuple):
+
+
+    def render_point(self,weight_to_vertex:glm.vec3,vertex_idx:tuple[int,int,int]):
         pa,pb,pc = vertex_idx
         uv1 = self.texture_coords[0][pa]
         uv2 = self.texture_coords[0][pb]
@@ -188,7 +194,7 @@ class GLMMesh3D(Mesh3D):
         weight_to_vertex.y*uv2+
         weight_to_vertex.z*uv3)
 
-        return self.texture.unshaded_render(glm.vec2(uvcoord.x,uvcoord.y))
+        return self.texture.unshaded_render(uvcoord)
         
         #
         #yield glm.vec2(px,py),glm.vec4(uvpoint.x,uvpoint.y,ddot_prod,appdepth)
@@ -238,11 +244,6 @@ class GLMMesh3D(Mesh3D):
             
 
     def draw(self, camera:GLMCamera, screen_width, screen_height) -> Iterable[tuple[vec3,vec3,tuple]]:
-
-        
-        #cameramatrix = glm.lookAt(camera.pos, glm.vec3(0,0,0), glm.vec3(0,1,0))
-        sw,sh = glm.vec2(screen_width,screen_height).xy
-
         
         perspective_matrix = camera.perspective
         screeninfo = glm.vec4(0,0,screen_width,screen_height)
@@ -253,7 +254,7 @@ class GLMMesh3D(Mesh3D):
 
         # rotate normals
         # using self.glm_normals 
-        rnormals = [camera._rotation*n for n in self.glm_normals]
+        rnormals = [glm.inverse(camera._model)*n for n in self.glm_normals]
 
         cam_dir = camera.direction_vector()
 
@@ -272,18 +273,18 @@ class GLMMesh3D(Mesh3D):
             # (rp1.z<1 and rp2.z<1 and rp3.z<0)or ()
             # rp1.z<1 and rp2.z<1 and rp3.z<0)or (
             # dotp1>0 or dotp2>0 or dotp3>0) or (
-            c = (
-                rp1.x<=0 and rp2.x <=0 and rp3.x <= 0) or (
-                rp1.y<=0 and rp2.y <=0 and rp3.y <= 0) or (
-                rp1.x>sw and rp2.x >sw and rp3.x >sw) or (
-                rp1.y>sh and rp2.y >sh and rp3.y >sh)
+            #c = (facing>0 ) or (
+            #    rp1.x<=0 and rp2.x <=0 and rp3.x <= 0) or (
+            #    rp1.y<=0 and rp2.y <=0 and rp3.y <= 0) or (
+            #    rp1.x>sw and rp2.x >sw and rp3.x >sw) or (
+            #    rp1.y>sh and rp2.y >sh and rp3.y >sh)
             #print(f"triangle {pa},{pb},{pc} c={c}")
             #print(f"rps {rp1},{rp2},{rp3}")
             #print(f"dots {dotp1},{dotp2},{dotp3}")
 
             
 
-            if not c:
+            if facing<0 and  (rp1.z>0 and rp2.z>0 and rp3.z>0) and (rp1.z<10 and rp2.z<10 and rp3.z<10):
                 
                 
                 # in screen space as float
@@ -346,16 +347,6 @@ class GLMMesh3D(Mesh3D):
                         py += 1
                     px += 1
                     py = mins.y
-    
-
-    def cache_output(self,segmap):
-        self.glm_verticesv4 = glma([vec4(p.x,p.y,p.z,1) for p in self.vertices])
-        self.glm_vertices = glma([vec3(p.x,p.y,p.z) for p in self.vertices])
-        self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
-        
-        self.texture.cache_output(segmap)
-
-
 
 
 
@@ -406,9 +397,7 @@ class GLMRenderContext:
 
             pixel_iterator = elemnt.draw(camera, self.screen_width, self.screen_height)
             for (pxi,pyi,appdepth),info,vertex_idx in pixel_iterator:
-                
                 aidx = (pyi * self.screen_width) + pxi
-
                 currdepth = self.depth_array[aidx]
                 if appdepth < currdepth:
                     # self.canvas[p.y][p.x] = p.render_pixel(txt)
@@ -432,7 +421,7 @@ class GLMRenderContext:
             #yield self.segmap[i]
         yield currentLine
 
-    def write_text(self, txt: str, x=0, y=0):
+    def write_text(self, txt: str, x:int=0, y:int=0):
         for idx, c in enumerate(txt):
             if c.isprintable():
                 ordc = ord(c)
@@ -447,7 +436,3 @@ class GLMRenderContext:
     def extend(self, elems: List[Drawable3D]):
         for e in elems:
             self.append(e)
-
-    def append_node(self, elem: Node3D):
-        elem.cache_output(self.segmap)
-        self.elements.append(elem)

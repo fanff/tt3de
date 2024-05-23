@@ -21,8 +21,8 @@ from textual.widgets import (
     Static,
 )
 
-from tt3de.asset_fastloader import fast_load
-from tt3de.pyglmtexture import GLMMesh3D, prefab_mesh_single_triangle
+from tt3de.asset_fastloader import fast_load, prefab_mesh_single_triangle
+from tt3de.glm.pyglmtexture import GLMMesh3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -64,7 +64,7 @@ class MyView(TT3DView):
         m = fast_load("models/cube.obj",meshclass)
 
 
-        m=prefab_mesh_single_triangle()
+        m=prefab_mesh_single_triangle(meshclass)
         m.set_texture(texture3)
         #m.triangles=m.triangles[3:4]
         #self.rc.append(m)
@@ -128,12 +128,14 @@ class MyView(TT3DView):
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
-        match event.__class__:
-            case events.MouseMove:
-                pass
-            case _:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(str(event))
+        if isinstance(event,events.MouseMove):
+            pass
+        elif isinstance(event,events.Leave):
+            info_box: Static = self.parent.query_one(".lastevent")
+            info_box.update(f"leaving!")
+        else:
+            info_box: Static = self.parent.query_one(".lastevent")
+            info_box.update(f"{event.__class__}: \n{str(event)}")
 
 
 class Content(Static):

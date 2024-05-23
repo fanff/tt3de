@@ -10,14 +10,14 @@ from pyinstrument import Profiler
 
 setup="""
 from tt3de.asset_fastloader import fast_load
-from tt3de.pyglmtexture import GLMCamera, GLMMesh3D, GLMRenderContext
+from tt3de.glm.pyglmtexture import GLMCamera, GLMMesh3D, GLMRenderContext
 from tt3de.richtexture import ImageTexture, RenderContext, Segmap, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3D
 from glm import vec3
 WIDTH = 300
 HEIGHT = 90
 
-camera = FPSCamera(pos=Point3D(5, 0, 5), WIDTH, HEIGHT)
+camera = FPSCamera(Point3D(5, 0, 5), WIDTH, HEIGHT)
 glmcam = GLMCamera(camera.pos, WIDTH, HEIGHT)
 
 camera.point_at(Point3D(0, 0, 0))

@@ -8,7 +8,7 @@ import tt3de
 from pyinstrument import Profiler
 
 from tt3de.asset_fastloader import fast_load
-from tt3de.pyglmtexture import GLMCamera, GLMMesh3D
+from tt3de.glm.pyglmtexture import GLMCamera, GLMMesh3D
 from tt3de.richtexture import ImageTexture, RenderContext, Segmap, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3D
 from glm import vec3

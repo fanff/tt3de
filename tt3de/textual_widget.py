@@ -14,7 +14,7 @@ from textual.widgets import (
     Static,
 )
 from abc import ABC, abstractmethod
-from tt3de.pyglmtexture import GLMCamera, GLMRenderContext
+from tt3de.glm.pyglmtexture import GLMCamera, GLMRenderContext
 from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
@@ -23,7 +23,6 @@ from textual.geometry import Region
 
 class TT3DView(Widget):
     can_focus = True
-
 
     use_native_python = True
 
