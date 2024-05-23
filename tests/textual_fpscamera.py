@@ -1,11 +1,7 @@
 import math
 from statistics import mean
-from textwrap import dedent
 from time import monotonic, time
 from typing import Sequence
-
-import glm
-
 from context import tt3de
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
@@ -19,12 +15,10 @@ from textual.widgets import (
     Label,
     Markdown,
     Sparkline,
-    Static,Input
+    Static,
 )
-from textual.validation import Function, Number, ValidationResult, Validator
 
 from tt3de.asset_fastloader import fast_load, prefab_mesh_single_triangle
-from tt3de.glm.pyglmtexture import GLMMesh3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -33,41 +27,30 @@ from tt3de.richtexture import (
     build_gizmo_arrows,
     get_cube_vertices,
 )
-
-
-from tt3de.textual.widgets import CameraConfig, FloatSelector, RenderInfo, Vector3Selector
+from tt3de.textual.widgets import CameraConfig, RenderInfo
 from tt3de.textual_widget import TT3DView
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D
 
-def vec3_str(v): 
-    return f"vec3({v.x:.2f},{v.y:.2f},{v.z:.2f})"
-
-
-
-class GLMTester(TT3DView):
-    use_native_python = False
-
-
-    def __init__(self):
-        super().__init__()
-
+class MyView(TT3DView):
+    use_native_python = True
     def initialize(self):
+
+        texture1 = fast_load("models/cube_texture.bmp")
+        texture2 = fast_load("models/cubetest2.bmp")
         texture3 = fast_load("models/cubetest3.bmp")
         
-        meshclass = GLMMesh3D
-        m = fast_load("models/cube.obj",meshclass)
+        meshclass = Mesh3D
+        cube_mesh:Mesh3D = fast_load("models/cube.obj",meshclass)
+        cube_mesh.set_texture(texture3)
+        self.rc.append(cube_mesh)
 
-
-        m.set_texture(texture3)
-        self.rc.append(m)
-
-        # this won't work because bellow the cameraConfig 
-        # widget will update the camera at the init time
-        #self.camera.move_at(glm.vec3(5,  0, 5))
-        #self.camera.point_at(glm.vec3(0.0, 0, 0))
-
+        #m=prefab_mesh_single_triangle(meshclass)
+        #m.set_texture(texture2)
+        #
+        #self.rc.append(m)
+        
         self.write_debug_inside = True
-        self.capture_mouse_events=False
+        self.capture_mouse_events=True
 
 
     def update_step(self, timediff):
@@ -82,45 +65,42 @@ class GLMTester(TT3DView):
         cc.refresh_camera_position((self.camera.pos.x,self.camera.pos.y,self.camera.pos.z))
         cc.refresh_camera_rotation((math.degrees(self.camera.yaw),math.degrees(self.camera.pitch)))
 
-    
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
-        match event.__class__:
-            case events.Leave:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"leaving!")
-            case _:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"{event.__class__}: \n{str(event)}")
- 
+        if isinstance(event,events.MouseMove):
+            pass
+        elif isinstance(event,events.Leave):
+            info_box: Static = self.parent.query_one(".lastevent")
+            info_box.update(f"leaving!")
+        else:
+            info_box: Static = self.parent.query_one(".lastevent")
+            info_box.update(f"{event.__class__}: \n{str(event)}")
+
+
 class Content(Static):
     def compose(self) -> ComposeResult:
-        
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield RenderInfo()
-            yield CameraConfig((0.0,0.0,3.0))
-                
+            yield CameraConfig((0,0,-3))
 
-        yield GLMTester()
+        yield MyView()
 
-            
     def on_camera_config_position_changed(self,event:CameraConfig.PositionChanged):
         x,y,z = event.value
-        viewelem:GLMTester = self.query_one("GLMTester")
-        viewelem.camera.move_at(glm.vec3(x,y,z))
+        viewelem:MyView = self.query_one("MyView")
+        viewelem.camera.move_at(Point3D(x,y,z))
+
     def on_camera_config_orientation_changed(self,event:CameraConfig.OrientationChanged):
-        viewelem:GLMTester = self.query_one("GLMTester")
+        viewelem:MyView = self.query_one("MyView")
         y,p = event.value
         viewelem.camera.set_yaw_pitch(math.radians(y),math.radians(p))
-
     def on_camera_config_projection_changed(self,event:CameraConfig.ProjectionChanged):
-        viewelem:GLMTester = self.query_one("GLMTester")
+        viewelem:MyView = self.query_one("MyView")
 
         fov,dist_min,dist_max,charfactor = event.value
         viewelem.camera.set_projectioninfo(math.radians(fov),dist_min,dist_max,charfactor)
-
 class Demo3dView(App):
     DEFAULT_CSS = """
     Content {
@@ -128,16 +108,20 @@ class Demo3dView(App):
         height: 100%;
         border: solid red;
     }
-    GLMTester {
+    MyView {
         height: 100%;
         width: 5fr;
     }
     .someinfo {
-        height: auto;
+        height: 100%;
         width: 1fr;
         border: solid red;
     }
-    
+
+    Sparkline {
+        margin: 2;
+        height: 5;
+    }
     """
 
     def compose(self) -> ComposeResult:

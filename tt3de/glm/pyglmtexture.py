@@ -50,7 +50,7 @@ GLMTexturecoord = glm.vec2
 
 class GLMCamera():
     def __init__(self, pos: Point3D, screen_width: int = 100, screen_height: int = 100, 
-                 fov_radians=70, 
+                 fov_radians=math.radians(80), 
                  dist_min=1, 
                  dist_max=100,
                  character_factor=1.8):
@@ -98,6 +98,7 @@ class GLMCamera():
 
     def update_perspective(self):
         self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
+        #self.perspective = glm.perspectiveFovRH_ZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
 
         #self.perspective = glm.orthoZO(-self.screen_width, self.screen_width, -self.screen_height, self.screen_height, 1, 100.0)
     
@@ -111,12 +112,12 @@ class GLMCamera():
         self.update_rotation()
 
     def move_side(self, dist: float):
-        self.pos -= glm.cross(self.direction_vector(), glm.vec3(0,1,0))*dist
+        self.pos += glm.cross(self.direction_vector(), glm.vec3(0,1,0))*dist
         self.update_rotation()
 
 
     def move_forward(self, dist: float):
-        self.pos += self.direction_vector()*dist
+        self.pos -= self.direction_vector()*dist
         self.update_rotation()
 
 
@@ -253,23 +254,37 @@ class GLMMesh3D(Mesh3D):
         perspective_matrix = camera.perspective
         screeninfo = glm.vec4(0,0,screen_width,screen_height)
         proj_vertices = ([glm.projectZO( v, camera._model , perspective_matrix, screeninfo) for v in self.glm_vertices])
-        
+
+
+        # vertices_in_camera_space = camera._model*self.glm_verticesv4
         vert_camera = (self.glm_vertices-camera.pos)
         vert_camera_dist = vert_camera.map(glm.length)
 
         # rotate normals
         # using self.glm_normals 
-        rnormals = [glm.inverse(camera._model)*n for n in self.glm_normals]
+        #glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelViewMatrix)));
+        #normal_matrix = glm.inverseTranspose(glm.mat3(camera._model))
+        #normal_matrix = glm.inverseTranspose(glm.mat3(glm.inverse(camera._model)))
 
-        cam_dir = camera.direction_vector()
+        #cp = glm.translate(-camera.pos)
+        rnormals = [camera._model*n for n in self.glm_normals]
 
+        #cam_dir = camera.direction_vector()
+        
         for (triangle_idx,(pa,pb,pc)),tnormal in zip(enumerate(self.triangles_vindex),rnormals):
             
             rp1 = proj_vertices[pa]
             rp2 = proj_vertices[pb]
             rp3 = proj_vertices[pc]
 
-            facing = glm.dot(tnormal,cam_dir )
+            if not (0<rp1.z<1 and 0<rp2.z<1 and 0<rp3.z<1):
+                continue
+            #if not (
+            #    (0<rp1.x<screen_width and 0<rp2.x<screen_width and 0<rp3.x<screen_width) and 
+            #    (0<rp1.y<screen_height and 0<rp2.y<screen_height and 0<rp3.y<screen_height)):
+            #    continue
+            facing = glm.determinant(glm.mat3(rp1,rp2,rp3))
+            #facing = glm.dot(tnormal,cam_dir )
             #dotp1 = glm.dot(rnormals[pa],cam_dir )
             #dotp2 = glm.dot(rnormals[pb],cam_dir )
             #dotp3 = glm.dot(rnormals[pc],cam_dir )
@@ -289,7 +304,7 @@ class GLMMesh3D(Mesh3D):
 
             
 
-            if facing<0 and  (rp1.z>0 and rp2.z>0 and rp3.z>0) and (rp1.z<10 and rp2.z<10 and rp3.z<10):
+            if facing>0 :
                 
                 
                 # in screen space as float
@@ -324,10 +339,10 @@ class GLMMesh3D(Mesh3D):
                         # w1 = (((p2f.y - p3f.y) * (px - p3f.x)) + ((p3f.x - p2f.x) * (py - p3f.y)))/bd
                         # w2 = (((p3f.y - p1f.y) * (px - p3f.x) + (p1f.x - p3f.x) * (py - p3f.y)))/bd
                         # w3 = 1 - w1 - w2
-                        w1 = (((rp2.y - rp3.y) * (px - rp3.x)) + ((rp3.x - rp2.x) * (py - rp3.y)))/bd
-                        w2 = (((rp3.y - rp1.y) * (px - rp3.x) + (rp1.x - rp3.x) * (py - rp3.y)))/bd
+                        w1 = (((rp2.y - rp3.y) * (pxi - rp3.x)) + ((rp3.x - rp2.x) * (pyi - rp3.y)))/bd
+                        w2 = (((rp3.y - rp1.y) * (pxi - rp3.x) + (rp1.x - rp3.x) * (pyi - rp3.y)))/bd
                         w3 = 1 - w1 - w2
-                        if w1 >= 0 and w2 >= 0 and w3 >= 0:
+                        if w1 > 0 and w2 > 0 and w3 > 0:
 
                             dist1 = vert_camera_dist[pa]
                             dist2 = vert_camera_dist[pb]

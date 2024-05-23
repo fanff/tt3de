@@ -1,3 +1,4 @@
+
 import os
 import sys
 
@@ -8,21 +9,25 @@ import tt3de
 from pyinstrument import Profiler
 
 
-setup="""
+
 from tt3de.asset_fastloader import fast_load
 from tt3de.glm.pyglmtexture import GLMCamera, GLMMesh3D, GLMRenderContext
 from tt3de.richtexture import ImageTexture, RenderContext, Segmap, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3D
 from glm import vec3
-WIDTH = 300
-HEIGHT = 90
 
-camera = FPSCamera(Point3D(5, 0, 5), WIDTH, HEIGHT)
-glmcam = GLMCamera(camera.pos, WIDTH, HEIGHT)
+import math
+WIDTH = 260
+HEIGHT = 66
 
-camera.point_at(Point3D(0, 0, 0))
+camera = FPSCamera(Point3D(0, 0, -3), WIDTH, HEIGHT)
+camera.set_yaw_pitch(0.0,0.0)
+camera.set_projectioninfo(math.radians(80),1.0,100.0,1.8)
 
-glmcam.point_at(vec3(0, 0, 0))
+glmcam = GLMCamera(Point3D(0, 0, 2.1), WIDTH, HEIGHT,fov_radians=math.radians(70))
+
+glmcam.set_yaw_pitch(0.0,0.0)
+camera.set_projectioninfo(math.radians(68),0.1,100.0,2.5)
 
 glmMesh:GLMMesh3D = fast_load("models/cube.obj",GLMMesh3D)
 mesh:Mesh3D = fast_load("models/cube.obj",Mesh3D)
@@ -40,7 +45,8 @@ rc= RenderContext(WIDTH,HEIGHT)
 rc.append(mesh)
 glmrc = GLMRenderContext(WIDTH,HEIGHT)
 glmrc.append(glmMesh)
-
+setup="""
+from __main__ import rc,camera,glmrc,glmcam
 """
 
 
