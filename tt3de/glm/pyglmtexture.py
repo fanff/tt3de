@@ -65,7 +65,7 @@ class GLMCamera():
         self.fov_radians=fov_radians
         self.dist_min=dist_min
         self.dist_max=dist_max
-        self.character_factor = 1.8
+        self.character_factor = character_factor
 
 
         self.perspective:glm.mat4 = glm.mat4(1.0)
@@ -126,6 +126,12 @@ class GLMCamera():
 
     def rotate_up_down(self, angle: float):
         self.pitch = self.pitch + angle
+        self.update_rotation()
+
+
+    def set_yaw_pitch(self,yaw:float,pitch:float):
+        self.yaw = yaw
+        self.pitch = pitch
         self.update_rotation()
 
     def update_rotation(self):

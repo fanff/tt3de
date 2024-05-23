@@ -35,13 +35,16 @@ from tt3de.richtexture import (
 )
 
 
-from tt3de.textual.widgets import FloatSelector
+from tt3de.textual.widgets import CameraConfig, FloatSelector, RenderInfo, Vector3Selector
 from tt3de.textual_widget import TT3DView
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D
 
 def vec3_str(v): 
     return f"vec3({v.x:.2f},{v.y:.2f},{v.z:.2f})"
-class MyView(TT3DView):
+
+
+
+class GLMTester(TT3DView):
     use_native_python = False
 
 
@@ -73,20 +76,14 @@ class MyView(TT3DView):
         self.rc.update_wh(self.size.width, self.size.height)
 
     def post_render_step(self):
-        spark: Sparkline = self.parent.query_one(".tsrender_dur")
-        spark.data = spark.data[1:] + [self.last_frame_data_info.get("tsrender_dur", 0)]
+        rinfo:RenderInfo = self.parent.query_one("RenderInfo")
+        rinfo.append_frame_duration(self.last_frame_data_info.get("tsrender_dur", 0))
+        rinfo.update_frame_count(self.frame_idx)
+        cc:CameraConfig = self.parent.query_one("CameraConfig")
+        cc.refresh_camera_position((self.camera.pos.x,self.camera.pos.y,self.camera.pos.z))
+        cc.refresh_camera_rotation((math.degrees(self.camera.yaw),math.degrees(self.camera.pitch)))
 
-        l: Label = self.parent.query_one(".frame_idx")
-        l.update(f"Frame: {self.frame_idx}")
-
-        l: Label = self.parent.query_one(".render_label")
-        l.update(f"Render: {(1000*mean(spark.data)):.2f} ms")
-        
-        camera_msg = dedent(f"""Pos: {vec3_str(self.camera.pos)}
-Dir: {self.camera.direction_vector()}
-Yaw: {self.camera.yaw:.2f} Pitch: {self.camera.pitch:.2f}""")
-        self.parent.query_one(".camera_label").update(camera_msg)
-
+    
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
@@ -100,54 +97,30 @@ Yaw: {self.camera.yaw:.2f} Pitch: {self.camera.pitch:.2f}""")
  
 class Content(Static):
     def compose(self) -> ComposeResult:
-        keep_count = 50
+        
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
+            yield RenderInfo()
+            yield CameraConfig()
+                
 
+        yield GLMTester()
 
-            with Container() as c:
-                yield Label("Render", classes="render_label")
-                yield Label("Frame idx", classes="frame_idx")
-                yield Sparkline(
-                    [0] * keep_count, summary_function=mean, classes="tsrender_dur"
-                )
-            with Container() as c:
-                yield Label("Camera")
-                yield Static("", classes="camera_label")
+            
+    def on_camera_config_position_changed(self,event:CameraConfig.PositionChanged):
+        x,y,z = event.value
+        viewelem:GLMTester = self.query_one("GLMTester")
+        viewelem.camera.move_at(glm.vec3(x,y,z))
+    def on_camera_config_orientation_changed(self,event:CameraConfig.OrientationChanged):
+        viewelem:GLMTester = self.query_one("GLMTester")
+        y,p = event.value
+        viewelem.camera.set_yaw_pitch(math.radians(y),math.radians(p))
 
-                yield FloatSelector(50,130,80,id="input_camera_fov")
-                yield FloatSelector(0.1,20,1.0, id="input_camera_mindepth")
-                yield FloatSelector(10,100,50.,id="input_camera_maxdepth")
-                yield FloatSelector(0.5,2.5,1.8,id="input_character_factor")
-                #yield Input(value="90",placeholder="90",type="integer",id="input_camera_fov",
-                #            validators=[Number(minimum=1,maximum=180)],validate_on="changed")
-                #yield Input(value="1.0",placeholder="1.0",type="number",id="input_camera_mindepth",
-                #            validators=[Number(minimum=1,maximum=100000)])
-                #yield Input(value="100.0",placeholder="100",type="number",id="input_camera_maxdepth",
-                #            validators=[Number(minimum=1,maximum=100000)])
-                #yield Input(value="1.8",placeholder="1.8",type="number",id="input_character_factor",
-                #            validators=[Number(minimum=0.1,maximum=5)])
+    def on_camera_config_projection_changed(self,event:CameraConfig.ProjectionChanged):
+        viewelem:GLMTester = self.query_one("GLMTester")
 
-
-
-        yield MyView()
-
-            #    case _:
-            #        return 
-    def on_float_selector_changed(self,event:FloatSelector.Changed) -> None:
-        viewelem:MyView = self.query_one("MyView")
-        valuef = float(event.value)
-        match event.input.id:
-            case "input_camera_fov":
-                viewelem.camera.set_projectioninfo(fov_radians=math.radians(valuef))
-            case "input_camera_mindepth":
-                viewelem.camera.set_projectioninfo(dist_min=valuef)
-            case "input_camera_maxdepth":
-                viewelem.camera.set_projectioninfo(dist_max=valuef)
-            case "input_character_factor":
-                viewelem.camera.set_projectioninfo(character_factor=valuef)
-
-
+        fov,dist_min,dist_max,charfactor = event.value
+        viewelem.camera.set_projectioninfo(math.radians(fov),dist_min,dist_max,charfactor)
 
 class Demo3dView(App):
     DEFAULT_CSS = """
@@ -156,19 +129,21 @@ class Demo3dView(App):
         height: 100%;
         border: solid red;
     }
-    MyView {
+    GLMTester {
         height: 100%;
         width: 5fr;
     }
     .someinfo {
-        height: 100%;
+        height: auto;
         width: 1fr;
         border: solid red;
     }
+    .render_container{
+        height: auto;
+    }
 
     Sparkline {
-        margin: 2;
-        height: 5;
+        margin: 1;
     }
     """
 

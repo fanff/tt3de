@@ -50,8 +50,16 @@ class TT3DView(Widget):
     }
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self,name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+        disabled: bool = False,):
+        super().__init__(
+            name=name,
+            id=id,
+            classes=classes,
+            disabled=disabled
+        )
 
         if self.use_native_python:
             self.camera = FPSCamera(pos=Point3D(0, 0, 0))

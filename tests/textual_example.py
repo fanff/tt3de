@@ -2,9 +2,6 @@ import math
 from statistics import mean
 from time import monotonic, time
 from typing import Sequence
-
-import glm
-
 from context import tt3de
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
@@ -22,7 +19,6 @@ from textual.widgets import (
 )
 
 from tt3de.asset_fastloader import fast_load, prefab_mesh_single_triangle
-from tt3de.glm.pyglmtexture import GLMMesh3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -31,17 +27,12 @@ from tt3de.richtexture import (
     build_gizmo_arrows,
     get_cube_vertices,
 )
+from tt3de.textual.widgets import CameraConfig, RenderInfo
 from tt3de.textual_widget import TT3DView
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D
 
-
 class MyView(TT3DView):
-    use_native_python = False
-
-
-    def __init__(self):
-        super().__init__()
-
+    use_native_python = True
     def initialize(self):
 
         
@@ -60,12 +51,13 @@ class MyView(TT3DView):
         texture2 = fast_load("models/cubetest2.bmp")
         texture3 = fast_load("models/cubetest3.bmp")
         
-        meshclass = GLMMesh3D
-        m = fast_load("models/cube.obj",meshclass)
-
+        meshclass = Mesh3D
+        cube_mesh:Mesh3D = fast_load("models/cube.obj",meshclass)
+        cube_mesh.set_texture(texture3)
+        self.rc.append(cube_mesh)
 
         m=prefab_mesh_single_triangle(meshclass)
-        m.set_texture(texture3)
+        m.set_texture(texture2)
         #m.triangles=m.triangles[3:4]
         #self.rc.append(m)
         self.rc.append(m)
@@ -92,8 +84,8 @@ class MyView(TT3DView):
 
 
         #self.camera.move_at(Point3D(5,  0, 5))
-        self.camera.move_at(glm.vec3(5,  0, 5))
-        self.camera.point_at(glm.vec3(0.0, 0, 0))
+        self.camera.move_at(Point3D(5,  0, 5))
+        self.camera.point_at(Point3D(0.0, 0, 0))
 
         self.write_debug_inside = True
         self.capture_mouse_events=False
@@ -106,8 +98,8 @@ class MyView(TT3DView):
         tf = 1
         c1 = math.cos(tf * ts) * ampxz
         c2 = math.sin(tf * ts) * ampxz
-        #self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
-        #self.camera.point_at(Point3D(0.0, 0, 0))
+        self.camera.move_at(Point3D(c1,  math.cos(tf * ts) * ampy, c2))
+        self.camera.point_at(Point3D(0.0, 0, 0))
 
         #self.rc.elements[0].rotation = Quaternion.from_euler(0,0,tf * ts)
 
@@ -116,14 +108,12 @@ class MyView(TT3DView):
 
     def post_render_step(self):
 
-        spark: Sparkline = self.parent.query_one(".tsrender_dur")
-        spark.data = spark.data[1:] + [self.last_frame_data_info.get("tsrender_dur", 0)]
-
-        l: Label = self.parent.query_one(".frame_idx")
-        l.update(f"Frame: {self.frame_idx}")
-
-        l: Label = self.parent.query_one(".render_label")
-        l.update(f"Render: {(1000*mean(spark.data)):.2f} ms")
+        rinfo:RenderInfo = self.parent.query_one("RenderInfo")
+        rinfo.append_frame_duration(self.last_frame_data_info.get("tsrender_dur", 0))
+        rinfo.update_frame_count(self.frame_idx)
+        cc:CameraConfig = self.parent.query_one("CameraConfig")
+        cc.refresh_camera_position((self.camera.pos.x,self.camera.pos.y,self.camera.pos.z))
+        cc.refresh_camera_rotation((math.degrees(self.camera.yaw),math.degrees(self.camera.pitch)))
 
     async def on_event(self, event: events.Event):
         await super().on_event(event)
@@ -140,20 +130,21 @@ class MyView(TT3DView):
 
 class Content(Static):
     def compose(self) -> ComposeResult:
-        keep_count = 50
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
-
-            yield Label("Frame idx", classes="frame_idx")
-
-            yield Label("Render", classes="render_label")
-            yield Sparkline(
-                [0] * keep_count, summary_function=mean, classes="tsrender_dur"
-            )
+            yield RenderInfo()
+            yield CameraConfig()
 
         yield MyView()
+    def on_camera_config_orientation_changed(self,event:CameraConfig.OrientationChanged):
+        viewelem:MyView = self.query_one("MyView")
+        y,p = event.value
+        viewelem.camera.set_yaw_pitch(math.radians(y),math.radians(p))
+    def on_camera_config_projection_changed(self,event:CameraConfig.ProjectionChanged):
+        viewelem:MyView = self.query_one("MyView")
 
-
+        fov,dist_min,dist_max,charfactor = event.value
+        viewelem.camera.set_projectioninfo(math.radians(fov),dist_min,dist_max,charfactor)
 class Demo3dView(App):
     DEFAULT_CSS = """
     Content {

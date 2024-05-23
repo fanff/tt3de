@@ -34,9 +34,13 @@ def prefab_mesh_single_triangle(meshcls):
     triangle_vindex = [
         (0, 1, 2)
     ]
-    triangles=[Triangle3D(*vertices)]
 
+    t = Triangle3D(*vertices)
+
+    t = Triangle3D(*vertices)
+    t.uvmap= [list(texture_coords)]
     
+    triangles=[t]
     m = meshcls()
     m.vertices = vertices
     m.texture_coords[0] = texture_coords

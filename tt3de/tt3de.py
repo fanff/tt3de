@@ -314,22 +314,56 @@ class Camera:
 class FPSCamera():
 
     NO_PROJECT = PPoint2D(0,0,0)
-    def __init__(self, pos: Point3D, fov_w: float = 90, fov_h: float = 90):
+    def __init__(self, pos: Point3D, screen_width: int = 100, screen_height: int = 100, 
+                 fov_radians=70, 
+                 dist_min=1, 
+                 dist_max=100,
+                 character_factor=1.8):
         self.pos = pos
-        self.fov_w = fov_w
-        self.fov_h = fov_h
+
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+
+        self.fov_w = math.radians(fov_radians)
+        self.fov_h = math.radians(fov_radians)
+
+        self.dist_min=dist_min
+        self.dist_max=dist_max
+        self.character_factor = character_factor
 
         self.pitch = 0
         self.yaw = 0
         self._rotation:Quaternion
         self._rotation_invers:Quaternion
 
-
+        
         self.worldobj_rotation:Quaternion = Quaternion.from_euler(0,0,0)
         self.update_rotation()
-    def recalc_fov_h(self, w, h):
-        r = (w / h) * 0.5
-        self.fov_h = self.fov_w * r
+        self.recalc_fov_h(screen_width,screen_height,force_recalc=True)
+
+
+    def set_projectioninfo(self, fov_radians:float=None, 
+                 dist_min:float=None, 
+                 dist_max:float=None,
+                 character_factor:float=None):
+        
+        if fov_radians is not None:
+            self.fov_w = fov_radians
+        if dist_min is not None:
+            self.dist_min=dist_min
+        if dist_max is not None:
+            self.dist_max=dist_max
+        if character_factor is not None:
+            self.character_factor=character_factor
+        self.recalc_fov_h(self.screen_width,self.screen_height,force_recalc=True)
+
+
+    def recalc_fov_h(self, w, h,force_recalc=False):
+        if  force_recalc or self.screen_width!=w or self.screen_height!=h:
+            r = (float(h) / w) 
+            self.fov_h = self.fov_w * r * self.character_factor
+
     def rotate_left_right(self, angle: float):
         self.yaw += angle
         self.update_rotation()
@@ -338,9 +372,14 @@ class FPSCamera():
         self.pitch = max(min(self.pitch + angle, 80), -80)
         self.update_rotation()
 
+    def set_yaw_pitch(self , yaw,pitch):
+        self.yaw = yaw
+        self.pitch = pitch
+        self.update_rotation()
+
     def update_rotation(self):
-        q_pitch = Quaternion.from_axis_angle((1, 0, 0), math.radians(self.pitch))
-        q_yaw = Quaternion.from_axis_angle((0, 1, 0), math.radians(self.yaw))
+        q_pitch = Quaternion.from_axis_angle((1, 0, 0), (self.pitch))
+        q_yaw = Quaternion.from_axis_angle((0, 1, 0), (self.yaw))
         self._rotation = q_yaw * q_pitch
         self._rotation_invers = self._rotation.inverse()
 
@@ -369,10 +408,8 @@ class FPSCamera():
 
     def point_at(self, target: Point3D):
         direction = target - self.pos
-        self.yaw = math.degrees(math.atan2(direction.x, direction.z))
-        self.pitch = math.degrees(
-            math.atan2(-direction.y, math.sqrt(direction.x**2 + direction.z**2))
-        )
+        self.yaw = math.atan2(direction.x, direction.z)
+        self.pitch = math.atan2(-direction.y, math.sqrt(direction.x**2 + direction.z**2))
         self.update_rotation()
 
     @property
@@ -393,10 +430,10 @@ class FPSCamera():
 
         # Perspective projection onto the screen space (0,1)
         x = (camera_space_point.x / camera_space_point.z) * (
-            radians(self.fov_w) / 2
+            (math.pi-self.fov_w) / 2
         ) + 0.5
         y = (camera_space_point.y / camera_space_point.z) * (
-            radians(self.fov_h) / 2
+            (math.pi-self.fov_h) / 2
         ) + 0.5
 
         # Calculate the distance from the camera to the point
