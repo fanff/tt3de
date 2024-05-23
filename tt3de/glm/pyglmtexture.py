@@ -2,7 +2,7 @@
 import array
 from math import exp
 import math
-from typing import Iterable, List
+from typing import Iterable, List, Tuple
 from tt3de.richtexture import ImageTexture, Segmap
 from tt3de.tt3de import (
     Camera,
@@ -188,17 +188,16 @@ class GLMMesh3D(Mesh3D):
         self.texture_coords = [[GLMTexturecoord(p.x,p.y) for p in coordlayer] for coordlayer in self.texture_coords]
         self.texture.cache_output(segmap)
 
+        self.glm_uvmap = [[[glm.vec2(uv.x,uv.y) for uv in uvlayer] for uvlayer in t.uvmap] for t in self.triangles]
 
 
-    def render_point(self,weight_to_vertex:glm.vec3,vertex_idx:tuple[int,int,int]):
-        pa,pb,pc = vertex_idx
-        uv1 = self.texture_coords[0][pa]
-        uv2 = self.texture_coords[0][pb]
-        uv3 = self.texture_coords[0][pc]
+    def render_point(self,weight_to_vertex:glm.vec3,vertex_idx:tuple[int,int,int],face_idx:int):
+
+        uv1,uv2,uv3 = self.glm_uvmap[face_idx][0]
 
         uvcoord = (weight_to_vertex.x*uv1 +
-        weight_to_vertex.y*uv2+
-        weight_to_vertex.z*uv3)
+                    weight_to_vertex.y*uv2+
+                    weight_to_vertex.z*uv3)
 
         return self.texture.unshaded_render(uvcoord)
         
@@ -264,7 +263,7 @@ class GLMMesh3D(Mesh3D):
 
         cam_dir = camera.direction_vector()
 
-        for (pa,pb,pc),tnormal in zip(self.triangles_vindex,rnormals):
+        for (triangle_idx,(pa,pb,pc)),tnormal in zip(enumerate(self.triangles_vindex),rnormals):
             
             rp1 = proj_vertices[pa]
             rp2 = proj_vertices[pb]
@@ -338,7 +337,7 @@ class GLMMesh3D(Mesh3D):
                             #appxp = rp1*w1 + rp2*w2 + rp3*w3
                             appdepth = w1 * dist1 + w2 * dist2 + w3 * dist3
 
-                            yield (pxi,pyi,appdepth),vec3(w1,w2,w3),(pa,pb,pc)
+                            yield (pxi,pyi,appdepth),vec3(w1,w2,w3),(pa,pb,pc),triangle_idx
 
                             #continue
                             #ddot_prod = w1 * dotp1 + w2 * dotp2 + w3 * dotp3
@@ -402,12 +401,12 @@ class GLMRenderContext:
         for elemnt in self.elements:
 
             pixel_iterator = elemnt.draw(camera, self.screen_width, self.screen_height)
-            for (pxi,pyi,appdepth),info,vertex_idx in pixel_iterator:
+            for (pxi,pyi,appdepth),vertex_weight,vertex_idx,triangle_idx in pixel_iterator:
                 aidx = (pyi * self.screen_width) + pxi
                 currdepth = self.depth_array[aidx]
                 if appdepth < currdepth:
                     # self.canvas[p.y][p.x] = p.render_pixel(txt)
-                    self.canvas_array[aidx] = elemnt.render_point(info,vertex_idx)
+                    self.canvas_array[aidx] = elemnt.render_point(vertex_weight,vertex_idx,triangle_idx)
                     self.depth_array[aidx] = appdepth
                 
     def iter_canvas(self) -> Iterable[Segment]:

@@ -1,7 +1,7 @@
 
 from dataclasses import dataclass
 from statistics import mean
-from typing import Any, Coroutine, List, Tuple
+from typing import Any, Coroutine, List
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
 from textual.containers import Container
@@ -32,13 +32,6 @@ from textual.widgets import (
 from textual.message import Message
 from textual.layouts import horizontal
 
-from tt3de.glm.pyglmtexture import GLMMesh3D
-from tt3de.richtexture import (
-    DistGradBGShade,
-    ImageTexture,
-    RenderContext,
-    StaticTexture,
-)
 from tt3de.textual_widget import TT3DView
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D
 
@@ -219,7 +212,7 @@ class Vector3Selector(Widget):
         input: 'Vector3Selector'
         """The `FloatSelector` widget that was changed."""
 
-        value: Tuple[float]
+        value: tuple[float]
         """The value that the input was changed to."""
 
     _selector_list:List[FloatSelector] =[]
@@ -291,38 +284,39 @@ class CameraConfig(Widget):
         input: 'CameraConfig'
         """The `FloatSelector` widget that was changed."""
 
-        value: Tuple[float,float,float]
+        value: tuple[float,float,float]
         """The value that the input was changed to."""
 
     @dataclass
     class ProjectionChanged(Message):
         input: 'CameraConfig'
-        value: Tuple[float,float,float,float]
+        value: tuple[float,float,float,float]
     @dataclass
     class OrientationChanged(Message):
         input: 'CameraConfig'
-        value: Tuple[float,float]
+        value: tuple[float,float]
 
-
+    _init_camera_position = None
     def __init__(self,
+                 initial_cam_position=(0.0,0.0,0.0),
                  name: str | None = None,
                  id: str | None = None,
                  classes: str | None = None,
                  disabled: bool = False,
                  ):
         super().__init__(id=id,classes=classes,disabled=disabled,name=name)
+        self._init_camera_position = initial_cam_position
 
     def compose(self):
         yield Label("Position:")
         yield Vector3Selector(minvalue=(-10,-10,-10),
                             maxvalue=(10,10,10),
-                            initial_value=(0.0,0.0,0.0),
-                            
+                            initial_value=self._init_camera_position,
                             id="input_camera_position")
 
         yield Label("Angle: Yaw,Pitch")
         
-        yield FloatSelector(0.0,360.0,0.0,mouse_factor=3.0,button_factor=10.0,id="input_camera_yaw")
+        yield FloatSelector(-1200.0,1200.0,0.0,mouse_factor=3.0,button_factor=10.0,id="input_camera_yaw")
         yield FloatSelector(-110.,110,0.0,mouse_factor=3.0,button_factor=10.0,id="input_camera_pitch")
 
         yield Label("Projection: Fov,min/max depth, factor")
@@ -364,7 +358,7 @@ class CameraConfig(Widget):
             self.post_message(CameraConfig.PositionChanged(self, event.value))
 
 
-    def refresh_camera_position(self,position:Tuple[float,float,float], no_events=True):
+    def refresh_camera_position(self,position:tuple[float,float,float], no_events=True):
         elem:Vector3Selector = self.query_one("#input_camera_position")
         x,y,z = position
 
@@ -376,7 +370,9 @@ class CameraConfig(Widget):
             elem._selector_list[0].current_buffer = x
             elem._selector_list[1].current_buffer = y
             elem._selector_list[2].current_buffer = z
-    def refresh_camera_rotation(self,attitude:Tuple[float,float], no_events=True):
+
+
+    def refresh_camera_rotation(self,attitude:tuple[float,float], no_events=True):
         yaw,pitch = attitude
         if no_events:
             self.query_one(f"#input_camera_yaw").current_value = yaw

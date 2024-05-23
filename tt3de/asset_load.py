@@ -142,6 +142,7 @@ def load_obj(cls,obj_bytes):
 
 
                 if len(vertex_indices) > 1 and vertex_indices[1]:
+                    # index of the point2D of the uv
                     tex_coord_index = int(vertex_indices[1]) - 1
                     face_tex_coords[0].append(texture_coords[0][tex_coord_index])
                 else:

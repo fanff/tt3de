@@ -104,8 +104,7 @@ class ImageTexture(TextureAscii):
     def unshaded_render(self, uvpoint):
 
         import glm
-        tranf = glm.vec2(1,1)+(glm.vec2(-1,-1)*uvpoint)
-        imgspace = tranf*glm.vec2(self.image_width-1,self.image_height-1)
+        imgspace = uvpoint*glm.vec2(self.image_width-1,self.image_height-1)
         cuv = glm.clamp(imgspace, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
         
         palette_idx:int = self.img_color[round(cuv.y)][round(cuv.x)]

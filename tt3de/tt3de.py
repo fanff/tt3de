@@ -583,10 +583,10 @@ class Triangle3D(Drawable3D):
         dotp2 = rnormal.dot(rrp2 - camera.pos) 
         dotp3 = rnormal.dot(rrp3 - camera.pos) 
 
-
+        min_depth = camera.dist_min
         
         c = (dotp1>0 or dotp2>0 or dotp3>0) or (
-            pp1.depth<1 and pp2.depth<1 and pp3.depth<1)or (
+            pp1.depth<min_depth and pp2.depth<min_depth and pp3.depth<min_depth)or (
             pp1.x<=0 and pp2.x <=0 and pp3.x <= 0) or (
             pp1.y<=0 and pp2.y <=0 and pp3.y <= 0) or (
             pp1.x>=1 and pp2.x >=1 and pp3.x >=1) or (
@@ -708,7 +708,7 @@ class Mesh3D(Drawable3D):
         self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
 
-        self.triangles_vindex: List[tuple[int]] = []
+        self.triangles_vindex: List[Tuple[int,int,int]] = []
 
 
         self.texture:TextureTT3DE=None

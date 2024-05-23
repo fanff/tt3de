@@ -63,9 +63,10 @@ class GLMTester(TT3DView):
         m.set_texture(texture3)
         self.rc.append(m)
 
-
-        self.camera.move_at(glm.vec3(5,  0, 5))
-        self.camera.point_at(glm.vec3(0.0, 0, 0))
+        # this won't work because bellow the cameraConfig 
+        # widget will update the camera at the init time
+        #self.camera.move_at(glm.vec3(5,  0, 5))
+        #self.camera.point_at(glm.vec3(0.0, 0, 0))
 
         self.write_debug_inside = True
         self.capture_mouse_events=False
@@ -101,7 +102,7 @@ class Content(Static):
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield RenderInfo()
-            yield CameraConfig()
+            yield CameraConfig((5.0,0.0,5.0))
                 
 
         yield GLMTester()
