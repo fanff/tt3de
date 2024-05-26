@@ -1,6 +1,8 @@
 import array
 from math import exp
 from typing import Iterable, List
+
+import glm
 from tt3de.asset_load import extract_palette
 from tt3de.tt3de import (
     Camera,
@@ -20,7 +22,7 @@ from rich.text import Segment
 from textual.strip import Strip
 
 class TextureAscii(TextureTT3DE):
-    def render_point(self, p: PPoint2D) -> int:
+    def render_point(self, *args) -> int:
         pass
 
     def cache_output(self, segmap: "Segmap"):
@@ -32,7 +34,7 @@ class StaticTexture(TextureAscii):
         self.s = Segment(char, style=Style(color=color, bgcolor=bgcolor))
         self.value = 4
 
-    def render_point(self, p: PPoint2D) -> int:
+    def render_point(self, *args) -> int:
         return self.value
 
     def cache_output(self, segmap: "Segmap"):
@@ -101,15 +103,18 @@ class ImageTexture(TextureAscii):
         self.shade_to_idx: List[List[int]]
         self.shade_count = shade_count
 
-    def unshaded_render(self, uvpoint):
-
+    def glm_render(self, uvpoint:glm.vec2,normal_dot:float):
+        
         import glm
-        imgspace = uvpoint*glm.vec2(self.image_width-1,self.image_height-1)
-        cuv = glm.clamp(imgspace, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
+        cuv = uvpoint*glm.vec2(self.image_width-1,self.image_height-1)
+        #cuv = glm.clamp(cuv, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
         
         palette_idx:int = self.img_color[round(cuv.y)][round(cuv.x)]
 
-        return self.shade_to_idx[0][palette_idx]
+
+        shade_idx = clamp(self.shade_count-round(abs(normal_dot)*self.shade_count),0,self.shade_count-1)
+
+        return self.shade_to_idx[shade_idx][palette_idx]
 
     def render_point(self, p: PPoint2D) -> int:
         
@@ -126,19 +131,19 @@ class ImageTexture(TextureAscii):
 
         self.shade_to_idx = []
         for i in range(self.shade_count):
-            colorshade = 1.0 - (i / self.shade_count)
+            colorshade = 1.0 - (i / (self.shade_count))
             self.shade_to_idx.append([0]*len(self.color_palette))
             
             for palette_idx,(r, g, b) in enumerate(self.color_palette):
                 background_c = Color.from_rgb(r * colorshade , g * colorshade , b * colorshade )
                 front_c = Color.from_rgb(r , g , b )
-                s = Segment("▒", style=Style(color=front_c, bgcolor=background_c))
+                s = Segment("⠿", style=Style(color=background_c, bgcolor=front_c,dim=False,reverse=False))
                 charidx = segmap.add_char(s)
                 self.shade_to_idx[i][palette_idx] = charidx
 
                 if i == 0:
                     # keep the color unshaded with the palette_idx value of the color
-                    buff_color_to_int[background_c] = palette_idx
+                    buff_color_to_int[front_c] = palette_idx
 
         for r in self.img_data:
             crow = []

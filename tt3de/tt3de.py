@@ -451,7 +451,8 @@ class FPSCamera():
 class Drawable3D:
     texture: "TextureTT3DE"
 
-    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]: ...
+    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]: 
+        raise NotImplemented("")
     def cache_output(self,segmap):
         raise NotImplemented("")
 

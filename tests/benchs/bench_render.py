@@ -17,8 +17,8 @@ from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Point3D, PointElem, Triangle3
 from glm import vec3
 
 import math
-WIDTH = 260
-HEIGHT = 66
+WIDTH = 300
+HEIGHT = 80
 
 camera = FPSCamera(Point3D(0, 0, -3), WIDTH, HEIGHT)
 camera.set_yaw_pitch(0.0,0.0)
@@ -52,14 +52,17 @@ from __main__ import rc,camera,glmrc,glmcam
 
 if __name__ == '__main__':
 
-    itercount = 100
+    itercount = 50
     
     import timeit
 
-    res= timeit.timeit(stmt="(rc.render(camera))", number=itercount,
+    durpy= timeit.timeit(stmt="(rc.render(camera))", number=itercount,
                        setup=setup)
-    print(f"{(res/itercount)*1000:.5f} ms per iteration")
+    print(f"{(durpy/itercount)*1000:.5f} ms per iteration")
     
-    res= timeit.timeit(stmt="(glmrc.render(glmcam))", number=itercount,
+    durglm= timeit.timeit(stmt="(glmrc.render(glmcam))", number=itercount,
                        setup=setup)
-    print(f"{(res/itercount)*1000:.5f} ms per iteration")
+    print(f"{(durglm/itercount)*1000:.5f} ms per iteration")
+
+
+    print(f"factor : {(durpy/durglm):.2f}")

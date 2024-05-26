@@ -47,6 +47,7 @@ class TT3DView(Widget):
     TT3DView {
         height: 100%;
         width: 100%;
+        
     }
     """
 

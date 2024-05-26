@@ -41,6 +41,21 @@ from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Q
 
 
 
+
+class GLMTester2(TT3DView):
+    use_native_python = False
+
+
+    def __init__(self):
+        super().__init__()
+
+    def initialize(self):
+        pass
+    def update_step(self, timediff):
+        self.camera.recalc_fov_h(self.size.width, self.size.height)
+        self.rc.update_wh(self.size.width, self.size.height)
+
+
 class GLMTester(TT3DView):
     use_native_python = False
 
@@ -91,7 +106,7 @@ class GLMTester(TT3DView):
         self.rc.update_wh(self.size.width, self.size.height)
         ts = self.reftime-time()
 
-        tsfactor = 0.5
+        tsfactor = 2
 
         rot = ts*tsfactor
 
@@ -103,70 +118,28 @@ class GLMTester(TT3DView):
             e.local_transform = glm.translate(glm.vec2(2*(idx),0.0))*glm.rotate(rot*(idx+1))*atransform
         self.root2Dnode.local_transform = glm.translate(glm.vec2(.5,.5))*glm.scale(glm.vec2(.2,.2))
 
-
-
-    def post_render_step(self):
-        rinfo:RenderInfo = self.parent.query_one("RenderInfo")
-        rinfo.append_frame_duration(self.last_frame_data_info.get("tsrender_dur", 0))
-        rinfo.update_frame_count(self.frame_idx)
-        cc:CameraConfig = self.parent.query_one("CameraConfig")
-        cc.refresh_camera_position((self.camera.pos.x,self.camera.pos.y,self.camera.pos.z))
-        cc.refresh_camera_rotation((math.degrees(self.camera.yaw),math.degrees(self.camera.pitch)))
-
-    
-    async def on_event(self, event: events.Event):
-        await super().on_event(event)
-
-        match event.__class__:
-            case events.Leave:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"leaving!")
-            case _:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"{event.__class__}: \n{str(event)}")
- 
+        
 class Content(Static):
     def compose(self) -> ComposeResult:
-        
-        with Container(classes="someinfo"):
-            yield Static("", classes="lastevent")
-            yield RenderInfo()
-            yield CameraConfig((0.0,0.0,3.0))
-                
-
+        yield GLMTester2()
         yield GLMTester()
 
             
-    def on_camera_config_position_changed(self,event:CameraConfig.PositionChanged):
-        x,y,z = event.value
-        viewelem:GLMTester = self.query_one("GLMTester")
-        viewelem.camera.move_at(glm.vec3(x,y,z))
-    def on_camera_config_orientation_changed(self,event:CameraConfig.OrientationChanged):
-        viewelem:GLMTester = self.query_one("GLMTester")
-        y,p = event.value
-        viewelem.camera.set_yaw_pitch(math.radians(y),math.radians(p))
-
-    def on_camera_config_projection_changed(self,event:CameraConfig.ProjectionChanged):
-        viewelem:GLMTester = self.query_one("GLMTester")
-
-        fov,dist_min,dist_max,charfactor = event.value
-        viewelem.camera.set_projectioninfo(math.radians(fov),dist_min,dist_max,charfactor)
-
 class Demo3dView(App):
     DEFAULT_CSS = """
     Content {
         layout: horizontal;
         height: 100%;
-        border: solid red;
+        
     }
-    GLMTester {
+    TT3DView {
+        
         height: 100%;
-        width: 5fr;
-    }
-    .someinfo {
-        height: auto;
         width: 1fr;
-        border: solid red;
+    }
+
+    GLMTester2 {
+        
     }
     
     """
@@ -175,14 +148,6 @@ class Demo3dView(App):
 
         yield Header()
         yield Content()
-
-    async def on_mount(self):
-        pass
-
-
-async def run():
-    pass
-
 
 if __name__ == "__main__":
 
