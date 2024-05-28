@@ -26,7 +26,7 @@ from rich.text import Segment
 from textual.strip import Strip
 
 import glm
-from glm import array as glma, i32vec2, ivec2, ivec3, mat3, vec2
+from glm import array as glma, i32vec2, ivec2, ivec3, mat3, mat4, vec2
 from glm import quat 
 from glm import vec3, vec4
 def p2d_tovec2(p:Point2D)->vec2:
@@ -67,7 +67,11 @@ GLMTexturecoord = glm.vec2
 GLMTriangle=glm.mat3
 IVEC2_YES = ivec2(1,1)
 VEC3_YES = vec3(1.0,1.0,1.0)
+VEC3_ZERO = vec3(0.0,0.0,0.0)
 
+
+IVEC3_ZERO = ivec3(0)
+IVEC3_YES = ivec3(1)
 
 class GLMCamera():
     def __init__(self, pos: Point3D, screen_width: int = 100, screen_height: int = 100, 
@@ -120,7 +124,6 @@ class GLMCamera():
     def update_perspective(self):
         self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
         #self.perspective = glm.perspectiveFovRH_ZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
-
         #self.perspective = glm.orthoZO(-self.screen_width, self.screen_width, -self.screen_height, self.screen_height, 1, 100.0)
     
     def move(self, delta:  glm.vec3):
@@ -159,32 +162,27 @@ class GLMCamera():
     def update_rotation(self):
         # pitch is around x axis , yaw is around y axis
         self._rotation = glm.rotate(self.yaw, glm.vec3(0,1,0))*glm.rotate(self.pitch, glm.vec3(1,0,0))
-
-        self._model= glm.inverse(self._rotation)*glm.translate(-self.pos)
-
-    def project(self, point: glm.vec3, perspective:glm.mat4x4) -> glm.vec3:
         
+        self.recalc_model_inverse()
 
-        # transformation to gtive to the model
-        #model = glm.mat4(1.0)
+    def recalc_model_inverse(self):
+        self._model_inverse= glm.inverse(self._rotation)*glm.translate(-self.pos)
 
-        view = glm.translate(-self.pos)
-        #p = (perspective*glm.inverse(model)*view*point)
-        #return p
-        return glm.projectZO( point, glm.inverse(self._rotation)*view, perspective, glm.vec4(0,0,1,1))
+    def project(self, point: glm.vec3, perspective:glm.mat4x4,screen_info=glm.vec4(0,0,1,1)) -> glm.vec3:
+
+        return glm.projectZO( point, self._model_inverse, perspective, screen_info)
         
-
-
     def point_at(self, target:glm.vec3):
         direction = target - self.pos
         self.yaw = glm.atan(direction.x, direction.z)#math.atan2(direction.x, direction.z)
         self.pitch = glm.atan(-direction.y, glm.length(direction.xz))
 
         self.update_rotation()
+
     def direction_vector(self) -> glm.vec3:
         # directional vector extracted from the matrix
-        return self._rotation*glm.vec3(0,0,1)
-        
+        return glm.row(self._model_inverse,2).xyz
+    
     def __str__(self):
         return f"GLMCamera({self.pos,self.direction_vector()},yaw={self.yaw},pitch={self.pitch})"
 
@@ -230,6 +228,12 @@ class GLM2DMappedTexture(TextureAscii):
                 crow.append(palette_idx)
             self.img_color.append(crow)
 
+def yvalue_from_adjoint_unprotected(adj_matrix:glm.mat3, side, x):
+    a, b, c = glm.row(adj_matrix,side)
+    alpha = -a/b
+    intercept = -c/b
+    return alpha * x + intercept
+
 
 def line_equation_from_adjoint(adj_matrix:glm.mat3, side, x):
     a, b, c = glm.row(adj_matrix,side)
@@ -238,8 +242,6 @@ def line_equation_from_adjoint(adj_matrix:glm.mat3, side, x):
     if abs(b) > CONST : # Vertical line case
         alpha = -a/b
         intercept = -c/b
-
-        
         return alpha * x + intercept
 
 
@@ -300,120 +302,178 @@ def glmiterate(adjoint,idx1,idx2,x ,screen_height):
         for yi in range(max(minyi,0),min(maxyi,screen_height-1)):
             yield yi
 
+from glm import determinant,iround,clamp,row
 
-def glmtriangle_render(tri:glm.mat3,tri_inv,screen_width,screen_height) -> Iterable[tuple[int,int]]:
-    adjoint = glm.determinant(tri)* tri_inv
+def glmtriangle_render(tri:glm.mat3,tri_inv:glm.mat3,screen_width:int,screen_height:int) -> Iterable[tuple[int,int]]:
+    adjoint = determinant(tri)* tri_inv
 
-    xclamped = glm.clamp(glm.row(tri,0),0,screen_width-1)
-    yclamped = glm.clamp(glm.row(tri,1),0,screen_height-1)
+    ax,bx,cx = iround(clamp(row(tri,0),0.0,screen_width-1))#round(xclamped.x),round(xclamped.y),round(xclamped.z)
+    ay,by,cy = iround(clamp(row(tri,1),0.0,screen_height-1))#round(yclamped.x),round(yclamped.y),round(yclamped.z)
 
-    ax,bx,cx = round(xclamped.x),round(xclamped.y),round(xclamped.z)
-    ay,by,cy = round(yclamped.x),round(yclamped.y),round(yclamped.z)
+    #xv = glm.row(tri,0)
+    #yv = glm.row(tri,1)
+    #ax,bx,cx = round(xv.x),round(xv.y),round(xv.z)
+    #ay,by,cy = round(yv.x),round(yv.y),round(yv.z)
+    #ax = 0 if ax < 0 else (screen_width if ax > screen_width else ax)
+    #bx = 0 if bx < 0 else (screen_width if bx > screen_width else bx)
+    #cx = 0 if cx < 0 else (screen_width if cx > screen_width else cx)
+    #ay = 0 if ax < 0 else (screen_height if ay > screen_height else ay)
+    #by = 0 if bx < 0 else (screen_height if by > screen_height else by)
+    #cy = 0 if cx < 0 else (screen_height if cy > screen_height else cy)
+
+    # segment index 
+    # 0: CB
+    # 1: AC
+    # 2: AB
+    # identifying triangle positionning
 
     if ax < cx:
-        
         if cx < bx:
-
+            #  ..-C.
+            # A-----B
+            # 
             minxi= ax
             maxxi= bx
             cutx = cx
 
-            seg1 = 2
-            seg2 = 1
-            seg3 = 0
-
+            # seg1 to seg2; then seg3 to seg4
+            seg1 = 2  # AB
+            seg2 = 1  # AC
+            seg3 = 2  
+            seg4 = 0  # CB
+            # heights to use, for min, cut, max
             ys = ay,cy,by
         else:
             if ax<bx:
+                #       _---C.
+                #   .-^    /
+                # A-----B/
+                # common branch is upper
                 minxi = ax
                 maxxi = cx
                 cutx = bx
 
-                seg1 = 1
-                seg2 = 2
-                seg3 = 0
-
-                ys = ay,by,cy
+                seg1 = 2 # AB
+                seg2 = 1 # AC
+                seg3 = 0 # CB
+                seg4 = 1 # AC
+                ys = ay, by, cy    
             else:
-
+                #     A   
+                #         C
+                #  B    
+                #   
                 minxi= bx
                 maxxi= cx
                 cutx = ax
 
-                seg1 = 0
-                seg2 = 2
-                seg3 = 1
-
+                seg1 = 0 # CB
+                seg2 = 2 # AB
+                seg3 = 0 # CB
+                seg4 = 1 # AC
                 ys = by,ay,cy
     else:
         if ax < bx:
-            
+            #    C        B 
+            #    
+            #         A          
+            #   common branch is upper
             minxi= cx
             maxxi= bx
             cutx = ax
 
-            seg1 = 0
-            seg2 = 1
-            seg3 = 2
-
+            seg1 = 1 # AC
+            seg2 = 0 # CB
+            seg3 = 2 # AB
+            seg4 = 0 # CB
             ys = cy,ay,by
         else:
+            
             if cx<bx:
-                
+                #      B      
+                #    
+                #   C        A          
+                #   
                 minxi= cx
                 maxxi= ax
                 cutx = bx
 
-                seg1 = 1
-                seg2 = 0
-                seg3 = 2
-
+                seg1 = 1 # AC
+                seg2 = 0 # CB
+                seg3 = 1 # AC
+                seg4 = 2 # AB
                 ys = cy,by,ay
 
 
             else:
+                #   B        A   
+                #       
+                #        C
+                # common branch is upper
                 minxi= bx
                 maxxi= ax
                 cutx = cx
 
-                seg1 = 2
-                seg2 = 0
-                seg3 = 1
+                seg1 = 0 # CB
+                seg2 = 2 # AB
+                seg3 = 1 # AC
+                seg4 = 2 # AB
                 ys = by,cy,ay
 
-
+    # first part
+    # from left to the cutindex
+    # the drawing is NOT including the cut 
     match cutx-minxi:
         case 0:
-            yield minxi,ys[0]
+            # its a vertical stuff
+            yield minxi,ys[0] # returning left point height
         case 1:
-            for yi in range(ys[0],ys[1]):
+            for yi in range(ys[0],ys[1]):  # from left height, to cut height
                 yield minxi,yi
         case _ :
+
+            # left corner return
             yield minxi,ys[0]
+            
             for xi in range(minxi+1,cutx):
-                for yi in glmiterate(adjoint,seg1,seg2,xi,screen_height):
+                miny = math.floor(yvalue_from_adjoint_unprotected(adjoint, seg1, xi))
+                maxy = math.ceil(yvalue_from_adjoint_unprotected(adjoint, seg2, xi))
+                miny =0 if miny < 0 else (screen_height if miny > screen_height else miny)
+                maxy =0 if maxy < 0 else (screen_height if maxy > screen_height else maxy)
+                for yi in range(miny,maxy):
                     yield xi,yi
 
+                #for yi in glmiterate(adjoint,seg1,seg2,xi,screen_height):
+                #    yield xi,yi
+
+    # second part
     match maxxi-cutx:
         case 0:
+            # its a vertical line. 
             yield cutx,ys[0]
         case 1:
             for yi in range(ys[1],ys[2]):
                 yield cutx,yi
             yield maxxi,ys[2]
         case _ :
-            yfl = line_equation_from_adjoint(adjoint, seg1, cutx)
-            if yfl is not None:
-                top = round(yfl)
-                top = min(max(top,0),screen_height-1)
-                r = range(ys[1],top) if ys[1]<top else range(top,ys[1])
-                
-                for yi in r:
-                    yield cutx,yi
-            for xi in range(cutx+1,maxxi):
-                for yi in glmiterate(adjoint,seg1,seg3,xi,screen_height):
+            for xi in range(cutx,maxxi):
+                miny = math.floor(yvalue_from_adjoint_unprotected(adjoint, seg3, xi))
+                maxy = math.ceil(yvalue_from_adjoint_unprotected(adjoint, seg4, xi))
+                miny =0 if miny < 0 else (screen_height if miny > screen_height else miny)
+                maxy =0 if maxy < 0 else (screen_height if maxy > screen_height else maxy)
+
+                for yi in range(miny,maxy):
                     yield xi,yi
-            #yield maxxi,ys[2]
+            #yfl = line_equation_from_adjoint(adjoint, seg1, cutx)
+            #if yfl is not None:
+            #    top = round(yfl)
+            #    top = min(max(top,0),screen_height-1)
+            #    r = range(ys[1],top) if ys[1]<top else range(top,ys[1])
+            #    for yi in r:
+            #        yield cutx,yi
+            #for xi in range(cutx+1,maxxi):
+            #    for yi in glmiterate(adjoint,seg1,seg3,xi,screen_height):
+            #        yield xi,yi
     
     
     
@@ -485,12 +545,14 @@ class GLM2DMesh(GLM2DNode):
 
             for pxi,pyi in glmtriangle_render(transformed,tri_inv,screen_width,screen_height):
                 weights = tri_inv*glm.vec3(pxi,pyi,1)
-                yield (pxi,pyi,0),(faceidx,1,weights)
 
-            vertidx = 0
-            for pxi,pyi in glm_triangle_vertex_pixels(transformed, screen_width,screen_height):
-                yield (pxi,pyi,-1),(vertidx,2,(1.0,0.0,0.0))
-                vertidx+=1
+                if (weights>VEC3_ZERO) == VEC3_YES:
+                    yield (pxi,pyi,0),(faceidx,1,weights)
+
+            #vertidx = 0
+            #for pxi,pyi in glm_triangle_vertex_pixels(transformed, screen_width,screen_height):
+            #    yield (pxi,pyi,-1),(vertidx,2,(1.0,0.0,0.0))
+            #    vertidx+=1
 
 
 
@@ -503,14 +565,13 @@ class GLMMesh3D(Mesh3D):
         self.texture:ImageTexture=None
 
     def cache_output(self,segmap):
-        self.glm_verticesv4 = glma([vec4(p.x,p.y,p.z,1) for p in self.vertices])
         self.glm_vertices = glma([vec3(p.x,p.y,p.z) for p in self.vertices])
         self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
         self.texture_coords = [[GLMTexturecoord(p.x,p.y) for p in coordlayer] for coordlayer in self.texture_coords]
         self.texture.cache_output(segmap)
         
         
-        self.glm_uvmap = [[glm.mat3x2(*[glm.vec2(uv.x,1-uv.y) for uv in uvlayer]) for uvlayer in t.uvmap] for t in self.triangles]
+        self.glm_uvmap = [[glm.mat3x2(*[glm.vec2(uv.x,1.0-uv.y) for uv in uvlayer]) for uvlayer in t.uvmap] for t in self.triangles]
         
         #self.glm_uvmap = [[[glm.vec2(uv.x,uv.y) for uv in uvlayer] for uvlayer in t.uvmap] ]
 
@@ -518,7 +579,7 @@ class GLMMesh3D(Mesh3D):
         weight_to_vertex,normal_dot,face_idx = some_info
         uvmat = self.glm_uvmap[face_idx][0]
 
-        uvcoord = glm.saturate(uvmat*weight_to_vertex)
+        uvcoord = uvmat*weight_to_vertex
 
         return self.texture.glm_render(uvcoord,normal_dot)
         
@@ -529,7 +590,7 @@ class GLMMesh3D(Mesh3D):
     def proj_vertices(self, camera: GLMCamera,perspective_matrix, screen_width, screen_height) :
         screeninfo = glm.vec4(0,0,1,1)
 
-        proj_vertices = ([glm.projectZO( v, camera._model , perspective_matrix, screeninfo) for v in self.glm_vertices])
+        proj_vertices = ([glm.projectZO( v, camera._model_inverse , perspective_matrix, screeninfo) for v in self.glm_vertices])
         
         vert_camera = self.glm_vertices-camera.pos
         vert_camera_dist = vert_camera.map(glm.length)
@@ -558,7 +619,7 @@ class GLMMesh3D(Mesh3D):
         perspective_matrix = camera.perspective
         screeninfo = glm.vec4(0,0,screen_width,screen_height)
 
-        proj_vertices = self.glm_vertices.map(glm.projectZO,camera._model , perspective_matrix, screeninfo)
+        proj_vertices = self.glm_vertices.map(glm.projectZO,camera._model_inverse , perspective_matrix, screeninfo)
         
         camera_dir = camera.direction_vector()
 
@@ -569,6 +630,7 @@ class GLMMesh3D(Mesh3D):
             rp3 = proj_vertices[pc]
 
             rp3X3 = glm.mat3(rp1,rp2,rp3)
+            
 
             facing = glm.determinant(rp3X3)
             zvalues = glm.row(rp3X3,2)
@@ -580,12 +642,19 @@ class GLMMesh3D(Mesh3D):
                 
                 for pxi,pyi in glmtriangle_render(rp33,rpi,screen_width,screen_height):
                     weights = rpi*glm.vec3(pxi,pyi,1)
-                    if (weights>vec3(0.0)) == VEC3_YES:
-                        appdepth = glm.dot(glm.row(rp3X3,2),weights)
-                        appx_point = rp3X3*weights
-                        unprojected_point = glm.unProjectZO(appx_point,camera._model,perspective_matrix,screeninfo)
-                        yield (pxi,pyi,appdepth),(weights,glm.dot(unprojected_point,camera_dir),triangle_idx)
-                continue
+                    appx_point = rp3X3*weights
+                    
+                    
+                    unprojected_point = glm.unProjectZO(vec3(pxi,pyi,appx_point.z),camera._model_inverse,perspective_matrix,screeninfo)
+                    if (weights>VEC3_ZERO) == VEC3_YES:
+                        #appdepth = glm.dot(glm.row(rp3X3,2),weights)
+
+                        w3d = glm.inverse(mat3(self.glm_vertices[pa],
+                                               self.glm_vertices[pb],
+                                               self.glm_vertices[pc]))*unprojected_point
+
+
+                        yield (pxi,pyi,appx_point.z),(w3d,glm.dot(unprojected_point,camera_dir),triangle_idx)
 
 class GLMRenderContext:
 
@@ -661,7 +730,7 @@ class GLMRenderContext:
         yield currentLine
 
     def write_text(self, txt: str, x:int=0, y:int=0):
-        return
+        
         for idx, c in enumerate(txt):
             if c.isprintable():
                 ordc = ord(c)
@@ -676,3 +745,40 @@ class GLMRenderContext:
     def extend(self, elems: List[Drawable3D]):
         for e in elems:
             self.append(e)
+
+
+
+class GLMNode3D(Drawable3D):
+    def __init__(self):
+        self.local_translate:vec3 = vec3(.0,.0,.0)
+        self.local_transform:mat4 = mat4(1.0)
+        self.elems:list[GLMMesh3D] = []
+
+    def set_transform(self,t:mat4):
+        self.local_transform = t
+
+
+    def draw(self, camera:GLMCamera) -> Iterable[object]:
+
+        cpos = camera.pos
+        cmod = camera._model_inverse
+
+        # move the camera
+        #camera.pos = camera.pos-self.local_translate
+        
+        camera._model_inverse= camera._model_inverse*self.local_transform
+
+        for element_idx, element in enumerate(self.elems):
+            for pixinfo,otherinfo in element.draw(camera):
+                yield pixinfo,(otherinfo,element)
+
+        # reset the camera
+        camera.pos = cpos 
+        camera._model_inverse = cmod
+    def render_point(self,some_info):
+        (otherinfo,element) = some_info
+        return element.render_point(otherinfo)
+
+    def cache_output(self,segmap):
+        for e in self.elems:
+            e.cache_output(segmap)

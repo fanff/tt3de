@@ -31,7 +31,13 @@ class TestCameraInit(unittest.TestCase):
         udvec = c._rotation*glm.vec3(0,1,0)
         
         
-        
+        print(dirvec,lrvec,udvec)
+
+        dirvec = glm.row(c._model_inverse,2).xyz
+        udvec = glm.row(c._model_inverse,1).xyz
+        lrvec = glm.row(c._model_inverse,0).xyz
+
+        print(dirvec,lrvec,udvec)
         #print(dirvec)
         #print(lrvec)
         #print(udvec)
@@ -44,45 +50,10 @@ class TestCameraInit(unittest.TestCase):
         random_noise = noise_factor*(dirvec*rpx+ lrvec*rpy + udvec * rpz)
         
         point_in_front_of_camera_noised = c.pos+c.direction_vector()+random_noise
-        point_in_the_camera_coordinate=c._model*point_in_front_of_camera_noised
+        point_in_the_camera_coordinate=c._model_inverse*point_in_front_of_camera_noised
 
         #print(point_in_the_camera_coordinate) # this should look like a direction vector
         #print((c._model*glm.array(glm.vec4(point_in_front_of_camera_noised,1.0))))
-
-    def test_projection_distance(self):
-        # can't understand what is the z value of the Projectzo stuff
-
-
-        c = GLMCamera(Point3D(12, 24, 56))
-
-        #c.set_yaw_pitch(.2,1.1)
-
-        dirvec = c._rotation*glm.vec3(0,0,1)
-        lrvec = c._rotation*glm.vec3(1,0,0)
-        udvec = c._rotation*glm.vec3(0,1,0)
-
-
-        print(dirvec)
-        print(lrvec)
-        print(udvec)
-        c.perspective
-
-        screeninfo = glm.vec4(0,0,1,1)
-
-        
-        p1 = glm.perspectiveFovLH_ZO(math.radians(90), 1, 1, 1, 10)
-        p2 = glm.perspectiveFovRH_ZO(math.radians(90), 1, 1, 1, 10)
-
-
-        for p in [glm.vec3(0,0,-2),glm.vec3(0,0,2),glm.vec3(0,0,5),glm.vec3(0,0,10),glm.vec3(0,0,12)]:
-
-            #p = glm.vec3(0,0,-2)
-            print("p:",p)
-            for perspective in [p1,p2]:
-                projected = glm.projectZO(p,glm.identity(glm.mat4),perspective,screeninfo)
-                
-                est_dist = math.atan(projected.z)
-                print(f"projectedz {projected.z:.2f}  -> {est_dist:.2f}")
 
     def test_direction_vector(self):
         for i in range(100):

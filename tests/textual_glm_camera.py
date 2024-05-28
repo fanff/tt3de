@@ -24,7 +24,7 @@ from textual.widgets import (
 from textual.validation import Function, Number, ValidationResult, Validator
 
 from tt3de.asset_fastloader import Prefab2D, fast_load, prefab_mesh_single_triangle
-from tt3de.glm.pyglmtexture import  GLM2DMappedTexture, GLM2DMesh, GLM2DNode, GLMMesh3D
+from tt3de.glm.pyglmtexture import  GLM2DMappedTexture, GLM2DMesh, GLM2DNode, GLMMesh3D, GLMNode3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -49,13 +49,36 @@ class GLMTester(TT3DView):
         super().__init__()
 
     def initialize(self):
+        meshclass = GLMMesh3D
+
+
         texture3 = fast_load("models/cubetest3.bmp")
         
-        meshclass = GLMMesh3D
-        m = fast_load("models/cube.obj",meshclass)
 
+        self.root3d_node = GLMNode3D()
+
+        # adding one cube
+
+        m = fast_load("models/cube.obj",meshclass)
         m.set_texture(texture3)
-        self.rc.append(m)
+
+        cube1node = GLMNode3D()
+        cube1node.elems.append(m)
+        self.root3d_node.elems.append(cube1node)
+        
+        # adding a second cube 
+        m2 = fast_load("models/cube.obj",meshclass)
+        m2.set_texture(texture3)
+
+        cube2node = GLMNode3D()
+        cube2node.local_transform = glm.translate(glm.vec3(0.0,3.0,0.0))
+        cube2node.elems.append(m2)
+
+        self.root3d_node.elems.append(cube2node)
+        
+
+        # add the root 
+        self.rc.append(self.root3d_node)
 
         # this won't work because bellow the cameraConfig 
         # widget will update the camera at the init time
@@ -64,22 +87,16 @@ class GLMTester(TT3DView):
 
         self.root2Dnode = GLM2DNode() 
 
-        meshtext = fast_load("models/test_screen32.bmp",GLM2DMappedTexture)
-        for i in range(3):
-            a2dnode =GLM2DNode() 
+        #meshtext = fast_load("models/test_screen32.bmp",GLM2DMappedTexture)
+        #for i in range(3):
+        #    a2dnode =GLM2DNode() 
+        #    a2dmesh:GLM2DMesh =Prefab2D.unitary_square(GLM2DMesh)
+        #    a2dmesh.texture = meshtext
+        #    a2dnode.elements.append(a2dmesh)
+        #    a2dnode.local_transform=glm.translate(glm.vec2(2*i,0.0))
+        #    self.root2Dnode.elements.append(a2dnode)
 
-            a2dmesh:GLM2DMesh =Prefab2D.unitary_square(GLM2DMesh)
-            a2dmesh.texture = meshtext
-
-            a2dnode.elements.append(a2dmesh)
-
-            a2dnode.local_transform=glm.translate(glm.vec2(2*i,0.0))
-
-            self.root2Dnode.elements.append(a2dnode)
-
-
-
-        self.rc.append(self.root2Dnode)
+        #self.rc.append(self.root2Dnode)
 
         self.reftime = time()
         self.write_debug_inside = True
@@ -95,13 +112,18 @@ class GLMTester(TT3DView):
 
         rot = ts*tsfactor
 
-        #glm.translate(glm.vec2(.5,.5))*glm.rotate(rot)*glm.scale(glm.vec2(.2,.2))
+        #*glm.rotate(rot)*glm.scale(glm.vec2(.2,.2))
+        
 
-        atransform =glm.scale(glm.vec2(2,2))* glm.translate(glm.vec2(-.5,-.5))
+        atransform = glm.translate(glm.vec3(.5,.5,.5))*glm.rotate(rot*(1+1),glm.vec3(1,0,0))
 
-        for idx , e in enumerate(self.root2Dnode.elements):
-            e.local_transform = glm.translate(glm.vec2(2*(idx),0.0))*glm.rotate(rot*(idx+1))*atransform
-        self.root2Dnode.local_transform = glm.translate(glm.vec2(.5,.5))*glm.scale(glm.vec2(.2,.2))
+        self.root3d_node.local_transform = atransform
+
+
+        scalefactor = 2.0
+
+        scalevalue = math.cos(ts*scalefactor)+1.7
+        self.root3d_node.elems[0].local_transform = glm.scale(glm.vec3(scalevalue,scalevalue,scalevalue))
 
 
 

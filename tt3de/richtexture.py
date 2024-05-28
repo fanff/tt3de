@@ -106,9 +106,8 @@ class ImageTexture(TextureAscii):
     def glm_render(self, uvpoint:glm.vec2,normal_dot:float):
         
         import glm
-        cuv = uvpoint*glm.vec2(self.image_width-1,self.image_height-1)
-        #cuv = glm.clamp(cuv, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
-        
+
+        cuv = glm.fract(uvpoint)*glm.vec2(self.image_width-1,self.image_height-1)
         palette_idx:int = self.img_color[round(cuv.y)][round(cuv.x)]
 
 
@@ -127,6 +126,7 @@ class ImageTexture(TextureAscii):
         return self.shade_to_idx[shade_idx][palette_idx]
 
     def cache_output(self, segmap: "Segmap"):
+        
         buff_color_to_int = {}
 
         self.shade_to_idx = []

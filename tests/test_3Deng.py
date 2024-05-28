@@ -3,7 +3,8 @@ import unittest
 
 from context import tt3de
 
-from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem, RenderContext
+from tt3de.richtexture import RenderContext
+from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 
 
 def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
@@ -57,7 +58,7 @@ class TestPJ(unittest.TestCase):
         projected_point = c.project(Point3D(5, 0, 0))
         self.assertTrue(projected_point.depth > 0)
         projected_point = c.project(Point3D(-5, 0, 0))
-        self.assertTrue(projected_point.depth == -1)
+        self.assertEqual(projected_point.depth,0.0)
 
     def test_projx2(self):
         c = FPSCamera(Point3D(0, 0, 0))
@@ -78,6 +79,7 @@ class TestPJ(unittest.TestCase):
 class TestCameraUpDown(unittest.TestCase):
 
     def setUp(self) -> None:
+        from tt3de.richtexture import RenderContext
         self.rc = RenderContext(100, 100)
         self.rc.append(PointElem(Point3D(0, -1, 0)))
         self.rc.append(PointElem(Point3D(0, 0, 0)))
