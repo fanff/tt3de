@@ -1,10 +1,14 @@
 
+import array
+import random
 from textwrap import dedent
 import timeit
 
 import math
 import glm
-from tt3de.glm.pyglmtexture import IVEC3_YES, IVEC3_ZERO, VEC3_YES, VEC3_ZERO, glm_triangle_vertex_pixels, glmtriangle_render
+
+from tt3de.glm.pyglmtexture import clampi, glmtriangle_render, yvalue_from_adjoint_unprotected
+from tt3de.glm.triangle_raster import generate_random_triangle, triangle_raster_v1, triangle_raster_v2
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 
 
@@ -13,8 +17,31 @@ import unittest
 
 from fractions import Fraction
 
+
+def topiliimage(coordinates,imgname):
+    from PIL import Image
+    # Extract the min and max values for x and y
+    min_x = min(coordinates, key=lambda t: t[0])[0]
+    max_x = max(coordinates, key=lambda t: t[0])[0]
+    min_y = min(coordinates, key=lambda t: t[1])[1]
+    max_y = max(coordinates, key=lambda t: t[1])[1]
+
+    # Calculate canvas size with extra 10 pixels on each side
+    width = (max_x - min_x) + 20
+    height = (max_y - min_y) + 20
+
+    # Create a blank white canvas
+    canvas = Image.new('RGB', (width, height), 'white')
+
+    # Adjust coordinates to account for the offset
+    adjusted_coordinates = [(x - min_x + 10, y - min_y + 10) for x, y in coordinates]
+
+    # Plot each point on the canvas
+    for x, y in adjusted_coordinates:
+        canvas.putpixel((x, y), (0, 0, 0))  # Black pixel
+    canvas.save(imgname)
 def line_nofloat(pa,pb ):
-    "Bresenham's line algorithm"
+    "Bresenham's line algorithm without using float (because the float curse)"
     (y0, x0), (y1, x1) = pa,pb
     rev = reversed
     if abs(y1 - y0) <= abs(x1 - x0):
@@ -29,7 +56,7 @@ def line_nofloat(pa,pb ):
         yield(xi,yi)
 
 def line_float(pa,pb ):
-    "Bresenham's line algorithm"
+    "Bresenham's line algorithm using float"
     (x0, y0), (x1, y1) = pa,pb
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
@@ -57,7 +84,7 @@ def line_float(pa,pb ):
     yield x,y
 
 def line_float_prot(pa,pb, maxx,maxy ):
-    "Bresenham's line algorithm"
+    "Bresenham's line algorithm with float values, protecting the top/bottom values within screen"
     (x0, y0), (x1, y1) = pa,pb
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
@@ -234,7 +261,7 @@ class Test_scanline_iterator(unittest.TestCase):
         print(list(inscreen_iter(pa,pb)))
         import timeit
         setup=f"pa={(0,0)};pb={(100,90)}"    
-        number=100000
+        number=10000
         durnat = timeit.timeit("list(iter_rect_diagonal_full(pa,pb))",globals=globals(),setup=setup,number=number)
         dur_in_nat = timeit.timeit("list(inscreen_iter(pa,pb))",globals=globals(),setup=setup,number=number)
 
@@ -245,11 +272,8 @@ class Test_scanline_iterator(unittest.TestCase):
         
 
 
-
-orient2d = glm.determinant
-def orient2di(a,b,c)->int:
-    return (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x)
-
+from c_triangle_raster import c_glm_triangle_render_to_buffer
+from c_triangle_raster import TrianglesBuffer
 
 class Test_TriangleScanLine(unittest.TestCase):
     
@@ -298,8 +322,8 @@ class Test_TriangleScanLine(unittest.TestCase):
 
 
 
-    def test_bench_big_triangle_raster(self):
-        number=5000
+    def test_bench_triangle_raster(self):
+        number=100
         setup_big=dedent(f"""
         a,b,c = vec3(2.0,2.0,1.0), vec3(120,120.0,1.0),  vec3(100.0,40.0,1.0)
         screen_width, screen_height = 100,100
@@ -337,9 +361,119 @@ class Test_TriangleScanLine(unittest.TestCase):
                 print(durv2)
                 durnat = timeit.timeit("list(glmtriangle_render(tri,tri_i,screen_width, screen_height))",globals=globals(),setup=setup+setup_rot,number=number)
                 print(durnat)
+    def test_bench_c_triangle_raster(self):
+        number=100
+        setup_big=dedent(f"""
+        import array
+        output_array = array.array('I', [0]*100000)
+        a,b,c = vec3(2.0,2.0,1.0), vec3(120,120.0,1.0),  vec3(100.0,40.0,1.0)
+        screen_width, screen_height = 100,100
+        """)
+        setup_small=dedent(f"""
+                           
+        import array
+        output_array = array.array('I', [0]*100000)
+        a,b,c = vec3(2.0,2.0,1.0), vec3(12,12.0,1.0),  vec3(10.0,4.0,1.0)
+        screen_width, screen_height = 100,100
+        """)
+        setups = [("big",setup_big),("small",setup_small)]
+
+        rots=[("abc",dedent(f"""
+        tri = mat3(a,c,b)
+        tri_i = glm.inverse(tri)
+        """)),
+        ("bca",dedent(f"""
+        a,b,c = b,c,a
+        tri = mat3(a,c,b)
+        tri_i = glm.inverse(tri)
+        """)),
+        ("cab",dedent(f"""
+        a,b,c = c,a,b
+        tri = mat3(a,c,b)
+        tri_i = glm.inverse(tri)
+        """))]
+        
+        for setupkey , setup in setups:
+            for rotinfo , setup_rot in rots:
+                print(setupkey,rotinfo)
+                durpy = timeit.timeit("list(glmtriangle_render(tri,tri_i,screen_width, screen_height))",globals=globals(),setup=setup+setup_rot,number=number)
+                
+                dur_cython_buffer = timeit.timeit("iterate_pixel_buffer(output_array,c_glm_triangle_render_to_buffer(tri,screen_width, screen_height,output_array))",globals=globals(),setup=setup+setup_rot,number=number)
+                
+                print(durpy,dur_cython_buffer)
 
 
 
+    def test_c_triangle_raster(self):
+        a,b,c = vec3(2.0,2.0,1.0), vec3(12,12.0,1.0),  vec3(10,4.0,1.0)
+
+        
+
+        screen_width, screen_height = 100,100
+        tri = mat3(a,c,b)
+        tri_inverse = glm.inverse(tri)
+
+        glmtri_rend = list(glmtriangle_render(tri,tri_inverse,screen_width, screen_height))
+        print(glmtri_rend[:10])
+        print(len(glmtri_rend))
+
+        output_array = array.array('I', [0]*100000)
+        r = c_glm_triangle_render_to_buffer(tri,
+                                            screen_width,
+                                            screen_height,
+                                            output_array)
+        print(output_array[:10])
+        print(r//2)
+
+    def test_random_triangle(self):
+        screen_width, screen_height = 100,100
+
+        a,b,c = generate_random_triangle()
+        tri = mat3(a,c,b)
+        tri_inverse = glm.inverse(tri)
+
+        glmtri_rend = list(glmtriangle_render(tri,tri_inverse,screen_width, screen_height))
+        print(glmtri_rend)
+        print(f"in normal impl : {len(glmtri_rend)}")
+
+
+
+
+
+        output_array = array.array('I', [0]*100000)
+
+        r = c_glm_triangle_render_to_buffer(tri,
+                                            screen_width,
+                                            screen_height,
+                                            output_array)
+        print(output_array[:10])
+        cversion_match = [(output_array[i],output_array[i+1]) for i in range(0,r,2)]
+        print(cversion_match)
+        print(f"in c impl : {len(cversion_match)}")
+
+        topiliimage(glmtri_rend,"glmtri.png")
+        topiliimage(cversion_match,"glm_cversion.png")
+
+
+
+        m = TrianglesBuffer(100000)
+        m.add_triangle_info(mat3(a,c,b))
+        m.calculate_internal(screen_width, screen_height)
+        index_buffer = array.array("I",[45]*32000000)
+        depth_buffer = array.array("d",[1000.0]*32000000)
+        m.raster_to_buffer(depth_buffer,index_buffer)
+        
+
+        def make_list():
+            for xi in range(screen_width):
+                for yi in range(screen_height):
+                    index = (((screen_height) * xi) + yi)
+                    index_d = index*4
+                    if depth_buffer[index_d] < 1000:
+                        yield (xi,yi)
+        blitedinpureC = list(make_list())
+        print("in pure_c ", len(blitedinpureC))
+        topiliimage(blitedinpureC,"pure_c_version.png")
 
     def test_bench_pyinstrument(self):
         from pyinstrument import Profiler
@@ -361,126 +495,6 @@ class Test_TriangleScanLine(unittest.TestCase):
         profiler.stop()
 
         profiler.print()
-
-
-
-def triangle_raster_v1(a:vec3,b:vec3,c:vec3,screenWidth,screenHeight):
-    v0,v1,v2 = glm.iround(a),glm.iround(b),glm.iround(c)
-    #print(" vectors index : ")
-    #print(v0,v1,v2)
-
-    minX = glm.iround(glm.min(a.x, b.x, c.x))
-    minY = glm.iround(glm.min(a.y, b.y, c.y))
-    maxX = glm.iround(glm.max(a.x, b.x, c.x))
-    maxY = glm.iround(glm.max(a.y, b.y, c.y))
-    minX = max(minX, 0)
-    minY = max(minY, 0)
-    maxX = min(maxX, screenWidth - 1)
-    maxY = min(maxY, screenHeight - 1)
-
-    #print(f"boundingx ",minX,maxX)
-    #print(f"boundingy ",minY,maxY)
-    A01 = v0.y - v1.y 
-    A12 = v1.y - v2.y
-    A20 = v2.y - v0.y
-
-    B01 = v1.x - v0.x
-    B12 = v2.x - v1.x
-    B20 = v0.x - v2.x
-
-    p = glm.ivec3(minX,minY,1)
-    w0_row:int = orient2di(v1, v2, p)
-    w1_row:int = orient2di(v2, v0, p)
-    w2_row:int = orient2di(v0, v1, p)
-    #print(w0_row,w1_row,w2_row)
-#
-    #print("factors A",A01,A12,A20)
-    #print("factors B",B01,B12,B20)
-    for yi in range(minY,maxY+1):
-        # Barycentric coordinates at start of row
-        w0 = w0_row
-        w1 = w1_row
-        w2 = w2_row
-
-        for xi in range(minX,maxX+1):#(p.x = minX; p.x <= maxX; p.x++) {
-
-            #print( w0,w1,w2   )
-            #// If p is on or inside all edges, render pixel.
-            if (w0 >= 0 and w1 >= 0 and w2 >= 0):
-                yield xi,yi
-#
-            # One step to the right
-            w0 += A12
-            w1 += A20
-            w2 += A01
-        # One row step
-        w0_row += B12
-        w1_row += B20
-        w2_row += B01
-
-def triangle_raster_v2(a:vec3,b:vec3,c:vec3,screenWidth,screenHeight):
-    v0,v1,v2 = glm.iround(a),glm.iround(b),glm.iround(c)
-    #print(" vectors index : ")
-    #print(v0,v1,v2)
-
-    minX = glm.iround(glm.min(a.x, b.x, c.x))
-    minY = glm.iround(glm.min(a.y, b.y, c.y))
-    maxX = glm.iround(glm.max(a.x, b.x, c.x))
-    maxY = glm.iround(glm.max(a.y, b.y, c.y))
-    minX = max(minX, 0)
-    minY = max(minY, 0)
-    maxX = min(maxX, screenWidth - 1)
-    maxY = min(maxY, screenHeight - 1)
-
-    #print(f"boundingx ",minX,maxX)
-    #print(f"boundingy ",minY,maxY)
-    A01 = v0.y - v1.y 
-    A12 = v1.y - v2.y
-    A20 = v2.y - v0.y
-
-    B01 = v1.x - v0.x
-    B12 = v2.x - v1.x
-    B20 = v0.x - v2.x
-    avec = glm.ivec3(A12,A20,A01)
-    bvec = glm.ivec3(B12,B20,B01)
-    p = glm.ivec3(minX,minY,1)
-    #w0_row:int = orient2di(v1, v2, p)
-    #w1_row:int = orient2di(v2, v0, p)
-    #w2_row:int = orient2di(v0, v1, p)
-
-    w_row = glm.ivec3(orient2di(v1, v2, p) , orient2di(v2, v0, p) , orient2di(v0, v1, p) )
-
-    w = glm.ivec3(0)
-    #print(w0_row,w1_row,w2_row)
-    
-
-    #print("factors A",A01,A12,A20)
-    #print("factors B",B01,B12,B20)
-    for yi in range(minY,maxY+1):
-        # Barycentric coordinates at start of row
-        w=glm.ivec3(w_row)
-        for xi in range(minX,maxX+1):#(p.x = minX; p.x <= maxX; p.x++) {
-
-            #print( w0,w1,w2   )
-            #// If p is on or inside all edges, render pixel.
-            
-            #if (w0 >= 0 and w1 >= 0 and w2 >= 0):
-            #glm.all(glm.greaterThanEqual(w,IVEC3_ZERO)) -> this is slower here. probeably because function call?
-            # (w>=IVEC3_ZERO)==IVEC3_YES: -> faster version 
-            if (w>=IVEC3_ZERO)==IVEC3_YES:
-                yield xi,yi
-#
-            # One step to the right
-            # w0 += A12
-            # w1 += A20
-            # w2 += A01
-
-            w = w+ avec
-        # One row step
-        #w0_row += B12
-        #w1_row += B20
-        #w2_row += B01
-        w_row = w_row+ bvec
 
 def print_info_row(c) -> str:
     if c[0] == "b6":
@@ -535,6 +549,135 @@ class TestBraile_scaling(unittest.TestCase):
         #        line = "".join([charuse for c in range(c[2])])
         #        print(line)
 
+from tt3de.glm.c_triangle_raster import c_floor_f,c_ceil_f,c_round_f,c_clamp_and_round_f
+from tt3de.glm.c_triangle_raster import mat3cast_f,ut_adjoint_calculation,ut_yvalue_calculation,ut_factors_calculation
+from tt3de.glm.c_triangle_raster import ut_output_array_set
+from tt3de.glm.c_triangle_raster import iterate_pixel_buffer
+
+class Test_c_custom_math_func(unittest.TestCase):
+    
+    def test_custom_math_artihmetic(self):
+        import math
+        numberlist = [-12, -2.1, -1.9,2.3,1.1,2.9,101221.2 ]
+        
+        for n in numberlist:
+            self.assertEqual(math.floor(n),c_floor_f(n))
+            self.assertEqual(math.ceil(n),c_ceil_f(n))
+            self.assertEqual(round(n),c_round_f(n))
+        import random
+        for i in range(1000):
+            n = random.normalvariate(0,10033)
+            self.assertEqual(math.floor(n),c_floor_f(n),f"floor issue with {n}")
+            self.assertEqual(math.ceil(n),c_ceil_f(n),f"ceil issue with {n}")
+            self.assertEqual(round(n),c_round_f(n),f"round issue with {n}")
+
+            self.assertEqual(min( 4000,max(round(n),0)),c_clamp_and_round_f(n,4000),f"clamp_and_round issue with {n}")
+
+            
+
+    def test_custom_c_mat_cast(self):
+        m = mat3(vec3(1.2,3.4,   1.4),
+                 vec3(2.2,34.4  ,3.4),
+                 vec3(3.2,6.4   ,8.4))
+        
+        casted = mat3cast_f(m)
+        #self.assertListEqual(casted[0],list(m[0]))
+        #self.assertListEqual(casted[1],list(m[1]))
+        #self.assertListEqual(casted[2],list(m[2]))
+
+        self.assertListEqual(casted[0],list(glm.row(m,0)))
+        self.assertListEqual(casted[1],list(glm.row(m,1)))
+        self.assertListEqual(casted[2],list(glm.row(m,2)))
+
+
+    def test_yvalue_cal(self):
+
+        m = mat3(vec3(1.2,3.4,   1.0),
+                 vec3(2.2,34.4  ,1.0),
+                 vec3(3.2,6.4   ,1.0))
+        glmadj = glm.determinant(m)*glm.inverse(m)
+        
+        glmpy_y = yvalue_from_adjoint_unprotected(glmadj,1,2)
+        
+
+
+        purec_y = ut_yvalue_calculation(m,1,2)
+        print(glmpy_y,purec_y)
+
+        self.assertAlmostEqual(glmpy_y,purec_y,5)
+
+        
+    def test_yvalue_calculation_random_triangles(self):
+
+        # generating not CCW triangles
+        m = mat3(*generate_random_triangle(False))
+
+        glmadj = glm.determinant(m)*glm.inverse(m)
+
+        for side in range(3):
+            for x in range(1,20):
+                glmpy_y = yvalue_from_adjoint_unprotected(glmadj,side,2)
+            
+
+                purec_y = ut_yvalue_calculation(m,side,2)
+
+                self.assertAlmostEqual(glmpy_y,purec_y,5)
+
+
+    def test_adjoint_matrix(self):
+        m = mat3(vec3(1.2,3.4,   1.0),
+                 vec3(2.2,34.4  ,1.0),
+                 vec3(3.2,6.4   ,1.0))
+        
+        detm = glm.determinant(m)
+        glmadj = glm.determinant(m)*glm.inverse(m)
+
+        glmadj_det = glm.determinant(glmadj)
+
+
+        cadjmatrix, cmat_determinant = ut_adjoint_calculation(m)
+
+        self.assertAlmostEqual(detm, cmat_determinant,4)
+        #self.assertListEqual(cadjmatrix[0],list(glm.column(glmadj,0))) 
+        #self.assertListEqual(cadjmatrix[1],list(glm.column(glmadj,1)))
+        #self.assertListEqual(cadjmatrix[2],list(glm.column(glmadj,2)))
+
+    def test_factor_calculation(self):
+        
+
+
+        screen_width = 11
+        screen_height = 11
+
+
+
+
+        for i in range(100):
+            tri = mat3(*generate_random_triangle())
+            ax,bx,cx = glm.iround(glm.clamp(glm.row(tri,0),0.0,screen_width-1))#round(xclamped.x),round(xclamped.y),round(xclamped.z)
+            ay,by,cy = glm.iround(glm.clamp(glm.row(tri,1),0.0,screen_height-1))
+            
+            factors_glm_version = (ax,ay , bx,by, cx,cy)
+
+
+            factors = ut_factors_calculation(tri,screen_width-1,screen_height-1)
+            
+            self.assertEqual(factors_glm_version,factors)
+
+
+    def test_setstuff_inside_array(self):
+        output_array = array.array('I', [0]*100000)
+        ut_output_array_set(output_array,0,1,2)
+        ut_output_array_set(output_array,2,3,4)
+
+        a = output_array[:6]
+        print(a[::2])
+        print(a[1::2])
+        iterated = list( iterate_pixel_buffer(output_array,6) ) 
+        self.assertEqual(iterated[0] , (1,2))
+        self.assertEqual(iterated[1] , (3,4))
+        self.assertEqual(iterated[2] , (0,0))
+        self.assertEqual(len(iterated) , 3)
 
 if __name__ == "__main__":
     unittest.main()

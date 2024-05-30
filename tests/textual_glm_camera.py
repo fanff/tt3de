@@ -69,7 +69,7 @@ class GLMTester(TT3DView):
         # adding a second cube 
         m2 = fast_load("models/cube.obj",meshclass)
         m2.set_texture(texture3)
-
+        
         cube2node = GLMNode3D()
         cube2node.local_transform = glm.translate(glm.vec3(0.0,3.0,0.0))
         cube2node.elems.append(m2)
@@ -125,7 +125,7 @@ class GLMTester(TT3DView):
         scalevalue = math.cos(ts*scalefactor)+1.7
         self.root3d_node.elems[0].local_transform = glm.scale(glm.vec3(scalevalue,scalevalue,scalevalue))
 
-
+        
 
     def post_render_step(self):
         rinfo:RenderInfo = self.parent.query_one("RenderInfo")

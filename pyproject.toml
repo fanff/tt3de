@@ -13,6 +13,8 @@ textual = "^0.60.1"
 pyinstrument = "^4.6.2"
 isort = "^5.13.2"
 black = "^24.4.2"
+pytest = "^8.2.1"
+pytest-benchmark = "^4.0.0"
 
 [build-system]
 requires = ["poetry-core"]

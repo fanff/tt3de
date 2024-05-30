@@ -501,8 +501,13 @@ class PointElem(Drawable3D):
 
     def proj_vertices(self, camera: Camera, screen_width, screen_height) :
         return camera.project(self.p)
-    
-
+    def cache_output(self,segmap):
+        if self.texture:
+            self.texture.cache_output(segmap)
+    def render_point(self,p):
+        if self.texture:
+            return self.texture.render_point(p)
+        return 5
 class Triangle3D(Drawable3D):
     def __init__(
         self, pos1: Point3D, pos2: Point3D, pos3: Point3D, texture: "TextureTT3DE"=None

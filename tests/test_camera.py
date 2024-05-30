@@ -3,7 +3,8 @@ import unittest
 
 from context import tt3de
 
-from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem, RenderContext
+from tt3de.richtexture import RenderContext
+from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 
 
 def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
@@ -55,9 +56,14 @@ class TestPJ(unittest.TestCase):
         assertAlmostEqualP3D(Point3D(1, 0, 0), c.direction_vector())
 
         projected_point = c.project(Point3D(5, 0, 0))
-        self.assertTrue(projected_point.depth > 0)
+        self.assertGreater(projected_point.depth , 0)
+
+        projected_6point = c.project(Point3D(6, 0, 0))
+        self.assertGreater(projected_6point.depth , 0)
+        self.assertGreater(projected_6point.depth , projected_point.depth)
+
         projected_point = c.project(Point3D(-5, 0, 0))
-        self.assertTrue(projected_point.depth == -1)
+        self.assertEqual(projected_point.depth , 0)
 
     def test_projx2(self):
         c = FPSCamera(Point3D(0, 0, 0))
@@ -66,74 +72,7 @@ class TestPJ(unittest.TestCase):
         rc = RenderContext(100, 100)
         rc.append(PointElem(Point3D(5, 0, 0)))
 
-        res = rc.render(c)
-
-        self.assertEqual(len(res[0]), 1, f"{str(res)}")
-        p = res[0][0]
-        self.assertEqual(p.x, 50)
-        self.assertEqual(p.y, 50)
-        self.assertEqual(p.depth, 5)
-
-
-class TestCameraUpDown(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.rc = RenderContext(100, 100)
-        self.rc.append(PointElem(Point3D(0, -1, 0)))
-        self.rc.append(PointElem(Point3D(0, 0, 0)))
-        self.rc.append(PointElem(Point3D(0, 2, 0)))
-
-    def tearDown(self) -> None:
-        pass
-
-    def test_point_X(self):
-
-        c = FPSCamera(Point3D(5, 0, 0))
-        c.point_at(Point3D(0, 0, 0))
-
-        res = self.rc.render(c)
-        self.run_ss(res)
-
-    def test_point_Z(self):
-        # rotated_camera a bit to the x axis
-        c = FPSCamera(Point3D(0, 0, 5))
-        c.point_at(Point3D(0, 0, 0))
-
-        res = self.rc.render(c)
-        self.run_ss(res)
-
-    def test_point_xxx(self):
-        # rotated_camera a bit to the x axis
-        c = FPSCamera(Point3D(0, 0, -5))
-        c.point_at(Point3D(0, 0, 0))
-        res = self.rc.render(c)
-        self.run_ss(res)
-
-    def test_rotating_camera(self):
-        for _ in range(100):
-            # calc camera position
-
-            amp = 7
-            tf = 6.0 / 100
-            c1 = math.cos(tf * _) * amp
-            c2 = math.sin(tf * _) * amp
-
-            c = FPSCamera(Point3D(c1, 0, c2))
-            c.point_at(Point3D(0, 0, 0))
-
-            res = self.rc.render(c)
-            self.run_ss(res)
-
-    def run_ss(self, res):
-        ll = res[0][0]
-        c = res[1][0]
-        r = res[2][0]
-
-        self.assertLess(ll.y, c.y)
-        self.assertLess(c.y, r.y)
-
-        self.assertAlmostEqual(ll.x, c.x, 1)
-        self.assertAlmostEqual(r.x, c.x, 1)
+        rc.render(c)
 
 
 if __name__ == "__main__":

@@ -117,7 +117,7 @@ class ImageTexture(TextureAscii):
 
     def render_point(self, p: PPoint2D) -> int:
         
-        shade_idx = clamp(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
+        shade_idx = 0#clamp(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
 
         imgx:int = (self.image_width-1) - int(p.uv.x *  self.image_width) 
         imgy:int = (self.image_height-1) - int(p.uv.y *  self.image_height) 

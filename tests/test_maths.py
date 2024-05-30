@@ -5,7 +5,7 @@ import unittest
 
 from context import tt3de
 
-from tt3de.tt3de import Camera, FPSCamera, Mesh3D, Point3D, PointElem, Quaternion, Triangle3D, extract_palette, load_bmp, round_to_palette
+from tt3de.tt3de import Camera, FPSCamera, Mesh3D, Point3D, PointElem, Quaternion, Triangle3D
 
 
 def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):

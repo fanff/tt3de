@@ -2,7 +2,7 @@
 from tt3de.asset_load import load_bmp, load_obj, read_file
 
 from tt3de.richtexture import ImageTexture
-from tt3de.tt3de import Mesh3D, Point2D, Point3D, Triangle3D
+from tt3de.tt3de import Point2D, Point3D, Triangle3D
 
 
 def fast_load(obj_file:str,cls=None):
