@@ -31,11 +31,10 @@ from glm import array as glma, i32vec2, ivec2, ivec3, mat3, mat4, vec2
 from glm import quat 
 from glm import vec3, vec4
 
-from c_triangle_raster import c_glm_triangle_render_to_buffer
-from c_triangle_raster import iterate_pixel_buffer,TrianglesBuffer
-from c_triangle_raster import TrianglesBuffer,apply_stage2
-from c_triangle_raster import make_per_pixel_index_buffer,make_per_pixel_data_buffer,make_per_mesh_data_buffer,make_uniform_data_buffer
-
+from tt3de.glm.c_triangle_raster import c_glm_triangle_render_to_buffer
+from tt3de.glm.c_triangle_raster import iterate_pixel_buffer,TrianglesBuffer
+from tt3de.glm.c_triangle_raster import TrianglesBuffer,apply_stage2
+from tt3de.glm.c_triangle_raster import make_per_pixel_index_buffer,make_per_pixel_data_buffer,make_per_mesh_data_buffer,make_uniform_data_buffer
 
 
 def p2d_tovec2(p:Point2D)->vec2:

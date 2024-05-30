@@ -8,7 +8,7 @@ import unittest
 import glm
 
 from glm import vec3,mat3
-from c_triangle_raster import TrianglesBuffer,make_per_pixel_index_buffer,make_per_pixel_data_buffer
+from tt3de.glm.c_triangle_raster import TrianglesBuffer,make_per_pixel_index_buffer,make_per_pixel_data_buffer
 from tt3de.glm.triangle_raster import generate_random_triangle
 
 def pix_buff_to_string(pixel_buffer,w,h,index_shift=1):

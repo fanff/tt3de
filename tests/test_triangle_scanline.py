@@ -272,8 +272,8 @@ class Test_scanline_iterator(unittest.TestCase):
         
 
 
-from c_triangle_raster import c_glm_triangle_render_to_buffer
-from c_triangle_raster import TrianglesBuffer
+from tt3de.glm.c_triangle_raster import c_glm_triangle_render_to_buffer
+from tt3de.glm.c_triangle_raster import TrianglesBuffer
 
 class Test_TriangleScanLine(unittest.TestCase):
     

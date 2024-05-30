@@ -141,3 +141,5 @@ dmypy.json
 ~$*
 .venv
 .vscode
+tt3de/glm/c_texture.c
+tt3de/glm/c_triangle_raster.c
