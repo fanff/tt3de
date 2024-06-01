@@ -1,0 +1,177 @@
+
+import unittest
+import pytest
+from tt3de.asset_fastloader import fast_load
+from tt3de.richtexture import ImageTexture
+
+from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
+
+def drawbuffer_to_pil(drawbuffer : DrawingBuffer,img_name="out.png", layer="front"):
+    """
+    
+    front,back,glyph
+    depth, weights, 
+
+
+    primitiv_id
+    geom_id
+    node_id
+    material_id
+
+
+    
+    """
+    from PIL import Image
+    # Extract the min and max values for x and y
+    min_x = 0
+    min_y = 0
+    max_x,max_y = drawbuffer.shape()
+
+    # Calculate canvas size with extra 10 pixels on each side
+    width = (max_x - min_x) + 20
+    height = (max_y - min_y) + 20
+
+    # Create a blank white canvas
+    canvas = Image.new('RGB', (width, height), 'white')
+
+    thelist = drawbuffer.canvas_to_list()
+    # Plot each point on the canvas
+    for x in range(max_x):
+        for y in range(max_y):
+            canvas_idx = (x*max_y)+y
+
+
+            apix = thelist[canvas_idx]
+            # Adjust coordinates to account for the offset
+            x_img, y_img = x - min_x + 10, y - min_y + 10
+
+            if layer == "front":
+                r,g,b = apix[:3]
+            if layer == "back":
+                r,g,b = apix[3:6]
+            elif layer == "glyph":
+                r = 0
+                g,b = apix[6:]
+            elif layer== "depth":
+
+                depth = apix[0]
+                r = normalised_depth_int
+                g,b = 0,0
+            elif layer== "weights":
+                wa,wb,wc = apix[1:4]
+                r,g,b = 0,0,0 # TODO
+            else:
+                r,g,b = apix[:3]
+            canvas.putpixel((x_img, y_img), (r,g,b))  # Black pixel
+
+
+    canvas.save(img_name)
+
+
+class Test_DrawCell(unittest.TestCase):
+    def test_create(self):
+        drawbuffer = DrawingBuffer(512 ,512)
+
+        max_x,max_y = drawbuffer.shape()
+        self.assertEqual( (512 ,512), drawbuffer.shape() )
+
+        drawbuffer = DrawingBuffer(48 ,23)
+        drawbuffer = DrawingBuffer(2 ,3)
+
+
+    def test_clear_canvas(self):
+        drawbuffer = DrawingBuffer(512 ,512)
+        drawbuffer.hard_clear(0.0)
+
+    
+        
+
+    def test_to_list(self):
+        w,h = 512 ,512
+        count = w*h
+        drawbuffer = DrawingBuffer(w,h)
+        drawbuffer.hard_clear(-32)
+
+        canvas_list = drawbuffer.canvas_to_list()
+        self.assertEqual(len(canvas_list),count)
+        
+        print(canvas_list[1])
+
+        self.assertEqual(len(canvas_list[0]),8)
+        
+
+        drawbuffer_list = drawbuffer.drawbuffer_to_list()
+        self.assertEqual(len(drawbuffer_list),count)
+
+        self.assertEqual(len(drawbuffer_list[0]),8)
+
+        acell = drawbuffer_list[0]
+
+        self.assertEqual(acell[0], -32)
+
+
+
+
+
+    def test_set_canvas(self):
+        drawbuffer = DrawingBuffer(32 ,32)
+        drawbuffer.hard_clear(10)
+        drawbuffer.set_canvas_content(0,0,
+                255,2,3,
+                4,5,6,
+                7,8)
+        
+        canvas_list = drawbuffer.canvas_to_list()
+
+        apix = canvas_list[0]
+
+        self.assertEqual([255,2,3],apix[:3])
+        self.assertEqual([4,5,6],apix[3:6])
+        self.assertEqual([7,8],apix[6:])
+
+
+        drawbuffer_to_pil(drawbuffer,"set_canvas.png")
+
+
+    def test_set_depth(self):
+        w,h = 32 ,32
+        count = w*h
+        drawbuffer = DrawingBuffer(w,h)
+
+        # setting initial depth buffer to 10
+        drawbuffer.hard_clear(10)
+
+
+
+        drawbuffer_list=drawbuffer.drawbuffer_to_list()
+
+
+        self.assertEqual(len(drawbuffer_list),count)
+
+
+        adepthelement_list = drawbuffer_list[0]
+
+        self.assertEqual(len(adepthelement_list),8)
+        self.assertEqual(adepthelement_list[0],10.0)
+
+
+        # setting info in the depth buffer
+        primitiv_id = 42
+        
+        geom_id =12
+        node_id =222
+        material_id = 3
+
+        inpuut_tuple = [1.0, # depth value
+            2.0, # weights
+            3.0, #
+            4.0, #
+            node_id,geom_id,material_id,primitiv_id]
+        
+        
+        drawbuffer.set_depth_content(0,0,*inpuut_tuple)
+        
+        modified_ = drawbuffer.drawbuffer_to_list()
+
+        self.assertEqual(modified_[0] ,inpuut_tuple)
+        

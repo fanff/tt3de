@@ -1,53 +1,41 @@
-from tt3de.glm.c_triangle_raster import _c_constants
-import itertools
-import glm
 
-print(_c_constants())
+aint  = 4.0 # in bytes #  size of the int
+anumeric_value_size = 4.0 # size of a float
 
+acolor = 3.0 # bytes,  3 for 24 bits, 2 for 16 bits (still good) , 1 for 8bits
 
+drawing_screen_pix_count = 1920*1080
 
-uvmap = glm.mat3x2(glm.vec2(1.0,2.0),glm.vec2(3.0,4.0),glm.vec2(5.0,6.0))
+indexor_size = 4.0  # 4 bytes  
 
-print( list(itertools.chain(*uvmap)) )
-
-
-
-uvmap = glm.mat4(2.0)
-
-print( list(itertools.chain(*uvmap)) )
+uv_layer_count = 2
+vertice_buffer_count = 2**16
+primitive_buffer_count = 2**16
 
 
-quit()
+vec3 = 3 * anumeric_value_size
+vec2 = 2 * anumeric_value_size
 
-print()
+node_buffer_size = ( vec2*2 * 4 ) * min(primitive_buffer_count,vertice_buffer_count)
+geometry_size =  ( indexor_size*3 + indexor_size + indexor_size + (vec2*3*uv_layer_count)  + indexor_size ) * min(primitive_buffer_count,vertice_buffer_count)
+vertice_buffer_size =( vec3 + vec3 + indexor_size ) * vertice_buffer_count
 
-
-uvmap = glm.mat3x2(1.0, 2.0,3.0, 4.0,5.0, 6.0)
-
-a = glm.array(glm.packUint4x8(glm.u8vec4(1,2,3,4)))
-
-
-print(a)
-print(a*4)
-print(glm.unpackUint4x8(a*4))
-#
-#v = glm.vec2([1,2])
-#a = glm.array(glm.vec2([1,2]))#
-
-#b = a.to_tuple()
-#v.to_list()
-#print(v.to_list())
-#result = somekindoftest()
-#print(f"Result: {result}")
+primitive_size = ( indexor_size*3 + indexor_size + indexor_size + indexor_size )  * primitive_buffer_count
+drawing_size =   ( anumeric_value_size + 3*anumeric_value_size + indexor_size + indexor_size+ indexor_size ) * drawing_screen_pix_count
+canvas_size =    ( acolor + acolor + acolor ) * drawing_screen_pix_count
 
 
-#m = glm.mat4(1.0)
-#rot = glm.rotate(1,glm.vec3(.2,.2,.2))
-#rot = m*rot
-#v = glm.vec3(1.0,2.0,3.0)
-#screen_info = glm.vec4(0.0,0.0,1.0,1.0)
-#
-#perspectivematrix = glm.perspective(89,9.0,.01,10)
-#r = glm.project(v,m,perspectivematrix,screen_info)
-#print(r)
+data = ({
+    "node_buffer_size": node_buffer_size,
+    "vertice_buffer_size" : vertice_buffer_size,
+    "primitive_size" : primitive_size,
+    "geometry_size" : geometry_size,
+    "drawing_size" : drawing_size ,
+    "canvas_size" : canvas_size
+})
 
+import pandas as pd 
+df = pd.DataFrame([data])/(2**20)
+print(df)
+print(df.sum())
+print(df.sum().sum())

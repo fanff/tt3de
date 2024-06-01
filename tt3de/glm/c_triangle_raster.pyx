@@ -5,105 +5,22 @@ import cython
 from cpython.array cimport array, clone
 from tt3de.glm.c_texture cimport Texture2D
 
-cpdef fu():
-    Texture2D(2,3)
+from tt3de.glm.c_math cimport round_in_screen,ceil_in_screen,floor_in_screen,cnumeric
 
+from tt3de.glm.c_math cimport flat_determinant_g as flat_determinant
 
-cdef int c_ceil(double a):
-    return int(ceil(a))
-
-cdef int c_floor(double a):
-    return int(floor(a))
-
-cdef int c_round(double x):
-    return int(round(x))
-
-
-cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:
-    if value < 0.0: 
-        return 0
-    cdef unsigned int rounded_a = <unsigned int> round(value)
-    if rounded_a > b:
-        return b
-    else:
-        return rounded_a
-
-cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:
-    if value < 0.0: 
-        return 0
-    cdef unsigned int _a = <unsigned int> ceil(value)
-    if _a > b:
-        return b
-    else:
-        return _a
-
-cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:
-    if value < 0.0: 
-        return 0
-    cdef unsigned int _a = <unsigned int> floor(value)
-    if _a > b:
-        return b
-    else:
-        return _a
-
-def c_ceil_f(a:float )->int : return c_ceil(a)
-def c_floor_f(a:float )->int : return c_floor(a)
-def c_round_f(a:float )->int : return c_round(a)
-def c_clamp_and_round_f(a:float,maxvalue:int )->int : return round_in_screen(a,maxvalue)
-
-
-cdef inline double c_determinant(double[3][3] mat):
-    # custom determinant for matrix of triangle, ignoring the z component
-    # Since the last row is [1, 1, 1], we can expand the determinant along this row:
-    # det = a11 * (a22 - a23) - a12 * (a21 - a23) + a13 * (a21 - a22)
-    return mat[0][0] * (mat[1][1] - mat[1][2]) - mat[0][1] * (mat[1][0] - mat[1][2]) + mat[0][2] * (mat[1][0] - mat[1][1])
-
-cdef void adjoint_mat(double[3][3] mat, double[3][3] adj_mat):
-    # mat[0] is the first col
-    # mat[:][0] is the row
-    # Calculate the adjoint matrix into destination
-    # assuming the last row or 'mat' is [1, 1, 1]
-
-    # Elements of the input matrix
-    cdef double a = mat[0][0]
-    cdef double b = mat[0][1]
-    cdef double c = mat[0][2]
-    cdef double d = mat[1][0]
-    cdef double e = mat[1][1]
-    cdef double f = mat[1][2]
+from tt3de.glm.c_math cimport adjoint_mat
     
-    # Calculate the cofactors (with assumption that last row is [1, 1, 1])
 
-    #diff y 
-    adj_mat[0][0] = e - f
-    adj_mat[0][1] = f - d
-    adj_mat[0][2] = d - e
-
-    # diff x 
-    adj_mat[1][0] = c - b
-    adj_mat[1][1] = a - c
-    adj_mat[1][2] = b - a
-
-
-    adj_mat[2][0] = b*f - c*e
-    adj_mat[2][1] = c*d - a*f
-    adj_mat[2][2] = a*e - b*d
-
-
-    # some extra values could be calculated :
-    # segment index 
-    # 0: CB
-    # 1: AC
-    # 2: AB
-    # xalpha = (-adj_matrix[0][side])/adj_matrix[1][side]
-    # xintercept = (-adj_matrix[2][side])/adj_matrix[1][side]
-    
 
 cdef mat3cast(src_mat:glm.mat3 , double[3][3] dst_mat):
+    #cdef double *p = &(dst_mat[0][0]);
+    
     cdef int i, j
     for i in range(3):
         for j in range(3):
             dst_mat[j][i] = src_mat[i][j]
+
 
 def mat3cast_f(src_mat:glm.mat3):
     cdef double[3][3] mat;
@@ -167,6 +84,7 @@ def c_glm_triangle_render_to_buffer(tri:glm.mat3,
 
 
 cdef int _c_glm_triangle_render_to_buffer (
+    # old implem 
     double[3][3] mat, 
     double[3][3] adjoint,
     unsigned int scw_1, 
@@ -346,8 +264,8 @@ cdef int _c_glm_triangle_render_to_buffer (
                 #for yi in glmiterate(adjoint,seg1,seg2,xi,screen_height):
                 #    yield xi,yi
 
-#    # second part
-#    
+    #    # second part
+    #    
     diff_maxx_cutx = maxxi-cutx
     if diff_maxx_cutx == 0:
         # its a vertical line. 
@@ -378,14 +296,14 @@ cdef int _c_glm_triangle_render_to_buffer (
 
 
 
-def ut_adjoint_calculation(tri:glm.mat3):
+cpdef ut_adjoint_calculation(tri:glm.mat3):
     """unit testing code """
     cdef double[3][3] mat;
     mat3cast(tri,mat)
     cdef double[3][3] adjoint;
     adjoint_mat(mat,adjoint)
 
-    dmat = c_determinant(mat)
+    cdef double dmat = flat_determinant(mat)
     
 
     return adjoint,dmat
@@ -470,11 +388,14 @@ def make_per_mesh_data_buffer():
     return array("d",[0.0]*(TRIANGLE_MESH_DATA_COUNT))
 
 
+#from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer
+
+
+
 
 ctypedef packed struct line_coef:
     double alpha
     double beta
-
 
 cdef void init_line_coef(line_coef* x,size_t index,double a,double b):
     x[index].alpha = a
@@ -482,24 +403,42 @@ cdef void init_line_coef(line_coef* x,size_t index,double a,double b):
 
 
 
+ctypedef packed struct uniform_info:
+
+    unsigned char[256] bufferdata
+    double[256] data
+
+    unsigned int scw_1
+    unsigned int sch_1
+
 
 ctypedef packed struct triangle_shape:
+    #"""this will be converted to a primitive structure"""
+    unsigned int node_id
+    unsigned int geometry_id
+    unsigned int material_id
+    unsigned int unique_id
+
     double[3][3] mat
     double[3][3] adjoint
     line_coef[3] coefs 
 
 
-    double[TRIANGLE_FACE_DATA_COUNT]  face_data # layout as you will
+    
+
+    double[TRIANGLE_FACE_DATA_COUNT]  face_data # layout as you will now is the UV points from the geom buffer
 
     # flat determinant of the triangle (surface on screen)
     double flat_determinant
 
-    unsigned int material_id
-    unsigned int unique_id
+
+
+
     # screen limit -1 for the triangle
     unsigned int scw_1
     unsigned int sch_1
     
+    # clamped limits of the triangle
     unsigned int ax 
     unsigned int ay 
     unsigned int bx 
@@ -514,6 +453,9 @@ cdef void init_triangle(triangle_shape* tris,size_t idx):
     tris[idx].coefs   =  [line_coef(.0,.0),line_coef(.0,.0),line_coef(.0,.0)]
 
 cdef class TrianglesBuffer:
+    """
+    Primitive buffer 
+    """
     cdef triangle_shape* array_of_triangles
     cdef size_t max_count 
     cdef size_t idx_limit 
@@ -532,10 +474,11 @@ cdef class TrianglesBuffer:
 
         if not self.array_of_triangles:
             raise MemoryError()
+    def __dealloc__(self):
+        PyMem_Free(self.array_of_triangles)  # no-op if self.array_of_triangles is NULL
         
     def get_triangle(self,idx:int ):
         cdef triangle_shape tr = self.array_of_triangles[idx]
-
         return tr
 
     def count(self)->int:
@@ -545,8 +488,6 @@ cdef class TrianglesBuffer:
     
     def as_pylist(self):
         return [self.array_of_triangles[i] for i in range(self.idx_limit)]
-    def __dealloc__(self):
-        PyMem_Free(self.array_of_triangles)  # no-op if self.array_of_triangles is NULL
     def add_triangle_info(self, tri, material_id:int =0 , uvmap:tuple[float,float,float,float,float,float]=None)->int:
         """
         uvmap can be a matrix 3x2 with uv vectore for 3 points; list(itertools.chain(*uvmap.to_tuple())) to listify 
@@ -579,7 +520,7 @@ cdef class TrianglesBuffer:
             self.add_triangle_info(tri)
         
 
-    def calculate_internal(self,screen_width:int,screen_height:int):
+    cpdef calculate_internal(self,screen_width:int,screen_height:int):
         cdef triangle_shape* tr
 
         cdef unsigned int scw_1 = <unsigned int> screen_width-1
@@ -598,7 +539,7 @@ cdef class TrianglesBuffer:
         cdef size_t i;
         for i in range(self.idx_limit):
             tr = &self.array_of_triangles[i]
-            tr.flat_determinant = c_determinant(tr.mat)
+            tr.flat_determinant = flat_determinant(tr.mat)
             
             tr.scw_1 = scw_1
             tr.sch_1 = sch_1
@@ -955,7 +896,7 @@ cdef void _apply_stage2(TrianglesBuffer tr_buff,
 
     cdef unsigned int material_id = 0
     cdef unsigned int triange_id = 0
-
+    cdef Texture2D t = Texture2D(23,32)
     output[0] = 2
 
     output[screen_width*3] = 5
@@ -984,6 +925,7 @@ cdef void _apply_stage2(TrianglesBuffer tr_buff,
                         tr_buff._get_triangle_face_data(triange_id), # face_info
                         mesh_info,   
                         uniformvalues,
+                        t,
                         output)
 
 
@@ -994,6 +936,7 @@ cpdef void apply_material(unsigned int material_id, # paint this on that
     double[:] face_info,                # using info from the face like the normal. or the UV coordinates
     double[:] mesh_info,                # mesh info that the vertice come from at the stage zero (the project ) 
     double[:] uniformvalues,            # world uniform values the mesh comes from (like.. global light/environmnet)
+    Texture2D atexture,
     unsigned int[:] output    # some kind of output buffer 
     ):
     """
@@ -1005,13 +948,12 @@ cpdef void apply_material(unsigned int material_id, # paint this on that
 
     uniformvalues contains the camera perspective info, screen wh info; 
     """
-    #cdef Texture2D atexture = Texture2D()
     if material_id == 1:
         apply_material_debug(output,xi, yi, combined_index)
-    #elif material_id == 2:
-    #    apply_1textured_material(output, xi, yi, combined_index, 
-    #    uniformvalues, mesh_info, face_info, pixel_info ,
-    #    atexture)
+    elif material_id == 2:
+        apply_1textured_material(output, xi, yi, combined_index, 
+        uniformvalues, mesh_info, face_info, pixel_info ,
+        atexture)
 
 cpdef inline void apply_material_debug(unsigned int[:] output,
         unsigned int xi,
@@ -1021,7 +963,7 @@ cpdef inline void apply_material_debug(unsigned int[:] output,
 
 
 
-cpdef void apply_1textured_material(unsigned int[:] output, 
+cdef void apply_1textured_material(unsigned int[:] output, 
     unsigned int xi,
     unsigned int yi,
     unsigned int combined_index,
@@ -1029,7 +971,7 @@ cpdef void apply_1textured_material(unsigned int[:] output,
     double[:] mesh_info,    
     double[:] face_info,    
     double[:] pixel_info,
-    #Texture2D thetexture
+    Texture2D thetexture
     ):
 
     # double precision UV mapping Oo , because.. precision <3 
@@ -1047,5 +989,5 @@ cpdef void apply_1textured_material(unsigned int[:] output,
 
     cdef double pixu = au*wa + bu * wb + cu*wc
     cdef double pixv = av*wa + bv * wb + cv*wc
-
+    thetexture
     #cdef Texture2D atexture = Texture2D(3,4)

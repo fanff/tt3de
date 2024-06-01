@@ -1,6 +1,7 @@
 from libc.stdlib cimport malloc, free
 from libc.string cimport memset
 
+
 cdef class Texture2D:
     def __cinit__(self, int width, int height):
         self.width = width
@@ -19,6 +20,11 @@ cdef class Texture2D:
         self.data[index] = r
         self.data[index + 1] = g
         self.data[index + 2] = b
+
+    cpdef void _get_at(self, int index, unsigned char* r, unsigned char* g, unsigned char* b):
+        r[0] = self.data[index]
+        g[0] = self.data[index + 1]
+        b[0] = self.data[index + 2]
 
     cdef void _get_pixel(self, int x, int y, unsigned char* r, unsigned char* g, unsigned char* b):
         cdef int index = (y * self.width + x) * 3
@@ -52,6 +58,8 @@ cdef class Texture2D:
                 ptr[index + 1] = data[i][j][1]
                 ptr[index + 2] = data[i][j][2]
 
+
+####################
 
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):

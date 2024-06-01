@@ -31,7 +31,8 @@ def pix_buff_to_string(pixel_buffer,w,h,index_shift=1):
 
 
 class Test_CalcInternals(unittest.TestCase):
-    def test_calculate_variation(self):
+    def test_calculate_zvariation(self):
+        "all the calculate_internal are Z value independant. "
         
         # lets create a triangle clock wise
         triangle1 = mat3(vec3(1.2,3.4,   1.0),
@@ -91,7 +92,8 @@ class Test_CalcInternals(unittest.TestCase):
         self.assertEqual(thetricalculated["cy"],thetri2calculated["cy"])
 
 
-        ### now we can test that the raster is exactly the same 
+        # now we can test that the raster is exactly the same between the two triangles
+        #
 
         pixel_buff_1 = make_per_pixel_index_buffer(10,10)
         data_buff_1 = make_per_pixel_data_buffer(10,10,float("inf"))

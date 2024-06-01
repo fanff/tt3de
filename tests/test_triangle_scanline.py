@@ -549,7 +549,7 @@ class TestBraile_scaling(unittest.TestCase):
         #        line = "".join([charuse for c in range(c[2])])
         #        print(line)
 
-from tt3de.glm.c_triangle_raster import c_floor_f,c_ceil_f,c_round_f,c_clamp_and_round_f
+from tt3de.glm.c_math import c_floor_f,c_ceil_f,c_round_f,c_clamp_and_round_f
 from tt3de.glm.c_triangle_raster import mat3cast_f,ut_adjoint_calculation,ut_yvalue_calculation,ut_factors_calculation
 from tt3de.glm.c_triangle_raster import ut_output_array_set
 from tt3de.glm.c_triangle_raster import iterate_pixel_buffer

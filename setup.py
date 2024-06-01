@@ -1,8 +1,6 @@
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 from Cython.Compiler import Options
-import glm
-
 
 # messing around with extensions.
 #extensions = [
@@ -12,7 +10,17 @@ import glm
 
 
 setup(
-    ext_modules = cythonize(["tt3de/glm/c_texture.pyx","tt3de/glm/c_triangle_raster.pyx"],
+    ext_modules = cythonize(["tt3de/glm/c_math.pyx",
+                             "tt3de/glm/c_texture.pyx",
+                             "tt3de/glm/drawing/c_drawing_buffer.pyx",
+                             "tt3de/glm/material/c_material.pyx",
+                             "tt3de/glm/raster/c_raster_point.pyx",
+                             "tt3de/glm/raster/c_raster_tri.pyx",
+                             "tt3de/glm/primitives/primitives.pyx",
+
+                             "tt3de/glm/raster/raster.pyx",
+                             "tt3de/glm/c_triangle_raster.pyx",
+                             ],
                             compiler_directives={'boundscheck': True,
                                                  'embedsignature':True}),
 
