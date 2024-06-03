@@ -14,7 +14,10 @@ cdef class Texture2D:
     def __dealloc__(self):
         if self.data:
             free(self.data)
-
+    cdef int get_width(self):
+        return self.width
+    cdef int get_height(self):
+        return  self.height
     cdef void _set_pixel(self, int x, int y, unsigned char r, unsigned char g, unsigned char b):
         cdef int index = (y * self.width + x) * 3
         self.data[index] = r

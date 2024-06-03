@@ -33,6 +33,11 @@ cdef class DrawingBuffer:
     cdef unsigned char* aleph(self,int index):
         return &(self.canvas[index].aleph[0])
 
+    cdef s_drawbuffer_cell* get_raw_depth_buffer(self):
+        return self._raw_data
+    cdef s_canvas_cell* get_raw_canvas_buffer(self):
+        return self._raw_canvas
+
 
 
     cdef inline int linear_idx(self,const int xi,const int yi):
@@ -75,34 +80,37 @@ cdef class DrawingBuffer:
                                 int   material_id ,
                                 int   primitiv_id ,
     ):
-
-        cdef s_drawbuffer_cell* thecell = &self.drawbuffer[self.linear_idx(xi,yi)]
+        set_depth_content(self._raw_data,self.height,xi,yi,
         
-        thecell.depth_value = depth_value
-        thecell.w1 = w1
-        thecell.w2 = w2
-        thecell.w3 = w3 
-        thecell.primitiv_id = primitiv_id
-        thecell.geom_id = geom_id
-        thecell.node_id = node_id
-        thecell.material_id = material_id
-
-    cpdef void apply_material(self,int xi,int yi):
-        cdef int lin_idx = self.linear_idx(xi,yi)
-
-
-
-        cdef s_drawbuffer_cell* thecell = &self.drawbuffer[lin_idx]
-
-        cdef unsigned char *aleph = self.aleph(lin_idx)
-        
-        
-
-        # thecell.material_id 
-        # material. 
-        # blit
+            depth_value, 
+            w1,
+            w2,
+            w3 ,
+            node_id,
+            geom_id,
+            material_id ,
+            primitiv_id ,
+        )
+    def get_depth_buff_content(self,xi:int,yi:int):
+        #lol =  self.canvas[self.linear_idx(xi,yi)]
+        athing = self._raw_data[self.linear_idx(xi,yi)]
+        return athing
 
 
+    def get_depth_min_max(self)->tuple[int,int]:
+
+        max_depth:float = -10**8
+        min_depth:float = 10**8
+        depth_val:float = 0
+        for i in range(self.size):
+            athing = self._raw_data[i]
+
+            depth_val = athing.depth_value
+            if depth_val> max_depth:
+                max_depth = depth_val
+            if depth_val< min_depth:
+                min_depth = depth_val
+        return min_depth,max_depth
     cpdef void set_canvas_content(self,
     
         int xi,
@@ -118,7 +126,19 @@ cdef class DrawingBuffer:
         
         self.canvas[self.linear_idx(xi,yi)].aleph = [fr,fg,fb, br,bg,bb, g1,g2]
 
-
+    def get_canvas_content(self,xi:int ,yi:int ):
+        lol =  self.canvas[self.linear_idx(xi,yi)]
+        rlist = [
+            <int> lol.aleph[0],
+            <int> lol.aleph[1],
+            <int> lol.aleph[2],
+            <int> lol.aleph[3],
+            <int> lol.aleph[4],
+            <int> lol.aleph[5],
+            <int> lol.aleph[6],
+            <int> lol.aleph[7],
+        ]
+        return rlist
 
     cpdef list canvas_to_list(self):
         cdef list ret = []
@@ -138,7 +158,10 @@ cdef class DrawingBuffer:
 
     
     cpdef list drawbuffer_to_list(self):
-
+        # will return the list of the drawbuffer elements. 
+        # [0] is [0,0]
+        # [1] is Y side (row )
+        # [height] is X side (column)
         cdef list ret = []
         cdef int idx = 0
         cdef s_drawbuffer_cell acell
@@ -171,6 +194,26 @@ cdef void init_s_drawbuffer_cell(s_drawbuffer_cell* x, const float depth):
 
 
 
-
-
+cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
+        const int raw_array_height,
+        const int xi,const int yi,
+        const float depth_value, 
+        const float w1 ,
+        const float w2 ,
+        const float w3 ,
+        const int   node_id,
+        const int   geom_id,
+        const int   material_id ,
+        const int   primitiv_id ,
+    ) noexcept nogil:
     
+    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(xi*raw_array_height)+yi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
+        
+    thecell.depth_value = depth_value
+    thecell.w1 = w1
+    thecell.w2 = w2
+    thecell.w3 = w3 
+    thecell.primitiv_id = primitiv_id
+    thecell.geom_id = geom_id
+    thecell.node_id = node_id
+    thecell.material_id = material_id

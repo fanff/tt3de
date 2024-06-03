@@ -1,15 +1,19 @@
 
+from tt3de.glm.c_buffer cimport s_buffer
+
 
 ctypedef packed struct line_coef:
     float alpha
     float beta
 
 ctypedef packed struct s_drawing_primitive:
-    
-    unsigned int node_id
-    unsigned int geometry_id
-    unsigned int material_id
-    unsigned int unique_id
+
+    int clipped
+    int primitive_type_id
+    int node_id
+    int geometry_id
+    int material_id
+    int unique_id
     
     # fields arbitrary compatible with any kind of primitive
     
@@ -28,7 +32,7 @@ ctypedef packed struct s_drawing_primitive:
     # czf = tr.mat[2][2]
 
 
-    # fields bellow are calculated by the raster stage; i guess
+    # fields bellow are calculated by the raster stage; 
 
 
 
@@ -53,25 +57,27 @@ ctypedef packed struct s_drawing_primitive:
 
 
 
-
 cdef class PrimitivesBuffer:
-    cdef s_drawing_primitive* _raw_content
+    cdef s_drawing_primitive* _raw_content # to be removed
     cdef int size
-
-    cdef unsigned int content_idx
+    cdef s_buffer an_arrayofstuff 
 
 
     cdef s_drawing_primitive* rawaccess(self)
+    cdef s_buffer* rawaccess_array(self)
     cpdef unsigned int primitive_count(self)
     cpdef bint can_add(self)
-    
+
+    cdef inline s_drawing_primitive* index_of(self,int idx):
+        return <s_drawing_primitive* > ((<char*> ((&self.an_arrayofstuff).data)) + sizeof(s_drawing_primitive) * idx )
+
+
     cpdef s_drawing_primitive get_primitive(self,int ixd)
     
     
-    cpdef void add_triangle(self, unsigned int  node_id,
-                            unsigned int  geometry_id,
-                            unsigned int  material_id,
-                            unsigned int  unique_id,
+    cpdef void add_triangle(self, int  node_id,
+                            int  geometry_id,
+                            int  material_id,
                             float ax,
                             float ay,
                             float az,
@@ -87,7 +93,6 @@ cdef class PrimitivesBuffer:
     cpdef void add_line(self, int  node_id,
                             int  geometry_id,
                             int  material_id,
-                            int  unique_id,
                             float ax,
                             float ay,
                             float az,
@@ -99,9 +104,46 @@ cdef class PrimitivesBuffer:
     cpdef void add_point(self,int  node_id,
                             int  geometry_id,
                             int  material_id,
-                            int  unique_id,
                             float x,
                             float y,
                             float z)
 
 
+
+
+
+cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
+                             int  geometry_id,
+                             int  material_id,
+                            float ax,
+                            float ay,
+                            float az,
+
+                            float bx,
+                            float by,
+                            float bz,
+
+                            float cx,
+                            float cy,
+                            float cz,
+                            ) 
+
+cdef void _add_line(s_buffer* primitiv_buffer_array, int  node_id,
+                            int  geometry_id,
+                            int  material_id,
+                            float ax,
+                            float ay,
+                            float az,
+
+                            float bx,
+                            float by,
+                            float bz,
+                            )
+
+
+cdef void _add_point(s_buffer* primitiv_buffer_array,int  node_id,
+                            int  geometry_id,
+                            int  material_id,
+                            float x,
+                            float y,
+                            float z)

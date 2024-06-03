@@ -6,10 +6,13 @@ from tt3de.glm.primitives.primitives cimport s_drawing_primitive
 
 cpdef raster_on_stuff(s_drawing_primitive aprimitive,DrawingBuffer drawing_buffer):
 
-    raster(&aprimitive,drawing_buffer)
+    raster_point(&aprimitive,drawing_buffer)
 
 
-cdef void raster (
+
+
+
+cdef void raster_point (
     s_drawing_primitive* dprim,
     DrawingBuffer drawing_buffer) noexcept :
     
@@ -35,3 +38,5 @@ cdef void raster (
     
     #drawing_buffer.material_id
     #drawing_buffer.set_canvas_content(xi,yi, 0,0,0,0,0,0,0,0)
+
+

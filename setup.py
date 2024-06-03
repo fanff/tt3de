@@ -11,14 +11,17 @@ from Cython.Compiler import Options
 
 setup(
     ext_modules = cythonize(["tt3de/glm/c_math.pyx",
+                             "tt3de/glm/c_buffer.pyx",
+                             "tt3de/glm/geometry/geometry.pyx",
                              "tt3de/glm/c_texture.pyx",
                              "tt3de/glm/drawing/c_drawing_buffer.pyx",
                              "tt3de/glm/material/c_material.pyx",
+                             "tt3de/glm/raster/c_raster_line.pyx",
                              "tt3de/glm/raster/c_raster_point.pyx",
                              "tt3de/glm/raster/c_raster_tri.pyx",
                              "tt3de/glm/primitives/primitives.pyx",
-
                              "tt3de/glm/raster/raster.pyx",
+                             "tt3de/glm/primitives/primitive_builder.pyx",
                              "tt3de/glm/c_triangle_raster.pyx",
                              ],
                             compiler_directives={'boundscheck': True,

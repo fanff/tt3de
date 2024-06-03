@@ -23,14 +23,15 @@ cdef class DrawingBuffer:
     cdef int width
     cdef int height
 
-
+    cdef s_drawbuffer_cell* get_raw_depth_buffer(self)
+    cdef s_canvas_cell* get_raw_canvas_buffer(self)
     cdef inline int linear_idx(self,int xi,int yi)
 
     cdef unsigned int get_width(self)
     cdef unsigned int get_height(self)
     cpdef tuple shape(self)
     cpdef void hard_clear(self,float init_depth)
-    cpdef void apply_material(self,int xi,int yi)
+    
     cpdef void set_depth_content(self,const int xi,const int yi,
                                 float depth_value, 
                                 float w1,
@@ -53,7 +54,7 @@ cdef class DrawingBuffer:
         unsigned char bb,
         unsigned char g1,
         unsigned char g2)
-
+    
     cdef unsigned char* aleph(self,int index)
     
 
