@@ -41,7 +41,10 @@ cdef class GeometryBuffer:
         return lol
     cpdef unsigned int geometry_count(self):
         return self.content_idx
+    cpdef void clear(self):
+        self.content_idx=0
 
+        
     cdef void add_point(self, float x, float y, float z, float uv_array[8], int node_id, int material_id):
         if not self.can_add():
             return

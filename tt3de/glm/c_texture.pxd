@@ -1,4 +1,16 @@
 # texture2d.pxd
+
+
+ctypedef packed struct s_texture32:
+    int height;
+    unsigned char data[32][32][3];
+
+cdef class TextureArray:
+    cdef s_texture32[32] t32_array
+    cdef int t32_size 
+
+    cpdef int size(self)
+    cdef s_texture32* get_raw(self)
 cdef class Texture2D:
     cdef unsigned char* data
     cdef int width

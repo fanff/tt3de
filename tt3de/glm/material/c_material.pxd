@@ -38,7 +38,10 @@ cdef class Material:
     cdef unsigned char albedo_back_b 
     cdef unsigned char glyph_a 
     cdef unsigned char glyph_b 
+    cdef int[8] texture_id_array
 
+
+    
     cdef void _rgb_uv_map(self,int texture_id, int index, unsigned char* r, unsigned char* g, unsigned char* b)
 
     cpdef int texture_factor(self,int texture_id)

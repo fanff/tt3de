@@ -15,6 +15,7 @@ from textual.widgets import (
 )
 from abc import ABC, abstractmethod
 from tt3de.glm.pyglmtexture import GLMCamera, GLMRenderContext
+from tt3de.render_context_cy import CyRenderContext
 from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
@@ -70,9 +71,9 @@ class TT3DView(Widget):
         else:
             self.camera = GLMCamera(Point3D(0, 0, 0), 90, 90)
             self.camera.point_at(glm.vec3(0, 0, 1))
-            self.rc = GLMRenderContext(self.size.width, self.size.height)
+            self.rc = CyRenderContext(self.size.width, self.size.height)
         self.initialize()
-        self.update_timer = self.set_interval(1.0 / 30, self.calc_frame, pause=False)
+        self.update_timer = self.set_interval(1.0 / 20, self.calc_frame, pause=False)
         self.last_frame_data_info = {}  
         self.rc.setup_segment_cache(self.app.console)
         
@@ -153,7 +154,19 @@ class TT3DView(Widget):
             return self.cached_result
         else:
             self.render_step()
-            
+        
+        
+        if not self.use_native_python:
+            ts = time()
+            result = self.rc.to_textual_()
+
+            self.render_strips_dur = time()-ts
+            self.last_processed_frame = self.frame_idx
+
+            self.cached_result = result
+            return result
+    
+
         ts = time()
 
         sw = self.rc.screen_width

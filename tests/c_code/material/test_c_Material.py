@@ -14,7 +14,6 @@ from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
 from tt3de.glm.primitives.primitives import PrimitivesBuffer  
 
 
-
 from tt3de.glm.raster.raster import raster_precalc
 from tt3de.glm.raster.raster import raster_all
 
@@ -33,21 +32,7 @@ class Test_Material(unittest.TestCase):
 
         print(amaterial)
         #print(amaterial.dostuff())
-    def test_blit(self):
-        
-        img:ImageTexture = fast_load("models/test_screen32.bmp")
-        atexture = Texture2D(img.image_width,img.image_height)
-        atexture.load_from_list(img.img_data)
-
-        amaterial = Material()
-        amaterial.add_texture(atexture)
-        amaterial.add_texture(atexture)
-        amaterial.add_texture(atexture)
-
-        from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
-
-        drawbuffer = DrawingBuffer(512 ,512)
-        amaterial.test_blit(0,0,drawbuffer)
+    
 
 class Test_MaterialBuffer(unittest.TestCase):
     def test_create(self):

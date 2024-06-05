@@ -8,13 +8,12 @@ from tt3de.glm.c_buffer cimport s_buffer
 
 from tt3de.glm.primitives.primitives cimport PrimitivesBuffer,s_drawing_primitive
 
-from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer
+from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer,s_drawbuffer_cell
 
 from tt3de.glm.raster.c_raster_point cimport raster_point
-from tt3de.glm.raster.c_raster_point import raster_on_stuff
 from tt3de.glm.raster.c_raster_line cimport clip_in_screen,raster_line
 
-
+from tt3de.glm.raster.c_raster_triangle cimport raster_triangle
 
 DEF PRIMITIVE_TYPE_POINT=0
 DEF PRIMITIVE_TYPE_LINE=1
@@ -116,58 +115,55 @@ cdef void _precalc(s_buffer* primitive_array,unsigned int idx_limit,
 
 
         elif tr.primitive_type_id == PRIMITIVE_TYPE_TRIANGLE:
-            tr.clipped=1
-            #tr = &(primitiv[i])
-            tr[0].flat_determinant = flat_determinant_g(tr.mat)
-            
-            axf = tr.mat[0][0]
-            ayf = tr.mat[1][0]
-            bxf = tr.mat[0][1]
-            byf = tr.mat[1][1]
-            cxf = tr.mat[0][2]
-            cyf = tr.mat[1][2]
+            tr.clipped=0
 
-            # getting the rounded values of the corners; 
-            # clamped into the screen
-            tr.ax = round_in_screen(axf, scw_1)
-            tr.ay = round_in_screen(ayf, sch_1)
-            tr.bx = round_in_screen(bxf, scw_1)
-            tr.by = round_in_screen(byf, sch_1)
-            tr.cx = round_in_screen(cxf, scw_1)
-            tr.cy = round_in_screen(cyf, sch_1)
-            
-
-            # Calculate the cofactors (with assumption that last row is [1, 1, 1])
-            tr.adjoint[0][0] = byf - cyf  #diff y 
-            tr.adjoint[0][1] = cyf - ayf
-            tr.adjoint[0][2] = ayf - byf
-            tr.adjoint[1][0] = cxf - bxf  # diff x 
-            tr.adjoint[1][1] = axf - cxf
-            tr.adjoint[1][2] = bxf - axf
-            tr.adjoint[2][0] = bxf*cyf - cxf*byf
-            tr.adjoint[2][1] = cxf*ayf - axf*cyf
-            tr.adjoint[2][2] = axf*byf - bxf*ayf
-            #  C
-            # A  B
-            # some extra values could be calculated :
-            # segment index 
-            # 0: CB
-            # 1: AC
-            # 2: BA
-            
-            side=0
-            if tr.cx!=tr.bx:
-                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
-                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
-
-            side=1
-            if tr.ax!=tr.cx:
-                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
-                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
-            side=2
-            if tr.ax!=tr.bx:
-                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
-                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
+            return 
+#            tr.clipped=1
+#            #tr = &(primitiv[i])
+#            tr[0].flat_determinant = flat_determinant_g(tr.mat)
+#            axf = tr.mat[0][0]
+#            ayf = tr.mat[1][0]
+#            bxf = tr.mat[0][1]
+#            byf = tr.mat[1][1]
+#            cxf = tr.mat[0][2]
+#            cyf = tr.mat[1][2]
+#            # getting the rounded values of the corners; 
+#            # clamped into the screen
+#            tr.ax = round_in_screen(axf, scw_1)
+#            tr.ay = round_in_screen(ayf, sch_1)
+#            tr.bx = round_in_screen(bxf, scw_1)
+#            tr.by = round_in_screen(byf, sch_1)
+#            tr.cx = round_in_screen(cxf, scw_1)
+#            tr.cy = round_in_screen(cyf, sch_1)
+#            # Calculate the cofactors (with assumption that last row is [1, 1, 1])
+#            tr.adjoint[0][0] = byf - cyf  #diff y 
+#            tr.adjoint[0][1] = cyf - ayf
+#            tr.adjoint[0][2] = ayf - byf
+#            tr.adjoint[1][0] = cxf - bxf  # diff x 
+#            tr.adjoint[1][1] = axf - cxf
+#            tr.adjoint[1][2] = bxf - axf
+#            tr.adjoint[2][0] = bxf*cyf - cxf*byf
+#            tr.adjoint[2][1] = cxf*ayf - axf*cyf
+#            tr.adjoint[2][2] = axf*byf - bxf*ayf
+#            #  C
+#            # A  B
+#            # some extra values could be calculated :
+#            # segment index 
+#            # 0: CB
+#            # 1: AC
+#            # 2: BA
+#            side=0
+#            if tr.cx!=tr.bx:
+#                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
+#                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
+#            side=1
+#            if tr.ax!=tr.cx:
+#                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
+#                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
+#            side=2
+#            if tr.ax!=tr.bx:
+#                tr.coefs[side].alpha = (-tr.adjoint[0][side])/tr.adjoint[1][side]
+#                tr.coefs[side].beta = (-tr.adjoint[2][side])/tr.adjoint[1][side]
 
 
 
@@ -177,27 +173,34 @@ cdef void _precalc(s_buffer* primitive_array,unsigned int idx_limit,
 
 cpdef void raster_all(PrimitivesBuffer primitive_buffer, 
                 DrawingBuffer drawing_buffer):
+    # python entry point to the raster function
     cdef unsigned int idx_limit = primitive_buffer.primitive_count()
     cdef s_buffer* primitive_array  =  primitive_buffer.rawaccess_array()
+    cdef s_drawbuffer_cell* the_raw_array= drawing_buffer.get_raw_depth_buffer()
+
+
     _raster_all(primitive_array,
-                idx_limit,
-                drawing_buffer.get_width(),
-                drawing_buffer.get_height(),
-                drawing_buffer)
+                <int> idx_limit,
+                <int> drawing_buffer.get_width(),
+                <int> drawing_buffer.get_height(),
+                the_raw_array)
 
 cdef void _raster_all(s_buffer* primitive_array,
-                    unsigned int idx_limit,
-                    unsigned int screen_width,
-                    unsigned int screen_height,
-                    DrawingBuffer drawing_buffer):
+                    int idx_limit,
+                    int screen_width,
+                    int screen_height,
+                    s_drawbuffer_cell* the_raw_array) noexcept nogil:
     cdef size_t i;
     cdef s_drawing_primitive* buff
+
     for i in range(idx_limit):
 
         buff= <s_drawing_primitive* > ((<char*> ((primitive_array).data)) + sizeof(s_drawing_primitive) * i )
-
+        
 
         if buff.primitive_type_id == PRIMITIVE_TYPE_POINT:
-            raster_point(buff,drawing_buffer)
+            raster_point(buff,the_raw_array, screen_width)
         elif buff.primitive_type_id == PRIMITIVE_TYPE_LINE:
-            raster_line(buff,drawing_buffer)
+            raster_line(buff, the_raw_array, screen_width)
+        elif buff.primitive_type_id == PRIMITIVE_TYPE_TRIANGLE:
+            raster_triangle(buff, the_raw_array, screen_width, screen_height)

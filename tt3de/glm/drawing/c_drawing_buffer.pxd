@@ -15,7 +15,7 @@ ctypedef packed struct s_drawbuffer_cell:
 cdef class DrawingBuffer:
     cdef s_canvas_cell[:] canvas
     cdef s_canvas_cell* _raw_canvas
-
+    cdef list style_array
 
     cdef s_drawbuffer_cell[:] drawbuffer
     cdef s_drawbuffer_cell* _raw_data
@@ -59,5 +59,20 @@ cdef class DrawingBuffer:
     
 
     cpdef list canvas_to_list(self)
-
+    cpdef list canvas_to_list_ofstyled(self)
     cpdef list drawbuffer_to_list(self)
+
+
+
+cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
+        const int raw_array_width,
+        const int xi,const int yi,
+        const float depth_value, 
+        const float w1 ,
+        const float w2 ,
+        const float w3 ,
+        const int   node_id,
+        const int   geom_id,
+        const int   material_id ,
+        const int   primitiv_id ,
+    ) noexcept nogil

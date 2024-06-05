@@ -67,7 +67,7 @@ cdef class PrimitivesBuffer:
     cdef s_buffer* rawaccess_array(self)
     cpdef unsigned int primitive_count(self)
     cpdef bint can_add(self)
-
+    cpdef void clear(self)
     cdef inline s_drawing_primitive* index_of(self,int idx):
         return <s_drawing_primitive* > ((<char*> ((&self.an_arrayofstuff).data)) + sizeof(s_drawing_primitive) * idx )
 

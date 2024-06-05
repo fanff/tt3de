@@ -575,10 +575,9 @@ class GLMMesh3D(Mesh3D):
         self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
         self.texture_coords = [[GLMTexturecoord(p.x,p.y) for p in coordlayer] for coordlayer in self.texture_coords]
         self.texture.cache_output(segmap)
-        
-        
-        self.glm_uvmap = [[glm.mat3x2(*[glm.vec2(uv.x,1.0-uv.y) for uv in uvlayer]) for uvlayer in t.uvmap] for t in self.triangles]
-        self.c_code_uvmap = [[tuple(itertools.chain(*[(uv.x,1.0-uv.y) for uv in uvlayer])) for uvlayer in t.uvmap] for t in self.triangles]
+
+        uvfiller = [0.0]*42
+        self.c_code_uvmap = [[list(itertools.chain(*[(1.0-uv.y,uv.x,) for uv in uvlayer]))+uvfiller for uvlayer in t.uvmap] for t in self.triangles]
         #self.glm_uvmap = [[[glm.vec2(uv.x,uv.y) for uv in uvlayer] for uvlayer in t.uvmap] ]
 
         # 
@@ -627,7 +626,7 @@ class GLMMesh3D(Mesh3D):
                     (rp2,(dist2)),
                     (rp3,(dist3)))
             
-    def draw(self,camera:GLMCamera,tribuff:TrianglesBuffer):
+    def draw(self,camera:GLMCamera,geometry_buffer):
         
         screen_width, screen_height = camera.screen_width,camera.screen_height
         perspective_matrix = camera.perspective
@@ -653,12 +652,29 @@ class GLMMesh3D(Mesh3D):
             if facing>0 and (zvalues>vec3(0.0)) * (zvalues<vec3(1.0))== vec3(1.0):
                 
                 # keep the FACE info (uv map and stuff) inside the the tribuff
-                uvmap = self.c_code_uvmap[triangle_idx][0]
+                #uvmap = self.c_code_uvmap[triangle_idx][0]
                 
                 # should add the triangle with material_id material _id here 
                 # glm.mat3x3(vec3(rp1.xy,1),vec3(rp2.xy,1),vec3(rp3.xy,1))
-                given_matrix = glm.mat3x3(vec3(rp1.xy,1.0),vec3(rp2.xy,1),vec3(rp3.xy,1))
-                tribuff.add_triangle_info(given_matrix,material_id=1,uvmap=uvmap)
+                #given_matrix = glm.mat3x3(vec3(rp1.xy,1.0),vec3(rp2.xy,1),vec3(rp3.xy,1))
+                a = [rp1.x,rp1.y,rp1.z]
+                b = [rp2.x,rp2.y,rp2.z]
+                c = [rp3.x,rp3.y,rp3.z]
+                #geometry_buffer.add_triangle_to_buffer(a , 
+                #                       c, 
+                #                       b, 
+                #                       [0.0] * 48,   # uv list 
+                #                       0,  # node_id
+                #                       1)  # material_id
+                geometry_buffer.add_triangle_to_buffer(a , 
+                                       b, 
+                                       c, 
+                                       self.c_code_uvmap[triangle_idx][0],   # uv list 
+                                       0,  # node_id
+                                       1)  # material_id
+
+
+                #geometry_buffer.add_triangle_info(given_matrix,material_id=1,uvmap=uvmap)
 
 
     def draw_old_version(self, camera:GLMCamera,transform=None,*args ) -> Iterable[tuple[vec3,vec3,tuple]]:

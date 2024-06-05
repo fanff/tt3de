@@ -1,6 +1,8 @@
-from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer
-from tt3de.glm.primitives.primitives cimport s_drawing_primitive
+from tt3de.glm.drawing.c_drawing_buffer cimport s_drawbuffer_cell
 
+
+
+from tt3de.glm.primitives.primitives cimport s_drawing_primitive
 
 
 
@@ -13,7 +15,7 @@ DEF RIGHT = 2   # 0010
 DEF BOTTOM = 4  # 0100
 DEF TOP = 8     # 1000
 
-cdef int compute_code(float x, float y, int screen_width, int screen_height):
+cdef int compute_code(float x, float y, int screen_width, int screen_height) noexcept nogil:
     cdef int code = INSIDE
 
     if x < 0:
@@ -29,7 +31,7 @@ cdef int compute_code(float x, float y, int screen_width, int screen_height):
 
 # applyed during precalc
 cdef int clip_in_screen(float axf, float ayf, float bxf, float byf, int screen_width, int screen_height,
-                        float* ax_clipped, float* ay_clipped, float* bx_clipped, float* by_clipped):
+                        float* ax_clipped, float* ay_clipped, float* bx_clipped, float* by_clipped) noexcept nogil :
     cdef int code1, code2, code_out
     cdef float x, y
     cdef int accept = 0
@@ -53,13 +55,13 @@ cdef int clip_in_screen(float axf, float ayf, float bxf, float byf, int screen_w
 
             if code_out & TOP:
                 x = axf + (bxf - axf) * (screen_height - ayf) / (byf - ayf)
-                y = screen_height
+                y = <float> screen_height
             elif code_out & BOTTOM:
                 x = axf + (bxf - axf) * (-ayf) / (byf - ayf)
                 y = 0
             elif code_out & RIGHT:
                 y = ayf + (byf - ayf) * (screen_width - axf) / (bxf - axf)
-                x = screen_width
+                x = <float> screen_width
             elif code_out & LEFT:
                 y = ayf + (byf - ayf) * (-axf) / (bxf - axf)
                 x = 0
@@ -90,99 +92,191 @@ cdef int clip_in_screen(float axf, float ayf, float bxf, float byf, int screen_w
 #####
 
 
+cdef extern from "math.h":
+    float sqrt(float)  noexcept nogil
+    float abs(float)  noexcept nogil
+    int max(int)  noexcept nogil
 
-
-
+from tt3de.glm.drawing.c_drawing_buffer cimport set_depth_content
 
 cdef void raster_line(s_drawing_primitive* dprim,
-    DrawingBuffer drawing_buffer):
-
-    _raster_line( drawing_buffer,dprim, dprim.ax, dprim.ay,dprim.mat[2][0], dprim.bx, dprim.by,dprim.mat[2][1])
-
+     s_drawbuffer_cell* the_raw_array,
+     int raw_array_width) noexcept nogil:
 
 
+    # lineRasterization(s_drawbuffer_cell* the_raw_array , int raw_array_width ,s_drawing_primitive* dprim, 
+    #    float initial_x, float initial_y, float final_x, float final_y,
+    #    int x, int y, int x2, int y2)
+    cdef float zzp1 = dprim.mat[2][0]
+    cdef float zzp2 = dprim.mat[2][1]
+    
+    cdef float initial_x= dprim.mat[0][0]
+    cdef float initial_y= dprim.mat[1][0]
 
-cdef void set_in_depth_buffer(DrawingBuffer drawing_buffer,s_drawing_primitive* dprim, int x, int y,float depth,
+    cdef float final_x = dprim.mat[0][1]
+    cdef float final_y = dprim.mat[1][1]
+
+
+    lineRasterization(the_raw_array , raw_array_width , dprim, 
+         initial_x,  initial_y,  zzp1, final_x,  final_y, zzp2,
+        dprim.ax, dprim.ay, dprim.bx, dprim.by)
+
+
+    #_raster_line(  the_raw_array , raw_array_width, dprim,      dprim.ax, dprim.ay,dprim.mat[2][0], dprim.bx, dprim.by,dprim.mat[2][1])
+
+
+
+
+cdef void set_in_depth_buffer(s_drawbuffer_cell* the_raw_array, int raw_array_width,s_drawing_primitive* dprim, int x, int y,float depth,
 
         float wa,
-        ):
-    drawing_buffer.set_depth_content(x,y, 
-            depth, wa,0.0,0.0,  
-            dprim.node_id,  # pass node_id
-            dprim.geometry_id, # pass geom 
-            dprim.material_id,
-            dprim.unique_id, # my primitive id 
-             )
+        ) noexcept nogil:
+    set_depth_content(the_raw_array,raw_array_width,x,y,
+        depth, wa,0.0,0.0,
+        dprim[0].node_id,  # pass node_id
+        dprim[0].geometry_id, # pass geom 
+        dprim[0].material_id,
+        dprim[0].unique_id, # my primitive id 
+    )
+
+
+cdef void line_vertical(s_drawbuffer_cell* the_raw_array , int raw_array_width ,s_drawing_primitive* dprim, 
+    float initial_y,float zzp1, 
+    float final_y,float zzp2,
+    int x, int y, int y2
+    ) noexcept nogil:
+    
+    cdef float dy = final_y - initial_y
+
+    cdef float line_full_length = abs(dy)
+    cdef float in_screen_length = abs(<float>(y2-y))
+
+
+    cdef float initial_factor = ((<float>y)-initial_y) / line_full_length
+
+    cdef float factor_step = (in_screen_length/line_full_length)/line_full_length
+
+
+    cdef int y_value = y
+    cdef float factor = initial_factor
+
+
+    cdef float diffzzz = (zzp2-zzp1)
+    
+
+    if y2>= y:
+        while (y_value<=y2):
+            set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x, y_value, zzp1+  diffzzz * factor, factor)
+            factor+=factor_step
+            y_value+=1
+    else:
+        while (y_value>=y2):
+            set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x, y_value, zzp1+  diffzzz * factor, factor)
+            factor+=factor_step
+            y_value-=1
+    
 
 
 
-cdef void _raster_line(DrawingBuffer drawing_buffer,s_drawing_primitive* dprim, int x, int y, float z, int x2, int y2, float z2):
-    cdef:
-        bint yLonger = False
-        int incrementVal, endVal
-        int shortLen = y2 - y
-        int longLen = x2 - x
-        double decInc, j = 0.0
-        float depth = 1.0
-        float ratioptop = 0.0
-        float zzp1 = dprim.mat[2][0]
-        float zzp2 = dprim.mat[2][1]
+cdef void lineRasterization(s_drawbuffer_cell* the_raw_array , int raw_array_width ,s_drawing_primitive* dprim, 
+        float initial_x, float initial_y,float zzp1, 
+        float final_x, float final_y,float zzp2,
 
-        float line_full_length = sqrt ((dprim.adjoint[1][2])**2 + (dprim.adjoint[0][2])**2)
-        float initial_x= dprim.mat[0][0]
-        float initial_y= dprim.mat[1][0]
+        int x, int y, 
+        int x2, int y2) noexcept nogil:
 
-        float final_x = dprim.mat[0][1]
-        float final_y = dprim.mat[1][1]
+    if x == x2:
+        line_vertical(the_raw_array , raw_array_width ,dprim, 
+            initial_y,zzp1, 
+            final_y,  zzp2,
+            x,  y,  y2
+            ) 
+        return
+    cdef int absolute_max_y = y if y > y2 else y2
+    # Calculate the direction vector of the line segment
+    cdef float dx = final_x - initial_x
+    cdef float dy = final_y - initial_y
+    cdef float diffzzz = (zzp2-zzp1)
 
 
-        int x_set
-        int y_set
 
-    if abs(shortLen) > abs(longLen):
-        # swap shortLen and longLen
-        shortLen, longLen = longLen, shortLen
-        yLonger = True
+    cdef float alpha = dy/dx
+    cdef float beta  = initial_y - (alpha * initial_x)
 
-    endVal = longLen
-    if longLen < 0:
-        incrementVal = -1
-        longLen = -longLen
-        zzp1,zzp2 = zzp2,zzp1
 
+    # Calculate the length of the direction vector
+    cdef float line_full_length = abs(dx) + abs(dy) # sqrt(dx * dx + dy * dy)
+
+
+    # calculate the in screen leng
+    cdef int dxinscreen = x2 - x
+    cdef int dyinscreen = y2 - y
+    cdef float in_screen_length =  abs(<float> dxinscreen)   + abs(<float> dyinscreen)  # sqrt(<float>(dxinscreen*dxinscreen + dyinscreen*dyinscreen))
+
+    # factor step calculation
+    cdef float factor_step = (in_screen_length/line_full_length)/line_full_length
+    cdef float diff_initial_float_y = (    (<float>y)-initial_y     )     
+    cdef float diff_initial_float_x = (    (<float>x)-initial_x     )     
+
+    cdef float initial_factor =( abs(diff_initial_float_x) + abs(diff_initial_float_y))/line_full_length #sqrt(diff_initial_float_y*diff_initial_float_y + diff_initial_float_x*diff_initial_float_x) / line_full_length
+    
+    cdef float factor = initial_factor
+    cdef float y_value_float
+    cdef float y_value2_float
+
+    cdef int y_value_int
+    cdef int y_value2_int
+
+    # calculate y and y2 for the current x value 
+    cdef float x_value_float = <float> x
+    cdef int x_value = x
+
+    if x2>= x:
+        while x_value <= x2 :
+
+            y_value_float = alpha * x_value_float + beta
+            y_value2_float = alpha * (x_value_float+1.0) +beta
+            y_value_int   = <int> y_value_float 
+            y_value2_int  = <int> y_value2_float
+
+            if y_value2_int>= y_value_int:
+                while ((y_value_int <= y_value2_int) ):
+
+                    if (y_value_int>=0) and (y_value_int <= absolute_max_y):
+                        
+                        set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x_value, y_value_int, zzp1+ diffzzz * factor, factor)
+                    factor+=factor_step
+                    y_value_int+=1
+            else:
+                while (y_value_int >= y_value2_int):
+                    if (y_value_int>=0) and (y_value_int <= absolute_max_y):
+                        set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x_value, y_value_int, zzp1+  diffzzz * factor, factor)
+                    factor+=factor_step
+                    y_value_int-=1
+            x_value += 1
+            x_value_float +=1.0
     else:
 
-        incrementVal = 1
-        #zzp1,zzp2 = z,z2
+        while x_value >= x2 :
 
+            y_value_float = alpha * x_value_float + beta
+            y_value2_float = alpha * (x_value_float+1.0) +beta
 
-    if longLen == 0:
-        decInc = float(shortLen)
-    else:
-        decInc = float(shortLen) / float(longLen)
+            y_value_int   = <int> y_value_float 
+            y_value2_int  = <int> y_value2_float
 
-    if yLonger:
-        for i in range(0, endVal, incrementVal):
-            x_set = x + int(j)
-            y_set = y + i
+            if y_value2_int>= y_value_int:
+                while (y_value_int <= y_value2_int):
+                    if (y_value_int>=0) and (y_value_int <= absolute_max_y):
+                        set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x_value, y_value_int, zzp1+diffzzz * factor, factor)
+                    factor+=factor_step
+                    y_value_int+=1
+            else:
+                while (y_value_int >= y_value2_int):
+                    if (y_value_int>=0) and (y_value_int <= absolute_max_y):
+                        set_in_depth_buffer(the_raw_array, raw_array_width, dprim, x_value, y_value_int,zzp1+  diffzzz * factor, factor)
+                    factor+=factor_step
+                    y_value_int-=1
 
-            
-            ratioptop = sqrt((x_set-initial_x)**2 + (y_set-initial_y)**2)/line_full_length
-            
-            depth = zzp1  + ((zzp2-zzp1)*ratioptop)
-
-            set_in_depth_buffer(drawing_buffer,dprim, x_set, y_set, depth,ratioptop)
-            j += decInc
-    else:
-        for i in range(0, endVal, incrementVal):
-            x_set = x + i
-            y_set = y + int(j)        
-            ratioptop = sqrt(float(x_set-initial_x)**2 + float(y_set-initial_y)**2)/line_full_length
-
-            depth = zzp1 + ((zzp2-zzp1)*ratioptop)
-            set_in_depth_buffer(drawing_buffer,dprim, x_set, y_set, depth,ratioptop)
-            j += decInc
-
-
-
-
+            x_value = x_value - 1
+            x_value_float = x_value_float - 1.0

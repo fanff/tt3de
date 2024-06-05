@@ -3,6 +3,12 @@ from libc.stdlib cimport malloc, free
 import cython
 
 
+from rich.style import Style
+from rich.color import Color
+from rich.color_triplet import ColorTriplet
+
+
+
 from tt3de.glm.drawing.c_drawing_buffer cimport s_drawbuffer_cell,s_canvas_cell
 
 @cython.boundscheck(False)
@@ -13,7 +19,8 @@ cdef class DrawingBuffer:
     def __cinit__(self, int width,int height):
         cdef int _size = width*height
         
-        
+        self.style_array = [Style() for i in range(width*height)]
+        print(type(self.style_array))
         self._raw_data = <s_drawbuffer_cell*>malloc(_size * sizeof(s_drawbuffer_cell))
         if not self._raw_data:
             raise MemoryError("Failed to allocate depth buffer.")
@@ -35,13 +42,14 @@ cdef class DrawingBuffer:
 
     cdef s_drawbuffer_cell* get_raw_depth_buffer(self):
         return self._raw_data
+
     cdef s_canvas_cell* get_raw_canvas_buffer(self):
         return self._raw_canvas
 
 
 
     cdef inline int linear_idx(self,const int xi,const int yi):
-        return (xi*self.height)+yi
+        return (yi*self.width)+xi
 
     def __dealloc__(self):
         free(self._raw_data)
@@ -80,7 +88,7 @@ cdef class DrawingBuffer:
                                 int   material_id ,
                                 int   primitiv_id ,
     ):
-        set_depth_content(self._raw_data,self.height,xi,yi,
+        set_depth_content(self._raw_data,self.width,xi,yi,
         
             depth_value, 
             w1,
@@ -124,21 +132,45 @@ cdef class DrawingBuffer:
         unsigned char g1,
         unsigned char g2,):
         
-        self.canvas[self.linear_idx(xi,yi)].aleph = [fr,fg,fb, br,bg,bb, g1,g2]
+        set_canvas_content(self._raw_canvas,    self.width,xi,yi,             fr,fg,fb, br,bg,bb, g1,g2)
+
 
     def get_canvas_content(self,xi:int ,yi:int ):
-        lol =  self.canvas[self.linear_idx(xi,yi)]
+        apix =  self.canvas[self.linear_idx(xi,yi)]
         rlist = [
-            <int> lol.aleph[0],
-            <int> lol.aleph[1],
-            <int> lol.aleph[2],
-            <int> lol.aleph[3],
-            <int> lol.aleph[4],
-            <int> lol.aleph[5],
-            <int> lol.aleph[6],
-            <int> lol.aleph[7],
+            <int> apix.aleph[0],
+            <int> apix.aleph[1],
+            <int> apix.aleph[2],
+            <int> apix.aleph[3],
+            <int> apix.aleph[4],
+            <int> apix.aleph[5],
+            <int> apix.aleph[6],
+            <int> apix.aleph[7],
         ]
         return rlist
+
+    cpdef list canvas_to_list_ofstyled(self):
+        cdef list ret = []
+
+        cdef list row = []
+        cdef int idx
+        cdef char[8] aaa
+        cdef unsigned char b 
+        cdef unsigned char gidx 
+
+        for idx in range (self.size):
+            
+            aaa = (self.canvas[idx]).aleph
+            c1 = Color.from_triplet(ColorTriplet(<int>aaa[0],<int>aaa[1],<int>aaa[2]))
+            c2 = Color.from_triplet(ColorTriplet(<int>aaa[3],<int>aaa[4],<int>aaa[5]))
+
+            asetyle = self.style_array[idx]
+            asetyle._color =c1
+            asetyle._bgcolor=c2
+
+
+            ret.append((asetyle,int(aaa[6]),int(aaa[7])))
+        return ret
 
     cpdef list canvas_to_list(self):
         cdef list ret = []
@@ -159,9 +191,6 @@ cdef class DrawingBuffer:
     
     cpdef list drawbuffer_to_list(self):
         # will return the list of the drawbuffer elements. 
-        # [0] is [0,0]
-        # [1] is Y side (row )
-        # [height] is X side (column)
         cdef list ret = []
         cdef int idx = 0
         cdef s_drawbuffer_cell acell
@@ -193,9 +222,8 @@ cdef void init_s_drawbuffer_cell(s_drawbuffer_cell* x, const float depth):
 
 
 
-
-cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
-        const int raw_array_height,
+cdef  void set_depth_content(s_drawbuffer_cell* the_raw_array,
+        const int raw_array_width,
         const int xi,const int yi,
         const float depth_value, 
         const float w1 ,
@@ -207,13 +235,41 @@ cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
         const int   primitiv_id ,
     ) noexcept nogil:
     
-    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(xi*raw_array_height)+yi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
+    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
+    if depth_value < thecell.depth_value:
+        thecell.depth_value = depth_value
+        thecell.w1 = w1
+        thecell.w2 = w2
+        thecell.w3 = w3 
+        thecell.primitiv_id = primitiv_id
+        thecell.geom_id = geom_id
+        thecell.node_id = node_id
+        thecell.material_id = material_id
+
+
+
+cdef void set_canvas_content(s_canvas_cell* the_raw_array,
+        const int raw_array_width,
+        const int xi,const int yi,
+        const unsigned char fr,
+        const unsigned char fg,
+        const unsigned char fb,
+        const unsigned char br,
+        const unsigned char bg,
+        const unsigned char bb,
+        const unsigned char g1, 
+        const unsigned char g2, 
+    ) noexcept nogil:
+    
+    cdef s_canvas_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
         
-    thecell.depth_value = depth_value
-    thecell.w1 = w1
-    thecell.w2 = w2
-    thecell.w3 = w3 
-    thecell.primitiv_id = primitiv_id
-    thecell.geom_id = geom_id
-    thecell.node_id = node_id
-    thecell.material_id = material_id
+    thecell.aleph[0] = fr
+    thecell.aleph[1] = fg
+    thecell.aleph[2] = fb
+    
+    thecell.aleph[3] = br
+    thecell.aleph[4] = bg
+    thecell.aleph[5] = bb
+
+    thecell.aleph[6] = g1
+    thecell.aleph[7] = g2

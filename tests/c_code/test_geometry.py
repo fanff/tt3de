@@ -8,7 +8,8 @@ class Test_GeometryBuffer(unittest.TestCase):
     def test_empty(self):
         geom_buffer = GeometryBuffer(32)
         self.assertEqual(geom_buffer.geometry_count(), 0)
-
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
     def test_add_point(self):
         """ Test adding a single point and verify buffer contents. """
         geom_buffer = GeometryBuffer(10)
@@ -21,7 +22,8 @@ class Test_GeometryBuffer(unittest.TestCase):
 
         # Access the raw content if possible to verify or check content_idx increase
         self.assertEqual(geom_buffer.geometry_count(), 1)
-
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
     def test_add_line(self):
         """ Test adding a line and check for correct buffer update. """
         geom_buffer = GeometryBuffer(10)
@@ -33,7 +35,8 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer.add_line_to_buffer(start, end, uv_array, node_id, material_id)
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
-
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
     def test_add_triangle(self):
         """ Test adding a triangle and verify its addition to the buffer. """
         geom_buffer = GeometryBuffer(10)
@@ -47,6 +50,10 @@ class Test_GeometryBuffer(unittest.TestCase):
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
 
+
+        
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
     def test_buffer_overflow(self):
         """ Test it does not crash and ignore stuff """
         geom_buffer = GeometryBuffer(10)  # Start with a small buffer size to test resizing
@@ -54,9 +61,11 @@ class Test_GeometryBuffer(unittest.TestCase):
             geom_buffer.add_point_to_buffer(0, 0, 0, [0.1] * 8, 100, 200)
 
         self.assertEqual(geom_buffer.geometry_count(), 10)
-
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
     def test_invalid_input(self):
         """ Test the buffer's response to invalid input. """
         geom_buffer = GeometryBuffer(10)
         with self.assertRaises(ValueError):
             geom_buffer.add_point_to_buffer(0, 0, 0, [0.1] * 7, 100, 200)  # UV array too short
+        

@@ -1,6 +1,35 @@
 from libc.stdlib cimport malloc, free
 from libc.string cimport memset
 
+from tt3de.glm.c_texture cimport s_texture32
+
+cdef class TextureArray:
+    # cdef s_texture32[32] t32_array
+    # cdef int t32_size 
+    def __cinit__(self):
+        self.t32_size = 0
+    cpdef int size(self):
+        return self.t32_size
+    cdef s_texture32* get_raw(self):
+        return (self.t32_array)
+    def load_texture32_from_list(self, list data):
+
+        cdef s_texture32 atexture = (self.t32_array[self.t32_size])
+
+        
+        cdef int i, j, index
+        #cdef unsigned char* ptr = atexture.data
+        for i in range(32):
+            for j in range(32):
+                index = (i * 32 + j) * 3
+                atexture.data[i][j][0]= data[i][j][0]
+                atexture.data[i][j][1]= data[i][j][1]
+                atexture.data[i][j][2]= data[i][j][2]
+        self.t32_array[self.t32_size] = atexture
+
+        self.t32_size+=1
+
+
 
 cdef class Texture2D:
     def __cinit__(self, int width, int height):
@@ -61,6 +90,7 @@ cdef class Texture2D:
                 ptr[index + 1] = data[i][j][1]
                 ptr[index + 2] = data[i][j][2]
 
+    
 
 ####################
 

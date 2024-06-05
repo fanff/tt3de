@@ -85,7 +85,7 @@ class GLMTester(TT3DView):
         #self.camera.move_at(glm.vec3(5,  0, 5))
         #self.camera.point_at(glm.vec3(0.0, 0, 0))
 
-        self.root2Dnode = GLM2DNode() 
+        #self.root2Dnode = GLM2DNode() 
 
         #meshtext = fast_load("models/test_screen32.bmp",GLM2DMappedTexture)
         #for i in range(3):

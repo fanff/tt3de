@@ -66,11 +66,17 @@ cdef class PrimitivesBuffer:
 
     cpdef bint can_add(self):
         return self.an_arrayofstuff.size<self.size
-
-    cpdef void add_triangle(self,int node_id,  int  geometry_id,  int  material_id, float ax, float ay, float az, float bx, float by, float bz, float cx, float cy,
-                            float cz):
+    cpdef void clear(self):
+        self.an_arrayofstuff.size=0
+    cpdef void add_triangle(self,int node_id,  int  geometry_id,  int  material_id, 
+        float ax, float ay, float az, 
+        float bx, float by, float bz, 
+        float cx, float cy, float cz):
         if self.an_arrayofstuff.size < self.an_arrayofstuff.capacity :         
-            _add_triangle_no_object(&self.an_arrayofstuff,node_id,geometry_id,material_id,ax,ay,az,bx,by,bz,cx,cy,cz)
+            _add_triangle_no_object(&self.an_arrayofstuff,node_id,geometry_id,material_id,
+                ax,ay,az,
+                bx,by,bz,
+                cx,cy,cz)
             self.an_arrayofstuff.size+=1     
 
     cpdef void add_line(self, int  node_id,  int  geometry_id,  int  material_id,  float ax,  float ay,  float az,  float bx,  float by,  float bz):
@@ -199,6 +205,7 @@ cdef void _add_point(s_buffer* primitiv_buffer_array,int  node_id,
         aprimitiv.mat[0][1] = 0.0
         aprimitiv.mat[1][1] = 0.0
         aprimitiv.mat[2][1] = 0.0
+
         aprimitiv.mat[0][2] = 0.0
         aprimitiv.mat[1][2] = 0.0
         aprimitiv.mat[2][2] = 0.0

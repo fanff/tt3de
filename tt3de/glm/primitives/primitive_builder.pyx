@@ -25,6 +25,9 @@ cpdef void build_primitives(GeometryBuffer geometry_buffer, PrimitivesBuffer pri
 
 
 cdef void c_build_primitives(s_geometry* geom_buffer, unsigned int geometry_count, s_buffer* primitiv_buffer_array)  :
+    # build the primitive_buffer array from the geometry buffer. 
+    # line , point, triangles are mapped 1:1 
+    # geom could be generative and build other stuff.
     cdef int i
     cdef s_geometry* geom
 
