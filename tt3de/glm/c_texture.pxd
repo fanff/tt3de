@@ -11,11 +11,14 @@ cdef class TextureArray:
 
     cpdef int size(self)
     cdef s_texture32* get_raw(self)
+
+
+
+    
 cdef class Texture2D:
     cdef unsigned char* data
     cdef int width
     cdef int height
-
 
     cdef int get_width(self)
     cdef int get_height(self)

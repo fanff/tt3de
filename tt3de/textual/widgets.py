@@ -320,7 +320,7 @@ class CameraConfig(Widget):
         yield FloatSelector(-110.,110,0.0,mouse_factor=3.0,button_factor=10.0,id="input_camera_pitch")
 
         yield Label("Projection: Fov,min/max depth, factor")
-        yield FloatSelector(50,130,80,mouse_factor=1.0,button_factor=1.0,id="input_camera_fov")
+        yield FloatSelector(30,130,50,mouse_factor=1.0,button_factor=1.0,id="input_camera_fov")
         yield FloatSelector(0.00,20,0.2,0.01,0.1, id="input_camera_mindepth")
         yield FloatSelector(10,1000,100.,id="input_camera_maxdepth")
         yield FloatSelector(0.3,3.5,1.8,mouse_factor=.1,button_factor=.1,id="input_character_factor")

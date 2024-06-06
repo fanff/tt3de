@@ -1,6 +1,5 @@
 
 
-
 def make_glm_object():
 
     mat = glm.mat4(3.0)

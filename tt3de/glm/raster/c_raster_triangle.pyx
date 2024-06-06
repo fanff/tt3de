@@ -54,23 +54,11 @@ cdef void raster_triangle(s_drawing_primitive* dprim,
 
     cdef int axi = <int> dprim.mat[0][0]
     cdef int ayi = <int> dprim.mat[1][0]
-    
     cdef int bxi = <int> dprim.mat[0][1]
     cdef int byi = <int> dprim.mat[1][1]
-    
     cdef int cxi = <int> dprim.mat[0][2]
     cdef int cyi = <int> dprim.mat[1][2]
     
-
-
-    # Compute triangle bounding box
-    cdef int minX = min3int(axi, bxi, cxi);
-    cdef int minY = min3int(ayi, byi, cyi);
-
-    cdef int maxX = max3int(axi, bxi, cxi);
-    cdef int maxY = max3int(ayi, byi, cyi);
-
-
     cdef int px
     cdef int py
 
@@ -79,11 +67,30 @@ cdef void raster_triangle(s_drawing_primitive* dprim,
     cdef int w2
 
 
+    # Compute triangle bounding box
+    cdef int minX 
+    cdef int minY 
+
+    cdef int maxX 
+    cdef int maxY 
+
+    if axi == bxi and axi == cxi:
+        # its a very vertical triangle. 
+        return
+    elif ayi == byi and ayi == cyi:
+        # its a very horizontal triangle
+        return 
+    minX = min3int(axi, bxi, cxi);
+    minY = min3int(ayi, byi, cyi);
+    maxX = max3int(axi, bxi, cxi);
+    maxY = max3int(ayi, byi, cyi);
+
+
     # // Clip against screen bounds
-    minX = max(minX, 0);
-    minY = max(minY, 0);
-    maxX = min(maxX, screenWidth - 1);
-    maxY = min(maxY, screenHeight - 1);
+    minX = max3int(minX,minX, 0);
+    minY = max3int(minY,minY, 0);
+    maxX = min3int(maxX,maxX, screenWidth - 1);
+    maxY = min3int(maxY,maxY, screenHeight - 1);
 
 
     # // Rasterize

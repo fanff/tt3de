@@ -70,7 +70,7 @@ cdef class MaterialBuffer:
 
 
     cdef s_buffer* get_raw(self)
-
+    cpdef int size(self)
     cpdef void add_material(self,Material material)
 
     cpdef void add_material_ele(self,s_material material)

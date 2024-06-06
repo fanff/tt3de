@@ -136,7 +136,8 @@ cdef class MaterialBuffer:
 
     cdef s_buffer* get_raw(self):
         return &(self.material_raw_buff)
-
+    cpdef int size(self):
+        return <int> self.material_raw_buff.size
 
     cpdef s_material get_material(self,int idx):
 
@@ -275,19 +276,8 @@ cdef void some_kind_ofapply(s_material* material,
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DEPTH_BUFFER:
          
         afloat = max(0.0, min(1.0, thecell.depth_value)) 
-
-        if afloat < CONSTANT_A_THIRD:
-            # Map to Blue range (0 - lower_bound)
-            aleph[3] = int(255 * (1 - afloat / CONSTANT_A_THIRD))
-        elif afloat < CONSTANT_TWO_THIRD:
-            aleph[3] = 255
-            # Map to Green range (lower_bound - upper_bound)
-            aleph[4] = int(255 * ((afloat - CONSTANT_A_THIRD) / (CONSTANT_A_THIRD)))
-        else:
-            aleph[3] = 255
-            aleph[4] = 255
-            # Map to Red range (upper_bound - 1)
-            aleph[5] = int(255 * ((afloat - CONSTANT_TWO_THIRD) / (CONSTANT_A_THIRD)))
+        aleph[3] = <int> (255 * afloat)
+        
 
     elif material.texturemode == TT3DE_MATERIAL_MODE_BACK_DEPTH_SHADING:
         pass

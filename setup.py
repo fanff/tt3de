@@ -18,7 +18,7 @@ setup(
                              "tt3de/glm/material/c_material.pyx",
                              "tt3de/glm/raster/c_raster_line.pyx",
                              "tt3de/glm/raster/c_raster_point.pyx",
-                             "tt3de/glm/raster/c_raster_tri.pyx",
+                             "tt3de/glm/raster/c_raster_triangle.pyx",
                              "tt3de/glm/primitives/primitives.pyx",
                              "tt3de/glm/raster/raster.pyx",
                              "tt3de/glm/primitives/primitive_builder.pyx",
@@ -26,5 +26,6 @@ setup(
                              ],
                             compiler_directives={'boundscheck': True,
                                                  'embedsignature':True}),
+                                                 extra_compile_args=['-std=c++11']
 
 )

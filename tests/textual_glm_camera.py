@@ -60,23 +60,45 @@ class GLMTester(TT3DView):
         # adding one cube
 
         m = fast_load("models/cube.obj",meshclass)
-        m.set_texture(texture3)
+        m.material_id = 1
+
 
         cube1node = GLMNode3D()
         cube1node.elems.append(m)
         self.root3d_node.elems.append(cube1node)
         
         # adding a second cube 
-        m2 = fast_load("models/cube.obj",meshclass)
-        m2.set_texture(texture3)
+        m2:GLMMesh3D = fast_load("models/cube.obj",meshclass)
+        m2.material_id = 1
         
         cube2node = GLMNode3D()
-        cube2node.local_transform = glm.translate(glm.vec3(0.0,3.0,0.0))
+        cube2node.local_transform = glm.translate(glm.vec3(5.0,0.0,0.0))
         cube2node.elems.append(m2)
 
         self.root3d_node.elems.append(cube2node)
         
 
+        manynodes =  GLMNode3D()
+
+        manynodes.local_transform = glm.scale(glm.vec3(50,50, 0 ))
+        for i in range(10):
+            for j in range(3):
+                awall_node = GLMNode3D()
+                awall_node.local_transform = glm.translate(glm.vec3(i,j, 0 ))
+                pref = prefab_mesh_single_triangle(GLMMesh3D)
+                pref.material_id = 2
+                awall_node.elems.append(pref)
+                manynodes.elems.append( awall_node )
+        self.root3d_node.elems.append(manynodes)
+
+
+        
+        
+        
+        
+        
+        
+        
         # add the root 
         self.rc.append(self.root3d_node)
 
@@ -97,7 +119,7 @@ class GLMTester(TT3DView):
         #    self.root2Dnode.elements.append(a2dnode)
 
         #self.rc.append(self.root2Dnode)
-
+        
         self.reftime = time()
         self.write_debug_inside = True
         self.capture_mouse_events=False
@@ -117,7 +139,7 @@ class GLMTester(TT3DView):
 
         atransform = glm.translate(glm.vec3(.5,.5,.5))*glm.rotate(rot*(1+1),glm.vec3(1,0,0))
 
-        self.root3d_node.local_transform = atransform
+        #self.root3d_node.local_transform = atransform
 
 
         scalefactor = 2.0

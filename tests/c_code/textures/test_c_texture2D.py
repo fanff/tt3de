@@ -13,8 +13,12 @@ class Test_TextureArray(unittest.TestCase):
         img:ImageTexture = fast_load("models/test_screen32.bmp")
         texture_array.load_texture32_from_list(img.img_data)
         self.assertEqual(texture_array.size(),1)
+        texture_array.load_texture32_from_list(img.img_data)
+        self.assertEqual(texture_array.size(),2)
+        texture_array.load_texture32_from_list(img.img_data)
+        self.assertEqual(texture_array.size(),3)
 
-
+        
 class Test_UV_calc(unittest.TestCase):
     
     def test_calculate_uv(self):

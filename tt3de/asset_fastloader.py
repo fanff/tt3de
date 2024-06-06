@@ -68,14 +68,22 @@ class Prefab2D():
 def prefab_mesh_single_triangle(meshcls):
     
     vertices = [
-        Point3D(0, 1, 0),
-        Point3D(-1, -1, 0),
-        Point3D(1, -1, 0),
+        Point3D(0, 0, 1.0),
+        Point3D(1, 0, 1.0),
+        Point3D(1, 1, 1.0),
+        Point3D(0, 1, 1.0),
     ]
     texture_coords = [
-        Point2D(0.5, 0),
-        Point2D(0, 1),
-        Point2D(1, 1),
+        [
+            Point2D(0, 0),
+            Point2D(1, 0),
+            Point2D(1, 1) 
+        ],
+        [
+            Point2D(0, 0),
+            Point2D(1, 1),
+            Point2D(0, 1)
+        ]
     ]
     normals = [
         Point3D(0, 0, 1),
@@ -83,18 +91,20 @@ def prefab_mesh_single_triangle(meshcls):
         Point3D(0, 0, 1),
     ]
     triangle_vindex = [
-        (0, 1, 2)
+        (0, 1, 2),
+        (0, 2, 3)
     ]
 
-    t = Triangle3D(*vertices)
-
-    t = Triangle3D(*vertices)
-    t.uvmap= [list(texture_coords)]
+    triangles=[]
+    for triangle_idx,vertex_ids in enumerate(triangle_vindex):
+        v1,v2,v3 = vertex_ids
+        t = Triangle3D(vertices[v1],vertices[v2],vertices[v3])
+        t.uvmap= [texture_coords[triangle_idx]]
+        
+        triangles.append(t)
     
-    triangles=[t]
     m = meshcls()
     m.vertices = vertices
-    m.texture_coords[0] = texture_coords
     m.normals = normals
     m.triangles_vindex = triangle_vindex
     m.triangles = triangles

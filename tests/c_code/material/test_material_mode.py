@@ -21,6 +21,7 @@ from tt3de.glm.raster.raster import raster_all
 
 from tt3de.glm.material.c_material import Material
 from tt3de.glm.material.c_material import MaterialBuffer
+from tt3de.glm.c_texture import TextureArray
 
 from tt3de.glm.primitives.primitive_builder import build_primitives  
 
@@ -49,26 +50,30 @@ class Test_Static_Mode(unittest.TestCase):
         ####### start of the test 
 
         ###
-        mb = MaterialBuffer()   
 
+        texture_array_object = TextureArray()
+
+
+        mb = MaterialBuffer()   
+        self.assertEqual(mb.size(),0)
         # the 0 material
         mat0 = Material(texturemode=0)
         mb.add_material(mat0)
-
+        self.assertEqual(mb.size(),1)
         # the 1 material is in mode 2, its a ... static color map
         mat1 = Material(texturemode=2)
 
         mat1.set_albedo_front(23,45,56)
         mb.add_material(mat1) # 
 
-
+        self.assertEqual(mb.size(),2)
         #build the primitives
         build_primitives(geometry_buffer,primitive_buffer)
         raster_precalc( primitive_buffer,  drawing_buffer)
         raster_all(primitive_buffer,drawing_buffer)
 
         
-        apply_pixel_shader(primitive_buffer,drawing_buffer,mb,geometry_buffer)
+        apply_pixel_shader(primitive_buffer,drawing_buffer,mb,geometry_buffer,texture_array_object)
         
 
         canvas_list = drawing_buffer.canvas_to_list()

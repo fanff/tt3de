@@ -5,6 +5,7 @@ from math import exp
 import math
 from typing import Iterable, List, Tuple
 from tt3de.asset_load import extract_palette
+from tt3de.glm.triangle_clipping import filter_clip_project
 from tt3de.richtexture import ImageTexture, Segmap, StaticTexture, TextureAscii
 from tt3de.tt3de import (
     Camera,
@@ -129,10 +130,9 @@ class GLMCamera():
 
 
     def update_perspective(self):
-        self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
-        #self.perspective = glm.perspectiveFovRH_ZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
-        #self.perspective = glm.orthoZO(-self.screen_width, self.screen_width, -self.screen_height, self.screen_height, 1, 100.0)
-    
+        # self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
+        self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width/self.character_factor, self.screen_height, self.dist_min, self.dist_max)
+        #self.perspective =  glm.infinitePerspective(self.fov_radians,self.screen_width/(self.screen_height*self.character_factor),self.dist_min)
     def move(self, delta:  glm.vec3):
         self.pos += delta
         self.update_rotation()
@@ -311,178 +311,6 @@ def glmtriangle_as_square(tri:glm.mat3,screen_width,screen_height) -> Iterable[t
 
 from glm import determinant,iround,clamp,row
 
-def glmtriangle_render(tri:glm.mat3,tri_inv:glm.mat3,screen_width:int,screen_height:int) -> Iterable[tuple[int,int]]:
-    adjoint = determinant(tri)* tri_inv
-
-    ax,bx,cx = iround(clamp(row(tri,0),0.0,screen_width-1))#round(xclamped.x),round(xclamped.y),round(xclamped.z)
-    ay,by,cy = iround(clamp(row(tri,1),0.0,screen_height-1))#round(yclamped.x),round(yclamped.y),round(yclamped.z)
-
-    #xv = glm.row(tri,0)
-    #yv = glm.row(tri,1)
-    #ax,bx,cx = round(xv.x),round(xv.y),round(xv.z)
-    #ay,by,cy = round(yv.x),round(yv.y),round(yv.z)
-    #ax = 0 if ax < 0 else (screen_width if ax > screen_width else ax)
-    #bx = 0 if bx < 0 else (screen_width if bx > screen_width else bx)
-    #cx = 0 if cx < 0 else (screen_width if cx > screen_width else cx)
-    #ay = 0 if ax < 0 else (screen_height if ay > screen_height else ay)
-    #by = 0 if bx < 0 else (screen_height if by > screen_height else by)
-    #cy = 0 if cx < 0 else (screen_height if cy > screen_height else cy)
-
-    # segment index 
-    # 0: CB
-    # 1: AC
-    # 2: AB
-    # identifying triangle positionning
-
-    if ax < cx:
-        if cx < bx:
-            #  ..-C.
-            # A-----B
-            # 
-            minxi= ax
-            maxxi= bx
-            cutx = cx
-
-            # seg1 to seg2; then seg3 to seg4
-            seg1 = 2  # AB
-            seg2 = 1  # AC
-            seg3 = 2  
-            seg4 = 0  # CB
-            # heights to use, for min, cut, max
-            ys = ay,cy,by
-        else:
-            if ax<bx:
-                #       _---C.
-                #   .-^    /
-                # A-----B/
-                # common branch is upper
-                minxi = ax
-                maxxi = cx
-                cutx = bx
-
-                seg1 = 2 # AB
-                seg2 = 1 # AC
-                seg3 = 0 # CB
-                seg4 = 1 # AC
-                ys = ay, by, cy    
-            else:
-                #     A   
-                #         C
-                #  B    
-                #   
-                minxi= bx
-                maxxi= cx
-                cutx = ax
-
-                seg1 = 0 # CB
-                seg2 = 2 # AB
-                seg3 = 0 # CB
-                seg4 = 1 # AC
-                ys = by,ay,cy
-    else:
-        if ax < bx:
-            #    C        B 
-            #    
-            #         A          
-            #   common branch is upper
-            minxi= cx
-            maxxi= bx
-            cutx = ax
-
-            seg1 = 1 # AC
-            seg2 = 0 # CB
-            seg3 = 2 # AB
-            seg4 = 0 # CB
-            ys = cy,ay,by
-        else:
-            
-            if cx<bx:
-                #      B      
-                #    
-                #   C        A          
-                #   
-                minxi= cx
-                maxxi= ax
-                cutx = bx
-
-                seg1 = 1 # AC
-                seg2 = 0 # CB
-                seg3 = 1 # AC
-                seg4 = 2 # AB
-                ys = cy,by,ay
-
-
-            else:
-                #   B        A   
-                #       
-                #        C
-                # common branch is upper
-                minxi= bx
-                maxxi= ax
-                cutx = cx
-
-                seg1 = 0 # CB
-                seg2 = 2 # AB
-                seg3 = 1 # AC
-                seg4 = 2 # AB
-                ys = by,cy,ay
-
-    # first part
-    # from left to the cutindex
-    # the drawing is NOT including the cut 
-    match cutx-minxi:
-        case 0:
-            # its a vertical stuff
-            yield minxi,ys[0] # returning left point height
-        case 1:
-            for yi in range(ys[0],ys[1]):  # from left height, to cut height
-                yield minxi,yi
-        case _ :
-
-            # left corner return
-            yield minxi,ys[0]
-            
-            for xi in range(minxi+1,cutx):
-                miny = math.floor(yvalue_from_adjoint_unprotected(adjoint, seg1, xi))
-                maxy = math.ceil(yvalue_from_adjoint_unprotected(adjoint, seg2, xi))
-                miny =0 if miny < 0 else (screen_height if miny > screen_height else miny)
-                maxy =0 if maxy < 0 else (screen_height if maxy > screen_height else maxy)
-                for yi in range(miny,maxy):
-                    yield xi,yi
-
-                #for yi in glmiterate(adjoint,seg1,seg2,xi,screen_height):
-                #    yield xi,yi
-
-    # second part
-    match maxxi-cutx:
-        case 0:
-            # its a vertical line. 
-            yield cutx,ys[0]
-        case 1:
-            for yi in range(ys[1],ys[2]):
-                yield cutx,yi
-            yield maxxi,ys[2]
-        case _ :
-            for xi in range(cutx,maxxi):
-                miny = math.floor(yvalue_from_adjoint_unprotected(adjoint, seg3, xi))
-                maxy = math.ceil(yvalue_from_adjoint_unprotected(adjoint, seg4, xi))
-                miny =0 if miny < 0 else (screen_height if miny > screen_height else miny)
-                maxy =0 if maxy < 0 else (screen_height if maxy > screen_height else maxy)
-
-                for yi in range(miny,maxy):
-                    yield xi,yi
-            #yfl = line_equation_from_adjoint(adjoint, seg1, cutx)
-            #if yfl is not None:
-            #    top = round(yfl)
-            #    top = min(max(top,0),screen_height-1)
-            #    r = range(ys[1],top) if ys[1]<top else range(top,ys[1])
-            #    for yi in r:
-            #        yield cutx,yi
-            #for xi in range(cutx+1,maxxi):
-            #    for yi in glmiterate(adjoint,seg1,seg3,xi,screen_height):
-            #        yield xi,yi
-    
-    
     
 class GLM2DNode(Drawable3D):
     def __init__(self):
@@ -568,37 +396,15 @@ class GLMMesh3D(Mesh3D):
         self.texture_coords: List[List[GLMTexturecoord]] = [[] for _ in range(8)]
         self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
-        self.texture:ImageTexture=None
+        self.material_id: int = 0
 
     def cache_output(self,segmap):
         self.glm_vertices = glma([vec3(p.x,p.y,p.z) for p in self.vertices])
         self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
-        self.texture_coords = [[GLMTexturecoord(p.x,p.y) for p in coordlayer] for coordlayer in self.texture_coords]
-        self.texture.cache_output(segmap)
 
         uvfiller = [0.0]*42
-        self.c_code_uvmap = [[list(itertools.chain(*[(1.0-uv.y,uv.x,) for uv in uvlayer]))+uvfiller for uvlayer in t.uvmap] for t in self.triangles]
+        self.c_code_uvmap = [[list(itertools.chain(*[(1.0-uv.y,uv.x) for uv in uvlayer]))+uvfiller for uvlayer in t.uvmap] for t in self.triangles]
         #self.glm_uvmap = [[[glm.vec2(uv.x,uv.y) for uv in uvlayer] for uvlayer in t.uvmap] ]
-
-        # 
-        self.per_mesh_buffer_data:array.array[float] = make_per_mesh_data_buffer()
-        #self.per_mesh_buffer_data[0:]
-        
-
-
-
-    def render_point(self,some_info:tuple[vec3,float,int]):
-        return 4
-        weight_to_vertex,normal_dot,face_idx = some_info
-        uvmat = self.glm_uvmap[face_idx][0]
-
-        uvcoord = uvmat*weight_to_vertex
-
-        return self.texture.glm_render(uvcoord,normal_dot)
-        
-        #
-        #yield glm.vec2(px,py),glm.vec4(uvpoint.x,uvpoint.y,ddot_prod,appdepth)
-
 
     def proj_vertices(self, camera: GLMCamera,perspective_matrix, screen_width, screen_height) :
         screeninfo = glm.vec4(0,0,1,1)
@@ -626,17 +432,46 @@ class GLMMesh3D(Mesh3D):
                     (rp2,(dist2)),
                     (rp3,(dist3)))
             
-    def draw(self,camera:GLMCamera,geometry_buffer):
+    def draw(self,camera:GLMCamera,geometry_buffer , node_id = 0):
         
         screen_width, screen_height = camera.screen_width,camera.screen_height
         perspective_matrix = camera.perspective
-        screeninfo = glm.vec4(0,0,screen_width,screen_height)
-
-        proj_vertices = self.glm_vertices.map(glm.projectZO,camera._model_inverse , perspective_matrix, screeninfo)
+        screeninfo = glm.vec4(0,0,1,1)
         
+        in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
 
-        # keeping the camera direction in the MESH store info
-        camera_dir = camera.direction_vector()
+        for triangle_idx,(pa,pb,pc) in  enumerate(self.triangles_vindex):
+            v1 = in_view_space[pa]
+            v2 = in_view_space[pb]
+            v3 = in_view_space[pc]
+            triangles_to_draw = filter_clip_project(v1.xyz,v2.xyz,v3.xyz, camera.dist_min, glm.mat4(1.0)  ,perspective_matrix, screeninfo)
+
+            for (rp1,rp2,rp3), normal in triangles_to_draw:
+                az = glm.unProject(rp1, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                bz = glm.unProject(rp2, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                cz = glm.unProject(rp3, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                a = [rp1.x*screen_width,rp1.y*screen_height,az]
+                b = [rp2.x*screen_width,rp2.y*screen_height,bz]
+                c = [rp3.x*screen_width,rp3.y*screen_height,cz]
+                                
+                givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
+                #kepu =givenuv[0] 
+                #kepv =givenuv[1] 
+                #givenuv[0] = givenuv[4]
+                #givenuv[1] = givenuv[5] 
+                #givenuv[4]=kepu
+                #givenuv[5]  =kepv
+
+
+                geometry_buffer.add_triangle_to_buffer(a, 
+                                    c, 
+                                    b, 
+                                    givenuv,   # uv list 
+                                    node_id,  # node_id
+                                    self.material_id)  # material_id
+        return
+        proj_vertices = [glm.projectZO(p.xyz,glm.mat4(1.0) , perspective_matrix, screeninfo) for p in in_view_space] 
+        
         
         for triangle_idx,(pa,pb,pc) in enumerate(self.triangles_vindex):
             
@@ -646,93 +481,30 @@ class GLMMesh3D(Mesh3D):
 
             rp3X3 = glm.mat3(rp1,rp2,rp3)
             facing = glm.determinant(rp3X3)
-            zvalues = glm.row(rp3X3,2)
+            a_flat = vec3(rp1.x,rp1.y,1.0)
+            b_flat = vec3(rp2.x,rp2.y,1.0)
+            c_flat = vec3(rp3.x,rp3.y,1.0)
+
+            d2 = glm.determinant(glm.mat3(a_flat,b_flat,c_flat))
+
+            #zvalues = glm.row(rp3X3,2)
             
             #(0<rp1.z<1 and 0<rp2.z<1 and 0<rp3.z<1)
-            if facing>0 and (zvalues>vec3(0.0)) * (zvalues<vec3(1.0))== vec3(1.0):
+
+            
+
+            if facing>0 :
+                a = [rp1.x*screen_width,rp1.y*screen_height,rp1.z]
+                b = [rp2.x*screen_width,rp2.y*screen_height,rp2.z]
+                c = [rp3.x*screen_width,rp3.y*screen_height,rp3.z]
                 
-                # keep the FACE info (uv map and stuff) inside the the tribuff
-                #uvmap = self.c_code_uvmap[triangle_idx][0]
                 
-                # should add the triangle with material_id material _id here 
-                # glm.mat3x3(vec3(rp1.xy,1),vec3(rp2.xy,1),vec3(rp3.xy,1))
-                #given_matrix = glm.mat3x3(vec3(rp1.xy,1.0),vec3(rp2.xy,1),vec3(rp3.xy,1))
-                a = [rp1.x,rp1.y,rp1.z]
-                b = [rp2.x,rp2.y,rp2.z]
-                c = [rp3.x,rp3.y,rp3.z]
-                #geometry_buffer.add_triangle_to_buffer(a , 
-                #                       c, 
-                #                       b, 
-                #                       [0.0] * 48,   # uv list 
-                #                       0,  # node_id
-                #                       1)  # material_id
                 geometry_buffer.add_triangle_to_buffer(a , 
                                        b, 
                                        c, 
                                        self.c_code_uvmap[triangle_idx][0],   # uv list 
-                                       0,  # node_id
-                                       1)  # material_id
-
-
-                #geometry_buffer.add_triangle_info(given_matrix,material_id=1,uvmap=uvmap)
-
-
-    def draw_old_version(self, camera:GLMCamera,transform=None,*args ) -> Iterable[tuple[vec3,vec3,tuple]]:
-        screen_width, screen_height = camera.screen_width,camera.screen_height
-        perspective_matrix = camera.perspective
-        screeninfo = glm.vec4(0,0,screen_width,screen_height)
-
-        proj_vertices = self.glm_vertices.map(glm.projectZO,camera._model_inverse , perspective_matrix, screeninfo)
-        
-        camera_dir = camera.direction_vector()
-
-        for triangle_idx,(pa,pb,pc) in enumerate(self.triangles_vindex):
-            
-            rp1 = proj_vertices[pa]
-            rp2 = proj_vertices[pb]
-            rp3 = proj_vertices[pc]
-
-            rp3X3 = glm.mat3(rp1,rp2,rp3)
-            
-
-            facing = glm.determinant(rp3X3)
-            zvalues = glm.row(rp3X3,2)
-            
-            #(0<rp1.z<1 and 0<rp2.z<1 and 0<rp3.z<1)
-            if facing>0 and (zvalues>vec3(0.0)) * (zvalues<vec3(1.0))== vec3(1.0):
-                rp33 = glm.mat3x3(vec3(rp1.xy,1),vec3(rp2.xy,1),vec3(rp3.xy,1))
-                rpi = glm.inverse(rp33)
-
-                count = c_glm_triangle_render_to_buffer(rp3X3,
-                                            screen_width,
-                                            screen_height,
-                                            self.pixel_buffer_array)
-                for pxi,pyi in iterate_pixel_buffer(self.pixel_buffer_array,count):
-                #for pxi,pyi in glmtriangle_render(rp33,rpi,screen_width,screen_height):
-                    weights = rpi*glm.vec3(pxi,pyi,1)
-                    
-                    
-                    if (weights>VEC3_ZERO) == VEC3_YES:
-                        appx_point = rp3X3*weights
-                        unprojected_point = glm.unProjectZO(vec3(pxi,pyi,appx_point.z),camera._model_inverse,perspective_matrix,screeninfo)
-                        #appdepth = glm.dot(glm.row(rp3X3,2),weights)
-
-                        w3d = glm.inverse(mat3(self.glm_vertices[pa],
-                                               self.glm_vertices[pb],
-                                               self.glm_vertices[pc]))*unprojected_point
-
-
-                        yield (pxi,pyi,appx_point.z),(w3d,glm.dot(unprojected_point,camera_dir),triangle_idx)
-
-
-
-def iterate_c_depth_array(depth_buffer:array.array,screen_width,screen_height):
-    for xi in range(screen_width):
-        for yi in range(screen_height):
-            index = (((screen_height) * xi) + yi)
-            index_d = index*4
-            if depth_buffer[index_d] < 1000:
-                yield (xi,yi,depth_buffer[index_d],depth_buffer[index_d+1],depth_buffer[index_d+2],depth_buffer[index_d+3] )
+                                       node_id,  # node_id
+                                       self.material_id)  # material_id
 
 
 

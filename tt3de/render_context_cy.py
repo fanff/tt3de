@@ -76,29 +76,32 @@ class CyRenderContext:
         self.geometry_buffer = GeometryBuffer(2000)
         self.primitive_buffer = PrimitivesBuffer(2000)
 
+        self.texture_array = TextureArray()
+        self.texture_array.load_texture32_from_list(fast_load("models/cubetest32.bmp").img_data)
+        self.texture_array.load_texture32_from_list(fast_load("models/test_screen32.bmp").img_data)
 
+        self.material_buffer = MaterialBuffer()   
 
-        mat = Material(texturemode=0)
+        mat = Material(texturemode=3)
         mat.set_albedo_front(1,2,3)
-        mat.set_albedo_back(200,200,150)
+        mat.set_albedo_back(100,80,80)
+        self.material_buffer.add_material(mat)
 
         mat1 = Material(texturemode=10)
         mat1.set_albedo_front(16,0,150)
         mat1.set_albedo_back(255,255,255)
         mat1.set_glyph(4,4)
-        mat1.set_texture_ids([0,-1,-1])
+        mat1.set_texture_ids([0,-1,-1])  # using 0 for the texture array 
+        self.material_buffer.add_material(mat1)
 
-        mat2 = Material(texturemode=5)
+        mat2 = Material(texturemode=7)
         mat2.set_albedo_front(0,200,150)
         mat2.set_albedo_back(200,0,0)
         mat2.set_glyph(0,1)
-
-        self.material_buffer = MaterialBuffer()   
-        self.material_buffer.add_material(mat)
-        self.material_buffer.add_material(mat1)
+        mat2.set_texture_ids([1,-1,-1])
         self.material_buffer.add_material(mat2)
-        self.texture_array = TextureArray()
-        self.texture_array.load_texture32_from_list(fast_load("models/cubetest32.bmp").img_data)
+
+
 
         
         self.setup_canvas()
@@ -127,7 +130,7 @@ class CyRenderContext:
             self.setup_canvas()
 
     def clear_canvas(self):
-        self.drawing_buffer.hard_clear(1.0)
+        self.drawing_buffer.hard_clear(100)
         self.geometry_buffer.clear()
         self.primitive_buffer.clear()
 
