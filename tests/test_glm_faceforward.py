@@ -6,7 +6,7 @@ import glm
 
 from context import tt3de
 
-from tt3de.glm.triangle_clipping import calculate_normal, clip_triangle, filter_clip, split_quad_to_triangles
+from tt3de.glm.triangle_clipping import calculate_normal, clip_triangle, split_quad_to_triangles
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 
 

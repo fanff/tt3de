@@ -130,7 +130,7 @@ class CyRenderContext:
             self.setup_canvas()
 
     def clear_canvas(self):
-        self.drawing_buffer.hard_clear(100)
+        self.drawing_buffer.hard_clear(100.0)
         self.geometry_buffer.clear()
         self.primitive_buffer.clear()
 

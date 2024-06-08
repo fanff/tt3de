@@ -5,7 +5,7 @@ from math import exp
 import math
 from typing import Iterable, List, Tuple
 from tt3de.asset_load import extract_palette
-from tt3de.glm.triangle_clipping import filter_clip_project
+from tt3de.glm.triangle_clipping import Triangle, clip_triangle_in_planes, clipping_space_planes, extract_planes, is_front_facing
 from tt3de.richtexture import ImageTexture, Segmap, StaticTexture, TextureAscii
 from tt3de.tt3de import (
     Camera,
@@ -130,9 +130,14 @@ class GLMCamera():
 
 
     def update_perspective(self):
-        # self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width, self.screen_height*self.character_factor, self.dist_min, self.dist_max)
-        self.perspective = glm.perspectiveFovZO(self.fov_radians, self.screen_width/self.character_factor, self.screen_height, self.dist_min, self.dist_max)
-        #self.perspective =  glm.infinitePerspective(self.fov_radians,self.screen_width/(self.screen_height*self.character_factor),self.dist_min)
+
+        w,h = self.screen_width, self.screen_height*self.character_factor
+
+
+        self.perspective = glm.perspectiveFovZO((self.fov_radians*h)/w, w, h, self.dist_min, self.dist_max)
+
+
+
     def move(self, delta:  glm.vec3):
         self.pos += delta
         self.update_rotation()
@@ -197,44 +202,6 @@ class GLMCamera():
         return str(self)
 
 
-class GLM2DMappedTexture(TextureAscii):
-    def __init__(self, img_data):
-        self.img_data = img_data
-        self.image_height = len(self.img_data)
-        self.image_width = len(self.img_data[0])
-
-        self.size_vec = glm.vec2(self.image_width-1,self.image_height-1)
-        self.img_color=[] 
-        self.output_cached=False
-    def render_point(self, uvcoord, info) -> int:
-        cuv = glm.fract(uvcoord)*self.size_vec
-        #cuv = glm.clamp(cuv, glm.vec2(0),glm.vec2(self.image_width-1,self.image_height-1))
-        
-        return self.img_color[round(cuv.y)][round(cuv.x)]
-
-    def cache_output(self, segmap: "Segmap"):
-        if self.output_cached: return
-        self.output_cached=True
-        black = Color.from_rgb(0, 0, 0)
-        buff_color_to_int = {}
-        for palette_idx,(r, g, b) in enumerate(extract_palette(self.img_data)):
-            c = Color.from_rgb(r, g, b)
-
-            s = Segment(" ",style=Style(color=black, bgcolor=c))
-
-            charidx = segmap.add_char(s)
-            #self.color_to_idx[palette_idx] = charidx
-
-            buff_color_to_int[c] = charidx
-
-        for r in self.img_data:
-            crow = []
-            for _ in r:
-                c = Color.from_rgb(*_)
-                palette_idx = buff_color_to_int[c]
-                crow.append(palette_idx)
-            self.img_color.append(crow)
-
 def yvalue_from_adjoint_unprotected(adj_matrix:glm.mat3, side, x):
     a, b, c = glm.row(adj_matrix,side)
     alpha = -a/b
@@ -287,109 +254,6 @@ def glmtriangle_as_square(tri:glm.mat3,screen_width,screen_height) -> Iterable[t
             yield (xi,minyi)
             yield (xi,maxyi)
 
-
-#def glmiterate(adjoint,idx1,idx2,x ,screen_height):
-#
-#    l2y = line_equation_from_adjoint(adjoint, idx1, x)
-#    l1y = line_equation_from_adjoint(adjoint, idx2, x)
-#    
-#    if l2y == None or l1y == None:
-#        return
-#
-#    if l1y<l2y:
-#        minyi = math.floor(l1y)
-#        maxyi = math.ceil(l2y)
-#    else:
-#        minyi = math.floor(l2y)
-#        maxyi = math.ceil(l1y)
-#    
-#    if minyi == maxyi and minyi<screen_height and minyi>0:
-#        yield minyi
-#    else:
-#        for yi in range(max(minyi,0),min(maxyi,screen_height-1)):
-#            yield yi
-
-from glm import determinant,iround,clamp,row
-
-    
-class GLM2DNode(Drawable3D):
-    def __init__(self):
-        
-        self.elements:List[GLM2DNode]=[]
-        self.local_transform = mat3(1.0)
-
-    def cache_output(self,segmap):
-        for e in self.elements:
-            e.cache_output(segmap)
-    def render_point(self,some_info)->int:
-        
-        (elem,pixinfo) = some_info
-        return elem.render_point(pixinfo)
-        
-    def draw(self,camera:GLMCamera,transform=None,*args):
-        if transform is not None:
-            localchange = transform*self.local_transform
-        else:
-            localchange = self.local_transform
-        for elem in self.elements:
-            for pixcoord,pixinfo in elem.draw(camera,localchange):
-                yield pixcoord,(elem,pixinfo)
-
-class GLM2DMesh(GLM2DNode):
-
-    def __init__(self):
-        
-        self.elements=[]
-        self.uvmap = []
-        self.texture:TextureAscii = StaticTexture()
-
-    def cache_output(self,segmap):
-        self.texture.cache_output(segmap)
-        self.glm_elements=[p3d_triplet_to_matrix(elment)
-            for elment in self.elements]
-        
-        self.glm_uvmap =[p2d_uv_tomatrix(uv) for uv in self.uvmap]
-
-
-    def render_point(self,some_info)->int:
-
-        vertid,mode,weights = some_info
-        
-
-        match mode:
-            case 1:
-                uvmat = self.glm_uvmap[vertid]
-                #uvcoord = glm.saturate(uvmat*weights)
-                uvcoord = (uvmat*weights)
-                return self.texture.render_point(uvcoord,None)
-            case 2:
-                return vertid+1
-        return 5
-    
-
-    def draw(self,camera:GLMCamera,transform=None,*args):
-
-        screen_width, screen_height = camera.screen_width,camera.screen_height
-        scc = min(screen_width,screen_height)
-        screenscaling = glm.scale(vec2(scc*camera.character_factor,scc))
-
-        final_transform = screenscaling*transform if transform is not None else screenscaling
-        for faceidx,trimat in enumerate(self.glm_elements):
-            transformed = final_transform*trimat
-            tri_inv = glm.inverse(transformed)
-
-            for pxi,pyi in glmtriangle_render(transformed,tri_inv,screen_width,screen_height):
-                weights = tri_inv*glm.vec3(pxi,pyi,1)
-
-                if (weights>VEC3_ZERO) == VEC3_YES:
-                    yield (pxi,pyi,0),(faceidx,1,weights)
-
-            #vertidx = 0
-            #for pxi,pyi in glm_triangle_vertex_pixels(transformed, screen_width,screen_height):
-            #    yield (pxi,pyi,-1),(vertidx,2,(1.0,0.0,0.0))
-            #    vertidx+=1
-
-
 class GLMMesh3D(Mesh3D):
     def __init__(self):
         self.vertices: List[Point3D] = []
@@ -399,6 +263,9 @@ class GLMMesh3D(Mesh3D):
         self.material_id: int = 0
 
     def cache_output(self,segmap):
+
+        self.glm_vertices_4:glm.array[vec4] = glma([vec4(p.x,p.y,p.z,1.0) for p in self.vertices])
+
         self.glm_vertices = glma([vec3(p.x,p.y,p.z) for p in self.vertices])
         self.glm_normals = glma([vec3(t.normal.x,t.normal.y,t.normal.z) for t in self.triangles])
 
@@ -436,9 +303,93 @@ class GLMMesh3D(Mesh3D):
         
         screen_width, screen_height = camera.screen_width,camera.screen_height
         perspective_matrix = camera.perspective
-        screeninfo = glm.vec4(0,0,1,1)
+
+
+        view_port_matrix = glm.scale(vec3(float(screen_width),float(screen_height),1.0)) * glm.translate(vec3(.5,.5,0.0))
+        #in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
+        view_space_vertices = [(camera._model_inverse) * vertex for vertex in self.glm_vertices_4]
+
+
+        triangle_in_clip_space = [perspective_matrix * vertex for vertex in view_space_vertices]
         
-        in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
+        
+        triangle_in_clip_space_divided = [vertex/vertex.w for vertex in triangle_in_clip_space] 
+        #planes = extract_planes(perspective_matrix)
+        plane_of_the_clip_space = clipping_space_planes()
+
+        for triangle_idx,(v_idx1,v_idx2,v_idx3) in  enumerate(self.triangles_vindex):
+            v_in_clip_space1 = triangle_in_clip_space_divided[v_idx1]
+            v_in_clip_space2 = triangle_in_clip_space_divided[v_idx2]
+            v_in_clip_space3 = triangle_in_clip_space_divided[v_idx3]
+
+            v_in_view_space1 = view_space_vertices[v_idx1]
+            v_in_view_space2 = view_space_vertices[v_idx2]
+            v_in_view_space3 = view_space_vertices[v_idx3]
+
+
+            
+            v_in_clip_space_undiv_1 = triangle_in_clip_space[v_idx1]
+            v_in_clip_space_undiv_2 = triangle_in_clip_space[v_idx2]
+            v_in_clip_space_undiv_3 = triangle_in_clip_space[v_idx3]
+
+            # perform a rejection test, if the triangle is like "all outside of the same plane. "
+            a_triangle_in_clip_spance_not_divided = [v_in_clip_space_undiv_1,v_in_clip_space_undiv_2,v_in_clip_space_undiv_3]
+            a_clip_space_test = []
+            for vertice_in_clip_space in a_triangle_in_clip_spance_not_divided:
+                sometest = [-vertice_in_clip_space.w < vertice_in_clip_space.x, 
+                vertice_in_clip_space.x < vertice_in_clip_space.w ,
+                -vertice_in_clip_space.w < vertice_in_clip_space.y ,
+                vertice_in_clip_space.y < vertice_in_clip_space.w ,
+                -vertice_in_clip_space.w < vertice_in_clip_space.z,
+                vertice_in_clip_space.z < vertice_in_clip_space.w ]
+
+                a_clip_space_test.append(sometest)
+            clipe_space_rejection = [not(a_clip_space_test[0][plane_idx]) and not(a_clip_space_test[1][plane_idx]) and not(a_clip_space_test[2][plane_idx])
+                                    for plane_idx in range(6)]
+            # if any of the clip_space_rejection is True, it means that ALL vertices of the triangles are on the outside of this plane.
+            if any(clipe_space_rejection):
+                continue
+            
+            
+            
+            
+            
+
+            #if ((v_in_clip_space1.z<0 and v_in_clip_space2.z<0 and v_in_clip_space3.z<0) or (
+            #    (v_in_clip_space1.x>1 and v_in_clip_space2.x>1 and v_in_clip_space3.x>1)) or (
+            #    (v_in_clip_space1.x < -1 and v_in_clip_space2.x<-1 and v_in_clip_space3.x < -1)) or(
+            #    (v_in_clip_space1.y>1 and v_in_clip_space2.y>1 and v_in_clip_space3.y>1)) or(
+            #    (v_in_clip_space1.y < -1 and v_in_clip_space2.y<-1 and v_in_clip_space3.y<-1)
+            #    )):
+            #    continue
+                
+            triangle:Triangle = [v_in_clip_space1,
+                                 v_in_clip_space2,
+                                 v_in_clip_space3]
+
+            clipped_triangles = clip_triangle_in_planes(triangle, plane_of_the_clip_space)
+            for sub_triangle in clipped_triangles:
+                #clipped_triangle_after_projection = [perspective_matrix * vertex for vertex in sub_triangle]
+                
+                    # lend in pixel coord
+                    pixwin_coord = [view_port_matrix*(vertex) for vertex in sub_triangle] 
+
+                    if is_front_facing(pixwin_coord):
+                        a,b,c = pixwin_coord
+
+                        a = [a.x,a.y,a.z]
+                        b = [b.x,b.y,b.z]
+                        c = [c.x,c.y,c.z]
+                        
+
+                        givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
+                        geometry_buffer.add_triangle_to_buffer(a,b,c,
+                                            givenuv,   # uv list 
+                                            node_id,  # node_id
+                                            self.material_id)  # material_id
+                    
+        
+        return
 
         for triangle_idx,(pa,pb,pc) in  enumerate(self.triangles_vindex):
             v1 = in_view_space[pa]
@@ -447,28 +398,21 @@ class GLMMesh3D(Mesh3D):
             triangles_to_draw = filter_clip_project(v1.xyz,v2.xyz,v3.xyz, camera.dist_min, glm.mat4(1.0)  ,perspective_matrix, screeninfo)
 
             for (rp1,rp2,rp3), normal in triangles_to_draw:
-                az = glm.unProject(rp1, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                bz = glm.unProject(rp2, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                cz = glm.unProject(rp3, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                a = [rp1.x*screen_width,rp1.y*screen_height,az]
-                b = [rp2.x*screen_width,rp2.y*screen_height,bz]
-                c = [rp3.x*screen_width,rp3.y*screen_height,cz]
-                                
-                givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
-                #kepu =givenuv[0] 
-                #kepv =givenuv[1] 
-                #givenuv[0] = givenuv[4]
-                #givenuv[1] = givenuv[5] 
-                #givenuv[4]=kepu
-                #givenuv[5]  =kepv
-
-
-                geometry_buffer.add_triangle_to_buffer(a, 
-                                    c, 
-                                    b, 
-                                    givenuv,   # uv list 
-                                    node_id,  # node_id
-                                    self.material_id)  # material_id
+                if check_winding([rp1,rp2,rp3],vec3(0,0,-1.0)):
+                    az = glm.unProject(rp1, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                    bz = glm.unProject(rp2, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                    cz = glm.unProject(rp3, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
+                    a = [rp1.x*screen_width,rp1.y*screen_height,az]
+                    b = [rp2.x*screen_width,rp2.y*screen_height,bz]
+                    c = [rp3.x*screen_width,rp3.y*screen_height,cz]
+                                    
+                    givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
+                    geometry_buffer.add_triangle_to_buffer(a, 
+                                        c, 
+                                        b, 
+                                        givenuv,   # uv list 
+                                        node_id,  # node_id
+                                        self.material_id)  # material_id
         return
         proj_vertices = [glm.projectZO(p.xyz,glm.mat4(1.0) , perspective_matrix, screeninfo) for p in in_view_space] 
         

@@ -11,6 +11,14 @@ A minimalistic 3D engine implemented entirely in Python, designed to render 3D o
 * **ASCII Output**: Renders the 3D scenes in a charming ASCII art style.
 * **Color Shading support**: Render with RGB colors and Shading level.
 
+
+magic commmand to make it run : 
+
+```bash 
+python setup.py build_ext --inplace
+
+```
+
 # Usage
 
 Here’s a basic example to get you started:

@@ -24,7 +24,7 @@ from textual.widgets import (
 from textual.validation import Function, Number, ValidationResult, Validator
 
 from tt3de.asset_fastloader import Prefab2D, fast_load, prefab_mesh_single_triangle
-from tt3de.glm.pyglmtexture import  GLM2DMappedTexture, GLM2DMesh, GLM2DNode, GLMMesh3D, GLMNode3D
+from tt3de.glm.pyglmtexture import GLMMesh3D, GLMNode3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -65,6 +65,7 @@ class GLMTester(TT3DView):
 
         cube1node = GLMNode3D()
         cube1node.elems.append(m)
+        cube1node.local_transform = glm.translate(glm.vec3(0.0,5.0,0.0))
         self.root3d_node.elems.append(cube1node)
         
         # adding a second cube 
@@ -80,15 +81,17 @@ class GLMTester(TT3DView):
 
         manynodes =  GLMNode3D()
 
-        manynodes.local_transform = glm.scale(glm.vec3(50,50, 0 ))
-        for i in range(10):
-            for j in range(3):
+        manynodes.local_transform = glm.scale(glm.vec3(20,20, 0 ))
+        for i in range(1):
+            for j in range(1):
                 awall_node = GLMNode3D()
-                awall_node.local_transform = glm.translate(glm.vec3(i,j, 0 ))
+                awall_node.local_transform = glm.translate(glm.vec3(i-0.5,j-.5, 0.01 ))
                 pref = prefab_mesh_single_triangle(GLMMesh3D)
                 pref.material_id = 2
                 awall_node.elems.append(pref)
                 manynodes.elems.append( awall_node )
+
+        #cube2node.elems.append(manynodes)
         self.root3d_node.elems.append(manynodes)
 
 

@@ -24,7 +24,7 @@ from textual.widgets import (
 from textual.validation import Function, Number, ValidationResult, Validator
 
 from tt3de.asset_fastloader import Prefab2D, fast_load, prefab_mesh_single_triangle
-from tt3de.glm.pyglmtexture import  GLM2DMappedTexture, GLM2DMesh, GLM2DNode, GLMMesh3D
+from tt3de.glm.pyglmtexture import GLM2DMesh, GLM2DNode, GLMMesh3D
 from tt3de.richtexture import (
     DistGradBGShade,
     ImageTexture,
@@ -39,21 +39,6 @@ from tt3de.textual.widgets import CameraConfig, FloatSelector, RenderInfo, Vecto
 from tt3de.textual_widget import TT3DView
 from tt3de.tt3de import FPSCamera, Line3D, Mesh3D, Node3D, Point3D, PointElem, Quaternion, Triangle3D
 
-
-
-
-class GLMTester2(TT3DView):
-    use_native_python = False
-
-
-    def __init__(self):
-        super().__init__()
-
-    def initialize(self):
-        pass
-    def update_step(self, timediff):
-        self.camera.recalc_fov_h(self.size.width, self.size.height)
-        self.rc.update_wh(self.size.width, self.size.height)
 
 
 class GLMTester(TT3DView):
@@ -121,7 +106,6 @@ class GLMTester(TT3DView):
         
 class Content(Static):
     def compose(self) -> ComposeResult:
-        yield GLMTester2()
         yield GLMTester()
 
             

@@ -10,8 +10,6 @@ from tt3de.glm.c_buffer cimport s_buffer,initBuffer,freeBuffer,addElement
 from tt3de.glm.material.c_material cimport s_material
 
 
-
-
 DEF TT3DE_MATERIAL_MODE_DO_NOTHING=0
 DEF TT3DE_MATERIAL_MODE_DEBUG=1
 DEF TT3DE_MATERIAL_MODE_STATIC_FRONT_ALBEDO=2
@@ -274,7 +272,7 @@ cdef void some_kind_ofapply(s_material* material,
         #thecell.material_id,
         #thecell.primitiv_id ,
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DEPTH_BUFFER:
-         
+    
         afloat = max(0.0, min(1.0, thecell.depth_value)) 
         aleph[3] = <int> (255 * afloat)
         
