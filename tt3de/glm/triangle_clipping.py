@@ -33,6 +33,24 @@ def inside_planes(planes:List[glm.vec4], point:glm.vec4)->bool:
     return [inside(plane,point) for plane in planes]
 
 
+def clip_space_reject_test(a_triangle_in_clip_spance_not_divided):
+    
+    # build an array of test agains all boundaries 
+    a_clip_space_test = []
+    for vertice_in_clip_space in a_triangle_in_clip_spance_not_divided:
+        sometest = [-vertice_in_clip_space.w < vertice_in_clip_space.x, 
+        vertice_in_clip_space.x < vertice_in_clip_space.w ,
+        -vertice_in_clip_space.w < vertice_in_clip_space.y ,
+        vertice_in_clip_space.y < vertice_in_clip_space.w ,
+        -vertice_in_clip_space.w < vertice_in_clip_space.z,
+        vertice_in_clip_space.z < vertice_in_clip_space.w ]
+
+        a_clip_space_test.append(sometest)
+    clipe_space_rejection = [not(a_clip_space_test[0][plane_idx]) and not(a_clip_space_test[1][plane_idx]) and not(a_clip_space_test[2][plane_idx])
+                            for plane_idx in range(6)]
+    # if any of the clip_space_rejection is True, it means that ALL vertices of the triangles are on the outside of this plane.
+    return any(clipe_space_rejection)
+
 
 def clipping_space_planes() -> List[glm.vec4]:
     """
@@ -146,19 +164,13 @@ def clip_polygon_against_plane(plane:glm.vec4, polygon:Polygon):
     
     return clipped_polygon
 
-def check_if_triangle_in_planes_volume(triangle:Triangle,planes:list[glm.vec4]):
-    p0_inclusion = inside_planes(planes,triangle[0])
-    p1_inclusion = inside_planes(planes,triangle[1])
-    p3_inclusion = inside_planes(planes,triangle[2])
-
-    return (p0_inclusion,
-            p1_inclusion,
-            p3_inclusion)
-
 
 def clip_triangle_in_planes(triangle, planes)->list[Triangle]:
     """Clip a triangle against a list of planes.
     Sutherland-Hodgman polygon clipping algorithm.
+
+    this should work with a triangle in the clip space after the perspective divide.
+
     Args:
         triangle (list): List of 3 points representing the triangle.
         planes (list): List of planes to clip the triangle against.
@@ -172,6 +184,7 @@ def clip_triangle_in_planes(triangle, planes)->list[Triangle]:
         if len(polygon) < 3:
             return []
     
+    # reassembly of the points into triangles. 
     triangles = []
     if len(polygon) >= 3:
         for i in range(1, len(polygon) - 1):

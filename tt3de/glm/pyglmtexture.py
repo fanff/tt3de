@@ -305,7 +305,7 @@ class GLMMesh3D(Mesh3D):
         perspective_matrix = camera.perspective
 
 
-        view_port_matrix = glm.scale(vec3(float(screen_width),float(screen_height),1.0)) * glm.translate(vec3(.5,.5,0.0))
+        view_port_matrix = glm.scale(vec3(float(screen_width)/2.0,float(screen_height)/2.0,1.0)) * glm.translate(vec3(1,1,0.0))
         #in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
         view_space_vertices = [(camera._model_inverse) * vertex for vertex in self.glm_vertices_4]
 
@@ -314,7 +314,10 @@ class GLMMesh3D(Mesh3D):
         
         
         triangle_in_clip_space_divided = [vertex/vertex.w for vertex in triangle_in_clip_space] 
-        #planes = extract_planes(perspective_matrix)
+
+
+        # keep an inversion for the whole transform : 
+        inverse_perspective = glm.inverse(perspective_matrix * camera._model_inverse)
         plane_of_the_clip_space = clipping_space_planes()
 
         for triangle_idx,(v_idx1,v_idx2,v_idx3) in  enumerate(self.triangles_vindex):
@@ -353,15 +356,6 @@ class GLMMesh3D(Mesh3D):
             
             
             
-            
-
-            #if ((v_in_clip_space1.z<0 and v_in_clip_space2.z<0 and v_in_clip_space3.z<0) or (
-            #    (v_in_clip_space1.x>1 and v_in_clip_space2.x>1 and v_in_clip_space3.x>1)) or (
-            #    (v_in_clip_space1.x < -1 and v_in_clip_space2.x<-1 and v_in_clip_space3.x < -1)) or(
-            #    (v_in_clip_space1.y>1 and v_in_clip_space2.y>1 and v_in_clip_space3.y>1)) or(
-            #    (v_in_clip_space1.y < -1 and v_in_clip_space2.y<-1 and v_in_clip_space3.y<-1)
-            #    )):
-            #    continue
                 
             triangle:Triangle = [v_in_clip_space1,
                                  v_in_clip_space2,
@@ -369,24 +363,76 @@ class GLMMesh3D(Mesh3D):
 
             clipped_triangles = clip_triangle_in_planes(triangle, plane_of_the_clip_space)
             for sub_triangle in clipped_triangles:
-                #clipped_triangle_after_projection = [perspective_matrix * vertex for vertex in sub_triangle]
                 
-                    # lend in pixel coord
-                    pixwin_coord = [view_port_matrix*(vertex) for vertex in sub_triangle] 
+                # lend in pixel coord
+                pixwin_coord = [view_port_matrix*(vertex) for vertex in sub_triangle] 
 
-                    if is_front_facing(pixwin_coord):
-                        a,b,c = pixwin_coord
+                if is_front_facing(pixwin_coord):
+                    a,b,c = pixwin_coord
 
-                        a = [a.x,a.y,a.z]
-                        b = [b.x,b.y,b.z]
-                        c = [c.x,c.y,c.z]
-                        
+                    min_v = vec4(-0.99,-0.99,-float("infinity"),-float("infinity"))
+                    max_v = vec4(0.99,0.99,float("infinity"),float("infinity"))
+                    # unproject the triangle in view space
+                    un_projected_clean = [glm.clamp(vertex,min_v,max_v) for vertex in sub_triangle]
+                    un_projected_ = [inverse_perspective*vertex for vertex in un_projected_clean]
+                    unp_a,unp_b,unp_c = un_projected_
 
-                        givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
-                        geometry_buffer.add_triangle_to_buffer(a,b,c,
-                                            givenuv,   # uv list 
-                                            node_id,  # node_id
-                                            self.material_id)  # material_id
+                    # normalize with the w so its clean
+                    unp_a= (unp_a/unp_a.w)
+                    unp_b= (unp_b/unp_b.w)
+                    unp_c= (unp_c/unp_c.w)
+
+                    self.glm_vertices_4[v_idx1]
+                    self.glm_vertices_4[v_idx2]
+                    self.glm_vertices_4[v_idx3]
+
+                    # each point is a barycentric coordinate of the original triangle corners
+                    unpa_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_a)
+                    unpb_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_b)
+                    unpc_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_c)
+                    
+                    # the original uv are : 
+                    #givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
+                    givenuv = self.triangles[triangle_idx].uvmap[0]
+                    uv_point1_u,uv_point1_v = givenuv[0].x,givenuv[0].y
+                    uv_point2_u,uv_point2_v = givenuv[1].x,givenuv[1].y
+                    uv_point3_u,uv_point3_v = givenuv[2].x,givenuv[2].y
+
+
+                    uv_pointa_u = (unpa_weights[0] * uv_point1_u) + (unpa_weights[1] * uv_point1_u) + (unpa_weights[2] * uv_point1_u) 
+                    uv_pointb_u = (unpb_weights[0] * uv_point2_u) + (unpb_weights[1] * uv_point2_u) + (unpb_weights[2] * uv_point2_u)
+                    uv_pointc_u = (unpc_weights[0] * uv_point3_u) + (unpc_weights[1] * uv_point3_u) + (unpc_weights[2] * uv_point3_u)
+                    
+                    uv_pointa_v = (unpa_weights[0] * uv_point1_v) + (unpa_weights[1] * uv_point1_v) + (unpa_weights[2] * uv_point1_v) 
+                    uv_pointb_v = (unpb_weights[0] * uv_point2_v) + (unpb_weights[1] * uv_point2_v) + (unpb_weights[2] * uv_point2_v)
+                    uv_pointc_v = (unpc_weights[0] * uv_point3_v) + (unpc_weights[1] * uv_point3_v) + (unpc_weights[2] * uv_point3_v)
+
+                    racalculated_uv = [
+                        uv_pointa_u,uv_pointa_v,
+                        uv_pointb_u,uv_pointb_v,
+                        uv_pointc_u,uv_pointc_v,
+                    ]+ ([0]*42)
+
+                    
+
+                    min_window_space = vec3(0,0,-float("infinity"))
+                    max_window_space = vec3(screen_width-1,screen_height-1,float("infinity"))
+
+                    # a = a.xyz/a.w
+                    # b = b.xyz/b.w
+                    # c = c.xyz/c.w
+
+                    a = glm.clamp(a.xyz,min_window_space,max_window_space)
+                    b = glm.clamp(b.xyz,min_window_space,max_window_space)
+                    c = glm.clamp(c.xyz,min_window_space,max_window_space)
+                    a = [a.x,a.y,a.z]
+                    b = [b.x,b.y,b.z]
+                    c = [c.x,c.y,c.z]
+                    
+                    geometry_buffer.add_triangle_to_buffer(a,b,c,
+                                        racalculated_uv,   # uv list 
+                                        node_id,  # node_id
+                                        self.material_id)  # material_id
                     
         
         return
@@ -451,9 +497,41 @@ class GLMMesh3D(Mesh3D):
                                        self.material_id)  # material_id
 
 
+def barycentric_coordinates(a: glm.vec3, b: glm.vec3, c: glm.vec3, p: glm.vec3) -> glm.vec3:
+    """
+    Calculates the barycentric coordinates of point p with respect to the triangle defined by points a, b, and c.
+
+    Args:
+        a (glm.vec3): Vertex A of the triangle.
+        b (glm.vec3): Vertex B of the triangle.
+        c (glm.vec3): Vertex C of the triangle.
+        p (glm.vec3): Point P to calculate the barycentric coordinates for.
+
+    Returns:
+        glm.vec3: The barycentric coordinates (u, v, w) of point P.
+    """
+    
+    v0 = b - a
+    v1 = c - a
+    v2 = p - a
+    
+    d00 = glm.dot(v0, v0)
+    d01 = glm.dot(v0, v1)
+    d11 = glm.dot(v1, v1)
+    d20 = glm.dot(v2, v0)
+    d21 = glm.dot(v2, v1)
+    
+    denom = d00 * d11 - d01 * d01
+    
+    v = (d11 * d20 - d01 * d21) / denom
+    w = (d00 * d21 - d01 * d20) / denom
+    u = 1.0 - v - w
+    
+    return glm.vec3(u, v, w)
+
 
 class GLMRenderContext:
-
+    #unusable at this stage
     LINE_RETURN_SEG = Segment("\n",Style(color="white"))
     EMPTY_SEGMENT = Segment(" ",Style(color="white"))
 

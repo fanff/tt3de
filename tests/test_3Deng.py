@@ -58,7 +58,7 @@ class TestPJ(unittest.TestCase):
         projected_point = c.project(Point3D(5, 0, 0))
         self.assertTrue(projected_point.depth > 0)
         projected_point = c.project(Point3D(-5, 0, 0))
-        self.assertEqual(projected_point.depth,0.0)
+        self.assertEqual(projected_point.depth, 0.0)
 
     def test_projx2(self):
         c = FPSCamera(Point3D(0, 0, 0))

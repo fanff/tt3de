@@ -56,14 +56,14 @@ class TestPJ(unittest.TestCase):
         assertAlmostEqualP3D(Point3D(1, 0, 0), c.direction_vector())
 
         projected_point = c.project(Point3D(5, 0, 0))
-        self.assertGreater(projected_point.depth , 0)
+        self.assertGreater(projected_point.depth, 0)
 
         projected_6point = c.project(Point3D(6, 0, 0))
-        self.assertGreater(projected_6point.depth , 0)
-        self.assertGreater(projected_6point.depth , projected_point.depth)
+        self.assertGreater(projected_6point.depth, 0)
+        self.assertGreater(projected_6point.depth, projected_point.depth)
 
         projected_point = c.project(Point3D(-5, 0, 0))
-        self.assertEqual(projected_point.depth , 0)
+        self.assertEqual(projected_point.depth, 0)
 
     def test_projx2(self):
         c = FPSCamera(Point3D(0, 0, 0))
