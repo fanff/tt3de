@@ -67,7 +67,7 @@ class Test_Static_Mode(unittest.TestCase):
         # build the primitives
         build_primitives(geometry_buffer, primitive_buffer)
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer,mb)
+        raster_all(primitive_buffer, drawing_buffer, mb)
 
         apply_pixel_shader(
             primitive_buffer, drawing_buffer, mb, geometry_buffer, texture_array_object
@@ -146,10 +146,12 @@ class Test_Static_Mode(unittest.TestCase):
         # build the primitives
         build_primitives(geometry_buffer, primitive_buffer)
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer,mb)
+        raster_all(primitive_buffer, drawing_buffer, mb)
 
         texture_array_object = TextureArray()
-        apply_pixel_shader(primitive_buffer, drawing_buffer, mb, geometry_buffer,texture_array_object)
+        apply_pixel_shader(
+            primitive_buffer, drawing_buffer, mb, geometry_buffer, texture_array_object
+        )
 
         canvas_list = drawing_buffer.canvas_to_list()
         depth_buffer_list = drawing_buffer.drawbuffer_to_list()

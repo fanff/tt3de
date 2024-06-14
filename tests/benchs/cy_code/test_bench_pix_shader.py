@@ -21,9 +21,9 @@ from tt3de.glm.geometry.geometry import GeometryBuffer
 LOOP_COUNT = 1000
 
 
-def cversion(primitive_buffer, drawing_buffer, mb, geometry_buffer,ta):
+def cversion(primitive_buffer, drawing_buffer, mb, geometry_buffer, ta):
     # for i in range(LOOP_COUNT):
-    apply_pixel_shader(primitive_buffer, drawing_buffer, mb, geometry_buffer,ta)
+    apply_pixel_shader(primitive_buffer, drawing_buffer, mb, geometry_buffer, ta)
 
 
 sizes = [32, 64, 128, 256]
@@ -53,6 +53,6 @@ def test_bench_full_pass_512(benchmark, n, texture_mode):
 
     raster_precalc(primitive_buffer, drawing_buffer)
 
-    raster_all(primitive_buffer, drawing_buffer,mb)
+    raster_all(primitive_buffer, drawing_buffer, mb)
     ta = TextureArray()
-    benchmark(cversion, primitive_buffer, drawing_buffer, mb, geometry_buffer,ta)
+    benchmark(cversion, primitive_buffer, drawing_buffer, mb, geometry_buffer, ta)

@@ -1,5 +1,5 @@
 import math
-from time import monotonic,time
+from time import monotonic, time
 from typing import Iterable
 import glm
 from rich.color import Color
@@ -30,7 +30,6 @@ class TT3DView(Widget):
     write_debug_inside = False
     mouse_fps_camera_mode = False
 
-
     cached_result = []
     last_frame_data_info = {}
     frame_idx = reactive(0)
@@ -52,16 +51,14 @@ class TT3DView(Widget):
     }
     """
 
-    def __init__(self,name: str | None = None,
+    def __init__(
+        self,
+        name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
-        disabled: bool = False,):
-        super().__init__(
-            name=name,
-            id=id,
-            classes=classes,
-            disabled=disabled
-        )
+        disabled: bool = False,
+    ):
+        super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
         if self.use_native_python:
             self.camera = FPSCamera(pos=Point3D(0, 0, 0))
@@ -74,9 +71,9 @@ class TT3DView(Widget):
             self.rc = CyRenderContext(self.size.width, self.size.height)
         self.initialize()
         self.update_timer = self.set_interval(1.0 / 20, self.calc_frame, pause=False)
-        self.last_frame_data_info = {}  
+        self.last_frame_data_info = {}
         self.rc.setup_segment_cache(self.app.console)
-        
+
     @abstractmethod
     def initialize(self):
         pass
@@ -91,25 +88,28 @@ class TT3DView(Widget):
 
     def calc_frame(self):
         self.frame_idx += 1
-    
 
     # override for some performance gain
-    def get_style_at(self,x,y):
+    def get_style_at(self, x, y):
         return Style()
 
     # overriden
     async def on_event(self, event: events.Event):
         if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
-            if event.delta_x!=0:
-                self.camera.rotate_left_right(math.radians(event.delta_x *(800.0/self.size.width)))
-            if event.delta_y!=0:
+            if event.delta_x != 0:
+                self.camera.rotate_left_right(
+                    math.radians(event.delta_x * (800.0 / self.size.width))
+                )
+            if event.delta_y != 0:
                 offset = self.screen.get_offset(self)
-                self.camera.pitch=math.radians((((event.y-offset.y)/self.size.height)-.5) * 160)
+                self.camera.pitch = math.radians(
+                    (((event.y - offset.y) / self.size.height) - 0.5) * 160
+                )
                 self.camera.update_rotation()
 
-        elif isinstance(event,events.Click):
+        elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True
-            
+
         elif isinstance(event, events.Key):
             match event.key:
                 case "j":
@@ -135,8 +135,7 @@ class TT3DView(Widget):
                 case "escape":
                     self.mouse_fps_camera_mode = False
 
-
-    def render_lines(self, crop:Region) -> list[Strip]:
+    def render_lines(self, crop: Region) -> list[Strip]:
         """Render the widget in to lines.
 
         Args:
@@ -147,25 +146,23 @@ class TT3DView(Widget):
         """
 
         # trick to avoid the compositor "get_style" to force a render
-        if crop.height==1:
+        if crop.height == 1:
             return []
 
         if self.last_processed_frame == self.frame_idx:
             return self.cached_result
         else:
             self.render_step()
-        
-        
+
         if not self.use_native_python:
             ts = time()
             result = self.rc.to_textual_()
 
-            self.render_strips_dur = time()-ts
+            self.render_strips_dur = time() - ts
             self.last_processed_frame = self.frame_idx
 
             self.cached_result = result
             return result
-    
 
         ts = time()
 
@@ -180,16 +177,16 @@ class TT3DView(Widget):
 
             if idx > 0 and (idx % sw == 0):
                 s = Strip(currentLine)
-                #s.render(console)
+                # s.render(console)
                 result.append(s)
                 currentLine = []
-            currentLine.append( segmap[i] )
-            #yield self.segmap[i]
+            currentLine.append(segmap[i])
+            # yield self.segmap[i]
         s = Strip(currentLine)
-        #s.render(console)
+        # s.render(console)
         result.append(s)
 
-        self.render_strips_dur = time()-ts
+        self.render_strips_dur = time() - ts
         self.last_processed_frame = self.frame_idx
 
         self.cached_result = result
@@ -199,7 +196,11 @@ class TT3DView(Widget):
         return "render called, should not happen actually :/"
 
     def render_step(self):
-        if self.size.width > 1 and self.size.height > 1 and self.update_timer._active.is_set():
+        if (
+            self.size.width > 1
+            and self.size.height > 1
+            and self.update_timer._active.is_set()
+        ):
 
             ts = time()
             self.update_step(0.2)  # TODO fix the time of the update
@@ -214,7 +215,7 @@ class TT3DView(Widget):
             self.tsrender_dur = time() - ts
 
             if self.write_debug_inside:
-                l = f"Frame:{self.frame_idx}: size: {self.size.width} x {self.size.height}" 
+                l = f"Frame:{self.frame_idx}: size: {self.size.width} x {self.size.height}"
                 self.rc.write_text(l, 5, 6)
 
                 self.rc.write_text(f"U:{self.update_dur*1000:.2f} ms", 1, 5)
@@ -231,4 +232,3 @@ class TT3DView(Widget):
             self.post_render_step()
             return True
         return False
-    

@@ -12,8 +12,9 @@ from tt3de.glm.primitives.primitive_builder import build_primitives
 from tt3de.glm.geometry.geometry import GeometryBuffer
 from tt3de.glm.material.c_material import MaterialBuffer
 
-def cversion(primitive_buffer, drawing_buffer,material_buffer):
-    raster_all(primitive_buffer, drawing_buffer,material_buffer)
+
+def cversion(primitive_buffer, drawing_buffer, material_buffer):
+    raster_all(primitive_buffer, drawing_buffer, material_buffer)
 
 
 sizes = [32, 64, 128, 256, 512, 2048, 4096]
@@ -48,4 +49,4 @@ def test_bench_triangle_raster(benchmark, size):
 
     raster_precalc(primitive_buffer, drawing_buffer)
 
-    benchmark(cversion, primitive_buffer, drawing_buffer,MaterialBuffer())
+    benchmark(cversion, primitive_buffer, drawing_buffer, MaterialBuffer())

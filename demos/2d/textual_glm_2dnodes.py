@@ -35,6 +35,8 @@ from tt3de.textual.widgets import (
 from tt3de.textual_widget import TT3DView
 
 from tt3de.tt_2dnodes import TT2DMesh, TT2DNode
+
+
 class GLMTester(TT3DView):
     use_native_python = False
 
@@ -43,9 +45,8 @@ class GLMTester(TT3DView):
 
     def initialize(self):
 
-        self.rc.texture_array,self.rc.material_buffer = MaterialPerfab.set_0()
+        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.set_0()
         self.root2Dnode = TT2DNode()
-        
 
         materialidx = 1
         for i in range(3):
@@ -53,24 +54,25 @@ class GLMTester(TT3DView):
                 a2dnode = TT2DNode()
 
                 a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-                a2dmesh.material_id=materialidx
-                materialidx+=1
-                if i==0 and j==1:
+                a2dmesh.material_id = materialidx
+                materialidx += 1
+                if i == 0 and j == 1:
                     pass
-                    a2dmesh.elements[0][0].z=0.2
+                    a2dmesh.elements[0][0].z = 0.2
                 a2dnode.elements.append(a2dmesh)
-                a2dnode.local_transform = glm.translate(glm.vec2(float(i)+0.1,float(j)+ 0.1))*glm.scale(glm.vec2(0.8,0.8))
+                a2dnode.local_transform = glm.translate(
+                    glm.vec2(float(i) + 0.1, float(j) + 0.1)
+                ) * glm.scale(glm.vec2(0.8, 0.8))
 
                 self.root2Dnode.elements.append(a2dnode)
 
-        
         # adding a spinning square
         a2dnode = TT2DNode()
         a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-        a2dmesh.material_id=5
+        a2dmesh.material_id = 5
         a2dnode.elements.append(a2dmesh)
         # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec2(-.5,-.5))
+        a2dnode.local_transform = glm.translate(glm.vec2(-0.5, -0.5))
 
         # this node is the one with the rotation motion
         self.spining_square = TT2DNode()
@@ -78,19 +80,18 @@ class GLMTester(TT3DView):
 
         # this node relocate the whole pack on the left
         spining_square_loc = TT2DNode()
-        spining_square_loc.local_transform = glm.translate(glm.vec2(-2.0,0.0))
+        spining_square_loc.local_transform = glm.translate(glm.vec2(-2.0, 0.0))
         spining_square_loc.elements.append(self.spining_square)
 
         self.root2Dnode.elements.append(spining_square_loc)
 
-
         # adding a Second spinning square
         a2dnode = TT2DNode()
         a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-        a2dmesh.material_id=8
+        a2dmesh.material_id = 8
         a2dnode.elements.append(a2dmesh)
         # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec2(-.5,-.5))
+        a2dnode.local_transform = glm.translate(glm.vec2(-0.5, -0.5))
 
         # this node is the one with the rotation motion
         self.spining_square_2 = TT2DNode()
@@ -98,25 +99,20 @@ class GLMTester(TT3DView):
 
         # this node relocate the whole pack on the left
         spining_square2_loc = TT2DNode()
-        spining_square2_loc.local_transform = glm.translate(glm.vec2(-2.0,1.2))
+        spining_square2_loc.local_transform = glm.translate(glm.vec2(-2.0, 1.2))
         spining_square2_loc.elements.append(self.spining_square_2)
 
         self.root2Dnode.elements.append(spining_square2_loc)
 
-
-
-
         # final append
         self.rc.append(self.root2Dnode)
 
-
-
         self.square_spining = True
 
-        self.absolute_location = glm.vec3(0.0,0.0,1.0)
+        self.absolute_location = glm.vec3(0.0, 0.0, 1.0)
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()
-        
+
     def update_step(self, timediff):
         self.camera.recalc_fov_h(self.size.width, self.size.height)
         self.rc.update_wh(self.size.width, self.size.height)
@@ -126,8 +122,8 @@ class GLMTester(TT3DView):
 
         rot = ts * tsfactor
         if self.square_spining:
-            self.spining_square.local_transform=glm.rotate(rot)
-            self.spining_square_2.local_transform=glm.rotate(rot)
+            self.spining_square.local_transform = glm.rotate(rot)
+            self.spining_square_2.local_transform = glm.rotate(rot)
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
@@ -138,15 +134,14 @@ class GLMTester(TT3DView):
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
 
-
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
         match event.__class__:
             case events.Leave:
                 pass
-                #info_box: Static = self.parent.query_one(".lastevent")
-                #info_box.update(f"leaving!")
+                # info_box: Static = self.parent.query_one(".lastevent")
+                # info_box.update(f"leaving!")
 
             case events.Key:
                 event: events.Key = event
@@ -157,18 +152,23 @@ class GLMTester(TT3DView):
                 event: events.MouseDown = event
                 match event.button:
                     case 1:
-                        relx_px = ((float(event.x)-(self.camera.screen_width/2))) /  (self.camera.screen_width*self.camera.zoom_2D)
-                        rely_px = ((float(event.y)-(self.camera.screen_height/2))) / (self.camera.screen_height*self.camera.zoom_2D)
-                        
+                        relx_px = (
+                            (float(event.x) - (self.camera.screen_width / 2))
+                        ) / (self.camera.screen_width * self.camera.zoom_2D)
+                        rely_px = (
+                            (float(event.y) - (self.camera.screen_height / 2))
+                        ) / (self.camera.screen_height * self.camera.zoom_2D)
 
-                        self.absolute_location = (glm.vec3(-relx_px,-rely_px,0.0)) + self.absolute_location
+                        self.absolute_location = (
+                            glm.vec3(-relx_px, -rely_px, 0.0)
+                        ) + self.absolute_location
                         trans = glm.translate(self.absolute_location.xy)
-                        self.root2Dnode.local_transform = trans 
+                        self.root2Dnode.local_transform = trans
 
             case events.MouseScrollDown:
-                self.camera.set_zoom_2D(self.camera.zoom_2D*0.9) 
+                self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
             case events.MouseScrollUp:
-                self.camera.set_zoom_2D(self.camera.zoom_2D*1.1) 
+                self.camera.set_zoom_2D(self.camera.zoom_2D * 1.1)
             case _:
                 info_box: Static = self.parent.query_one(".lastevent")
                 info_box.update(f"{event.__class__}: \n{str(event)}")
@@ -181,6 +181,7 @@ class Content(Static):
             yield Static("", classes="lastevent")
             yield CameraConfig()
         yield GLMTester()
+
     def on_camera_config_projection_changed(
         self, event: CameraConfig.ProjectionChanged
     ):
@@ -190,6 +191,8 @@ class Content(Static):
         viewelem.camera.set_projectioninfo(
             math.radians(fov), dist_min, dist_max, charfactor
         )
+
+
 class Demo3dView(App):
     DEFAULT_CSS = """
     Content {

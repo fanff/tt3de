@@ -6,9 +6,7 @@ import glm
 
 from context import tt3de
 
-from tt3de.glm.triangle_clipping import (
-    calculate_normal
-)
+from tt3de.glm.triangle_clipping import calculate_normal
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 
 
@@ -66,7 +64,6 @@ class TestFaceforward(unittest.TestCase):
             print(f"{apoint3} -> {pp3}")
             # pp4=m*v*p*apoint4
             # print(pp4)
-        
 
 
 if __name__ == "__main__":

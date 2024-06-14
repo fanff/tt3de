@@ -21,6 +21,7 @@ from rich.style import Style
 from rich.text import Segment
 from textual.strip import Strip
 
+
 class TextureAscii(TextureTT3DE):
     def render_point(self, *args) -> int:
         pass
@@ -86,58 +87,70 @@ class DistanceCharShare(TextureAscii):
             charidx = segmap.add_char(s)
             self.shade_to_idx[i] = charidx
 
-def clamp(v,mv,maxv):
-    return max(min(v,maxv),mv)
+
+def clamp(v, mv, maxv):
+    return max(min(v, maxv), mv)
+
 
 class ImageTexture(TextureAscii):
-    def __init__(self, img_data,shade_count=4):
+    def __init__(self, img_data, shade_count=4):
         self.img_data = img_data
         self.image_height = len(self.img_data)
         self.image_width = len(self.img_data[0])
 
         self.color_palette = extract_palette(self.img_data)
-        
-        self.img_color=[]
-        
+
+        self.img_color = []
+
         # the shading , then the color idx
         self.shade_to_idx: List[List[int]]
         self.shade_count = shade_count
 
-    def glm_render(self, uvpoint:glm.vec2,normal_dot:float):
-        
+    def glm_render(self, uvpoint: glm.vec2, normal_dot: float):
+
         import glm
 
-        cuv = glm.fract(uvpoint)*glm.vec2(self.image_width-1,self.image_height-1)
-        palette_idx:int = self.img_color[round(cuv.y)][round(cuv.x)]
+        cuv = glm.fract(uvpoint) * glm.vec2(self.image_width - 1, self.image_height - 1)
+        palette_idx: int = self.img_color[round(cuv.y)][round(cuv.x)]
 
-
-        shade_idx = clamp(self.shade_count-round(abs(normal_dot)*self.shade_count),0,self.shade_count-1)
+        shade_idx = clamp(
+            self.shade_count - round(abs(normal_dot) * self.shade_count),
+            0,
+            self.shade_count - 1,
+        )
 
         return self.shade_to_idx[shade_idx][palette_idx]
 
     def render_point(self, p: PPoint2D) -> int:
-        
-        shade_idx = 0#clamp(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
 
-        imgx:int = (self.image_width-1) - int(p.uv.x *  self.image_width) 
-        imgy:int = (self.image_height-1) - int(p.uv.y *  self.image_height) 
+        shade_idx = 0  # clamp(self.shade_count-round(abs(p.dotval)*self.shade_count),0,self.shade_count-1)
 
-        palette_idx:int = self.img_color[imgy][imgx]
+        imgx: int = (self.image_width - 1) - int(p.uv.x * self.image_width)
+        imgy: int = (self.image_height - 1) - int(p.uv.y * self.image_height)
+
+        palette_idx: int = self.img_color[imgy][imgx]
         return self.shade_to_idx[shade_idx][palette_idx]
 
     def cache_output(self, segmap: "Segmap"):
-        
+
         buff_color_to_int = {}
 
         self.shade_to_idx = []
         for i in range(self.shade_count):
             colorshade = 1.0 - (i / (self.shade_count))
-            self.shade_to_idx.append([0]*len(self.color_palette))
-            
-            for palette_idx,(r, g, b) in enumerate(self.color_palette):
-                background_c = Color.from_rgb(r * colorshade , g * colorshade , b * colorshade )
-                front_c = Color.from_rgb(r , g , b )
-                s = Segment("⠿", style=Style(color=background_c, bgcolor=front_c,dim=False,reverse=False))
+            self.shade_to_idx.append([0] * len(self.color_palette))
+
+            for palette_idx, (r, g, b) in enumerate(self.color_palette):
+                background_c = Color.from_rgb(
+                    r * colorshade, g * colorshade, b * colorshade
+                )
+                front_c = Color.from_rgb(r, g, b)
+                s = Segment(
+                    "⠿",
+                    style=Style(
+                        color=background_c, bgcolor=front_c, dim=False, reverse=False
+                    ),
+                )
                 charidx = segmap.add_char(s)
                 self.shade_to_idx[i][palette_idx] = charidx
 
@@ -156,8 +169,8 @@ class ImageTexture(TextureAscii):
 
 class RenderContext:
 
-    LINE_RETURN_SEG = Segment("\n",Style(color="white"))
-    EMPTY_SEGMENT = Segment(" ",Style(color="white"))
+    LINE_RETURN_SEG = Segment("\n", Style(color="white"))
+    EMPTY_SEGMENT = Segment(" ", Style(color="white"))
 
     def __init__(self, screen_width, screen_height):
         self.elements: List[Drawable3D] = []
@@ -172,7 +185,7 @@ class RenderContext:
         self.segmap = Segmap().init()
         self.split_map = dict[int:object]
 
-    def setup_segment_cache(self,console):
+    def setup_segment_cache(self, console):
         self.split_map = self.segmap.to_split_map(console)
 
     def setup_canvas(self):
@@ -206,7 +219,7 @@ class RenderContext:
                     # self.canvas[p.y][p.x] = p.render_pixel(txt)
                     self.canvas_array[aidx] = elemnt.render_point(p)
                     self.depth_array[aidx] = p.depth
-                
+
     def iter_canvas(self) -> Iterable[Segment]:
         for idx, i in enumerate(self.canvas_array):
             if idx > 0 and (idx % self.screen_width == 0):
@@ -220,8 +233,8 @@ class RenderContext:
             if idx > 0 and (idx % self.screen_width == 0):
                 yield currentLine
                 currentLine = []
-            currentLine.append( self.segmap[i] )
-            #yield self.segmap[i]
+            currentLine.append(self.segmap[i])
+            # yield self.segmap[i]
         yield currentLine
 
     def write_text(self, txt: str, x=0, y=0):
@@ -248,7 +261,7 @@ class RenderContext:
 class Segmap(dict):
 
     def init(self):
-        self[0] = Segment(" ",Style(color="white"))
+        self[0] = Segment(" ", Style(color="white"))
         for i in range(1, 10):
             self[i] = Segment(str(i), Style(color="white"))
 
@@ -265,13 +278,14 @@ class Segmap(dict):
         self[idx] = seg
         return idx
 
-    def to_split_map(self,console):
+    def to_split_map(self, console):
         strip_map = dict()
-        for k,segment in self.items():
+        for k, segment in self.items():
             s = Strip([segment])
             s = s.render(console)
             strip_map[k] = s
         return strip_map
+
 
 def build_gizmo_arrows(center: Point3D):
     xline = Line3D(

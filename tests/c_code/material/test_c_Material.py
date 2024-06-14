@@ -147,10 +147,12 @@ class Test_ApplyMaterialMethod(unittest.TestCase):
 
         raster_precalc(primitive_buffer, drawing_buffer)
 
-        raster_all(primitive_buffer, drawing_buffer,mb)
+        raster_all(primitive_buffer, drawing_buffer, mb)
         self.assertEqual(primitive_buffer.primitive_count(), 1)
         texture_array_object = TextureArray()
-        apply_pixel_shader(primitive_buffer, drawing_buffer, mb, geometry_buffer,texture_array_object)
+        apply_pixel_shader(
+            primitive_buffer, drawing_buffer, mb, geometry_buffer, texture_array_object
+        )
 
         canvas_list = drawing_buffer.canvas_to_list()
         depth_buffer_list = drawing_buffer.drawbuffer_to_list()

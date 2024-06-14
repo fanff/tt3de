@@ -2,6 +2,7 @@ import math
 from math import radians
 from typing import Iterable, List, Tuple
 
+
 class Point2Di:
     def __init__(self, x: int, y: int):
         self.x = x
@@ -48,6 +49,7 @@ class Point2D:
 
     def __repr__(self):
         return str(self)
+
     def __str__(self):
         return f"Point2D({self.x:.2f},{self.y:.2f})"
 
@@ -57,8 +59,8 @@ class PPoint2D(Point2D):
         self.x = x
         self.y = y
         self.depth = depth
-        self.uv:Point2D = None
-        self.dotval:float= 0.0
+        self.uv: Point2D = None
+        self.dotval: float = 0.0
 
     def __add__(self, other: "Point2D") -> "PPoint2D":
         return PPoint2D(self.x + other.x, self.y + other.y, self.depth)
@@ -209,6 +211,7 @@ class Point3D:
             self.x * other.y - self.y * other.x,
         )
 
+
 def normalize(v: "Point3D"):
     n2 = v.x**2 + v.y**2 + v.z**2
 
@@ -311,57 +314,62 @@ class Camera:
         self.fov_h = self.fov_w * r
 
 
-class FPSCamera():
+class FPSCamera:
 
-    NO_PROJECT = PPoint2D(0,0,0)
-    def __init__(self, pos: Point3D, screen_width: int = 100, screen_height: int = 100, 
-                 fov_radians=70, 
-                 dist_min=1, 
-                 dist_max=100,
-                 character_factor=1.8):
+    NO_PROJECT = PPoint2D(0, 0, 0)
+
+    def __init__(
+        self,
+        pos: Point3D,
+        screen_width: int = 100,
+        screen_height: int = 100,
+        fov_radians=70,
+        dist_min=1,
+        dist_max=100,
+        character_factor=1.8,
+    ):
         self.pos = pos
 
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-
         self.fov_w = math.radians(fov_radians)
         self.fov_h = math.radians(fov_radians)
 
-        self.dist_min=dist_min
-        self.dist_max=dist_max
+        self.dist_min = dist_min
+        self.dist_max = dist_max
         self.character_factor = character_factor
 
         self.pitch = 0
         self.yaw = 0
-        self._rotation:Quaternion
-        self._rotation_invers:Quaternion
+        self._rotation: Quaternion
+        self._rotation_invers: Quaternion
 
-        
-        self.worldobj_rotation:Quaternion = Quaternion.from_euler(0,0,0)
+        self.worldobj_rotation: Quaternion = Quaternion.from_euler(0, 0, 0)
         self.update_rotation()
-        self.recalc_fov_h(screen_width,screen_height,force_recalc=True)
+        self.recalc_fov_h(screen_width, screen_height, force_recalc=True)
 
+    def set_projectioninfo(
+        self,
+        fov_radians: float = None,
+        dist_min: float = None,
+        dist_max: float = None,
+        character_factor: float = None,
+    ):
 
-    def set_projectioninfo(self, fov_radians:float=None, 
-                 dist_min:float=None, 
-                 dist_max:float=None,
-                 character_factor:float=None):
-        
         if fov_radians is not None:
             self.fov_w = fov_radians
         if dist_min is not None:
-            self.dist_min=dist_min
+            self.dist_min = dist_min
         if dist_max is not None:
-            self.dist_max=dist_max
+            self.dist_max = dist_max
         if character_factor is not None:
-            self.character_factor=character_factor
-        self.recalc_fov_h(self.screen_width,self.screen_height,force_recalc=True)
+            self.character_factor = character_factor
+        self.recalc_fov_h(self.screen_width, self.screen_height, force_recalc=True)
 
-
-    def recalc_fov_h(self, w, h,force_recalc=False):
-        if  force_recalc or self.screen_width!=w or self.screen_height!=h:
-            r = (float(h) / w) 
+    def recalc_fov_h(self, w, h, force_recalc=False):
+        if force_recalc or self.screen_width != w or self.screen_height != h:
+            r = float(h) / w
             self.fov_h = self.fov_w * r * self.character_factor
 
     def rotate_left_right(self, angle: float):
@@ -372,7 +380,7 @@ class FPSCamera():
         self.pitch = max(min(self.pitch + angle, 80), -80)
         self.update_rotation()
 
-    def set_yaw_pitch(self , yaw,pitch):
+    def set_yaw_pitch(self, yaw, pitch):
         self.yaw = yaw
         self.pitch = pitch
         self.update_rotation()
@@ -409,7 +417,9 @@ class FPSCamera():
     def point_at(self, target: Point3D):
         direction = target - self.pos
         self.yaw = math.atan2(direction.x, direction.z)
-        self.pitch = math.atan2(-direction.y, math.sqrt(direction.x**2 + direction.z**2))
+        self.pitch = math.atan2(
+            -direction.y, math.sqrt(direction.x**2 + direction.z**2)
+        )
         self.update_rotation()
 
     @property
@@ -418,7 +428,6 @@ class FPSCamera():
 
     def project(self, point: Point3D) -> PPoint2D:
 
-
         # Transform the point to camera space
         camera_space_point = self._rotation_invers.rotate_point(point - self.pos)
 
@@ -426,14 +435,16 @@ class FPSCamera():
         if camera_space_point.z <= 0:
             return self.NO_PROJECT  # Point is behind the camera
 
-            return PPoint2D(.2, .5, camera_space_point.z)  # Point is behind the camera
+            return PPoint2D(
+                0.2, 0.5, camera_space_point.z
+            )  # Point is behind the camera
 
         # Perspective projection onto the screen space (0,1)
         x = (camera_space_point.x / camera_space_point.z) * (
-            (math.pi-self.fov_w) / 2
+            (math.pi - self.fov_w) / 2
         ) + 0.5
         y = (camera_space_point.y / camera_space_point.z) * (
-            (math.pi-self.fov_h) / 2
+            (math.pi - self.fov_h) / 2
         ) + 0.5
 
         # Calculate the distance from the camera to the point
@@ -451,20 +462,18 @@ class FPSCamera():
 class Drawable3D:
     texture: "TextureTT3DE"
 
-    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]: 
-        raise NotImplemented("")
-    def cache_output(self,segmap):
+    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]:
         raise NotImplemented("")
 
+    def cache_output(self, segmap):
+        raise NotImplemented("")
 
     @staticmethod
     def is_in_scree(pp: PPoint2D):
         return pp.depth > 1 and pp.x >= 0 and pp.x < 1 and pp.y >= 0 and pp.y < 1
 
-    def render_point(self,pp: PPoint2D):
+    def render_point(self, pp: PPoint2D):
         raise NotImplemented("")
-
-    
 
 
 def is_point_in_triangle(px, py, ax, ay, bx, by, cx, cy, d) -> tuple[float]:
@@ -488,7 +497,7 @@ def is_point_in_triangle(px, py, ax, ay, bx, by, cx, cy, d) -> tuple[float]:
 
 
 class PointElem(Drawable3D):
-    def __init__(self, p: Point3D, texture: "TextureTT3DE"=None):
+    def __init__(self, p: Point3D, texture: "TextureTT3DE" = None):
         self.p = p
         self.texture: "TextureTT3DE" = texture
 
@@ -499,18 +508,26 @@ class PointElem(Drawable3D):
             ppr = PPoint2D(pi.x, pi.y, pp.depth)
             yield ppr
 
-    def proj_vertices(self, camera: Camera, screen_width, screen_height) :
+    def proj_vertices(self, camera: Camera, screen_width, screen_height):
         return camera.project(self.p)
-    def cache_output(self,segmap):
+
+    def cache_output(self, segmap):
         if self.texture:
             self.texture.cache_output(segmap)
-    def render_point(self,p):
+
+    def render_point(self, p):
         if self.texture:
             return self.texture.render_point(p)
         return 5
+
+
 class Triangle3D(Drawable3D):
     def __init__(
-        self, pos1: Point3D, pos2: Point3D, pos3: Point3D, texture: "TextureTT3DE"=None
+        self,
+        pos1: Point3D,
+        pos2: Point3D,
+        pos3: Point3D,
+        texture: "TextureTT3DE" = None,
     ):
         self.pos1 = pos1
         self.pos2 = pos2
@@ -522,13 +539,13 @@ class Triangle3D(Drawable3D):
         ]
         self.normal = self.normal_vector()
 
-
     def __str__(self):
-        return f"Triangle3D({self.pos1,self.pos2,self.pos3}, {self.uvmap}, {self.normal})"
+        return (
+            f"Triangle3D({self.pos1,self.pos2,self.pos3}, {self.uvmap}, {self.normal})"
+        )
 
     def __repr__(self):
         return str(self)
-    
 
     def uvcalc(self, w1: float, w2: float, w3: float) -> Point2D:
         # Calculate the UV coordinates based on the weights
@@ -571,7 +588,9 @@ class Triangle3D(Drawable3D):
         cz = (self.pos1.z + self.pos2.z + self.pos3.z) / 3
         return Point3D(cx, cy, cz)
 
-    def draw(self, camera: FPSCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
+    def draw(
+        self, camera: FPSCamera, screen_width, screen_height
+    ) -> Iterable[PPoint2D]:
         # vertex modifier can be applied here.
 
         # project
@@ -583,29 +602,44 @@ class Triangle3D(Drawable3D):
         pp2 = camera.project(rrp2)
         pp3 = camera.project(rrp3)
 
-
         rnormal = camera.worldobj_rotation.rotate_point(self.normal)
-        dotp1 = rnormal.dot(rrp1 - camera.pos) 
-        dotp2 = rnormal.dot(rrp2 - camera.pos) 
-        dotp3 = rnormal.dot(rrp3 - camera.pos) 
+        dotp1 = rnormal.dot(rrp1 - camera.pos)
+        dotp2 = rnormal.dot(rrp2 - camera.pos)
+        dotp3 = rnormal.dot(rrp3 - camera.pos)
 
         min_depth = camera.dist_min
-        
-        c = (dotp1>0 or dotp2>0 or dotp3>0) or (
-            pp1.depth<min_depth and pp2.depth<min_depth and pp3.depth<min_depth)or (
-            pp1.x<=0 and pp2.x <=0 and pp3.x <= 0) or (
-            pp1.y<=0 and pp2.y <=0 and pp3.y <= 0) or (
-            pp1.x>=1 and pp2.x >=1 and pp3.x >=1) or (
-            pp1.y>=1 and pp2.y >=1 and pp3.y >=1) or (
-                pp1==camera.NO_PROJECT or pp2 == camera.NO_PROJECT or pp3==camera.NO_PROJECT
+
+        c = (
+            (dotp1 > 0 or dotp2 > 0 or dotp3 > 0)
+            or (
+                pp1.depth < min_depth
+                and pp2.depth < min_depth
+                and pp3.depth < min_depth
             )
-        
+            or (pp1.x <= 0 and pp2.x <= 0 and pp3.x <= 0)
+            or (pp1.y <= 0 and pp2.y <= 0 and pp3.y <= 0)
+            or (pp1.x >= 1 and pp2.x >= 1 and pp3.x >= 1)
+            or (pp1.y >= 1 and pp2.y >= 1 and pp3.y >= 1)
+            or (
+                pp1 == camera.NO_PROJECT
+                or pp2 == camera.NO_PROJECT
+                or pp3 == camera.NO_PROJECT
+            )
+        )
+
         if not c:
-            return self.draw_inner(camera, 
-                                    pp1, pp2, pp3, 
-                                    screen_width, screen_height,
-                                    rnormal,
-                                    rrp1,rrp2,rrp3)
+            return self.draw_inner(
+                camera,
+                pp1,
+                pp2,
+                pp3,
+                screen_width,
+                screen_height,
+                rnormal,
+                rrp1,
+                rrp2,
+                rrp3,
+            )
         return []
 
     def draw_border(
@@ -615,9 +649,10 @@ class Triangle3D(Drawable3D):
         yield from Line2D(pp2, pp3).draw(screen_width, screen_height)
         yield from Line2D(pp3, pp1).draw(screen_width, screen_height)
 
-    def render_point(self,pp: PPoint2D):
+    def render_point(self, pp: PPoint2D):
         return self.texture.render_point(pp)
-    def cache_output(self,segmap):
+
+    def cache_output(self, segmap):
         self.texture.cache_output(segmap)
 
     def draw_inner(
@@ -628,8 +663,10 @@ class Triangle3D(Drawable3D):
         pp3: PPoint2D,
         screen_width,
         screen_height,
-        rnormal:Point3D,
-        rrp1,rrp2,rrp3
+        rnormal: Point3D,
+        rrp1,
+        rrp2,
+        rrp3,
     ) -> Iterable[PPoint2D]:
 
         p1i = pp1.to_screen_space(screen_width, screen_height)
@@ -658,16 +695,14 @@ class Triangle3D(Drawable3D):
                 w3 = 1 - w1 - w2
 
                 if w1 > 0 and w2 > 0 and w3 > 0:
-                    # this is like the pixel shader. 
+                    # this is like the pixel shader.
 
-                    appxp = rrp1*w1 + rrp2*w2 + rrp3*w3
-                    
+                    appxp = rrp1 * w1 + rrp2 * w2 + rrp3 * w3
 
-                    d = (pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3) 
+                    d = pp1.depth * w1 + pp2.depth * w2 + pp3.depth * w3
 
+                    ddot_prod = rnormal.dot(appxp - camera.pos) / d
 
-                    ddot_prod = rnormal.dot(appxp-camera.pos) / d
-                    
                     p = PPoint2D(px, py, d)
                     uvpoint = self.uvcalc(w1, w2, w3)
                     p.uv = uvpoint
@@ -704,8 +739,11 @@ class Line3D(Drawable3D):
             lpoint2D = l2d.draw(screen_width, screen_height)
             return lpoint2D
         return []
+
+
 class TextureCoordinate(Point2D):
     pass
+
 
 class Mesh3D(Drawable3D):
     def __init__(self):
@@ -714,17 +752,16 @@ class Mesh3D(Drawable3D):
         self.normals: List[Point3D] = []
         self.triangles: List[Triangle3D] = []
 
-        self.triangles_vindex: List[Tuple[int,int,int]] = []
+        self.triangles_vindex: List[Tuple[int, int, int]] = []
 
+        self.texture: TextureTT3DE = None
 
-        self.texture:TextureTT3DE=None
-
-    def proj_vertices(self, camera: Camera, screen_width, screen_height) :
+    def proj_vertices(self, camera: Camera, screen_width, screen_height):
 
         for t in self.triangles:
-            #rrp1 = camera.worldobj_rotation.rotate_point(t.pos1)
-            #rrp2 = camera.worldobj_rotation.rotate_point(t.pos2)
-            #rrp3 = camera.worldobj_rotation.rotate_point(t.pos3)
+            # rrp1 = camera.worldobj_rotation.rotate_point(t.pos1)
+            # rrp2 = camera.worldobj_rotation.rotate_point(t.pos2)
+            # rrp3 = camera.worldobj_rotation.rotate_point(t.pos3)
 
             pp1 = camera.project(t.pos1)
             pp2 = camera.project(t.pos2)
@@ -735,58 +772,59 @@ class Mesh3D(Drawable3D):
         for t in self.triangles:
             yield from t.draw(camera, screen_width, screen_height)
 
-
-    def cache_output(self,segmap):
+    def cache_output(self, segmap):
         self.texture.cache_output(segmap)
 
-
-    def render_point(self,pp: PPoint2D):
+    def render_point(self, pp: PPoint2D):
         return self.texture.render_point(pp)
 
-    def set_texture(self,t):
-        self.texture=t
+    def set_texture(self, t):
+        self.texture = t
         for t in self.triangles:
             t.texture = t
 
     @classmethod
-    def from_square(cls,p1:Point3D):
-        t1 = Triangle3D( p1 , p1+Point3D(1,0,0), p1+Point3D(1,0,1))
-        t2 = Triangle3D( p1 , p1+Point3D(0,0,1), p1+Point3D(1,0,1))
+    def from_square(cls, p1: Point3D):
+        t1 = Triangle3D(p1, p1 + Point3D(1, 0, 0), p1 + Point3D(1, 0, 1))
+        t2 = Triangle3D(p1, p1 + Point3D(0, 0, 1), p1 + Point3D(1, 0, 1))
 
-        t1.uvmap = [(TextureCoordinate(0,0),TextureCoordinate(1,0),TextureCoordinate(1,1))]
-        t2.uvmap = [(TextureCoordinate(0,0),TextureCoordinate(0,1),TextureCoordinate(1,1))]
+        t1.uvmap = [
+            (TextureCoordinate(0, 0), TextureCoordinate(1, 0), TextureCoordinate(1, 1))
+        ]
+        t2.uvmap = [
+            (TextureCoordinate(0, 0), TextureCoordinate(0, 1), TextureCoordinate(1, 1))
+        ]
         s = cls()
-        s.triangles=[t1,t2]
+        s.triangles = [t1, t2]
+
 
 class Node3D(Drawable3D):
     def __init__(self):
-        
-        self.translation = Point3D(0,0,0)
-        self.rotation = Quaternion.from_euler(0,0,0)
-        self.elems:list[Drawable3D] = []
 
+        self.translation = Point3D(0, 0, 0)
+        self.rotation = Quaternion.from_euler(0, 0, 0)
+        self.elems: list[Drawable3D] = []
 
-    def set_translation(self,translation:Point3D):
+    def set_translation(self, translation: Point3D):
         self.translation = translation
 
-    def draw(self, camera:FPSCamera, screen_width, screen_height) -> Iterable[PPoint2D]:
+    def draw(
+        self, camera: FPSCamera, screen_width, screen_height
+    ) -> Iterable[PPoint2D]:
         p = camera.pos
         prev_rot = camera.worldobj_rotation
         camera.move(self.translation * (-1))
-        camera.worldobj_rotation = camera.worldobj_rotation*self.rotation
-        for elemidx,t in enumerate(self.elems):
+        camera.worldobj_rotation = camera.worldobj_rotation * self.rotation
+        for elemidx, t in enumerate(self.elems):
             yield from t.draw(camera, screen_width, screen_height)
 
         camera.move_at(p)
         camera.worldobj_rotation = prev_rot
 
-
-    def render_point(self,pp: PPoint2D):
-        idx=0
+    def render_point(self, pp: PPoint2D):
+        idx = 0
         return self.elems[idx].render_point(pp)
-    
-    def cache_output(self,segmap):
+
+    def cache_output(self, segmap):
         for e in self.elems:
             e.cache_output(segmap)
-
-
