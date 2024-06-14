@@ -36,49 +36,7 @@ from tt3de.glm.c_triangle_raster import c_glm_triangle_render_to_buffer
 from tt3de.glm.c_triangle_raster import iterate_pixel_buffer,TrianglesBuffer
 from tt3de.glm.c_triangle_raster import TrianglesBuffer,apply_stage2
 from tt3de.glm.c_triangle_raster import make_per_pixel_index_buffer,make_per_pixel_data_buffer,make_per_mesh_data_buffer,make_uniform_data_buffer
-
-
-def p2d_tovec2(p:Point2D)->vec2:
-    return vec2(p.x,p.y)
-
-def p2d_uv_tomatrix(ps:tuple[Point2D,Point2D,Point2D])-> glm.mat3x2:
-    return glm.mat3x2(p2d_tovec2(ps[0]),p2d_tovec2(ps[1]),p2d_tovec2(ps[2]))
-
-
-def vec3_str(v)->str: 
-    return f"vec3({v.x:.2f},{v.y:.2f},{v.z:.2f})"
-def p3d_tovec3(p:Point3D)->vec3:
-    return vec3(p.x,p.y,p.z)
-def p3d_triplet_to_matrix(ps:tuple[Point3D,Point3D,Point3D])->mat3:
-    a,b,c = ps
-
-    return mat3(p3d_tovec3(a),p3d_tovec3(b),p3d_tovec3(c))
-
-def quat_from_euler(x, y, z):
-    return quat(vec3(x,y,z))
-
-def quat_from_axis_angle(axis, angle):
-    half_angle = angle / 2
-    sin_half_angle = math.sin(half_angle)
-    return quat(
-        math.cos(half_angle),
-        axis[0] * sin_half_angle,
-        axis[1] * sin_half_angle,
-        axis[2] * sin_half_angle,
-    )
-def mat_from_axis_angle(axis, angle):
-    return glm.rotate(angle, axis) 
-
-
-def clampi(x,minx,maxx):
-    return min( maxx,max(x,minx))
-GLMTexturecoord = glm.vec2
-GLMTriangle=glm.mat3
-IVEC2_YES = ivec2(1,1)
-VEC3_YES = vec3(1.0,1.0,1.0)
-VEC3_ZERO = vec3(0.0,0.0,0.0)
-
-
+from tt3de.utils import GLMTexturecoord, GLMTriangle
 
 
 class GLMCamera():
@@ -101,17 +59,25 @@ class GLMCamera():
         self.character_factor = character_factor
 
 
+
+        self.zoom_2D = 1.0
+
+        self.view_matrix_2D = glm.scale(glm.vec2(self.character_factor,1.0))
+
+
         self.perspective:glm.mat4 = glm.mat4(1.0)
         self._rotation:glm.mat4 = glm.mat4(1.0)
         self.update_rotation()
         self.update_perspective()
+        self.update_2d_perspective()
+
 
     def recalc_fov_h(self, w, h):
         if self.screen_width!=w or self.screen_height!=h:
             self.screen_width = w
             self.screen_height = h
             self.update_perspective()
-
+            self.update_2d_perspective()
     def set_projectioninfo(self, fov_radians:float=None, 
                  dist_min:float=None, 
                  dist_max:float=None,
@@ -127,7 +93,7 @@ class GLMCamera():
             self.character_factor=character_factor
             
         self.update_perspective()
-
+        self.update_2d_perspective()
 
     def update_perspective(self):
 
@@ -136,6 +102,23 @@ class GLMCamera():
 
         self.perspective = glm.perspectiveFovZO((self.fov_radians*h)/w, w, h, self.dist_min, self.dist_max)
 
+    def update_2d_perspective(self):
+        """
+        """
+        # TODO depending on mode it can be different here. 
+
+        min_screen_ = min(self.screen_width, self.screen_height) * self.zoom_2D
+
+        scale_x = min_screen_*self.character_factor
+        scale_y = min_screen_
+
+
+        self.view_matrix_2D =glm.translate(glm.vec2(self.screen_width/2,self.screen_height/2))* glm.scale(glm.vec2(scale_x,scale_y))
+
+
+    def set_zoom_2D(self,zoom=1.0):
+        self.zoom_2D = zoom
+        self.update_2d_perspective()
 
 
     def move(self, delta:  glm.vec3):
@@ -353,10 +336,6 @@ class GLMMesh3D(Mesh3D):
             if any(clipe_space_rejection):
                 continue
             
-            
-            
-            
-                
             triangle:Triangle = [v_in_clip_space1,
                                  v_in_clip_space2,
                                  v_in_clip_space3]
@@ -369,134 +348,26 @@ class GLMMesh3D(Mesh3D):
 
                 if is_front_facing(pixwin_coord):
                     a,b,c = pixwin_coord
-
-                    min_v = vec4(-0.99,-0.99,-float("infinity"),-float("infinity"))
-                    max_v = vec4(0.99,0.99,float("infinity"),float("infinity"))
-                    # unproject the triangle in view space
-                    un_projected_clean = [glm.clamp(vertex,min_v,max_v) for vertex in sub_triangle]
-                    un_projected_ = [inverse_perspective*vertex for vertex in un_projected_clean]
-                    unp_a,unp_b,unp_c = un_projected_
-
-                    # normalize with the w so its clean
-                    unp_a= (unp_a/unp_a.w)
-                    unp_b= (unp_b/unp_b.w)
-                    unp_c= (unp_c/unp_c.w)
-
-                    self.glm_vertices_4[v_idx1]
-                    self.glm_vertices_4[v_idx2]
-                    self.glm_vertices_4[v_idx3]
-
-                    # each point is a barycentric coordinate of the original triangle corners
-                    unpa_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_a)
-                    unpb_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_b)
-                    unpc_weights = barycentric_coordinates(self.glm_vertices_4[v_idx1],self.glm_vertices_4[v_idx2],self.glm_vertices_4[v_idx3],unp_c)
-                    
-                    # the original uv are : 
-                    #givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
-                    givenuv = self.triangles[triangle_idx].uvmap[0]
-                    uv_point1_u,uv_point1_v = givenuv[0].x,givenuv[0].y
-                    uv_point2_u,uv_point2_v = givenuv[1].x,givenuv[1].y
-                    uv_point3_u,uv_point3_v = givenuv[2].x,givenuv[2].y
+                else:
+                    a,c,b = pixwin_coord
 
 
-                    uv_pointa_u = (unpa_weights[0] * uv_point1_u) + (unpa_weights[1] * uv_point1_u) + (unpa_weights[2] * uv_point1_u) 
-                    uv_pointb_u = (unpb_weights[0] * uv_point2_u) + (unpb_weights[1] * uv_point2_u) + (unpb_weights[2] * uv_point2_u)
-                    uv_pointc_u = (unpc_weights[0] * uv_point3_u) + (unpc_weights[1] * uv_point3_u) + (unpc_weights[2] * uv_point3_u)
-                    
-                    uv_pointa_v = (unpa_weights[0] * uv_point1_v) + (unpa_weights[1] * uv_point1_v) + (unpa_weights[2] * uv_point1_v) 
-                    uv_pointb_v = (unpb_weights[0] * uv_point2_v) + (unpb_weights[1] * uv_point2_v) + (unpb_weights[2] * uv_point2_v)
-                    uv_pointc_v = (unpc_weights[0] * uv_point3_v) + (unpc_weights[1] * uv_point3_v) + (unpc_weights[2] * uv_point3_v)
+                min_window_space = vec3(0,0,-float("infinity"))
+                max_window_space = vec3(screen_width-1,screen_height-1,float("infinity"))
 
-                    racalculated_uv = [
-                        uv_pointa_u,uv_pointa_v,
-                        uv_pointb_u,uv_pointb_v,
-                        uv_pointc_u,uv_pointc_v,
-                    ]+ ([0]*42)
-
-                    
-
-                    min_window_space = vec3(0,0,-float("infinity"))
-                    max_window_space = vec3(screen_width-1,screen_height-1,float("infinity"))
-
-                    # a = a.xyz/a.w
-                    # b = b.xyz/b.w
-                    # c = c.xyz/c.w
-
-                    a = glm.clamp(a.xyz,min_window_space,max_window_space)
-                    b = glm.clamp(b.xyz,min_window_space,max_window_space)
-                    c = glm.clamp(c.xyz,min_window_space,max_window_space)
-                    a = [a.x,a.y,a.z]
-                    b = [b.x,b.y,b.z]
-                    c = [c.x,c.y,c.z]
-                    
-                    geometry_buffer.add_triangle_to_buffer(a,b,c,
-                                        racalculated_uv,   # uv list 
-                                        node_id,  # node_id
-                                        self.material_id)  # material_id
-                    
-        
-        return
-
-        for triangle_idx,(pa,pb,pc) in  enumerate(self.triangles_vindex):
-            v1 = in_view_space[pa]
-            v2 = in_view_space[pb]
-            v3 = in_view_space[pc]
-            triangles_to_draw = filter_clip_project(v1.xyz,v2.xyz,v3.xyz, camera.dist_min, glm.mat4(1.0)  ,perspective_matrix, screeninfo)
-
-            for (rp1,rp2,rp3), normal in triangles_to_draw:
-                if check_winding([rp1,rp2,rp3],vec3(0,0,-1.0)):
-                    az = glm.unProject(rp1, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                    bz = glm.unProject(rp2, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                    cz = glm.unProject(rp3, glm.mat4(1.0)  ,perspective_matrix, screeninfo).z
-                    a = [rp1.x*screen_width,rp1.y*screen_height,az]
-                    b = [rp2.x*screen_width,rp2.y*screen_height,bz]
-                    c = [rp3.x*screen_width,rp3.y*screen_height,cz]
-                                    
-                    givenuv = list(self.c_code_uvmap[triangle_idx][0]  )
-                    geometry_buffer.add_triangle_to_buffer(a, 
-                                        c, 
-                                        b, 
-                                        givenuv,   # uv list 
-                                        node_id,  # node_id
-                                        self.material_id)  # material_id
-        return
-        proj_vertices = [glm.projectZO(p.xyz,glm.mat4(1.0) , perspective_matrix, screeninfo) for p in in_view_space] 
-        
-        
-        for triangle_idx,(pa,pb,pc) in enumerate(self.triangles_vindex):
-            
-            rp1 = proj_vertices[pa]
-            rp2 = proj_vertices[pb]
-            rp3 = proj_vertices[pc]
-
-            rp3X3 = glm.mat3(rp1,rp2,rp3)
-            facing = glm.determinant(rp3X3)
-            a_flat = vec3(rp1.x,rp1.y,1.0)
-            b_flat = vec3(rp2.x,rp2.y,1.0)
-            c_flat = vec3(rp3.x,rp3.y,1.0)
-
-            d2 = glm.determinant(glm.mat3(a_flat,b_flat,c_flat))
-
-            #zvalues = glm.row(rp3X3,2)
-            
-            #(0<rp1.z<1 and 0<rp2.z<1 and 0<rp3.z<1)
-
-            
-
-            if facing>0 :
-                a = [rp1.x*screen_width,rp1.y*screen_height,rp1.z]
-                b = [rp2.x*screen_width,rp2.y*screen_height,rp2.z]
-                c = [rp3.x*screen_width,rp3.y*screen_height,rp3.z]
+                a = glm.clamp(vec3(a.xyz),min_window_space,max_window_space)
+                b = glm.clamp(vec3(b.xyz),min_window_space,max_window_space)
+                c = glm.clamp(vec3(c.xyz),min_window_space,max_window_space)
+                a = [a.x,a.y,a.z]
+                b = [b.x,b.y,b.z]
+                c = [c.x,c.y,c.z]
                 
-                
-                geometry_buffer.add_triangle_to_buffer(a , 
-                                       b, 
-                                       c, 
-                                       self.c_code_uvmap[triangle_idx][0],   # uv list 
-                                       node_id,  # node_id
-                                       self.material_id)  # material_id
-
-
+                geometry_buffer.add_triangle_to_buffer(a,b,c,
+                                    [0.0]*48,   # uv list 
+                                    node_id,  # node_id
+                                    self.material_id)  # material_id
+                    
+        
 def barycentric_coordinates(a: glm.vec3, b: glm.vec3, c: glm.vec3, p: glm.vec3) -> glm.vec3:
     """
     Calculates the barycentric coordinates of point p with respect to the triangle defined by points a, b, and c.

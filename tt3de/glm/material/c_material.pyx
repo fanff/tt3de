@@ -8,7 +8,7 @@ from tt3de.glm.primitives.primitives cimport PrimitivesBuffer,s_drawing_primitiv
 from tt3de.glm.geometry.geometry cimport GeometryBuffer,s_geometry
 from tt3de.glm.c_buffer cimport s_buffer,initBuffer,freeBuffer,addElement
 from tt3de.glm.material.c_material cimport s_material
-
+from tt3de.glm.perlin_noise cimport perlin
 
 DEF TT3DE_MATERIAL_MODE_DO_NOTHING=0
 DEF TT3DE_MATERIAL_MODE_DEBUG=1
@@ -27,7 +27,12 @@ DEF TT3DE_MATERIAL_MODE_BACK_DEPTH_SHADING = 8
 DEF TT3DE_MATERIAL_MODE_UV_MAPPING_DEBUG = 9
 
 DEF TT3DE_MATERIAL_MODE_UV_MAPPING_TEXT1 = 10
+DEF TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_WEIGHT = 11
+DEF TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_UV_MAP = 12
+DEF TT3DE_MATERIAL_MODE_DOUBLE_UV_MAP = 13
 
+
+DEF TT3DE_MATERIAL_MODE_DOUBLE_PERLIN_NOISE = 14
 
 DEF CONSTANT_A_THIRD = 1.0/3.0
 DEF CONSTANT_TWO_THIRD = 2.0/3.0
@@ -164,6 +169,8 @@ cpdef void apply_pixel_shader(
 
     # deal with the texture buffer 
     cdef s_texture32* texture_array = texture_array_object.get_raw()
+
+    
     _apply_pixel_shader(  primitive_array_buffer  ,
             #drawing_buffer,
             depth_buffer_raw,
@@ -288,9 +295,15 @@ cdef void some_kind_ofapply(s_material* material,
         
         apply_mode_uv_mapping_texture_id(material,aleph, thecell, the_primitive, the_geometry,texture_array)
             
+    elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_WEIGHT:
         
-        
-        
+        apply_mode_debug_double_weight(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+    elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_UV_MAP:
+        apply_mode_debug_double_uv_map(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+    elif material.texturemode == TT3DE_MATERIAL_MODE_DOUBLE_UV_MAP:
+        apply_mode_double_up_mapping_texture_id(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+    elif material.texturemode ==  TT3DE_MATERIAL_MODE_DOUBLE_PERLIN_NOISE:
+        apply_mode_double_perlin_noise(material,aleph, thecell, the_primitive, the_geometry,texture_array)
     
 cdef void apply_mode_uv_mapping_debug(s_material* material,
                 unsigned char *aleph, 
@@ -334,20 +347,204 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
     cdef float cu = the_geometry.uv_array[4]
     cdef float cv = the_geometry.uv_array[5]
 
-
+    # get uv coordinates 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
     cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
-    
 
-    
-
+    # get the texture, assuming its a 32 sized texture.
     cdef s_texture32* thetexture = &(texture_array[material.texture_id_array[0]])
     cdef unsigned char * the_triplet
-    cdef int uint = <int>abs(max(0.0, min(1.0, u)) * 31)
-    cdef int vint = <int>abs(max(0.0, min(1.0, v)) * 31)
-
+    cdef int uint = <int>abs(max(0.0, min(0.999999, u)) * 32)
+    cdef int vint = <int>abs(max(0.0, min(0.999999, v)) * 32)
+    
+    # get the color tripplet
     the_triplet = (thetexture.data[uint][vint])
     
     aleph[3] = the_triplet[0]
     aleph[4] = the_triplet[1]
     aleph[5] = the_triplet[2]
+
+
+
+#### DOUBLE MAPPING MODE 
+cdef void apply_mode_debug_double_weight(s_material* material,
+                unsigned char *aleph, 
+                s_drawbuffer_cell* thecell ,
+                s_drawing_primitive* the_primitive,
+                s_geometry* the_geometry,
+                s_texture32* texture_array) noexcept nogil:
+    
+    # set the front as top
+    aleph[0] =<int>abs(max(0.0, min(1.0, thecell.w1)) * 255)
+    aleph[1] =<int>abs(max(0.0, min(1.0, thecell.w2)) * 255)
+    aleph[2] =<int>abs(max(0.0, min(1.0, thecell.w3)) * 255)
+
+
+    # set the back
+    aleph[3] = <int>abs(max(0.0, min(1.0, thecell.w1_alt)) * 255)
+    aleph[4] = <int>abs(max(0.0, min(1.0, thecell.w2_alt)) * 255)
+    aleph[5] = <int>abs(max(0.0, min(1.0, thecell.w3_alt)) * 255)
+
+    # set the glyph id
+    aleph[6] = material.glyph_a 
+    aleph[7] = material.glyph_b 
+
+
+cdef void apply_mode_debug_double_uv_map(s_material* material,
+                unsigned char *aleph, 
+                s_drawbuffer_cell* thecell ,
+                s_drawing_primitive* the_primitive,
+                s_geometry* the_geometry,
+                s_texture32* texture_array) noexcept nogil:
+    #unpack the uvs 
+    cdef float au = the_geometry.uv_array[0]
+    cdef float av = the_geometry.uv_array[1]
+    cdef float bu = the_geometry.uv_array[2]
+    cdef float bv = the_geometry.uv_array[3]
+    cdef float cu = the_geometry.uv_array[4]
+    cdef float cv = the_geometry.uv_array[5]
+
+
+    cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
+    cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
+
+
+    cdef float u_alt = au * thecell.w1_alt + bu*thecell.w2_alt + cu*thecell.w3_alt
+    cdef float v_alt = av * thecell.w1_alt + bv*thecell.w2_alt + cv*thecell.w3_alt
+    
+
+    u = max(0.0, min(1.0, u))
+    v = max(0.0, min(1.0, v))
+    u_alt = max(0.0, min(1.0, u_alt))
+    v_alt = max(0.0, min(1.0, v_alt))
+
+
+    # set the front as top
+    aleph[0] =<unsigned char>((u) * 255)
+    aleph[1] =<unsigned char>((v) * 255)
+    aleph[2] =0
+
+    # set the back
+    aleph[3] = <unsigned char>((u_alt) * 255)
+    aleph[4] = <unsigned char>((v_alt) * 255)
+    aleph[5] = 0
+
+    # set the glyph id
+    aleph[6] = material.glyph_a 
+    aleph[7] = material.glyph_b 
+
+
+
+
+    
+cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
+                unsigned char *aleph, 
+                s_drawbuffer_cell* thecell ,
+                s_drawing_primitive* the_primitive,
+                s_geometry* the_geometry,
+                s_texture32* texture_array) noexcept nogil:
+    #unpack the uvs 
+    cdef float au = the_geometry.uv_array[0]
+    cdef float av = the_geometry.uv_array[1]
+    cdef float bu = the_geometry.uv_array[2]
+    cdef float bv = the_geometry.uv_array[3]
+    cdef float cu = the_geometry.uv_array[4]
+    cdef float cv = the_geometry.uv_array[5]
+
+    # get uv coordinates 
+    cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
+    cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
+
+
+
+    cdef float u_alt = au * thecell.w1_alt + bu*thecell.w2_alt + cu*thecell.w3_alt
+    cdef float v_alt = av * thecell.w1_alt + bv*thecell.w2_alt + cv*thecell.w3_alt
+    
+    # get the texture, assuming its a 32 sized texture.
+    cdef s_texture32* thetexture = &(texture_array[material.texture_id_array[0]])
+    cdef unsigned char * the_triplet
+    cdef int uint = 0
+    cdef int vint = 0
+
+    u = max(0.0, min(0.999999, u))* 32
+    v = max(0.0, min(0.999999, v))* 32
+    u_alt = max(0.0, min(0.999999, u_alt))* 32
+    v_alt = max(0.0, min(0.999999, v_alt))* 32
+
+
+
+    uint = <int> u
+    vint = <int> v
+    
+    # get the color tripplet
+    the_triplet = (thetexture.data[uint][vint])
+    
+    aleph[0] = the_triplet[0]
+    aleph[1] = the_triplet[1]
+    aleph[2] = the_triplet[2]
+
+
+    uint = <int> u_alt
+    vint = <int> v_alt
+    
+    # get the color tripplet
+    the_triplet = (thetexture.data[uint][vint])
+    
+    aleph[3] = the_triplet[0]
+    aleph[4] = the_triplet[1]
+    aleph[5] = the_triplet[2]
+
+
+    # set the glyph id
+    aleph[6] = material.glyph_a 
+    aleph[7] = material.glyph_b 
+
+cdef void apply_mode_double_perlin_noise(s_material* material,
+                unsigned char *aleph, 
+                s_drawbuffer_cell* thecell ,
+                s_drawing_primitive* the_primitive,
+                s_geometry* the_geometry,
+                s_texture32* texture_array) noexcept nogil:
+    #unpack the uvs 
+    cdef float au = the_geometry.uv_array[0]
+    cdef float av = the_geometry.uv_array[1]
+    cdef float bu = the_geometry.uv_array[2]
+    cdef float bv = the_geometry.uv_array[3]
+    cdef float cu = the_geometry.uv_array[4]
+    cdef float cv = the_geometry.uv_array[5]
+
+    # get uv coordinates 
+    cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
+    cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
+    cdef float u_alt = au * thecell.w1_alt + bu*thecell.w2_alt + cu*thecell.w3_alt
+    cdef float v_alt = av * thecell.w1_alt + bv*thecell.w2_alt + cv*thecell.w3_alt
+    
+    # 
+    cdef float a_value = 0.0
+
+
+    u = max(0.0, min(1.0, u))
+    v = max(0.0, min(1.0, v))
+    u_alt = max(0.0, min(1.0, u_alt))
+    v_alt = max(0.0, min(1.0, v_alt))
+    
+    # get the color tripplet
+    a_value = (perlin(u*2,v*2,5.0)+1.0)/2.0
+    
+    aleph[0] = <unsigned char>(a_value*255)
+    aleph[1] = <unsigned char>(a_value*255)
+    aleph[2] = <unsigned char>(a_value*255)
+
+
+    
+    # get the color tripplet
+    a_value = (perlin(u_alt*2,v_alt*2,5.0)+1)/2.0
+    
+    aleph[3] = <unsigned char>(a_value*255)
+    aleph[4] = <unsigned char>(a_value*255)
+    aleph[5] = <unsigned char>(a_value*255)
+
+
+    # set the glyph id
+    aleph[6] = material.glyph_a 
+    aleph[7] = material.glyph_b 

@@ -9,3 +9,9 @@ cdef void raster_triangle(s_drawing_primitive* dprim,
     int screenWidth,int screenHeight) noexcept nogil
 
 
+
+
+cdef void raster_triangle_double_weights(s_drawing_primitive* dprim,
+    s_drawbuffer_cell* the_raw_array,
+    int screenWidth,int screenHeight) noexcept nogil
+  

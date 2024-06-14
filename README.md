@@ -71,6 +71,24 @@ class MyView(TT3DView):
 ```
 
 
+
+### trick for pythonpath 
+
+
+on windows
+
+```bat
+set PYTHONPATH=%CD%;%PYTHONPATH%
+```
+
+on vscode  launch.josn
+
+```
+"env": {"PYTHONPATH":"${workspaceFolder}"}
+```
+
+
+
 ## C Engine structure 
 
 The Cython engine uses 5 elementary buffers to work:

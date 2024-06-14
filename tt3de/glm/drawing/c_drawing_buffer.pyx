@@ -222,7 +222,7 @@ cdef void init_s_drawbuffer_cell(s_drawbuffer_cell* x, const float depth):
 
 
 
-cdef  void set_depth_content(s_drawbuffer_cell* the_raw_array,
+cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
         const int raw_array_width,
         const int xi,const int yi,
         const float depth_value, 
@@ -234,13 +234,54 @@ cdef  void set_depth_content(s_drawbuffer_cell* the_raw_array,
         const int   material_id ,
         const int   primitiv_id ,
     ) noexcept nogil:
-    
+    # Set depth content with a testing. assume it is used for simple rendering.
+
     cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
     if depth_value < thecell.depth_value:
         thecell.depth_value = depth_value
         thecell.w1 = w1
         thecell.w2 = w2
         thecell.w3 = w3 
+
+        thecell.w1_alt = 1
+        thecell.w2_alt = 1
+        thecell.w3_alt = 1
+
+        thecell.primitiv_id = primitiv_id
+        thecell.geom_id = geom_id
+        thecell.node_id = node_id
+        thecell.material_id = material_id
+
+
+
+cdef void set_depth_content_with_alts(s_drawbuffer_cell* the_raw_array,
+        const int raw_array_width,
+        const int xi,const int yi,
+        const float depth_value, 
+        const float w1 ,
+        const float w2 ,
+        const float w3 ,
+        const float w1_alt ,
+        const float w2_alt ,
+        const float w3_alt ,
+        const int   node_id,
+        const int   geom_id,
+        const int   material_id ,
+        const int   primitiv_id ,
+    ) noexcept nogil:
+    # Set depth content with a testing. assume it is used for simple rendering.
+
+    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
+    if depth_value < thecell.depth_value:
+        thecell.depth_value = depth_value
+        thecell.w1 = w1
+        thecell.w2 = w2
+        thecell.w3 = w3 
+
+        thecell.w1_alt = w1_alt
+        thecell.w2_alt = w2_alt
+        thecell.w3_alt = w3_alt
+
         thecell.primitiv_id = primitiv_id
         thecell.geom_id = geom_id
         thecell.node_id = node_id

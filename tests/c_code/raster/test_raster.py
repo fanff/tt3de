@@ -8,6 +8,8 @@ from tt3de.glm.raster.raster import raster_all
 from tt3de.glm.primitives.primitives import PrimitivesBuffer
 from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
 
+from tt3de.glm.material.c_material import MaterialBuffer
+
 
 class Test_RasterPrecalcLine(unittest.TestCase):
     def test_raster_precalc_empty(self):
@@ -219,7 +221,7 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_precalc(primitive_buffer, drawing_buffer)
 
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         # tets that teh depth buffer hasn"'t changed
         depth_buffer_list = drawing_buffer.drawbuffer_to_list()
@@ -256,7 +258,7 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_precalc(primitive_buffer, drawing_buffer)
 
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         depth_buffer_list = drawing_buffer.drawbuffer_to_list()
 
@@ -299,7 +301,7 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_precalc(primitive_buffer, drawing_buffer)
 
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 0)
         print(elem_of_dephtbuffer)
@@ -350,7 +352,7 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_precalc(primitive_buffer, drawing_buffer)
 
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         depth_buffer_list = drawing_buffer.drawbuffer_to_list()
 
@@ -391,6 +393,9 @@ class Test_RasterAll_line(unittest.TestCase):
 
     def test_raster_one_line(self):
         "along the x axis"
+
+
+        mb_ = MaterialBuffer()
         drawing_buffer = DrawingBuffer(64, 32)
         drawing_buffer.hard_clear(3)
 
@@ -419,7 +424,7 @@ class Test_RasterAll_line(unittest.TestCase):
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,mb_)
 
         # should be a horizontal line, top left of the screen
         drawbuffer_to_pil(
@@ -497,7 +502,7 @@ class Test_RasterAll_line(unittest.TestCase):
             )
         self.assertEqual(primitive_buffer.primitive_count(), 10)
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         # should be a horizontal line, top left of the screen
         drawbuffer_to_pil(
@@ -535,7 +540,7 @@ class Test_RasterAll_line(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer, MaterialBuffer())
 
         # should be a horizontal line, top left of the screen
         drawbuffer_to_pil(
@@ -596,7 +601,7 @@ class Test_RasterAll_line(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), branch_count)
 
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         # should be a horizontal line, top left of the screen
         drawbuffer_to_pil(
@@ -639,7 +644,7 @@ class Test_RasterAll_line(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), branch_count)
 
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         # should be a horizontal line, top left of the screen
         drawbuffer_to_pil(
@@ -676,7 +681,7 @@ class Test_RasterAll_Triangle(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         drawbuffer_to_pil(
             drawing_buffer, img_name="test_raster_one_triangle.png", layer="depth"
@@ -711,7 +716,7 @@ class Test_RasterAll_Triangle(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         raster_precalc(primitive_buffer, drawing_buffer)
-        raster_all(primitive_buffer, drawing_buffer)
+        raster_all(primitive_buffer, drawing_buffer,MaterialBuffer())
 
         drawbuffer_to_pil(
             drawing_buffer,

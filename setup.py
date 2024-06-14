@@ -11,6 +11,7 @@ from Cython.Compiler import Options
 
 setup(
     ext_modules = cythonize(["tt3de/glm/c_math.pyx",
+                             "tt3de/glm/perlin_noise.pyx",
                              "tt3de/glm/c_buffer.pyx",
                              "tt3de/glm/geometry/geometry.pyx",
                              "tt3de/glm/c_texture.pyx",

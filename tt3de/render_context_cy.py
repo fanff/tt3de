@@ -44,13 +44,16 @@ from tt3de.glm.raster.raster import raster_precalc
 from tt3de.glm.raster.raster import raster_all
 from tt3de.glm.primitives.primitives import PrimitivesBuffer    
 from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
-from tt3de.glm.material.c_material import Material
-from tt3de.glm.material.c_material import MaterialBuffer
-from tt3de.glm.c_texture import Texture2D,TextureArray
+
+
+
 from tt3de.glm.primitives.primitive_builder import build_primitives  
 
 from tt3de.glm.geometry.geometry import GeometryBuffer  
 from tt3de.glm.material.c_material import apply_pixel_shader
+from tt3de.glm.c_texture import TextureArray
+from tt3de.glm.material.c_material import MaterialBuffer
+
 
 class CyRenderContext:
 
@@ -63,9 +66,6 @@ class CyRenderContext:
         self.depth_array: array.array[float] = array.array("d", [])
         self.canvas_array: array.array[int] = array.array("i", [])
 
-
-
-
         self.screen_width: int = screen_width
         self.screen_height: int = screen_height
 
@@ -77,29 +77,8 @@ class CyRenderContext:
         self.primitive_buffer = PrimitivesBuffer(2000)
 
         self.texture_array = TextureArray()
-        self.texture_array.load_texture32_from_list(fast_load("models/cubetest32.bmp").img_data)
-        self.texture_array.load_texture32_from_list(fast_load("models/test_screen32.bmp").img_data)
 
         self.material_buffer = MaterialBuffer()   
-
-        mat = Material(texturemode=3)
-        mat.set_albedo_front(1,2,3)
-        mat.set_albedo_back(100,80,80)
-        self.material_buffer.add_material(mat)
-
-        mat1 = Material(texturemode=10)
-        mat1.set_albedo_front(16,0,150)
-        mat1.set_albedo_back(255,255,255)
-        mat1.set_glyph(4,4)
-        mat1.set_texture_ids([0,-1,-1])  # using 0 for the texture array 
-        self.material_buffer.add_material(mat1)
-
-        mat2 = Material(texturemode=7)
-        mat2.set_albedo_front(0,200,150)
-        mat2.set_albedo_back(200,0,0)
-        mat2.set_glyph(0,1)
-        mat2.set_texture_ids([1,-1,-1])
-        self.material_buffer.add_material(mat2)
 
 
 
@@ -130,7 +109,7 @@ class CyRenderContext:
             self.setup_canvas()
 
     def clear_canvas(self):
-        self.drawing_buffer.hard_clear(100.0)
+        self.drawing_buffer.hard_clear(100000.0)
         self.geometry_buffer.clear()
         self.primitive_buffer.clear()
 
@@ -150,7 +129,7 @@ class CyRenderContext:
         build_primitives(self.geometry_buffer,self.primitive_buffer)
 
         raster_precalc( self.primitive_buffer,  self.drawing_buffer)
-        raster_all(self.primitive_buffer,  self.drawing_buffer)
+        raster_all(self.primitive_buffer,  self.drawing_buffer,self.material_buffer)
 
         apply_pixel_shader(self.primitive_buffer,
                              self.drawing_buffer,
@@ -182,13 +161,16 @@ class CyRenderContext:
         for e in elems:
             self.append(e)
 
+    def to_textual_(self)->List[Strip]:
+        """Converts the drawing buffer to textual representation.
+        
+        Returns:
+            List[Strip]: A list of Strip objects representing the textual representation of the drawing buffer.
+        """
+        if self.screen_width == 0 or self.screen_height == 0:
+            return []
+        
 
-
-
-
-
-
-    def to_textual_(self):
         factor = len(self.allchars)
         result = []
         currentLine = []
@@ -226,13 +208,12 @@ class CyRenderContext:
         self.big_buffer = []  #8^6 =  262 144 values
         self.allchars_text = [chr(i) for i in range(32, 126)]
         self.all_chars_b6 =    [c for c in "⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿"]
-        self.all_chars_block = [c for c in "▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟"]
+        self.all_chars_block = [c for c in "▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▚▙▛▜▝▞▟"]
 
 
         self.allchars =self.allchars_text + self.all_chars_b6 + self.all_chars_block
 
-
-        self.cut_factor_by_channel = 16 # the more you cut, the more you kinda limit the auto buffer size
+        self.cut_factor_by_channel = 32 # the more you cut, the more you kinda limit the auto buffer size
         self.mult = 256//self.cut_factor_by_channel
 
         return

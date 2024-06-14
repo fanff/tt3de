@@ -4,9 +4,17 @@ ctypedef packed struct s_canvas_cell:
 
 ctypedef packed struct s_drawbuffer_cell:
     float depth_value
+
+    # weights for drawing.
     float w1
     float w2
     float w3 
+
+    float w1_alt
+    float w2_alt
+    float w3_alt 
+
+
     int   primitiv_id 
     int   geom_id
     int   node_id
@@ -71,6 +79,23 @@ cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
         const float w1 ,
         const float w2 ,
         const float w3 ,
+        const int   node_id,
+        const int   geom_id,
+        const int   material_id ,
+        const int   primitiv_id ,
+    ) noexcept nogil
+
+
+cdef void set_depth_content_with_alts(s_drawbuffer_cell* the_raw_array,
+        const int raw_array_width,
+        const int xi,const int yi,
+        const float depth_value, 
+        const float w1 ,
+        const float w2 ,
+        const float w3 ,
+        const float w1_alt ,
+        const float w2_alt ,
+        const float w3_alt ,
         const int   node_id,
         const int   geom_id,
         const int   material_id ,

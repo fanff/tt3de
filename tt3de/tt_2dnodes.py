@@ -5,87 +5,87 @@ import glm
 from typing_extensions import Self
 
 from tt3de.glm.pyglmtexture import GLMCamera
-
+from tt3de.utils import p2d_uv_tomatrix, p3d_tovec3, p3d_triplet_to_matrix, random_node_id
 
 class TT2DNode():
     def __init__(self, name: str = None,
                  transform: Optional[glm.mat3] = None):
-        super().__init__()
-        self.name = name if name is not None else "random"
+        self.name = name if name is not None else random_node_id()
         self.elements:List[TT2DNode]=  []
         self.local_transform = transform if transform is not None else glm.mat3(1.0)
 
     def cache_output(self,segmap):
         for e in self.elements:
             e.cache_output(segmap)
-    def render_point(self,some_info)->int:
-        
-        (elem,pixinfo) = some_info
-        return elem.render_point(pixinfo)
-        
-    def draw(self,camera:GLMCamera,transform=None,*args):
-        if transform is not None:
-            localchange = transform*self.local_transform
+
+
+
+    def draw(self,camera:GLMCamera,geometry_buffer,model_matrix=None):
+        if model_matrix is not None:
+            _model_matrix = model_matrix*self.local_transform
         else:
-            localchange = self.local_transform
+            _model_matrix = self.local_transform
         for elem in self.elements:
-            for pixcoord,pixinfo in elem.draw(camera,localchange):
-                yield pixcoord,(elem,pixinfo)
+            elem.draw(camera,geometry_buffer,_model_matrix)
 
 
+    def add_child(self,child:"TT2DNode"):
+        """Adds a child element to the list of elements.
+        
+        Args:
+            child: The child element to be added.
+        """
+        self.elements.append(child)
 
 class TT2DMesh(TT2DNode):
 
-    def __init__(self):
-        
+    def __init__(self,name: str = None,
+                 transform: Optional[glm.mat3] = None,
+                 material_id = 0):
+        super().__init__(name=name,transform=transform)
         self.elements=[]
         self.uvmap = []
-
+        self.material_id=material_id
     def cache_output(self,segmap):
-        self.texture.cache_output(segmap)
-        self.glm_elements=[p3d_triplet_to_matrix(elment)
-            for elment in self.elements]
-        
-        self.glm_uvmap =[p2d_uv_tomatrix(uv) for uv in self.uvmap]
 
+        self.glm_elements = [[p3d_tovec3(a),p3d_tovec3(b),p3d_tovec3(c)] for (a,b,c) in (self.elements)]
 
-    def render_point(self,some_info)->int:
+    def draw(self,camera:GLMCamera,geometry_buffer,model_matrix=None, node_id = 0 ):
+        if model_matrix is not None:
+            _model_matrix = model_matrix*self.local_transform
+        else:
+            _model_matrix = self.local_transform
+        screen_scaling_matrix:glm.mat3x3 = camera.view_matrix_2D*_model_matrix
 
-        vertid,mode,weights = some_info
-        
-
-        match mode:
-            case 1:
-                uvmat = self.glm_uvmap[vertid]
-                #uvcoord = glm.saturate(uvmat*weights)
-                uvcoord = (uvmat*weights)
-                return self.texture.render_point(uvcoord,None)
-            case 2:
-                return vertid+1
-        return 5
-    
-
-    def draw(self,camera:GLMCamera,transform=None,*args):
-
-        screen_width, screen_height = camera.screen_width,camera.screen_height
-        scc = min(screen_width,screen_height)
-        screenscaling = glm.scale(glm.vec2(scc*camera.character_factor,scc))
-
-        final_transform = screenscaling*transform if transform is not None else screenscaling
         for faceidx,trimat in enumerate(self.glm_elements):
-            transformed = final_transform*trimat
-            tri_inv = glm.inverse(transformed)
+            a,b,c = trimat
 
-            for pxi,pyi in glmtriangle_render(transformed,tri_inv,screen_width,screen_height):
-                weights = tri_inv*glm.vec3(pxi,pyi,1)
+            a = screen_scaling_matrix*a
+            b = screen_scaling_matrix*b
+            c = screen_scaling_matrix*c
+            deptha = a.z
+            depthb = b.z
+            depthc = c.z
 
-                if (weights>VEC3_ZERO) == VEC3_YES:
-                    yield (pxi,pyi,0),(faceidx,1,weights)
+            a = a/a.z
+            b = b/b.z
+            c = c/c.z
 
-            #vertidx = 0
-            #for pxi,pyi in glm_triangle_vertex_pixels(transformed, screen_width,screen_height):
-            #    yield (pxi,pyi,-1),(vertidx,2,(1.0,0.0,0.0))
-            #    vertidx+=1
+            a = [a.x,a.y,deptha]
+            b = [b.x,b.y,depthb]
+            c = [c.x,c.y,depthc]
+            uva,uvb,uvc = self.uvmap[faceidx]
+
+            uvs = [uva.x,uva.y,
+            uvb.x,uvb.y,
+            uvc.x,uvc.y] + [0.0]*42
+            geometry_buffer.add_triangle_to_buffer(
+                                    a,
+                                    b,
+                                    c,
+                                    uvs,   # uv list 
+                                    node_id,  # node_id
+                                    self.material_id)
 
 
 

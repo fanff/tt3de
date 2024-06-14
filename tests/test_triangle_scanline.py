@@ -6,7 +6,7 @@ import timeit
 import math
 import glm
 
-from tt3de.glm.pyglmtexture import clampi, yvalue_from_adjoint_unprotected
+from tt3de.glm.pyglmtexture import yvalue_from_adjoint_unprotected
 from tt3de.glm.triangle_raster import (
     generate_random_triangle,
     triangle_raster_v1,
