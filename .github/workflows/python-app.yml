@@ -32,4 +32,4 @@ jobs:
         poetry run python setup.py build_ext --inplace
     - name: Test with pytest
       run: |
-        poetry run pytest tests/
+        PYTHONPATH=$PWD poetry run pytest tests/

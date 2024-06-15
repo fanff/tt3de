@@ -18,6 +18,7 @@ pytest = "^8.2.1"
 pytest-benchmark = "^4.0.0"
 setuptools = "^70.0.0"
 cython = "^3.0.10"
+pillow = "^10.3.0"
 
 [build-system]
 requires = ["poetry-core"]
