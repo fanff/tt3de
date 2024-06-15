@@ -110,13 +110,6 @@ class CyRenderContext:
         for elemnt in self.elements:
             elemnt.draw(camera, self.geometry_buffer)
 
-        # start = [4.0, 4.0, 5.0]
-        # end = [10,10, 5.0]
-        # uv_array = [1.0] * 16
-        # node_id = 1
-        # material_id = 2
-        # self.geometry_buffer.add_line_to_buffer(start, end, uv_array, node_id, material_id)
-
         build_primitives(self.geometry_buffer, self.primitive_buffer)
 
         raster_precalc(self.primitive_buffer, self.drawing_buffer)
@@ -129,10 +122,6 @@ class CyRenderContext:
             self.geometry_buffer,
             self.texture_array,
         )
-        # drawbuffer_to_pil(self.drawing_buffer,img_name="depth.png",layer="depth")
-        # drawbuffer_to_pil(self.drawing_buffer,img_name="front.png",layer="front")
-        # drawbuffer_to_pil(self.drawing_buffer,img_name="back.png",layer="back")
-        # drawbuffer_to_pil(self.drawing_buffer,img_name="glyph.png",layer="glyph")
 
     def write_text(self, txt: str, x: int = 0, y: int = 0):
         pass
@@ -151,14 +140,14 @@ class CyRenderContext:
         for e in elems:
             self.append(e)
 
-    def to_textual_(self,crop:Region) -> List[Strip]:
+    def to_textual_(self, crop: Region) -> List[Strip]:
         """Converts the drawing buffer to textual representation.
 
         Returns:
             List[Strip]: A list of Strip objects representing the textual representation of the drawing buffer.
         """
-        max_x = crop.x+crop.width
-        max_y = crop.y+crop.height
+        max_x = crop.x + crop.width
+        max_y = crop.y + crop.height
         if self.screen_width == 0 or self.screen_height == 0:
             return []
 
@@ -168,16 +157,16 @@ class CyRenderContext:
         last_processed_line = 0
         for idx, (fr, fg, fb, br, bg, bb, g1, g2) in enumerate(
             (self.drawing_buffer.canvas_to_list())
-        ):  
-            curr_x = idx%self.screen_width
+        ):
+            curr_x = idx % self.screen_width
             curr_y = idx // self.screen_width
 
-            if curr_x<crop.x or curr_x>max_x or curr_y<crop.y or curr_y>max_y:
-                continue  #skip this
+            if curr_x < crop.x or curr_x > max_x or curr_y < crop.y or curr_y > max_y:
+                continue  # skip this
 
             if curr_y > last_processed_line:
 
-                last_processed_line=curr_y
+                last_processed_line = curr_y
                 # we just found a end of line
                 s = Strip(currentLine)
                 result.append(s)

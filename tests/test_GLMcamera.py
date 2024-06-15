@@ -2,7 +2,6 @@ import math
 import random
 import unittest
 
-from context import tt3de
 
 from tt3de.glm.pyglmtexture import GLMCamera
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem

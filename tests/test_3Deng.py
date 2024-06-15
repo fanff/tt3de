@@ -1,7 +1,6 @@
 import math
 import unittest
 
-from context import tt3de
 
 from tt3de.richtexture import RenderContext
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem

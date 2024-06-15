@@ -1,7 +1,6 @@
 import math
 import unittest
 
-from context import tt3de
 
 from tt3de.tt3de import (
     Camera,
@@ -54,6 +53,38 @@ class TestTriangle(unittest.TestCase):
         assertAlmostEqualP3D(Triangle3D(c, b, a).normal, Triangle3D(a, c, b).normal)
         assertAlmostEqualP3D(Triangle3D(c, b, a).normal, Triangle3D(b, a, c).normal)
         assertAlmostEqualP3D(Triangle3D(c, b, a).normal, Point3D(0, -1, 0))
+
+
+import random
+import math
+import unittest
+
+
+from tt3de.glm.c_math import c_floor_f, c_ceil_f, c_round_f, c_clamp_and_round_f
+
+
+class Test_c_custom_math_func(unittest.TestCase):
+
+    def test_custom_math_artihmetic(self):
+
+        numberlist = [-12, -2.1, -1.9, 2.3, 1.1, 2.9, 101221.2]
+
+        for n in numberlist:
+            self.assertEqual(math.floor(n), c_floor_f(n))
+            self.assertEqual(math.ceil(n), c_ceil_f(n))
+            self.assertEqual(round(n), c_round_f(n))
+
+        for i in range(1000):
+            n = random.normalvariate(0, 10033)
+            self.assertEqual(math.floor(n), c_floor_f(n), f"floor issue with {n}")
+            self.assertEqual(math.ceil(n), c_ceil_f(n), f"ceil issue with {n}")
+            self.assertEqual(round(n), c_round_f(n), f"round issue with {n}")
+
+            self.assertEqual(
+                min(4000, max(round(n), 0)),
+                c_clamp_and_round_f(n, 4000),
+                f"clamp_and_round issue with {n}",
+            )
 
 
 if __name__ == "__main__":

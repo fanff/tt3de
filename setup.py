@@ -23,7 +23,6 @@ setup(
                              "tt3de/glm/primitives/primitives.pyx",
                              "tt3de/glm/raster/raster.pyx",
                              "tt3de/glm/primitives/primitive_builder.pyx",
-                             "tt3de/glm/c_triangle_raster.pyx",
                              ],
                             compiler_directives={'boundscheck': True,
                                                  'embedsignature':True}),

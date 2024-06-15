@@ -466,17 +466,12 @@ class RenderInfo(Widget, can_focus=False):
         )
 
         yield Label("to_textual", id="to_tex")
-        yield Sparkline(
-            [0] * keep_count, summary_function=mean, id="to_tex_sl"
-        )
-
-
+        yield Sparkline([0] * keep_count, summary_function=mean, id="to_tex_sl")
 
     def append_frame_duration(self, timing_registry: TimingRegistry):
 
-
         duration = timing_registry.get_duration("tsrender_dur")
-        
+
         spark: Sparkline = self.query_one("#render_duration_sl")
         spark.data = spark.data[1:] + [duration]
 
@@ -501,8 +496,6 @@ class RenderInfo(Widget, can_focus=False):
 
         l: Label = self.query_one("#to_tex")
         l.update(f"to_text: {(1000*mean_dur_sec):.2f} ms ")
-
-
 
     def update_frame_count(self, frame_count: int):
         l: Label = self.query_one("#frame_idx")

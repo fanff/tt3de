@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from context import tt3de
+
 import glm
 from tt3de.asset_fastloader import fast_load
 from tt3de.glm.pyglmtexture import GLMCamera, GLMMesh3D

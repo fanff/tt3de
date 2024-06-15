@@ -20,13 +20,16 @@ def vec3_str(v) -> str:
 def p3d_tovec3(p: Point3D) -> vec3:
     return vec3(p.x, p.y, p.z)
 
+
 def p3d_tovec4(p: Point3D) -> vec4:
-    return vec4(p.x, p.y, p.z,1.0)
+    return vec4(p.x, p.y, p.z, 1.0)
+
 
 def p3d_triplet_to_matrix(ps: tuple[Point3D, Point3D, Point3D]) -> mat3:
     a, b, c = ps
 
     return mat3(p3d_tovec3(a), p3d_tovec3(b), p3d_tovec3(c))
+
 
 def mat_from_axis_angle(axis, angle):
     return glm.rotate(angle, axis)

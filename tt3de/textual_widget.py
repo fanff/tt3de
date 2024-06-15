@@ -14,27 +14,24 @@ from textual.widgets import (
     Static,
 )
 from abc import ABC, abstractmethod
-from tt3de.glm.pyglmtexture import GLMCamera, GLMRenderContext
+from tt3de.glm.pyglmtexture import GLMCamera
 from tt3de.render_context_cy import CyRenderContext
 from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
 from textual.geometry import Region
 
-class TimingRegistry():
+
+class TimingRegistry:
 
     def __init__(self):
-        self.data= {}
+        self.data = {}
 
-    def set_duration(self,name,duration):
+    def set_duration(self, name, duration):
         self.data[name] = duration
-    def get_duration(self,name)->float:
-        return self.data.get(name,-1.0)
-    
 
-
-
-
+    def get_duration(self, name) -> float:
+        return self.data.get(name, -1.0)
 
 
 class TT3DView(Widget):
@@ -51,7 +48,6 @@ class TT3DView(Widget):
     last_processed_frame = 0
 
     timing_registry = TimingRegistry()
-
 
     camera = None
     update_timer = None
@@ -104,7 +100,7 @@ class TT3DView(Widget):
         self.frame_idx += 1
 
     ## override for some performance gain
-    #def get_style_at(self, x, y):
+    # def get_style_at(self, x, y):
     #    return Style()
 
     # overriden
@@ -163,8 +159,7 @@ class TT3DView(Widget):
         if crop.height == 0:
             return []
         if crop.width == 0:
-            return [Strip([])
-            for h in crop.height]
+            return [Strip([]) for h in crop.height]
 
         if self.last_processed_frame != self.frame_idx:
             ts = time()
@@ -175,7 +170,6 @@ class TT3DView(Widget):
             ts = time()
             result = self.rc.to_textual_(crop)
             self.timing_registry.set_duration("to_textual_", time() - ts)
-
 
             self.last_processed_frame = self.frame_idx
 
@@ -245,8 +239,6 @@ class TT3DView(Widget):
             self.timing_registry.set_duration("update_dur", update_dur)
             self.timing_registry.set_duration("render_clear_dur", render_clear_dur)
             self.timing_registry.set_duration("tsrender_dur", tsrender_dur)
-
-
 
             self.post_render_step()
             return True

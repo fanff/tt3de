@@ -2,7 +2,7 @@ import math
 from statistics import mean
 from time import monotonic, time
 from typing import Sequence
-from context import tt3de
+
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
 from textual.containers import Container

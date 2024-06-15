@@ -1,4 +1,3 @@
-from context import tt3de
 from pyinstrument import Profiler
 
 from tt3de.richtexture import (

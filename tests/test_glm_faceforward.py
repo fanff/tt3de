@@ -4,8 +4,6 @@ import unittest
 
 import glm
 
-from context import tt3de
-
 from tt3de.glm.triangle_clipping import calculate_normal
 from tt3de.tt3de import Camera, FPSCamera, Point3D, PointElem
 

@@ -37,15 +37,6 @@ from glm import array as glma, i32vec2, ivec2, ivec3, mat3, mat4, vec2
 from glm import quat
 from glm import vec3, vec4
 
-from tt3de.glm.c_triangle_raster import c_glm_triangle_render_to_buffer
-from tt3de.glm.c_triangle_raster import iterate_pixel_buffer, TrianglesBuffer
-from tt3de.glm.c_triangle_raster import TrianglesBuffer, apply_stage2
-from tt3de.glm.c_triangle_raster import (
-    make_per_pixel_index_buffer,
-    make_per_pixel_data_buffer,
-    make_per_mesh_data_buffer,
-    make_uniform_data_buffer,
-)
 from tt3de.utils import GLMTexturecoord, GLMTriangle
 
 
@@ -128,8 +119,7 @@ class GLMCamera:
 
         self.view_matrix_2D = glm.translate(
             glm.vec3(self.screen_width / 2, self.screen_height / 2, 0.0)
-        ) * glm.scale(glm.vec3(scale_x, scale_y,1.0))
-
+        ) * glm.scale(glm.vec3(scale_x, scale_y, 1.0))
 
     def set_zoom_2D(self, zoom=1.0):
         self.zoom_2D = zoom
@@ -443,144 +433,6 @@ def barycentric_coordinates(
     u = 1.0 - v - w
 
     return glm.vec3(u, v, w)
-
-
-class GLMRenderContext:
-    # unusable at this stage
-    LINE_RETURN_SEG = Segment("\n", Style(color="white"))
-    EMPTY_SEGMENT = Segment(" ", Style(color="white"))
-
-    def __init__(self, screen_width, screen_height):
-        self.elements: List[GLMMesh3D] = []
-
-        self.depth_array: array.array[float] = array.array("d", [])
-        self.canvas_array: array.array[int] = array.array("i", [])
-
-        self.triangle_buffer = TrianglesBuffer(10000)
-        self.triangle_buffer.clear()
-
-        self.screen_width: int = screen_width
-        self.screen_height: int = screen_height
-        self.uniform_data: array.array[float] = make_uniform_data_buffer()
-
-        self.setup_canvas()
-        self.segmap = Segmap().init()
-        self.split_map = dict[int:object]
-
-        self.dummy_mesh_databuff = make_per_mesh_data_buffer()
-
-    def setup_segment_cache(self, console):
-        self.split_map = self.segmap.to_split_map(console)
-
-    def setup_canvas(self):
-        w, h = self.screen_width, self.screen_height
-
-        # the depth array with empty version
-        self.empty_depth_array = make_per_pixel_data_buffer(
-            w, h, initial_value=float("inf")
-        )
-        self.depth_array = self.empty_depth_array.__copy__()
-
-        # the canvas array with empty version
-        self.empty_canvas_array = array.array("I", [0] * (w * h))
-        self.canvas_array = self.empty_canvas_array.__copy__()
-
-        # the buffer holding the pair (material_id, triangleid)
-        self.empty_pixel_index_buffer = make_per_pixel_index_buffer(w, h)
-        self.pixel_index_buffer = self.empty_pixel_index_buffer.__copy__()
-
-    def update_wh(self, w, h):
-        if w != self.screen_width or h != self.screen_height:
-            self.screen_width = w
-            self.screen_height = h
-            self.setup_canvas()
-
-    def clear_canvas(self):
-        self.depth_array = self.empty_depth_array.__copy__()
-        self.canvas_array = self.empty_canvas_array.__copy__()
-
-        # clean up the info about what displayed where.
-        self.pixel_index_buffer = self.empty_pixel_index_buffer.__copy__()
-
-    def render(self, camera: GLMCamera):
-        self.triangle_buffer.clear()
-        for elemnt in self.elements:
-            elemnt.draw(camera, self.triangle_buffer)
-
-        self.triangle_buffer.calculate_internal(self.screen_width, self.screen_height)
-        self.triangle_buffer.raster_to_buffer(self.depth_array, self.pixel_index_buffer)
-
-        # in the uniform buffer putting the perspective
-        for idx, v in enumerate(itertools.chain(*camera.perspective)):
-            self.uniform_data[idx] = v
-
-        apply_stage2(
-            self.triangle_buffer,
-            self.depth_array,
-            self.pixel_index_buffer,
-            self.screen_width,
-            self.screen_height,
-            self.dummy_mesh_databuff,
-            self.uniform_data,
-            self.canvas_array,
-        )
-
-        # apply_stage2(TrianglesBuffer tr_buff,
-        # double[:] double_values_buff,
-        # unsigned int[:] integer_values_buff,
-
-        # unsigned int screen_width,
-        # unsigned int screen_height,
-        # double[:] mesh_info,
-        # double[:] uniformvalues, # the contextual data
-        # unsigned int[:] output
-        # ):
-
-    #        return #
-    #        for elemnt in self.elements:
-    #
-    #            pixel_iterator = elemnt.draw(camera)
-    #            for (pxi,pyi,appdepth),someinfo in pixel_iterator:
-    #                aidx = (pyi * self.screen_width) + pxi
-    #                currdepth = self.depth_array[aidx]
-    #                if appdepth < currdepth:
-    #                    # self.canvas[p.y][p.x] = p.render_pixel(txt)
-    #                    self.canvas_array[aidx] = elemnt.render_point(someinfo)
-    #                    self.depth_array[aidx] = appdepth
-
-    def iter_canvas(self) -> Iterable[Segment]:
-        for idx, i in enumerate(self.canvas_array):
-            if idx > 0 and (idx % self.screen_width == 0):
-                yield self.LINE_RETURN_SEG
-            yield self.segmap[i]
-
-    def iter_segments(self) -> Iterable[List[Segment]]:
-        currentLine = []
-        for idx, i in enumerate(self.canvas_array):
-
-            if idx > 0 and (idx % self.screen_width == 0):
-                yield currentLine
-                currentLine = []
-            currentLine.append(self.segmap[i])
-            # yield self.segmap[i]
-        yield currentLine
-
-    def write_text(self, txt: str, x: int = 0, y: int = 0):
-
-        for idx, c in enumerate(txt):
-            if c.isprintable():
-                ordc = ord(c)
-                if ordc in self.segmap:
-                    aidx = (self.screen_height - y - 1) * self.screen_width + idx + x
-                    self.canvas_array[aidx] = ordc
-
-    def append(self, elem: Drawable3D):
-        elem.cache_output(self.segmap)
-        self.elements.append(elem)
-
-    def extend(self, elems: List[Drawable3D]):
-        for e in elems:
-            self.append(e)
 
 
 class GLMNode3D(Drawable3D):

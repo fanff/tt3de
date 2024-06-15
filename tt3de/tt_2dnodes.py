@@ -18,7 +18,6 @@ class TT2DNode:
         self.name = name if name is not None else random_node_id()
         self.elements: List[TT2DNode] = []
         self.local_transform = transform if transform is not None else glm.mat4(1.0)
-        
 
     def cache_output(self, segmap):
         for e in self.elements:
@@ -68,7 +67,7 @@ class TT2DMesh(TT2DNode):
             _model_matrix = model_matrix * self.local_transform
         else:
             _model_matrix = self.local_transform
-        tr = camera.view_matrix_2D*_model_matrix
+        tr = camera.view_matrix_2D * _model_matrix
 
         for faceidx, facepoints in enumerate(self.glm_elements_4):
             a, b, c = facepoints
@@ -86,5 +85,3 @@ class TT2DMesh(TT2DNode):
             geometry_buffer.add_triangle_to_buffer(
                 a, b, c, uvs, node_id, self.material_id  # uv list  # node_id
             )
-
-        
