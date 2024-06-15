@@ -131,6 +131,13 @@ class GLMCamera:
             glm.vec2(self.screen_width / 2, self.screen_height / 2)
         ) * glm.scale(glm.vec2(scale_x, scale_y))
 
+
+
+        return glm.translate(
+            glm.vec3(self.screen_width / 2, self.screen_height / 2, 0.0)
+        ) * glm.scale(glm.vec3(scale_x, scale_y,1.0))
+
+
     def set_zoom_2D(self, zoom=1.0):
         self.zoom_2D = zoom
         self.update_2d_perspective()
