@@ -121,19 +121,12 @@ class GLMCamera:
     def update_2d_perspective(self):
         """ """
         # TODO depending on mode it can be different here.
-
         min_screen_ = min(self.screen_width, self.screen_height) * self.zoom_2D
 
         scale_x = min_screen_ * self.character_factor
         scale_y = min_screen_
 
         self.view_matrix_2D = glm.translate(
-            glm.vec2(self.screen_width / 2, self.screen_height / 2)
-        ) * glm.scale(glm.vec2(scale_x, scale_y))
-
-
-
-        return glm.translate(
             glm.vec3(self.screen_width / 2, self.screen_height / 2, 0.0)
         ) * glm.scale(glm.vec3(scale_x, scale_y,1.0))
 

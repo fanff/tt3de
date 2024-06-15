@@ -68,11 +68,7 @@ class TT2DMesh(TT2DNode):
             _model_matrix = model_matrix * self.local_transform
         else:
             _model_matrix = self.local_transform
-        #screen_scaling_matrix: glm.mat3x3 = camera.view_matrix_2D * _model_matrix
-
-
-        vpmatrix = camera.update_2d_perspective()
-        tr = vpmatrix*_model_matrix
+        tr = camera.view_matrix_2D*_model_matrix
 
         for faceidx, facepoints in enumerate(self.glm_elements_4):
             a, b, c = facepoints
@@ -80,13 +76,6 @@ class TT2DMesh(TT2DNode):
             a = tr * a
             b = tr * b
             c = tr * c
-            deptha = a.z
-            depthb = b.z
-            depthc = c.z
-
-            #a = a / a.z
-            #b = b / b.z
-            #c = c / c.z
 
             a = [a.x, a.y, a.z]
             b = [b.x, b.y, b.z]
@@ -98,27 +87,4 @@ class TT2DMesh(TT2DNode):
                 a, b, c, uvs, node_id, self.material_id  # uv list  # node_id
             )
 
-        return     
-        for faceidx, trimat in enumerate(self.glm_elements):
-            a, b, c = trimat
-
-            a = screen_scaling_matrix * a
-            b = screen_scaling_matrix * b
-            c = screen_scaling_matrix * c
-            deptha = a.z
-            depthb = b.z
-            depthc = c.z
-
-            #a = a / a.z
-            #b = b / b.z
-            #c = c / c.z
-
-            a = [a.x, a.y, deptha]
-            b = [b.x, b.y, depthb]
-            c = [c.x, c.y, depthc]
-            uva, uvb, uvc = self.uvmap[faceidx]
-
-            uvs = [uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y] + [0.0] * 42
-            geometry_buffer.add_triangle_to_buffer(
-                a, b, c, uvs, node_id, self.material_id  # uv list  # node_id
-            )
+        

@@ -31,7 +31,7 @@ from textual.widgets import (
 from textual.message import Message
 from textual.layouts import horizontal
 
-from tt3de.textual_widget import TT3DView
+from tt3de.textual_widget import TT3DView, TimingRegistry
 from tt3de.tt3de import (
     FPSCamera,
     Line3D,
@@ -465,8 +465,19 @@ class RenderInfo(Widget, can_focus=False):
             [0] * keep_count, summary_function=mean, id="render_duration_sl"
         )
 
-    def append_frame_duration(self, duration: float):
-        spark: Sparkline = self.query_one(Sparkline)
+        yield Label("to_textual", id="to_tex")
+        yield Sparkline(
+            [0] * keep_count, summary_function=mean, id="to_tex_sl"
+        )
+
+
+
+    def append_frame_duration(self, timing_registry: TimingRegistry):
+
+
+        duration = timing_registry.get_duration("tsrender_dur")
+        
+        spark: Sparkline = self.query_one("#render_duration_sl")
         spark.data = spark.data[1:] + [duration]
 
         mean_dur_sec = mean(spark.data)
@@ -477,7 +488,21 @@ class RenderInfo(Widget, can_focus=False):
             fps_render = 1.0 / mean_dur_sec
 
         l: Label = self.query_one("#timeinfo")
-        l.update(f"Render: {(1000*mean(spark.data)):.2f} ms ({fps_render:.1f} rps)")
+        l.update(f"Render: {(1000*mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
+
+        # update the frame count
+        self.update_frame_count(timing_registry.get_duration("frame_idx"))
+
+        # update the to_textual_timing
+        to_tt_duration = timing_registry.get_duration("to_textual_")
+        spark: Sparkline = self.query_one("#to_tex_sl")
+        spark.data = spark.data[1:] + [to_tt_duration]
+        mean_dur_sec = mean(spark.data)
+
+        l: Label = self.query_one("#to_tex")
+        l.update(f"to_text: {(1000*mean_dur_sec):.2f} ms ")
+
+
 
     def update_frame_count(self, frame_count: int):
         l: Label = self.query_one("#frame_idx")

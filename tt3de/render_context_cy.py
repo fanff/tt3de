@@ -30,7 +30,7 @@ from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
 from textual.strip import Strip
-
+from textual.geometry import Region
 import glm
 from glm import array as glma, i32vec2, ivec2, ivec3, mat3, mat4, vec2
 from glm import quat
@@ -151,22 +151,34 @@ class CyRenderContext:
         for e in elems:
             self.append(e)
 
-    def to_textual_(self) -> List[Strip]:
+    def to_textual_(self,crop:Region) -> List[Strip]:
         """Converts the drawing buffer to textual representation.
 
         Returns:
             List[Strip]: A list of Strip objects representing the textual representation of the drawing buffer.
         """
+        max_x = crop.x+crop.width
+        max_y = crop.y+crop.height
         if self.screen_width == 0 or self.screen_height == 0:
             return []
 
         factor = len(self.allchars)
         result = []
         currentLine = []
+        last_processed_line = 0
         for idx, (fr, fg, fb, br, bg, bb, g1, g2) in enumerate(
-            list(self.drawing_buffer.canvas_to_list())
-        ):
-            if idx > 0 and (idx % self.screen_width == 0):
+            (self.drawing_buffer.canvas_to_list())
+        ):  
+            curr_x = idx%self.screen_width
+            curr_y = idx // self.screen_width
+
+            if curr_x<crop.x or curr_x>max_x or curr_y<crop.y or curr_y>max_y:
+                continue  #skip this
+
+            if curr_y > last_processed_line:
+
+                last_processed_line=curr_y
+                # we just found a end of line
                 s = Strip(currentLine)
                 result.append(s)
                 currentLine = []

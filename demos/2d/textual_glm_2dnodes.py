@@ -61,8 +61,8 @@ class GLMTester(TT3DView):
                     a2dmesh.elements[0][0].z = 0.2
                 a2dnode.elements.append(a2dmesh)
                 a2dnode.local_transform = glm.translate(
-                    glm.vec2(float(i) + 0.1, float(j) + 0.1)
-                ) * glm.scale(glm.vec2(0.8, 0.8))
+                    glm.vec3(float(i) + 0.1, float(j) + 0.1,0.0)
+                ) * glm.scale(glm.vec3(0.8, 0.8,1.0))
 
                 self.root2Dnode.elements.append(a2dnode)
 
@@ -72,7 +72,7 @@ class GLMTester(TT3DView):
         a2dmesh.material_id = 5
         a2dnode.elements.append(a2dmesh)
         # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec2(-0.5, -0.5))
+        a2dnode.local_transform = glm.translate(glm.vec3(-0.5, -0.5,0.0))
 
         # this node is the one with the rotation motion
         self.spining_square = TT2DNode()
@@ -80,7 +80,7 @@ class GLMTester(TT3DView):
 
         # this node relocate the whole pack on the left
         spining_square_loc = TT2DNode()
-        spining_square_loc.local_transform = glm.translate(glm.vec2(-2.0, 0.0))
+        spining_square_loc.local_transform = glm.translate(glm.vec3(-2.0, 0.0,0.0))
         spining_square_loc.elements.append(self.spining_square)
 
         self.root2Dnode.elements.append(spining_square_loc)
@@ -91,7 +91,7 @@ class GLMTester(TT3DView):
         a2dmesh.material_id = 8
         a2dnode.elements.append(a2dmesh)
         # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec2(-0.5, -0.5))
+        a2dnode.local_transform = glm.translate(glm.vec3(-0.5, -0.5,0.0))
 
         # this node is the one with the rotation motion
         self.spining_square_2 = TT2DNode()
@@ -99,7 +99,7 @@ class GLMTester(TT3DView):
 
         # this node relocate the whole pack on the left
         spining_square2_loc = TT2DNode()
-        spining_square2_loc.local_transform = glm.translate(glm.vec2(-2.0, 1.2))
+        spining_square2_loc.local_transform = glm.translate(glm.vec3(-2.0, 1.2,0.0))
         spining_square2_loc.elements.append(self.spining_square_2)
 
         self.root2Dnode.elements.append(spining_square2_loc)
@@ -122,8 +122,8 @@ class GLMTester(TT3DView):
 
         rot = ts * tsfactor
         if self.square_spining:
-            self.spining_square.local_transform = glm.rotate(rot)
-            self.spining_square_2.local_transform = glm.rotate(rot)
+            self.spining_square.local_transform = glm.rotate(rot,glm.vec3(0,0,1))
+            self.spining_square_2.local_transform = glm.rotate(rot,glm.vec3(0,0,1))
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
@@ -133,6 +133,8 @@ class GLMTester(TT3DView):
         cc.refresh_camera_rotation(
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
+
+        self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 
     async def on_event(self, event: events.Event):
         await super().on_event(event)
@@ -159,11 +161,9 @@ class GLMTester(TT3DView):
                             (float(event.y) - (self.camera.screen_height / 2))
                         ) / (self.camera.screen_height * self.camera.zoom_2D)
 
-                        self.absolute_location = (
-                            glm.vec3(-relx_px, -rely_px, 0.0)
-                        ) + self.absolute_location
-                        trans = glm.translate(self.absolute_location.xy)
-                        self.root2Dnode.local_transform = trans
+                        small_tr_vector = glm.vec3(-relx_px, -rely_px, 0.0)
+                        
+                        self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
 
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
@@ -180,6 +180,7 @@ class Content(Static):
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield CameraConfig()
+            yield RenderInfo()
         yield GLMTester()
 
     def on_camera_config_projection_changed(
