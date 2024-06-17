@@ -38,3 +38,7 @@ cdef class Texture2D:
     cpdef void set_pixel_uv(self, double u, double v, unsigned char r, unsigned char g, unsigned char b)
 
 cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
+
+cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
+
+

@@ -2,9 +2,12 @@ from libc.string cimport memset
 from libc.stdlib cimport malloc, free
 import cython
 
+from textual.strip import Strip
 
 from rich.style import Style
 from rich.color import Color
+from rich.text import Segment
+
 from rich.color_triplet import ColorTriplet
 
 
@@ -45,6 +48,9 @@ cdef class DrawingBuffer:
             raise ValueError("bit reduction size must be 6")
         for i in range(6):
             self.bit_reductions[i] = <unsigned char> params[i]
+
+
+
     cpdef int hash_value(self, list value):
         cdef unsigned char [8] v
         for i in range(8):
@@ -186,7 +192,6 @@ cdef class DrawingBuffer:
         return ret
 
     cpdef list canvas_to_list(self):
-
         #cdef unsigned char [6] bit_reductions= [4,5,6,4,5,6]
         cdef list ret = []
 
@@ -205,6 +210,77 @@ cdef class DrawingBuffer:
             ret.append(row)
         return ret
 
+
+    cpdef list canvas_to_list_hashed(self,int minx,int miny,int width,int height,dict cache_,list allchars):
+        cdef list ret = []
+
+        cdef list current_line = []
+        cdef int idx
+
+        cdef unsigned int hashvalue 
+
+        cdef unsigned char current_elem[8]
+
+        cdef int curr_x = 0
+        cdef int curr_y = 0
+        cdef int max_x = minx + width
+        cdef int max_y = miny + height
+        cdef int last_processed_line = 0
+        for idx in range (self.size):
+
+            current_elem = (self._raw_canvas[idx].aleph)
+
+            hashvalue = hash_function((current_elem) , self.bit_reductions)
+            
+            curr_x = idx % self.width
+            curr_y = idx // self.width
+            
+            if curr_x < minx or curr_x > max_x or curr_y < miny or curr_y > max_y:
+                continue  # skip this
+            if curr_y > last_processed_line:
+                last_processed_line = curr_y
+
+                ret.append(Strip(current_line))
+
+                current_line = []
+                
+            # current_line.append([
+            #     <int> ( current_elem[0] ),
+            #     <int> ( current_elem[1] ),
+            #     <int> ( current_elem[2] ),
+            #     <int> ( current_elem[3] ),
+            #     <int> ( current_elem[4] ),
+            #     <int> ( current_elem[5] ),
+            #     <int> ( current_elem[6] ),
+            #     <int> ( current_elem[7] ),
+            #     <int> hashvalue
+            # 
+            # ])
+            asegment = cache_.get(hashvalue, None)
+            if asegment is None:
+                asegment = Segment(
+                    allchars[<int> ( current_elem[7] )],
+                    Style(
+                        color=Color.from_triplet(ColorTriplet(
+                                                <int> ( current_elem[0] ),
+                                                <int> ( current_elem[1] ),
+                                                <int> ( current_elem[2] ))),
+                        bgcolor=Color.from_triplet(ColorTriplet(
+                                                <int> ( current_elem[3] ),
+                                                <int> ( current_elem[4] ),
+                                                <int> ( current_elem[5] ),
+                        )),
+                    ),
+                )
+
+                cache_[hashvalue] = asegment
+            current_line.append(asegment)
+        ret.append(Strip(current_line))
+        return ret
+
+
+
+    
     
     cpdef list drawbuffer_to_list(self):
         # will return the list of the drawbuffer elements. 
@@ -229,7 +305,6 @@ cdef class DrawingBuffer:
                 ]
             ret.append(row)
         return ret
-
 
 
 

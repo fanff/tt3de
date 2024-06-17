@@ -1,6 +1,6 @@
 from libc.stdlib cimport malloc, free
 from libc.string cimport memset
-
+from libc.math cimport modff,fabsf
 from tt3de.glm.c_texture cimport s_texture256,s_texture_array
 
 cdef class TextureArray:
@@ -25,14 +25,17 @@ cdef class TextureArray:
     def get_wh_of(self,i:int ):
         cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
         return [atext.width,atext.height]
-    def get_pixel_of(self,i:int, u:float,v:float):
+    def get_pixel_of(self,i:int, u:float,v:float, repeat:bool = True):
         cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
 
         cdef unsigned char r = 0
         cdef unsigned char g = 0
         cdef unsigned char b = 0
 
-        map_uv_clamp(atext,u,v,&r,&g,&b)
+        if repeat:
+            map_uv_repeat(atext,u,v,&r,&g,&b)
+        else:
+            map_uv_clamp(atext,u,v,&r,&g,&b)
 
         return [<int> r,
         <int> g,
@@ -126,9 +129,27 @@ cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsig
     cdef int hi = <int> ( texture.height * max(0.0, min(0.9999, v))   )
 
 
+
     r[0] = texture.data[hi][wi][0]
     g[0] = texture.data[hi][wi][1]
     b[0] = texture.data[hi][wi][2]
+
+
+cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
+
+    cdef float one = 1.0
+    cdef float modu = modff(fabsf(u),&one)
+    cdef float modv = modff(fabsf(v),&one)
+
+
+    cdef int wi = <int> ( (<float>(texture.width )) * modu)  
+    cdef int hi = <int> ( (<float>(texture.height)) * modv)   
+
+    r[0] = texture.data[hi][wi][0]
+    g[0] = texture.data[hi][wi][1]
+    b[0] = texture.data[hi][wi][2]
+
+
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):
     cdef unsigned char r,g,b;

@@ -152,14 +152,14 @@ class TT3DView(Container):
             self.timing_registry.set_duration("render_step", time() - ts)
 
             ts = time()
-            result = self.rc.to_textual_(crop)
+            result = self.rc.to_textual_2(crop)
             self.timing_registry.set_duration("to_textual_", time() - ts)
 
             self.last_frame_time = time()
             self.cached_result = result
             return result
         else:
-            result = self.rc.to_textual_(crop)
+            result = self.rc.to_textual_2(crop)
             self.timing_registry.set_duration("to_textual_", time() - ts)
             return result
 

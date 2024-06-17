@@ -105,19 +105,3 @@ def test_bench_to_textual_method3(benchmark, size):
     benchmark(method_3, drawing_buffer)
 
 
-class TestSegMap(unittest.TestCase):
-
-    def test_simple(self):
-        s = Segmap()
-        drawing_buffer = DrawingBuffer(256, 256)
-        drawing_buffer.hard_clear(100)
-        canvas_data = drawing_buffer.canvas_to_list()
-        # this takes a while, and 3gig of memeory;
-        # this could fint in
-        # colorarray = []
-        # for i in range(256):
-        #    for j in range(256):
-        #        for k in range(256):
-        #            colorarray.append(Color.from_rgb(i,j,k))
-        # time.sleep(100)
-        c = Color.from_rgb(1, 2, 3)

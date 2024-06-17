@@ -325,5 +325,17 @@ class Test_DrawingBuffer(unittest.TestCase):
         max_hashf = max_hash([5]*6)
         self.assertEqual(max_hashf,274877906944)
         
-        
+    def test_to_hashed_list(self):
+        drawing_buffer = DrawingBuffer(256, 256)
+        drawing_buffer.hard_clear(100)
+        drawing_buffer.set_bit_reduction([5,5,5,5,5,5])
 
+        result = drawing_buffer.canvas_to_list_hashed()
+
+        self.assertEqual(len(result),256*256)
+
+        self.assertEqual(len(result[0]),9)
+
+        arow = result[0]
+
+        self.assertEqual(arow,[0]*9)

@@ -1,7 +1,7 @@
 
 from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer,s_drawbuffer_cell,s_canvas_cell
 
-from tt3de.glm.c_texture cimport Texture2D,TextureArray,s_texture_array,s_texture256,map_uv_clamp
+from tt3de.glm.c_texture cimport Texture2D,TextureArray,s_texture_array,s_texture256,map_uv_clamp,map_uv_repeat
 from tt3de.glm.primitives.primitives cimport PrimitivesBuffer,s_drawing_primitive
 
 
@@ -355,7 +355,7 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
     cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
 
     
-    map_uv_clamp(thetexture,u,v,&(aleph[3]),&(aleph[4]),&(aleph[5]))
+    map_uv_repeat(thetexture,u,v,&(aleph[3]),&(aleph[4]),&(aleph[5]))
 
 #### DOUBLE MAPPING MODE 
 cdef void apply_mode_debug_double_weight(s_material* material,
@@ -454,8 +454,8 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     # get the texture
     cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
     
-    map_uv_clamp(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
-    map_uv_clamp(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
+    map_uv_repeat(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
+    map_uv_repeat(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
 
     # set the glyph id
     aleph[6] = material.glyph_a 

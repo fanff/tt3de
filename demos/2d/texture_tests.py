@@ -61,7 +61,7 @@ class GLMTester(TT3DView):
 
             if j==2:
                 a2dnode.local_transform = glm.translate(
-                    glm.vec3(0.0, float(j) + 0.1,0.0)
+                    glm.vec3(0.0, float(j) ,0.0)
                 ) * glm.scale(glm.vec3(1.7777778, 1.0,1.0))
             else:
                 a2dnode.local_transform = glm.translate(
@@ -69,6 +69,41 @@ class GLMTester(TT3DView):
                 ) * glm.scale(glm.vec3(0.8, 0.8,1.0))
 
             self.root2Dnode.elements.append(a2dnode)
+
+        a2dnode = TT2DNode()
+        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh.material_id = 3
+        a2dnode.elements.append(a2dmesh)
+        a2dnode.local_transform = glm.translate(
+            glm.vec3(2, float(2) ,0.0)
+        ) * glm.scale(glm.vec3(1.7777778, 1.0,1.0))
+        
+        self.root2Dnode.elements.append(a2dnode)
+        
+
+        # adding a long stuff to have a repeated texture
+        a2dnode = TT2DNode()
+        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh.material_id = 3
+        a2dnode.elements.append(a2dmesh)
+
+        for uva, uvb, uvc in a2dmesh.uvmap:
+            uva.x = uva.x*2.0
+            uvb.x = uvb.x*2.0
+            uvc.x = uvc.x*2.0
+            uva.y = uva.y
+            uvb.y = uvb.y
+            uvc.y = uvc.y
+
+
+        a2dnode.local_transform = glm.translate(
+            glm.vec3(1.0, float(.0) ,0.0)
+        ) *glm.scale(glm.vec3(1.7777778*2, 1.0,1.0))
+        
+        self.root2Dnode.elements.append(a2dnode)
+
+
+
 
         # final append
         self.rc.append(self.root2Dnode)

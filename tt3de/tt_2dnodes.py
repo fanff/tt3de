@@ -4,6 +4,7 @@ import glm
 from typing_extensions import Self
 
 from tt3de.glm.pyglmtexture import GLMCamera
+from tt3de.tt3de import Point2D
 from tt3de.utils import (
     p2d_uv_tomatrix,
     p3d_tovec3,
@@ -47,7 +48,7 @@ class TT2DMesh(TT2DNode):
     ):
         super().__init__(name=name, transform=transform)
         self.elements = []
-        self.uvmap = []
+        self.uvmap:List[tuple[Point2D,Point2D,Point2D]] = []
         self.material_id = material_id
 
     def cache_output(self, segmap):

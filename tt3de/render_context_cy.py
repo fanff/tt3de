@@ -89,9 +89,13 @@ class CyRenderContext:
         if w * h > 0:
             # the depth array with empty version
             self.drawing_buffer = DrawingBuffer(w, h)
+            self.drawing_buffer.set_bit_reduction([4]*6)
+            self.auto_buffer = {}
             self.drawing_buffer.hard_clear(float("inf"))
         else:
             self.drawing_buffer = DrawingBuffer(3, 3)
+            self.drawing_buffer.set_bit_reduction([4]*6)
+            self.auto_buffer = {}
             self.drawing_buffer.hard_clear(float("inf"))
 
     def update_wh(self, w, h):
@@ -217,7 +221,20 @@ class CyRenderContext:
         s = Strip(currentLine)
         result.append(s)
         return result
+    
+    def to_textual_2(self, crop: Region) -> List[Strip]:
+        """Converts the drawing buffer to textual representation.
 
+        Returns:
+            List[Strip]: A list of Strip objects representing the textual representation of the drawing buffer.
+        """
+        if self.screen_width == 0 or self.screen_height == 0:
+            return []
+        return self.drawing_buffer.canvas_to_list_hashed(crop.x,crop.y,crop.width,crop.height,self.auto_buffer,self.allchars)
+        
+            
+
+        
     def pre_calc_bigbuffer(self):
         self.auto_buffer = {}
         self.big_buffer = []  # 8^6 =  262 144 values
@@ -235,17 +252,3 @@ class CyRenderContext:
         self.mult = 256 // self.cut_factor_by_channel
 
         return
-        # yes I tryed, its 10 times faster with a precomputed precache
-        # but eats like 4 gig ram Oo
-        # idx = 0
-        # for fr in range(self.cut_factor_by_channel):
-        #    for fg in range(self.cut_factor_by_channel):
-        #        for fb in range(self.cut_factor_by_channel):
-        #            for br in range(self.cut_factor_by_channel):
-        #                for bg in range(self.cut_factor_by_channel):
-        #                    for bb in range(self.cut_factor_by_channel):
-        #                        for g2,cha in enumerate(self.allchars):
-        #                            segid = g2+len(self.allchars)*(bb + self.cut_factor_by_channel * ( bg + self.cut_factor_by_channel*(br + self.cut_factor_by_channel * ( fb + self.cut_factor_by_channel*( fg + self.cut_factor_by_channel * (  fr  )  )  )   )) )
-        #                            self.big_buffer.append(Segment(cha,Style(color= Color.from_triplet(ColorTriplet(fr*self.mult,fg*self.mult,fb*self.mult)),
-        #                                                            bgcolor= Color.from_triplet(ColorTriplet(br*self.mult,bg*self.mult,bb*self.mult)) )))
-        #                            idx+=1

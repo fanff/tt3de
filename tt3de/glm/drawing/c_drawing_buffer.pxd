@@ -42,7 +42,7 @@ cdef class DrawingBuffer:
     cpdef set_bit_reduction(self, list params)
     cpdef int hash_value(self, list value)
 
-    
+
     cdef unsigned int get_width(self)
     cdef unsigned int get_height(self)
     cpdef tuple shape(self)
@@ -76,6 +76,7 @@ cdef class DrawingBuffer:
 
     cpdef list canvas_to_list(self)
     cpdef list canvas_to_list_ofstyled(self)
+    cpdef list canvas_to_list_hashed(self,int minx,int miny,int width,int height,dict cache_,list allchars)
     cpdef list drawbuffer_to_list(self)
 
 

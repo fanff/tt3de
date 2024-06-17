@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 pyglm = "^2.7.1"
-textual = "^0.68.0"
+textual = "^0.69.0"
 
 [tool.poetry.group.dev.dependencies]
 pyinstrument = "^4.6.2"

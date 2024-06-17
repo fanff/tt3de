@@ -10,11 +10,11 @@ class Test_TextureArray(unittest.TestCase):
     def test_create(self):
         texture_array = TextureArray()
         img: ImageTexture = fast_load("models/test_screen32.bmp")
-        texture_array.load_texture32_from_list(img.img_data)
+        texture_array.load_texture256_from_list(img.img_data)
         self.assertEqual(texture_array.size(), 1)
-        texture_array.load_texture32_from_list(img.img_data)
+        texture_array.load_texture256_from_list(img.img_data)
         self.assertEqual(texture_array.size(), 2)
-        texture_array.load_texture32_from_list(img.img_data)
+        texture_array.load_texture256_from_list(img.img_data)
         self.assertEqual(texture_array.size(), 3)
     def test_create256(self):
         texture_array = TextureArray()
@@ -48,6 +48,35 @@ class Test_TextureArray(unittest.TestCase):
         hyp[2] =1  
         self.assertEqual(texture_array.get_inner_map(), hyp)
 
+
+
+    def test_mapping_repeat(self):
+        texture_array = TextureArray()
+        self.assertEqual(texture_array.size(), 0)
+        sky1: ImageTexture = fast_load("models/sky1.bmp")
+
+        texture_array.load_texture256_from_list(sky1.img_data)
+        self.assertEqual(texture_array.size(), 1)
+        self.assertEqual(texture_array.get_wh_of(1), [256,114])
+
+        self.assertEqual(texture_array.get_pixel_of(1,0.0,0.0,repeat=False), [204, 145, 114])
+        self.assertEqual(texture_array.get_pixel_of(1,0.1,0.0,repeat=False), [211, 149, 113])
+        self.assertEqual(texture_array.get_pixel_of(1,0.1,0.1,repeat=False), [205, 146, 112])
+
+
+        self.assertEqual(texture_array.get_pixel_of(1,0.0,0.0,repeat=True), [204, 145, 114])
+        self.assertEqual(texture_array.get_pixel_of(1,0.1,0.0,repeat=True), [211, 149, 113])
+        self.assertEqual(texture_array.get_pixel_of(1,0.1,0.1,repeat=True), [205, 146, 112])
+
+
+        # forcing a repeat by asking uv after 1.0
+        self.assertEqual(texture_array.get_pixel_of(1,1.0,1.0,repeat=True), [204, 145, 114])
+        self.assertEqual(texture_array.get_pixel_of(1,1.1,1.0,repeat=True), [211, 149, 113])
+        self.assertEqual(texture_array.get_pixel_of(1,1.1,1.1,repeat=True), [205, 146, 112])
+        # forcing a repeat by asking uv after 5.0
+        self.assertEqual(texture_array.get_pixel_of(1,5.0,5.0,repeat=True), [204, 145, 114])
+        self.assertEqual(texture_array.get_pixel_of(1,5.1,5.0,repeat=True), [211, 149, 113])
+        self.assertEqual(texture_array.get_pixel_of(1,5.1,5.1,repeat=True), [205, 146, 112])
 
 
 
