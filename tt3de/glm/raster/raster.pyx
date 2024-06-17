@@ -1,4 +1,4 @@
-
+# cython: language_level=3str
 
 from tt3de.glm.c_math cimport round_in_screen
 from tt3de.glm.c_math cimport flat_determinant_g

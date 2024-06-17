@@ -45,64 +45,30 @@ class GLMTester(TT3DView):
 
     def initialize(self):
 
-        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.set_0()
+        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.set_1()
         self.root2Dnode = TT2DNode()
 
         materialidx = 1
-        for i in range(3):
-            for j in range(3):
-                a2dnode = TT2DNode()
+        for j in range(3):
 
-                a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-                a2dmesh.material_id = materialidx
-                materialidx += 1
-                if i == 0 and j == 1:
-                    pass
-                    a2dmesh.elements[0][0].z = 0.2
-                a2dnode.elements.append(a2dmesh)
+            if materialidx>=4 : continue
+            a2dnode = TT2DNode()
+
+            a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+            a2dmesh.material_id = materialidx
+            materialidx += 1
+            a2dnode.elements.append(a2dmesh)
+
+            if j==2:
                 a2dnode.local_transform = glm.translate(
-                    glm.vec3(float(i) + 0.1, float(j) + 0.1,0.0)
+                    glm.vec3(0.0, float(j) + 0.1,0.0)
+                ) * glm.scale(glm.vec3(1.7777778, 1.0,1.0))
+            else:
+                a2dnode.local_transform = glm.translate(
+                    glm.vec3(0.0, float(j) + 0.1,0.0)
                 ) * glm.scale(glm.vec3(0.8, 0.8,1.0))
 
-                self.root2Dnode.elements.append(a2dnode)
-
-        # adding a spinning square
-        a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-        a2dmesh.material_id = 5
-        a2dnode.elements.append(a2dmesh)
-        # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec3(-0.5, -0.5,0.0))
-
-        # this node is the one with the rotation motion
-        self.spining_square = TT2DNode()
-        self.spining_square.elements.append(a2dnode)
-
-        # this node relocate the whole pack on the left
-        spining_square_loc = TT2DNode()
-        spining_square_loc.local_transform = glm.translate(glm.vec3(-2.0, 0.0,0.0))
-        spining_square_loc.elements.append(self.spining_square)
-
-        self.root2Dnode.elements.append(spining_square_loc)
-
-        # adding a Second spinning square
-        a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
-        a2dmesh.material_id = 8
-        a2dnode.elements.append(a2dmesh)
-        # making the square centered
-        a2dnode.local_transform = glm.translate(glm.vec3(-0.5, -0.5,0.0))
-
-        # this node is the one with the rotation motion
-        self.spining_square_2 = TT2DNode()
-        self.spining_square_2.elements.append(a2dnode)
-
-        # this node relocate the whole pack on the left
-        spining_square2_loc = TT2DNode()
-        spining_square2_loc.local_transform = glm.translate(glm.vec3(-2.0, 1.2,0.0))
-        spining_square2_loc.elements.append(self.spining_square_2)
-
-        self.root2Dnode.elements.append(spining_square2_loc)
+            self.root2Dnode.elements.append(a2dnode)
 
         # final append
         self.rc.append(self.root2Dnode)
@@ -121,10 +87,7 @@ class GLMTester(TT3DView):
         tsfactor = 2
 
         rot = ts * tsfactor
-        if self.square_spining:
-            self.spining_square.local_transform = glm.rotate(rot,glm.vec3(0,0,1))
-            self.spining_square_2.local_transform = glm.rotate(rot,glm.vec3(0,0,1))
-
+        
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
         cc.refresh_camera_position(

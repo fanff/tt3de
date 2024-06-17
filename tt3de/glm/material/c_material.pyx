@@ -1,7 +1,7 @@
 
 from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer,s_drawbuffer_cell,s_canvas_cell
 
-from tt3de.glm.c_texture cimport Texture2D,s_texture32,TextureArray
+from tt3de.glm.c_texture cimport Texture2D,TextureArray,s_texture_array,s_texture256,map_uv_clamp
 from tt3de.glm.primitives.primitives cimport PrimitivesBuffer,s_drawing_primitive
 
 
@@ -168,7 +168,7 @@ cpdef void apply_pixel_shader(
     cdef s_buffer* material_buffer_raw= material_buffer.get_raw()
 
     # deal with the texture buffer 
-    cdef s_texture32* texture_array = texture_array_object.get_raw()
+    cdef s_texture_array* texture_array = texture_array_object.get_raw()
 
     
     _apply_pixel_shader(  primitive_array_buffer  ,
@@ -188,7 +188,7 @@ cdef void _apply_pixel_shader(
     s_canvas_cell* canvas_buffer_raw,
     s_buffer* material_buffer_raw,
     s_geometry* gemoetry_buffer_raw  ,
-    s_texture32* texture_array,
+    s_texture_array* texture_array,
     unsigned int drawing_buffer_width ,
     unsigned int drawing_buffer_height    ) noexcept nogil:
 
@@ -233,7 +233,7 @@ cdef void some_kind_ofapply(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     cdef int i
     cdef float afloat
     
@@ -310,7 +310,7 @@ cdef void apply_mode_uv_mapping_debug(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -338,7 +338,7 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -351,20 +351,11 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
     cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
 
-    # get the texture, assuming its a 32 sized texture.
-    cdef s_texture32* thetexture = &(texture_array[material.texture_id_array[0]])
-    cdef unsigned char * the_triplet
-    cdef int uint = <int>abs(max(0.0, min(0.999999, u)) * 32)
-    cdef int vint = <int>abs(max(0.0, min(0.999999, v)) * 32)
-    
-    # get the color tripplet
-    the_triplet = (thetexture.data[uint][vint])
-    
-    aleph[3] = the_triplet[0]
-    aleph[4] = the_triplet[1]
-    aleph[5] = the_triplet[2]
+    # get the texture
+    cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
 
-
+    
+    map_uv_clamp(thetexture,u,v,&(aleph[3]),&(aleph[4]),&(aleph[5]))
 
 #### DOUBLE MAPPING MODE 
 cdef void apply_mode_debug_double_weight(s_material* material,
@@ -372,7 +363,7 @@ cdef void apply_mode_debug_double_weight(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     
     # set the front as top
     aleph[0] =<int>abs(max(0.0, min(1.0, thecell.w1)) * 255)
@@ -395,7 +386,7 @@ cdef void apply_mode_debug_double_uv_map(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -442,7 +433,7 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -460,40 +451,11 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     cdef float u_alt = au * thecell.w1_alt + bu*thecell.w2_alt + cu*thecell.w3_alt
     cdef float v_alt = av * thecell.w1_alt + bv*thecell.w2_alt + cv*thecell.w3_alt
     
-    # get the texture, assuming its a 32 sized texture.
-    cdef s_texture32* thetexture = &(texture_array[material.texture_id_array[0]])
-    cdef unsigned char * the_triplet
-    cdef int uint = 0
-    cdef int vint = 0
-
-    u = max(0.0, min(0.999999, u))* 32
-    v = max(0.0, min(0.999999, v))* 32
-    u_alt = max(0.0, min(0.999999, u_alt))* 32
-    v_alt = max(0.0, min(0.999999, v_alt))* 32
-
-
-
-    uint = <int> u
-    vint = <int> v
+    # get the texture
+    cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
     
-    # get the color tripplet
-    the_triplet = (thetexture.data[uint][vint])
-    
-    aleph[0] = the_triplet[0]
-    aleph[1] = the_triplet[1]
-    aleph[2] = the_triplet[2]
-
-
-    uint = <int> u_alt
-    vint = <int> v_alt
-    
-    # get the color tripplet
-    the_triplet = (thetexture.data[uint][vint])
-    
-    aleph[3] = the_triplet[0]
-    aleph[4] = the_triplet[1]
-    aleph[5] = the_triplet[2]
-
+    map_uv_clamp(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
+    map_uv_clamp(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
 
     # set the glyph id
     aleph[6] = material.glyph_a 
@@ -504,7 +466,7 @@ cdef void apply_mode_double_perlin_noise(s_material* material,
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture32* texture_array) noexcept nogil:
+                s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]

@@ -20,7 +20,7 @@ from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
 from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
 from textual.geometry import Region
-
+from textual.containers import Container
 
 class TimingRegistry:
 
@@ -34,7 +34,7 @@ class TimingRegistry:
         return self.data.get(name, -1.0)
 
 
-class TT3DView(Widget):
+class TT3DView(Container):
     can_focus = True
 
     use_native_python = True
@@ -42,15 +42,14 @@ class TT3DView(Widget):
     write_debug_inside = False
     mouse_fps_camera_mode = False
 
-    cached_result = []
-    last_frame_data_info = {}
-    frame_idx = reactive(0)
+    frame_idx:int = reactive(0)
     last_processed_frame = 0
 
     timing_registry = TimingRegistry()
 
     camera = None
-    update_timer = None
+    last_frame_time = 0.0
+    cached_result = None
     cwr = None
 
     DEFAULT_CSS = """
@@ -80,30 +79,14 @@ class TT3DView(Widget):
             self.camera.point_at(glm.vec3(0, 0, 1))
             self.rc = CyRenderContext(self.size.width, self.size.height)
         self.initialize()
-        self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
-        self.last_frame_data_info = {}
+        ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
         self.rc.setup_segment_cache(self.app.console)
+        self.last_frame_time = time()-1.0
 
-    @abstractmethod
-    def initialize(self):
-        pass
+    def on_mount(self):
+        self.auto_refresh = 1.0/20.0
 
-    @abstractmethod
-    def update_step(self, tg):
-        pass
-
-    @abstractmethod
-    def post_render_step(self):
-        pass
-
-    def calc_frame(self):
-        self.frame_idx += 1
-
-    ## override for some performance gain
-    # def get_style_at(self, x, y):
-    #    return Style()
-
-    # overriden
+   
     async def on_event(self, event: events.Event):
         if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
             if event.delta_x != 0:
@@ -144,6 +127,9 @@ class TT3DView(Widget):
                     self.update_timer.resume()
                 case "escape":
                     self.mouse_fps_camera_mode = False
+        else:
+            await super().on_event(event)
+
 
     def render_lines(self, crop: Region) -> list[Strip]:
         """Render the widget in to lines.
@@ -154,64 +140,48 @@ class TT3DView(Widget):
         Returns:
             A list of list of segments.
         """
-
-        # trick to avoid the compositor "get_style" to force a render
         if crop.height == 0:
             return []
         if crop.width == 0:
             return [Strip([]) for h in crop.height]
-
-        if self.last_processed_frame != self.frame_idx:
-            ts = time()
+        
+        ts = time()
+        if ts>self.last_frame_time+1.0/24.0:
+            self.frame_idx+=1
             self.render_step()
             self.timing_registry.set_duration("render_step", time() - ts)
 
-        if not self.use_native_python:
             ts = time()
             result = self.rc.to_textual_(crop)
             self.timing_registry.set_duration("to_textual_", time() - ts)
 
-            self.last_processed_frame = self.frame_idx
-
+            self.last_frame_time = time()
             self.cached_result = result
             return result
+        else:
+            result = self.rc.to_textual_(crop)
+            self.timing_registry.set_duration("to_textual_", time() - ts)
+            return result
 
-        ts = time()
+    @abstractmethod
+    def initialize(self):
+        pass
 
-        sw = self.rc.screen_width
-        strip_map = self.rc.split_map
+    @abstractmethod
+    def update_step(self, tg):
+        pass
 
-        segmap = self.rc.segmap
-        console = self.app.console
-        result = []
-        currentLine = []
-        for idx, i in enumerate(self.rc.canvas_array):
+    @abstractmethod
+    def post_render_step(self):
+        pass
 
-            if idx > 0 and (idx % sw == 0):
-                s = Strip(currentLine)
-                # s.render(console)
-                result.append(s)
-                currentLine = []
-            currentLine.append(segmap[i])
-            # yield self.segmap[i]
-        s = Strip(currentLine)
-        # s.render(console)
-        result.append(s)
-
-        self.render_strips_dur = time() - ts
-        self.last_processed_frame = self.frame_idx
-
-        self.cached_result = result
-        return result
-
-    def render(self):
-        return "render called, should not happen actually :/"
+    #def render(self):
+    #    return "render called, should not happen actually :/"
 
     def render_step(self):
         if (
             self.size.width > 1
             and self.size.height > 1
-            and self.update_timer._active.is_set()
         ):
 
             ts = time()

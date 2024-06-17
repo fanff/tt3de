@@ -3,6 +3,8 @@ import unittest
 import pytest
 from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture
+import random
+
 
 from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
 
@@ -270,3 +272,58 @@ class Test_DrawCell(unittest.TestCase):
         self.assertEqual(maxd, 10.0)
 
         drawbuffer_to_pil(drawbuffer, img_name="set_depth_00.png", layer="depth")
+
+def max_hash(bit_reductions):
+    """
+    Function to predict the maximum hash based on bit reductions.
+    
+    :param bit_reductions: List of 6 integers representing the number of bits to keep for the first 6 numbers
+    :return: Maximum possible integer hash value
+    """
+    
+    return 2**(sum(bit_reductions) + 8)
+
+class Test_DrawingBuffer(unittest.TestCase):
+    def test_create_some_hash(self):
+        db = DrawingBuffer(64,64)
+
+        db.set_bit_reduction([3]*6)
+
+        self.assertEqual(db.hash_value([4]*8),4)
+        self.assertEqual(db.hash_value([127]*8),28760959)
+        self.assertEqual(db.hash_value([255]*8),67108863)
+
+    def test_ignore_element6(self):
+
+        db = DrawingBuffer(64,64)
+        db.set_bit_reduction([7]*6)
+
+        for i in range(100):
+            v = [1,22,33,44,55,66,random.randint(0,255),34]
+
+            self.assertEqual(db.hash_value([4]*8),1082196484)
+
+    def test_max_hash1(self):
+
+        max_hashf = max_hash([1]*6)
+        self.assertEqual(max_hashf,16384)
+
+    def test_max_hash2(self):
+        max_hashf = max_hash([2]*6)
+        self.assertEqual(max_hashf,1048576)
+
+
+    def test_max_hash3(self):
+        max_hashf = max_hash([3]*6)
+        self.assertEqual(max_hashf,67108864)
+        
+    def test_max_hash4(self):
+
+        max_hashf = max_hash([4]*6)
+        self.assertEqual(max_hashf,4294967296)
+    def test_max_hash5(self):
+        max_hashf = max_hash([5]*6)
+        self.assertEqual(max_hashf,274877906944)
+        
+        
+

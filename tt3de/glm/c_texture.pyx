@@ -1,33 +1,61 @@
 from libc.stdlib cimport malloc, free
 from libc.string cimport memset
 
-from tt3de.glm.c_texture cimport s_texture32
+from tt3de.glm.c_texture cimport s_texture256,s_texture_array
 
 cdef class TextureArray:
     # cdef s_texture32[32] t32_array
     # cdef int t32_size 
     def __cinit__(self):
-        self.t32_size = 0
+        self.raw_array.inner_size = 0
+
+        for i in range(64):
+            self.raw_array.inner_map[i] = 0
+            self.raw_array.pointer_map[i] = &self.raw_array.data
+        self.raw_array.current_pointer =  &self.raw_array.data
+
+
     cpdef int size(self):
-        return self.t32_size
-    cdef s_texture32* get_raw(self):
-        return (self.t32_array)
-    def load_texture32_from_list(self, list data):
+        return self.raw_array.inner_size
+    cdef s_texture_array* get_raw(self):
+        return (&self.raw_array)
 
-        cdef s_texture32 atexture = (self.t32_array[self.t32_size])
+    def get_inner_map(self):
+        return [int(self.raw_array.inner_map[i]) for i in range(64)]
+    def get_wh_of(self,i:int ):
+        cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
+        return [atext.width,atext.height]
+    def get_pixel_of(self,i:int, u:float,v:float):
+        cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
 
-        
-        cdef int i, j, index
-        #cdef unsigned char* ptr = atexture.data
-        for i in range(32):
-            for j in range(32):
-                index = (i * 32 + j) * 3
-                atexture.data[i][j][0]= data[i][j][0]
-                atexture.data[i][j][1]= data[i][j][1]
-                atexture.data[i][j][2]= data[i][j][2]
-        self.t32_array[self.t32_size] = atexture
+        cdef unsigned char r = 0
+        cdef unsigned char g = 0
+        cdef unsigned char b = 0
 
-        self.t32_size+=1
+        map_uv_clamp(atext,u,v,&r,&g,&b)
+
+        return [<int> r,
+        <int> g,
+        <int> b]
+
+    def load_texture256_from_list(self, list data):
+
+        cdef int in_width = len(data[0])
+        cdef int in_height = len(data)
+        cdef s_texture256 *atexture256 = <s_texture256*> self.raw_array.current_pointer 
+        atexture256.width = in_width
+        atexture256.height = in_height
+        for i in range(in_height):
+            for j in range(in_width):
+                atexture256.data[i][j][0] = data[i][j][0]
+                atexture256.data[i][j][1] = data[i][j][1]
+                atexture256.data[i][j][2] = data[i][j][2]
+
+        self.raw_array.pointer_map[self.raw_array.inner_size] = atexture256
+        self.raw_array.inner_map[self.raw_array.inner_size] = 1 # ONE for 256 texture
+        self.raw_array.inner_size+=1
+        #self.current_pointer+=sizeof(s_texture256)
+        self.raw_array.current_pointer = <void*>((<char*>self.raw_array.current_pointer) + sizeof(s_texture256))
 
 
 
@@ -93,7 +121,14 @@ cdef class Texture2D:
     
 
 ####################
+cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
+    cdef int wi = <int> ( texture.width * max(0.0, min(0.9999, u))   )
+    cdef int hi = <int> ( texture.height * max(0.0, min(0.9999, v))   )
 
+
+    r[0] = texture.data[hi][wi][0]
+    g[0] = texture.data[hi][wi][1]
+    b[0] = texture.data[hi][wi][2]
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):
     cdef unsigned char r,g,b;

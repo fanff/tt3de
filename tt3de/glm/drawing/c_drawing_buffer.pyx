@@ -37,6 +37,19 @@ cdef class DrawingBuffer:
         self.drawbuffer = <s_drawbuffer_cell[:_size]> self._raw_data
         self.canvas = <s_canvas_cell[:_size]> self._raw_canvas
 
+        #init some bit reduction for caching the output
+        self.bit_reductions = [1,1,1,1,1,1]
+
+    cpdef set_bit_reduction(self, list params):
+        if len(params)!= 6:
+            raise ValueError("bit reduction size must be 6")
+        for i in range(6):
+            self.bit_reductions[i] = <unsigned char> params[i]
+    cpdef int hash_value(self, list value):
+        cdef unsigned char [8] v
+        for i in range(8):
+            v[i] = value[i]
+        return hash_function(v,self.bit_reductions)
     cdef unsigned char* aleph(self,int index):
         return &(self.canvas[index].aleph[0])
 
@@ -173,6 +186,8 @@ cdef class DrawingBuffer:
         return ret
 
     cpdef list canvas_to_list(self):
+
+        #cdef unsigned char [6] bit_reductions= [4,5,6,4,5,6]
         cdef list ret = []
 
         cdef list row = []
@@ -183,6 +198,8 @@ cdef class DrawingBuffer:
 
         for idx in range (self.size):
             row = []
+            #hash_function(((self.canvas[idx]).aleph) ,bit_reductions)
+
             for gidx in range(8):
                 row.append( ((self.canvas[idx]).aleph)[gidx]      )
             ret.append(row)
@@ -269,7 +286,7 @@ cdef void set_depth_content_with_alts(s_drawbuffer_cell* the_raw_array,
         const int   material_id ,
         const int   primitiv_id ,
     ) noexcept nogil:
-    # Set depth content with a testing. assume it is used for simple rendering.
+    # Set depth content with a testing. assume it is used for double rendering.
 
     cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
     if depth_value < thecell.depth_value:
@@ -314,3 +331,31 @@ cdef void set_canvas_content(s_canvas_cell* the_raw_array,
 
     thecell.aleph[6] = g1
     thecell.aleph[7] = g2
+
+
+
+
+cdef unsigned int hash_function(unsigned char nums[8], unsigned char bit_reductions[6]):
+    """
+    :param nums: An array of 8 unsigned char values to be hashed.
+    :param bit_reductions: An array of 6 unsigned char values specifying the number of bits to retain for the first 6 elements of nums.
+    
+    The hashing method is as follows:
+    - For the first 6 elements of nums (indices 0 to 5), only the highest bits as specified by bit_reductions are used.
+    - The 7th element of nums (index 6) is ignored.
+    - The 8th element of nums (index 7) is used without any bit reduction.
+
+    The resulting hash value is a unique positive integer derived from the provided nums and bit_reductions.
+    """
+    cdef unsigned int hash_value = 0
+    cdef int i
+
+    # Iterate over the first 6 elements of nums
+    for i in range(6):
+        # Use only the highest bits as specified by bit_reductions
+        hash_value = (hash_value << bit_reductions[i]) | (nums[i] >> (8 - bit_reductions[i]))
+    
+    # Use the 8th element of nums (nums[7]) directly
+    hash_value = (hash_value << 8) | nums[7]
+
+    return hash_value

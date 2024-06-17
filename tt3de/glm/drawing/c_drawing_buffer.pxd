@@ -31,10 +31,18 @@ cdef class DrawingBuffer:
     cdef int width
     cdef int height
 
+
+    cdef unsigned char [6] bit_reductions
+
+
     cdef s_drawbuffer_cell* get_raw_depth_buffer(self)
     cdef s_canvas_cell* get_raw_canvas_buffer(self)
     cdef inline int linear_idx(self,int xi,int yi)
+    
+    cpdef set_bit_reduction(self, list params)
+    cpdef int hash_value(self, list value)
 
+    
     cdef unsigned int get_width(self)
     cdef unsigned int get_height(self)
     cpdef tuple shape(self)

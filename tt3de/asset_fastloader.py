@@ -42,10 +42,10 @@ class MaterialPerfab:
             Tuple[TextureArray, MaterialBuffer]: A tuple containing the initialized TextureArray and MaterialBuffer.
         """
         texture_array = TextureArray()
-        texture_array.load_texture32_from_list(
+        texture_array.load_texture256_from_list(
             fast_load("models/cubetest32.bmp").img_data
         )
-        texture_array.load_texture32_from_list(
+        texture_array.load_texture256_from_list(
             fast_load("models/test_screen32.bmp").img_data
         )
 
@@ -127,7 +127,53 @@ class MaterialPerfab:
 
         return texture_array, material_buffer
 
+    def set_1() -> Tuple[TextureArray, MaterialBuffer]:
+        
+        texture_array = TextureArray()
+        texture_array.load_texture256_from_list(
+            fast_load("models/cubetest32.bmp").img_data
+        )
+        texture_array.load_texture256_from_list(
+            fast_load("models/test_screen32.bmp").img_data
+        )
+        texture_array.load_texture256_from_list(
+            fast_load("models/test_screen256.bmp").img_data
+        )
+        texture_array.load_texture256_from_list(
+            fast_load("models/sky1.bmp").img_data
+        )
 
+        material_buffer = MaterialBuffer()
+
+        # a background colorizer; index 0 
+        mat = Material(texturemode=3)
+        mat.set_albedo_front(1, 2, 3)
+        mat.set_albedo_back(100, 80, 80)
+        material_buffer.add_material(mat)
+
+        # double raster Texture 1 (small 32 text)
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([1, -1, -1])
+        material_buffer.add_material(mat2)
+
+        # double raster Texture 2 ( 256 texture)
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([2, -1, -1])
+        material_buffer.add_material(mat2)
+
+        # double raster Texture 3 (sky texture)
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([3, -1, -1])
+        material_buffer.add_material(mat2)
+
+        return texture_array, material_buffer
+    
+
+
+    
 class Prefab2D:
 
     @staticmethod

@@ -1,4 +1,4 @@
-
+# cython: language_level=3str
 
 cimport cython
 from libc.math cimport sin, cos, floor
@@ -44,7 +44,7 @@ cdef float grad(int hash, float x, float y, float z) noexcept nogil :
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef float perlin(float x, float y, float z) nogil noexcept:
+cdef float perlin(float x, float y, float z)  noexcept nogil:
     cdef int X = <int> (floor(x)) & 255
     cdef int Y = <int> (floor(y)) & 255
     cdef int Z = <int> (floor(z)) & 255

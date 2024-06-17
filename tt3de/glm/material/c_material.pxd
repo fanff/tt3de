@@ -1,3 +1,5 @@
+# cython: language_level=3str
+
 
 from tt3de.glm.c_texture cimport Texture2D
 from tt3de.glm.primitives.primitives cimport s_drawing_primitive
