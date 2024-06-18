@@ -330,12 +330,34 @@ class Test_DrawingBuffer(unittest.TestCase):
         drawing_buffer.hard_clear(100)
         drawing_buffer.set_bit_reduction([5,5,5,5,5,5])
 
-        result = drawing_buffer.canvas_to_list_hashed()
+        chars = ["a","b","c"]
+        result = drawing_buffer.canvas_to_list_hashed(0,0,256, 256,dict(),chars)
 
-        self.assertEqual(len(result),256*256)
+        self.assertEqual(len(result),256)
 
-        self.assertEqual(len(result[0]),9)
+        self.assertEqual(len(result[0]),256)
 
-        arow = result[0]
+        astrip = result[0]
 
-        self.assertEqual(arow,[0]*9)
+    def test_to_hashed_list_crop_limits(self):
+        drawing_buffer = DrawingBuffer(256, 256)
+        drawing_buffer.hard_clear(100)
+        drawing_buffer.set_bit_reduction([5,5,5,5,5,5])
+
+        chars = ["a","b","c"]
+        result = drawing_buffer.canvas_to_list_hashed(0, 0, 5, 20,dict(),chars)
+        self.assertEqual(len(result),20)
+        self.assertEqual(len(result[0]),5)
+
+        result = drawing_buffer.canvas_to_list_hashed(5, 5,5, 20,dict(),chars)
+        self.assertEqual(len(result),20)
+        self.assertEqual(len(result[0]),5)
+
+
+
+
+        result = drawing_buffer.canvas_to_list_hashed(10,11,22, 33,dict(),chars)
+        self.assertEqual(len(result[0]),22)
+        self.assertEqual(len(result),33)
+
+        astrip = result[0]

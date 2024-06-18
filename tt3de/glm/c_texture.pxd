@@ -3,6 +3,9 @@
 ctypedef packed struct s_texture256:
     int height;
     int width;
+    char tr_r;
+    char tr_g;
+    char tr_b;
     unsigned char data[256][256][3];
 
 ctypedef packed struct s_texture_array:

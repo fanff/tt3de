@@ -13,6 +13,16 @@ from tt3de.glm.c_buffer cimport s_buffer
 ctypedef packed struct s_material:
 
     int texturemode
+    unsigned char texture_mapping_options
+    #
+    # Bit 0: Texture Mapping Repetition (0: Off, 1: On)
+    # Bit 1: Texture Transparency Mode (0: Off, 1: On)
+    # Bit 2: Specular Reflection (0: Off, 1: On)
+    # Bit 3: Normal Mapping (0: Off, 1: On)
+    # Bit 4: Emission (0: Off, 1: On)
+    # Bit 5: Double-Sided Rendering (0: Off, 1: On)
+    # Bit 6: Alpha Blending (0: Off, 1: On)
+    # Bit 7: Ambient Occlusion (0: Off, 1: On)
     unsigned char albedo_front_r
     unsigned char albedo_front_g
     unsigned char albedo_front_b
@@ -41,7 +51,7 @@ cdef class Material:
     cdef unsigned char glyph_a 
     cdef unsigned char glyph_b 
     cdef int[8] texture_id_array
-
+    cdef unsigned char texture_mapping_options
 
     
     cdef void _rgb_uv_map(self,int texture_id, int index, unsigned char* r, unsigned char* g, unsigned char* b)
@@ -63,6 +73,8 @@ cdef class Material:
     cpdef void set_albedo_back(self,unsigned char r, unsigned char g, unsigned char b)
 
     cpdef void set_glyph(self,unsigned char glyph_a, unsigned char glyph_a)
+
+    cpdef void set_texture_mapping_options(self,unsigned char opts)
 
 
 

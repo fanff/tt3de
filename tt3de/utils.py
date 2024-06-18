@@ -63,6 +63,85 @@ class TT3DEMaterialMode(Enum):
     DOUBLE_UV_MAPPING_TEXT1 = 13
     DOUBLE_PERLIN_NOISE = 14
 
+class TT3DEMaterialTextureMappingOptions:
+    def __init__(self):
+        self._bits = 0
+
+    def _set_bit(self, position, value):
+        if value:
+            self._bits |= (1 << position)
+        else:
+            self._bits &= ~(1 << position)
+
+    def _get_bit(self, position):
+        return (self._bits >> position) & 1
+
+    @property
+    def texture_mapping_repetition(self):
+        return self._get_bit(0)
+
+    @texture_mapping_repetition.setter
+    def texture_mapping_repetition(self, value):
+        self._set_bit(0, value)
+
+    @property
+    def texture_transparency_mode(self):
+        return self._get_bit(1)
+
+    @texture_transparency_mode.setter
+    def texture_transparency_mode(self, value):
+        self._set_bit(1, value)
+
+    @property
+    def specular_reflection(self):
+        return self._get_bit(2)
+
+    @specular_reflection.setter
+    def specular_reflection(self, value):
+        self._set_bit(2, value)
+
+    @property
+    def normal_mapping(self):
+        return self._get_bit(3)
+
+    @normal_mapping.setter
+    def normal_mapping(self, value):
+        self._set_bit(3, value)
+
+    @property
+    def emission(self):
+        return self._get_bit(4)
+
+    @emission.setter
+    def emission(self, value):
+        self._set_bit(4, value)
+
+    @property
+    def double_sided_rendering(self):
+        return self._get_bit(5)
+
+    @double_sided_rendering.setter
+    def double_sided_rendering(self, value):
+        self._set_bit(5, value)
+
+    @property
+    def alpha_blending(self):
+        return self._get_bit(6)
+
+    @alpha_blending.setter
+    def alpha_blending(self, value):
+        self._set_bit(6, value)
+
+    @property
+    def ambient_occlusion(self):
+        return self._get_bit(7)
+
+    @ambient_occlusion.setter
+    def ambient_occlusion(self, value):
+        self._set_bit(7, value)
+
+    def get_value(self):
+        return self._bits
 
 import random
 import string

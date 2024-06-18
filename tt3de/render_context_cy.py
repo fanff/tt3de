@@ -89,12 +89,12 @@ class CyRenderContext:
         if w * h > 0:
             # the depth array with empty version
             self.drawing_buffer = DrawingBuffer(w, h)
-            self.drawing_buffer.set_bit_reduction([4]*6)
+            self.drawing_buffer.set_bit_reduction([6]*6)
             self.auto_buffer = {}
             self.drawing_buffer.hard_clear(float("inf"))
         else:
             self.drawing_buffer = DrawingBuffer(3, 3)
-            self.drawing_buffer.set_bit_reduction([4]*6)
+            self.drawing_buffer.set_bit_reduction([7]*6)
             self.auto_buffer = {}
             self.drawing_buffer.hard_clear(float("inf"))
 

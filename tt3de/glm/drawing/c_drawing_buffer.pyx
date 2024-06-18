@@ -22,8 +22,6 @@ cdef class DrawingBuffer:
     def __cinit__(self, int width,int height):
         cdef int _size = width*height
         
-        self.style_array = [Style() for i in range(width*height)]
-        print(type(self.style_array))
         self._raw_data = <s_drawbuffer_cell*>malloc(_size * sizeof(s_drawbuffer_cell))
         if not self._raw_data:
             raise MemoryError("Failed to allocate depth buffer.")
@@ -51,11 +49,11 @@ cdef class DrawingBuffer:
 
 
 
-    cpdef int hash_value(self, list value):
+    cpdef long hash_value(self, list value):
         cdef unsigned char [8] v
         for i in range(8):
             v[i] = value[i]
-        return hash_function(v,self.bit_reductions)
+        return <long> hash_function(v,self.bit_reductions)
     cdef unsigned char* aleph(self,int index):
         return &(self.canvas[index].aleph[0])
 
@@ -168,29 +166,6 @@ cdef class DrawingBuffer:
         ]
         return rlist
 
-    cpdef list canvas_to_list_ofstyled(self):
-        cdef list ret = []
-
-        cdef list row = []
-        cdef int idx
-        cdef char[8] aaa
-        cdef unsigned char b 
-        cdef unsigned char gidx 
-
-        for idx in range (self.size):
-            
-            aaa = (self.canvas[idx]).aleph
-            c1 = Color.from_triplet(ColorTriplet(<int>aaa[0],<int>aaa[1],<int>aaa[2]))
-            c2 = Color.from_triplet(ColorTriplet(<int>aaa[3],<int>aaa[4],<int>aaa[5]))
-
-            asetyle = self.style_array[idx]
-            asetyle._color =c1
-            asetyle._bgcolor=c2
-
-
-            ret.append((asetyle,int(aaa[6]),int(aaa[7])))
-        return ret
-
     cpdef list canvas_to_list(self):
         #cdef unsigned char [6] bit_reductions= [4,5,6,4,5,6]
         cdef list ret = []
@@ -217,65 +192,46 @@ cdef class DrawingBuffer:
         cdef list current_line = []
         cdef int idx
 
-        cdef unsigned int hashvalue 
+        cdef unsigned long long hashvalue 
 
         cdef unsigned char current_elem[8]
 
-        cdef int curr_x = 0
-        cdef int curr_y = 0
+        cdef int curr_x = minx
+        cdef int curr_y = miny
         cdef int max_x = minx + width
         cdef int max_y = miny + height
-        cdef int last_processed_line = 0
-        for idx in range (self.size):
 
-            current_elem = (self._raw_canvas[idx].aleph)
+        for curr_y in range(miny,max_y):
+            current_line = []
+            for curr_x in range (minx,max_x):
+                idx = curr_y*self.width + curr_x
 
-            hashvalue = hash_function((current_elem) , self.bit_reductions)
+                current_elem = (self._raw_canvas[idx].aleph)
+
+                hashvalue = hash_function((current_elem) , self.bit_reductions)
+                        
+                        
+                asegment = cache_.get(hashvalue, None)
+                if asegment is None:
+                    asegment = Segment(
+                        allchars[<int> ( current_elem[7] )],
+                        Style(
+                            color=Color.from_triplet(ColorTriplet(
+                                                    <int> ( current_elem[0] ),
+                                                    <int> ( current_elem[1] ),
+                                                    <int> ( current_elem[2] ))),
+                            bgcolor=Color.from_triplet(ColorTriplet(
+                                                    <int> ( current_elem[3] ),
+                                                    <int> ( current_elem[4] ),
+                                                    <int> ( current_elem[5] ),
+                            )),
+                        ),
+                    )
+
+                    cache_[hashvalue] = asegment
+                current_line.append(asegment)
             
-            curr_x = idx % self.width
-            curr_y = idx // self.width
-            
-            if curr_x < minx or curr_x > max_x or curr_y < miny or curr_y > max_y:
-                continue  # skip this
-            if curr_y > last_processed_line:
-                last_processed_line = curr_y
-
-                ret.append(Strip(current_line))
-
-                current_line = []
-                
-            # current_line.append([
-            #     <int> ( current_elem[0] ),
-            #     <int> ( current_elem[1] ),
-            #     <int> ( current_elem[2] ),
-            #     <int> ( current_elem[3] ),
-            #     <int> ( current_elem[4] ),
-            #     <int> ( current_elem[5] ),
-            #     <int> ( current_elem[6] ),
-            #     <int> ( current_elem[7] ),
-            #     <int> hashvalue
-            # 
-            # ])
-            asegment = cache_.get(hashvalue, None)
-            if asegment is None:
-                asegment = Segment(
-                    allchars[<int> ( current_elem[7] )],
-                    Style(
-                        color=Color.from_triplet(ColorTriplet(
-                                                <int> ( current_elem[0] ),
-                                                <int> ( current_elem[1] ),
-                                                <int> ( current_elem[2] ))),
-                        bgcolor=Color.from_triplet(ColorTriplet(
-                                                <int> ( current_elem[3] ),
-                                                <int> ( current_elem[4] ),
-                                                <int> ( current_elem[5] ),
-                        )),
-                    ),
-                )
-
-                cache_[hashvalue] = asegment
-            current_line.append(asegment)
-        ret.append(Strip(current_line))
+            ret.append(Strip(current_line))
         return ret
 
 
@@ -410,7 +366,7 @@ cdef void set_canvas_content(s_canvas_cell* the_raw_array,
 
 
 
-cdef unsigned int hash_function(unsigned char nums[8], unsigned char bit_reductions[6]):
+cdef unsigned long long hash_function(unsigned char nums[8], unsigned char bit_reductions[6]):
     """
     :param nums: An array of 8 unsigned char values to be hashed.
     :param bit_reductions: An array of 6 unsigned char values specifying the number of bits to retain for the first 6 elements of nums.
@@ -422,7 +378,7 @@ cdef unsigned int hash_function(unsigned char nums[8], unsigned char bit_reducti
 
     The resulting hash value is a unique positive integer derived from the provided nums and bit_reductions.
     """
-    cdef unsigned int hash_value = 0
+    cdef unsigned long long hash_value = 0
     cdef int i
 
     # Iterate over the first 6 elements of nums

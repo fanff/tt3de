@@ -3,7 +3,7 @@ from tt3de.asset_load import load_bmp, load_obj, read_file
 
 from tt3de.richtexture import ImageTexture
 from tt3de.tt3de import Point2D, Point3D, Triangle3D
-from tt3de.utils import TT3DEMaterialMode
+from tt3de.utils import TT3DEMaterialMode, TT3DEMaterialTextureMappingOptions
 
 
 def fast_load(obj_file: str, cls=None):
@@ -167,13 +167,19 @@ class MaterialPerfab:
         mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
         mat2.set_glyph(0, 157)
         mat2.set_texture_ids([3, -1, -1])
+        mops = TT3DEMaterialTextureMappingOptions()
+        mops.texture_mapping_repetition = 1
+        mat2.set_texture_mapping_options(mops.get_value())
         material_buffer.add_material(mat2)
+
+
+
 
         return texture_array, material_buffer
     
 
 
-    
+
 class Prefab2D:
 
     @staticmethod

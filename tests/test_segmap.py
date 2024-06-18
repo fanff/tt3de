@@ -86,22 +86,3 @@ def test_bench_to_textual_method2(benchmark, size):
     benchmark(method_2, drawing_buffer, big_buffer, allchars)
 
 
-def method_3(
-    drawing_buffer,
-):
-    # canvas_data = drawing_buffer.canvas_to_list()
-    segs = []
-    for asetyle, g1, g2 in drawing_buffer.canvas_to_list_ofstyled():
-        asegment = Segment(" ", asetyle)
-        segs.append(asegment)
-    Strip(segs)
-
-
-@pytest.mark.parametrize("size", sizes)
-@pytest.mark.benchmark(group="to_textual")
-def test_bench_to_textual_method3(benchmark, size):
-    drawing_buffer = DrawingBuffer(size, size)
-    drawing_buffer.hard_clear(100)
-    benchmark(method_3, drawing_buffer)
-
-

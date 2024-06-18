@@ -41,13 +41,19 @@ cdef class TextureArray:
         <int> g,
         <int> b]
 
-    def load_texture256_from_list(self, list data):
+    def load_texture256_from_list(self, list data, int tr_r=0,int tr_g=0, int tr_b=0):
 
         cdef int in_width = len(data[0])
         cdef int in_height = len(data)
         cdef s_texture256 *atexture256 = <s_texture256*> self.raw_array.current_pointer 
         atexture256.width = in_width
         atexture256.height = in_height
+
+        atexture256.tr_r=tr_r
+        atexture256.tr_g=tr_g
+        atexture256.tr_b=tr_b
+
+
         for i in range(in_height):
             for j in range(in_width):
                 atexture256.data[i][j][0] = data[i][j][0]

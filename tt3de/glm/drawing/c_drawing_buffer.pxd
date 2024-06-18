@@ -23,14 +23,12 @@ ctypedef packed struct s_drawbuffer_cell:
 cdef class DrawingBuffer:
     cdef s_canvas_cell[:] canvas
     cdef s_canvas_cell* _raw_canvas
-    cdef list style_array
 
     cdef s_drawbuffer_cell[:] drawbuffer
     cdef s_drawbuffer_cell* _raw_data
     cdef int size
     cdef int width
     cdef int height
-
 
     cdef unsigned char [6] bit_reductions
 
@@ -39,9 +37,11 @@ cdef class DrawingBuffer:
     cdef s_canvas_cell* get_raw_canvas_buffer(self)
     cdef inline int linear_idx(self,int xi,int yi)
     
-    cpdef set_bit_reduction(self, list params)
-    cpdef int hash_value(self, list value)
 
+    cpdef set_bit_reduction(self, list params)
+    
+    
+    cpdef long hash_value(self, list value)
 
     cdef unsigned int get_width(self)
     cdef unsigned int get_height(self)
@@ -75,7 +75,6 @@ cdef class DrawingBuffer:
     
 
     cpdef list canvas_to_list(self)
-    cpdef list canvas_to_list_ofstyled(self)
     cpdef list canvas_to_list_hashed(self,int minx,int miny,int width,int height,dict cache_,list allchars)
     cpdef list drawbuffer_to_list(self)
 

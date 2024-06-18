@@ -3,7 +3,7 @@ from tt3de.glm.primitives.primitives cimport s_drawing_primitive
 
 from tt3de.glm.drawing.c_drawing_buffer cimport set_depth_content,set_depth_content_with_alts
 
-from libc.math cimport fabs,sqrt
+from libc.math cimport fabs,sqrt,floor
 
 
 cdef int min3int(int a, int b, int c) noexcept nogil:
@@ -90,16 +90,16 @@ cdef void raster_triangle(s_drawing_primitive* dprim,
     # // Clip against screen bounds
     minX = max3int(minX,minX, 0);
     minY = max3int(minY,minY, 0);
-    maxX = min3int(maxX,maxX, screenWidth - 1);
-    maxY = min3int(maxY,maxY, screenHeight - 1);
+    maxX = min3int(maxX,maxX, screenWidth );
+    maxY = min3int(maxY,maxY, screenHeight );
 
 
     # // Rasterize
     #for (py = minY; py <= maxY; py++) {
     py = minY
-    while py<=maxY:
+    while py<maxY:
         px = minX
-        while px<=maxX:
+        while px<maxX:
         # for (px = minX; px <= maxX; px++) {
             #// Determine barycentric coordinates
             w0 = orient2di(bxi,byi, cxi,cyi, px,py);
@@ -163,12 +163,12 @@ cdef void raster_triangle_double_weights(s_drawing_primitive* dprim,
     # with a dummy version of two pixel at once, 
 
 
-    cdef int axi = <int> dprim.mat[0][0]
-    cdef int ayi = <int> dprim.mat[1][0]
-    cdef int bxi = <int> dprim.mat[0][1]
-    cdef int byi = <int> dprim.mat[1][1]
-    cdef int cxi = <int> dprim.mat[0][2]
-    cdef int cyi = <int> dprim.mat[1][2]
+    cdef int axi = <int> floor(dprim.mat[0][0])
+    cdef int ayi = <int> floor(dprim.mat[1][0])
+    cdef int bxi = <int> floor(dprim.mat[0][1])
+    cdef int byi = <int> floor(dprim.mat[1][1])
+    cdef int cxi = <int> floor(dprim.mat[0][2])
+    cdef int cyi = <int> floor(dprim.mat[1][2])
     
     cdef int px
     cdef int py
@@ -205,16 +205,16 @@ cdef void raster_triangle_double_weights(s_drawing_primitive* dprim,
     # // Clip against screen bounds
     minX = max3int(minX,minX, 0);
     minY = max3int(minY,minY, 0);
-    maxX = min3int(maxX,maxX, screenWidth - 1);
-    maxY = min3int(maxY,maxY, screenHeight - 1);
+    maxX = min3int(maxX,maxX, screenWidth );
+    maxY = min3int(maxY,maxY, screenHeight );
 
 
     # // Rasterize
     #for (py = minY; py <= maxY; py++) {
     py = minY
-    while py<=maxY:
+    while py<maxY:
         px = minX
-        while px<=maxX:
+        while px<maxX:
         # for (px = minX; px <= maxX; px++) {
             #// Determine barycentric coordinates
             w0 = orient2di(bxi,byi, cxi,cyi, px,py);

@@ -58,7 +58,7 @@ cdef class Material:
         self.glyph_b = 0
 
         self.texture_id_array = [-1,-1,-1,-1,-1,-1,-1,-1]
-
+        self.texture_mapping_options = 0
 
     cdef void _rgb_uv_map(self,int texture_id, int index, unsigned char* r, unsigned char* g, unsigned char* b):
         self.texts[texture_id]._get_at(index,r,g,b)
@@ -101,6 +101,9 @@ cdef class Material:
         """set glyph"""
         self.glyph_a = glyph_a
         self.glyph_b = glyph_b
+    cpdef void set_texture_mapping_options(self,unsigned char opts):
+        self.texture_mapping_options = opts
+
 
     def set_texture_ids(self, list values):
         for i,v in enumerate(values):
@@ -122,9 +125,10 @@ cdef class MaterialBuffer:
         addElement(&self.material_raw_buff , &a)
 
     cpdef void add_material(self,Material material):
-
+        
         cdef s_material amat = s_material(texturemode=material.texturemode,
             texturemode=material.texturemode,
+            texture_mapping_options = material.texture_mapping_options,
             albedo_front_r=material.albedo_front_r,
             albedo_front_g=material.albedo_front_g,
             albedo_front_b=material.albedo_front_b,
@@ -454,9 +458,13 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     # get the texture
     cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
     
-    map_uv_repeat(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
-    map_uv_repeat(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
-
+    
+    if (material.texture_mapping_options & 1):
+        map_uv_repeat(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
+        map_uv_repeat(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
+    else:
+        map_uv_clamp(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
+        map_uv_clamp(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
     # set the glyph id
     aleph[6] = material.glyph_a 
     aleph[7] = material.glyph_b 
