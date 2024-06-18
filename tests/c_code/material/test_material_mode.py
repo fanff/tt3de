@@ -131,6 +131,7 @@ class Test_Static_Mode(unittest.TestCase):
         # the 1 material is in mode 3, its a ... static color map back albedo
         settings = {
             "texturemode": 3,
+            "texture_mapping_options": 0,
             "albedo_front_r": 1,
             "albedo_front_g": 2,
             "albedo_front_b": 3,

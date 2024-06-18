@@ -46,6 +46,7 @@ class Test_MaterialBuffer(unittest.TestCase):
         # mb.add_material(Material())
         settings = {
             "texturemode": 1,
+            "texture_mapping_options":0,
             "albedo_front_r": 1,
             "albedo_front_g": 2,
             "albedo_front_b": 3,
@@ -64,6 +65,7 @@ class Test_MaterialBuffer(unittest.TestCase):
 
         settings2 = {
             "texturemode": 3,
+            "texture_mapping_options":0,
             "albedo_front_r": 11,
             "albedo_front_g": 12,
             "albedo_front_b": 13,
@@ -88,6 +90,7 @@ class Test_MaterialBuffer(unittest.TestCase):
         # mb.add_material(Material())
         settings = {
             "texturemode": 1,
+            "texture_mapping_options":0,
             "albedo_front_r": 1,
             "albedo_front_g": 2,
             "albedo_front_b": 3,

@@ -30,9 +30,15 @@ DEF TT3DE_MATERIAL_MODE_UV_MAPPING_TEXT1 = 10
 DEF TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_WEIGHT = 11
 DEF TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_UV_MAP = 12
 DEF TT3DE_MATERIAL_MODE_DOUBLE_UV_MAP = 13
-
-
 DEF TT3DE_MATERIAL_MODE_DOUBLE_PERLIN_NOISE = 14
+
+
+DEF TT3DE_TEXTURE_MAPPING_OPTION_REPEAT = 1
+DEF TT3DE_TEXTURE_MAPPING_OPTION_TRANSPARENCY = 2
+
+
+
+
 
 DEF CONSTANT_A_THIRD = 1.0/3.0
 DEF CONSTANT_TWO_THIRD = 2.0/3.0
@@ -459,7 +465,7 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
     
     
-    if (material.texture_mapping_options & 1):
+    if (material.texture_mapping_options & TT3DE_TEXTURE_MAPPING_OPTION_REPEAT):
         map_uv_repeat(thetexture,u,v,&(aleph[0]),&(aleph[1]),&(aleph[2]))
         map_uv_repeat(thetexture,u_alt,v_alt,&(aleph[3]),&(aleph[4]),&(aleph[5]))
     else:

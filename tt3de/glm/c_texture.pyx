@@ -134,8 +134,6 @@ cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsig
     cdef int wi = <int> ( texture.width * max(0.0, min(0.9999, u))   )
     cdef int hi = <int> ( texture.height * max(0.0, min(0.9999, v))   )
 
-
-
     r[0] = texture.data[hi][wi][0]
     g[0] = texture.data[hi][wi][1]
     b[0] = texture.data[hi][wi][2]
@@ -146,8 +144,6 @@ cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsi
     cdef float one = 1.0
     cdef float modu = modff(fabsf(u),&one)
     cdef float modv = modff(fabsf(v),&one)
-
-
     cdef int wi = <int> ( (<float>(texture.width )) * modu)  
     cdef int hi = <int> ( (<float>(texture.height)) * modv)   
 
@@ -155,6 +151,23 @@ cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsi
     g[0] = texture.data[hi][wi][1]
     b[0] = texture.data[hi][wi][2]
 
+cdef void map_uv_rere(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
+    cdef float one = 1.0
+    cdef float modu = modff(fabsf(u),&one)
+    cdef float modv = modff(fabsf(v),&one)
+    cdef int wi = <int> ( (<float>(texture.width )) * modu)  
+    cdef int hi = <int> ( (<float>(texture.height)) * modv)   
+
+    cdef unsigned char on_text_r = texture.data[hi][wi][0]
+    cdef unsigned char on_text_g = texture.data[hi][wi][1]
+    cdef unsigned char on_text_b = texture.data[hi][wi][2]
+
+    if on_text_r == texture.tr_r and on_text_g == texture.tr_g and on_text_b == texture.tr_b:
+        pass
+    else:
+        r[0] = texture.data[hi][wi][0]
+        g[0] = texture.data[hi][wi][1]
+        b[0] = texture.data[hi][wi][2]
 
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):
