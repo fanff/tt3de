@@ -40,8 +40,5 @@ cdef class Texture2D:
     cpdef tuple get_pixel_uv(self, double u, double v)
     cpdef void set_pixel_uv(self, double u, double v, unsigned char r, unsigned char g, unsigned char b)
 
-cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
-
-cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
-
-
+cdef void map_uv_generic(s_texture256* texture,const int repeat, const int transparency, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
+cdef void calc_uv( const int repeat, const int width, const int height, const float u, const float v, int* wi,int* hi) noexcept nogil

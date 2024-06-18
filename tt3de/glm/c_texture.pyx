@@ -31,11 +31,10 @@ cdef class TextureArray:
         cdef unsigned char r = 0
         cdef unsigned char g = 0
         cdef unsigned char b = 0
+        cdef int use_repeat = 1 if repeat else 0
+        cdef int use_transp = 0
 
-        if repeat:
-            map_uv_repeat(atext,u,v,&r,&g,&b)
-        else:
-            map_uv_clamp(atext,u,v,&r,&g,&b)
+        map_uv_generic(atext,use_repeat,use_transp, u,v,&r,&g,&b)
 
         return [<int> r,
         <int> g,
@@ -130,44 +129,43 @@ cdef class Texture2D:
     
 
 ####################
-cdef void map_uv_clamp(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
-    cdef int wi = <int> ( texture.width * max(0.0, min(0.9999, u))   )
-    cdef int hi = <int> ( texture.height * max(0.0, min(0.9999, v))   )
-
-    r[0] = texture.data[hi][wi][0]
-    g[0] = texture.data[hi][wi][1]
-    b[0] = texture.data[hi][wi][2]
 
 
-cdef void map_uv_repeat(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
-
+cdef void calc_uv( const int repeat, const int width, const int height, const float u, const float v, int* wi,int* hi) noexcept nogil:
     cdef float one = 1.0
-    cdef float modu = modff(fabsf(u),&one)
-    cdef float modv = modff(fabsf(v),&one)
-    cdef int wi = <int> ( (<float>(texture.width )) * modu)  
-    cdef int hi = <int> ( (<float>(texture.height)) * modv)   
+    if repeat==1:
+        wi[0] = <int> ( (<float>(width )) * modff(fabsf(u),&one))  
+        hi[0] = <int> ( (<float>(height)) * modff(fabsf(v),&one))   
+    else:
+        wi[0] = <int> ( (<float> width ) * max(0.0, min(0.9999, u))   )
+        hi[0] = <int> ( (<float> height) * max(0.0, min(0.9999, v))   )
 
-    r[0] = texture.data[hi][wi][0]
-    g[0] = texture.data[hi][wi][1]
-    b[0] = texture.data[hi][wi][2]
 
-cdef void map_uv_rere(s_texture256* texture, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
-    cdef float one = 1.0
-    cdef float modu = modff(fabsf(u),&one)
-    cdef float modv = modff(fabsf(v),&one)
-    cdef int wi = <int> ( (<float>(texture.width )) * modu)  
-    cdef int hi = <int> ( (<float>(texture.height)) * modv)   
+cdef void map_uv_generic(s_texture256* texture,const int repeat, const int transparency, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
+    
+    
+    cdef int wi 
+    cdef int hi 
 
-    cdef unsigned char on_text_r = texture.data[hi][wi][0]
-    cdef unsigned char on_text_g = texture.data[hi][wi][1]
-    cdef unsigned char on_text_b = texture.data[hi][wi][2]
+    cdef unsigned char on_text_r 
+    cdef unsigned char on_text_g 
+    cdef unsigned char on_text_b 
 
-    if on_text_r == texture.tr_r and on_text_g == texture.tr_g and on_text_b == texture.tr_b:
+
+    calc_uv(repeat,texture.width,texture.height,u,v,&wi,&hi)
+    
+    
+    on_text_r = texture.data[hi][wi][0]
+    on_text_g = texture.data[hi][wi][1]
+    on_text_b = texture.data[hi][wi][2]
+
+
+    if transparency==1 and (on_text_r == texture.tr_r and on_text_g == texture.tr_g and on_text_b == texture.tr_b):
         pass
     else:
-        r[0] = texture.data[hi][wi][0]
-        g[0] = texture.data[hi][wi][1]
-        b[0] = texture.data[hi][wi][2]
+        r[0] = on_text_r 
+        g[0] = on_text_g 
+        b[0] = on_text_b 
 
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):
