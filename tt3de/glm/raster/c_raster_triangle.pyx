@@ -1,7 +1,7 @@
 from tt3de.glm.drawing.c_drawing_buffer cimport s_drawbuffer_cell
 from tt3de.glm.primitives.primitives cimport s_drawing_primitive
 
-from tt3de.glm.drawing.c_drawing_buffer cimport set_depth_content,set_depth_content_with_alts
+from tt3de.glm.drawing.c_drawing_buffer cimport set_depth_content
 
 from libc.math cimport fabs,sqrt,floor
 
@@ -39,6 +39,7 @@ cdef void set_pixel(s_drawing_primitive* dprim,
 
     set_depth_content(the_raw_array, screenWidth, px,py, 
             depth, w0/ sss,w1/ sss,w2/ sss,  
+            0.0,0.0,0.0,
             dprim.node_id,  # pass node_id
             dprim.geometry_id, # pass geom 
             dprim.material_id,
@@ -126,7 +127,7 @@ cdef void set_pixel_double_weights(s_drawing_primitive* dprim,
     cdef float sss_alt = w0_alt+w1_alt+w2_alt
 
 
-    set_depth_content_with_alts(the_raw_array, screenWidth, px,py, 
+    set_depth_content(the_raw_array, screenWidth, px,py, 
             depth, 
             w0/ sss,
             w1/ sss,

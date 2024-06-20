@@ -1,8 +1,8 @@
 
 
 ctypedef packed struct s_geometry:
-    unsigned char geom_type # 0 is point, 1 is line , 2 is triangle
-    
+    unsigned char geom_type # 0 is point, 1 is line , 2 is triangle , 3 is polygon
+    int polygon_count
     # 3 points in 3d ..
     float ax
     float ay 
@@ -21,17 +21,6 @@ ctypedef packed struct s_geometry:
 
     int node_id
     int material_id
-
-
-cdef inline void get_uv_from_layer_direct(s_geometry* geom, int layer_idx, int point_idx, float* output):
-    # grab the uv coordinates into a float[2] array.
-    # point_idx is 0,1,2 to match with abc  
-    
-    # Calculate the starting index for the requested UV coordinates in the uv_array
-    cdef int start_index = (layer_idx * 6) + (point_idx * 2)
-    # Write U and V values directly to output
-    output[0] = geom.uv_array[start_index]
-    output[1] = geom.uv_array[start_index + 1]
 
 
 cdef class GeometryBuffer:
@@ -57,4 +46,7 @@ cdef class GeometryBuffer:
         
 
     cpdef add_triangle_to_buffer(self, list point_a, list point_b, list point_c, list uv_list, int node_id, int material_id)
+    
+    cpdef add_polygon_to_buffer(self,list vertex,list face_uvs, int node_id, int material_id)
+
     

@@ -260,29 +260,24 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_all(primitive_buffer, drawing_buffer, MaterialBuffer())
 
-        depth_buffer_list = drawing_buffer.drawbuffer_to_list()
 
-        elem_of_dephtbuffer = depth_buffer_list[0]
-
-        (
-            depth,
-            wa,
-            wb,
-            wc,
-            node_id_out,
-            geom_id_out_out,
-            material_id_out,
-            primitiv_id,
-        ) = elem_of_dephtbuffer
-        self.assertEqual(depth, 1.0)  # depth is set correctly; as expected.
-        self.assertEqual(wa, 1.0)  # weights is calculated
-        self.assertEqual(wb, 0.0)
-        self.assertEqual(wc, 0.0)
-
-        self.assertEqual(node_id_out, node_id)
-        self.assertEqual(geom_id_out_out, geom_id)
-        self.assertEqual(material_id_out, material_id)
-        self.assertEqual(primitiv_id, 0)
+        elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 0 , layer=0)
+        
+        
+        self.assertEqual(elem_of_dephtbuffer, {
+                "depth_value": 1.0,
+                "w1": 1.0,
+                "w2": 0.0,
+                "w3": 0.0,
+                "w1_alt": 0.5,
+                "w2_alt": 0.5,
+                "w3_alt": 0.0,
+                "primitiv_id": 0,
+                "geom_id": geom_id,
+                "node_id": node_id,
+                "material_id": material_id,
+            })  # depth is set correctly; as expected.
+        
 
     def test_raster_one_point_Yside(self):
 
@@ -303,7 +298,7 @@ class Test_RasterAll_point(unittest.TestCase):
 
         raster_all(primitive_buffer, drawing_buffer, MaterialBuffer())
 
-        elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 0)
+        elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 0, layer=0)
         print(elem_of_dephtbuffer)
         self.assertEqual(
             elem_of_dephtbuffer["depth_value"], 1000.0
@@ -319,8 +314,8 @@ class Test_RasterAll_point(unittest.TestCase):
         self.assertEqual(elem_of_dephtbuffer["material_id"], 0)
         self.assertEqual(elem_of_dephtbuffer["primitiv_id"], 0)
 
-        # the point on the side
-        elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 1)
+        # the point on the sidethis should be the point we want to raster 
+        elem_of_dephtbuffer = drawing_buffer.get_depth_buff_content(0, 1, layer=0)
         self.assertEqual(
             elem_of_dephtbuffer["depth_value"], 1.0
         )  # depth is set correctly; as expected.

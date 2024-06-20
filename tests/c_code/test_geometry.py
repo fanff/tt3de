@@ -16,7 +16,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer = GeometryBuffer(10)
         self.assertEqual(geom_buffer.geometry_count(), 0)
         x, y, z = 1.0, 2.0, 3.0
-        uv_array = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        uv_array = [0.1, 0.2]*16
         node_id = 100
         material_id = 200
         geom_buffer.add_point_to_buffer(x, y, z, uv_array, node_id, material_id)
@@ -58,13 +58,43 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
+
+    def test_add_polygon(self):
+        """Test adding a triangle and verify its addition to the buffer."""
+        geom_buffer = GeometryBuffer(10)
+        point_a = [0, 0, 0]
+        point_b = [1, 0, 0]
+        point_c = [0, 1, 0]
+        point_d = [1, 1, 0]
+
+        uv_array_face1 = [0.1] * 48
+        uv_array_face2 = [0.1] * 48
+
+        node_id = 102
+        material_id = 202
+
+        vertex = [point_a,point_b,point_c , point_d]
+        uv_array = [uv_array_face1,uv_array_face2]
+
+        geom_buffer.add_polygon_to_buffer(
+            vertex, uv_array, node_id, material_id
+        )
+
+        self.assertEqual(geom_buffer.geometry_count(), 1)
+
+        geom_buffer.clear()
+        self.assertEqual(geom_buffer.geometry_count(), 0)
+
+
+
+        
     def test_buffer_overflow(self):
         """Test it does not crash and ignore stuff"""
         geom_buffer = GeometryBuffer(
             10
         )  # Start with a small buffer size to test resizing
         for i in range(100):  # Add more items than the initial size
-            geom_buffer.add_point_to_buffer(0, 0, 0, [0.1] * 8, 100, 200)
+            geom_buffer.add_point_to_buffer(0, 0, 0, [0.1,0.1] * 16, 100, 200)
 
         self.assertEqual(geom_buffer.geometry_count(), 10)
         geom_buffer.clear()

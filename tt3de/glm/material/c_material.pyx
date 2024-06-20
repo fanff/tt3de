@@ -1,5 +1,12 @@
 
+
+
+
+from libc.math cimport modff,fabsf
+from tt3de.glm.c_math cimport clampf
+
 from tt3de.glm.drawing.c_drawing_buffer cimport DrawingBuffer,s_drawbuffer_cell,s_canvas_cell
+
 
 from tt3de.glm.c_texture cimport Texture2D,TextureArray,s_texture_array,s_texture256,map_uv_generic
 from tt3de.glm.primitives.primitives cimport PrimitivesBuffer,s_drawing_primitive
@@ -37,11 +44,16 @@ DEF TT3DE_TEXTURE_MAPPING_OPTION_REPEAT = 1
 DEF TT3DE_TEXTURE_MAPPING_OPTION_TRANSPARENCY = 2
 
 
-
-
+DEF TT3DE_APPLY_FRONT_DONE = 1
+DEF TT3DE_APPLY_BACK_DONE = 2
+DEF TT3DE_APPLY_GLYPH_DONE = 4
+DEF TT3DE_APPLY_ALL_DONE = 7
 
 DEF CONSTANT_A_THIRD = 1.0/3.0
 DEF CONSTANT_TWO_THIRD = 2.0/3.0
+
+DEF DEPTH_BUFFER_COUNT = 2
+
 
 
 cdef class Material:
@@ -165,8 +177,8 @@ cpdef void apply_pixel_shader(
     GeometryBuffer geometry_buffer,
     TextureArray texture_array_object):
     
-    cdef unsigned int drawing_buffer_width = drawing_buffer.get_width()
-    cdef unsigned int drawing_buffer_height = drawing_buffer.get_height()
+    cdef int drawing_buffer_width = drawing_buffer.get_width()
+    cdef int drawing_buffer_height = drawing_buffer.get_height()
     
     cdef s_drawbuffer_cell* depth_buffer_raw = drawing_buffer.get_raw_depth_buffer()
     cdef s_canvas_cell* canvas_buffer_raw = drawing_buffer.get_raw_canvas_buffer()
@@ -182,7 +194,6 @@ cpdef void apply_pixel_shader(
 
     
     _apply_pixel_shader(  primitive_array_buffer  ,
-            #drawing_buffer,
             depth_buffer_raw,
             canvas_buffer_raw,
             material_buffer_raw,
@@ -199,8 +210,8 @@ cdef void _apply_pixel_shader(
     s_buffer* material_buffer_raw,
     s_geometry* gemoetry_buffer_raw  ,
     s_texture_array* texture_array,
-    unsigned int drawing_buffer_width ,
-    unsigned int drawing_buffer_height    ) noexcept nogil:
+    int drawing_buffer_width ,
+    int drawing_buffer_height    ) noexcept nogil:
 
     cdef int xi = 0
     cdef int yi = 0 
@@ -214,59 +225,59 @@ cdef void _apply_pixel_shader(
 
     cdef s_material* anymat
 
+
+    cdef int apply_finished = 0
+    cdef int depth_layer = DEPTH_BUFFER_COUNT-1
     for yi in range(drawing_buffer_height):
         for xi in range(drawing_buffer_width):
+            aleph = canvas_buffer_raw[idx].aleph
+            while depth_layer >= 0:
 
-            #idx = (yi*drawing_buffer_width)+xi # drawing_buffer.linear_idx(xi,yi)
-            
-            #aleph = drawing_buffer.aleph(idx)
-            aleph = &(canvas_buffer_raw[idx].aleph[0])
+                thecell = &(depth_buffer_raw[ (idx * DEPTH_BUFFER_COUNT) + depth_layer])
+                # grabing the geometry element
+                the_geom =  &(gemoetry_buffer_raw[thecell.geom_id]);
+                # grabing the generated primitive quickly 
+                aprimitiv = <s_drawing_primitive* > ((<char*> ((primitive_array_buffer).data)) + sizeof(s_drawing_primitive) * thecell.primitiv_id )
 
-            thecell = &(depth_buffer_raw[idx])
-            # grabing the geometry element
-            the_geom =  &(gemoetry_buffer_raw[thecell.geom_id]);
-            # grabing the generated primitive quickly 
-            aprimitiv = <s_drawing_primitive* > ((<char*> ((primitive_array_buffer).data)) + sizeof(s_drawing_primitive) * thecell.primitiv_id )
+                anymat = <s_material* > ((<char*> ((material_buffer_raw).data)) + sizeof(s_material) * thecell.material_id )
 
-
-            anymat = <s_material* > ((<char*> ((material_buffer_raw).data)) + sizeof(s_material) * thecell.material_id )
-
-
-            #material = material_buffer.get_material(thecell.material_id)
-            some_kind_ofapply(anymat,aleph, thecell, aprimitiv, the_geom, texture_array)
-
+                some_kind_ofapply(anymat,aleph, thecell, aprimitiv, the_geom, texture_array , &apply_finished)
+                depth_layer = depth_layer - 1
+                                
             idx+=1
-
+            apply_finished = 0
+            depth_layer = DEPTH_BUFFER_COUNT-1
 
 cdef void some_kind_ofapply(s_material* material,
                 unsigned char *aleph, 
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture_array* texture_array) noexcept nogil:
+                s_texture_array* texture_array,
+                int* apply_finished) noexcept nogil:
     cdef int i
     cdef float afloat
-    
-
 
     if material.texturemode == TT3DE_MATERIAL_MODE_DEBUG:
         for i in range(8):
             aleph[i] = i
-         
+        apply_finished[0] = TT3DE_APPLY_ALL_DONE;
     elif material.texturemode == TT3DE_MATERIAL_MODE_STATIC_FRONT_ALBEDO:
         aleph[0] = material.albedo_front_r
         aleph[1] = material.albedo_front_g
         aleph[2] = material.albedo_front_b
-         
+        apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_FRONT_DONE
+    
     elif material.texturemode == TT3DE_MATERIAL_MODE_STATIC_BACK_ALBEDO:
         aleph[3] = material.albedo_back_r
         aleph[4] = material.albedo_back_g
         aleph[5] = material.albedo_back_b
-
+        apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_BACK_DONE
+    
     elif material.texturemode == TT3DE_MATERIAL_MODE_STATIC_GLYPH:
         aleph[6] = material.glyph_a 
         aleph[7] = material.glyph_b 
-
+        apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_GLYPH_DONE
 
     elif material.texturemode == TT3DE_MATERIAL_MODE_STATIC_ALL:
         aleph[0] = material.albedo_front_r
@@ -279,20 +290,32 @@ cdef void some_kind_ofapply(s_material* material,
 
         aleph[6] = material.glyph_a 
         aleph[7] = material.glyph_b 
+
+        apply_finished[0] = TT3DE_APPLY_ALL_DONE;
+
+
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_WEIGHTS:
         
-        aleph[3] = <int>abs(thecell.w1 * 255)#material.albedo_back_r
-        aleph[4] = <int>abs(thecell.w2 * 255)#material.albedo_back_g
-        aleph[5] = <int>abs(thecell.w3 * 255)#material.albedo_back_b
+        aleph[3] = <int>fabsf(thecell.w1 * <float> 255.0)#material.albedo_back_r
+        aleph[4] = <int>fabsf(thecell.w2 * <float> 255.0)#material.albedo_back_g
+        aleph[5] = <int>fabsf(thecell.w3 * <float> 255.0)#material.albedo_back_b
         #thecell.node_id
         #thecell.geom_id,
         #thecell.material_id,
         #thecell.primitiv_id ,
+
+        apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_BACK_DONE
+
+
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DEPTH_BUFFER:
     
         afloat = max(0.0, min(1.0, thecell.depth_value)) 
         aleph[3] = <int> (255 * afloat)
+        aleph[4] = 0
+        aleph[5] = 0
         
+        apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_BACK_DONE
+
 
     elif material.texturemode == TT3DE_MATERIAL_MODE_BACK_DEPTH_SHADING:
         pass
@@ -300,20 +323,30 @@ cdef void some_kind_ofapply(s_material* material,
         
         apply_mode_uv_mapping_debug(material,aleph, thecell, the_primitive, the_geometry,texture_array)
         
-        # unproject the point to the original s
+        apply_finished[0] = TT3DE_APPLY_ALL_DONE
+
+
     elif material.texturemode == TT3DE_MATERIAL_MODE_UV_MAPPING_TEXT1:
         
-        apply_mode_uv_mapping_texture_id(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+        apply_mode_uv_mapping_texture_id(material, aleph, thecell, the_primitive, the_geometry, texture_array, apply_finished)
             
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_WEIGHT:
         
         apply_mode_debug_double_weight(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+        apply_finished[0] = TT3DE_APPLY_ALL_DONE
+
+
+
     elif material.texturemode == TT3DE_MATERIAL_MODE_DEBUG_DOUBLE_UV_MAP:
         apply_mode_debug_double_uv_map(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+        apply_finished[0] = TT3DE_APPLY_ALL_DONE
+
+
+
     elif material.texturemode == TT3DE_MATERIAL_MODE_DOUBLE_UV_MAP:
-        apply_mode_double_up_mapping_texture_id(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+        apply_mode_double_up_mapping_texture_id(material,aleph, thecell, the_primitive, the_geometry,texture_array,apply_finished)
     elif material.texturemode ==  TT3DE_MATERIAL_MODE_DOUBLE_PERLIN_NOISE:
-        apply_mode_double_perlin_noise(material,aleph, thecell, the_primitive, the_geometry,texture_array)
+        apply_mode_double_perlin_noise(material,aleph, thecell, the_primitive, the_geometry,texture_array,apply_finished)
     
 cdef void apply_mode_uv_mapping_debug(s_material* material,
                 unsigned char *aleph, 
@@ -341,14 +374,15 @@ cdef void apply_mode_uv_mapping_debug(s_material* material,
     aleph[4] = <unsigned char>abs(v * 255)#material.albedo_back_g
     aleph[5] = 0
 
-
     
 cdef void apply_mode_uv_mapping_texture_id(s_material* material,
                 unsigned char *aleph, 
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture_array* texture_array) noexcept nogil:
+                s_texture_array* texture_array,
+                int* apply_finished
+                ) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -369,7 +403,10 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
     
     map_uv_generic(thetexture,use_repeat,use_transp,
                         u,v,
-                        &(aleph[3]),&(aleph[4]),&(aleph[5]))
+                        &(aleph[3]),&(aleph[4]),&(aleph[5]),apply_finished)
+    
+    apply_finished[0] = (apply_finished[0]) | TT3DE_APPLY_BACK_DONE
+
 
 #### DOUBLE MAPPING MODE 
 cdef void apply_mode_debug_double_weight(s_material* material,
@@ -393,7 +430,6 @@ cdef void apply_mode_debug_double_weight(s_material* material,
     # set the glyph id
     aleph[6] = material.glyph_a 
     aleph[7] = material.glyph_b 
-
 
 cdef void apply_mode_debug_double_uv_map(s_material* material,
                 unsigned char *aleph, 
@@ -440,15 +476,17 @@ cdef void apply_mode_debug_double_uv_map(s_material* material,
 
 
 
-
     
 cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
                 unsigned char *aleph, 
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture_array* texture_array) noexcept nogil:
-    #unpack the uvs 
+                s_texture_array* texture_array,
+                int* apply_finished) noexcept nogil:
+
+                
+    #unpack the uvs layer 1 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
     cdef float bu = the_geometry.uv_array[2]
@@ -461,34 +499,44 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
 
 
+    cdef float w1_alt_clamped = clampf(thecell.w1_alt,0.0,1.0 )
+    cdef float w2_alt_clamped = clampf(thecell.w2_alt,0.0,1.0 )
+    cdef float w3_alt_clamped = clampf(thecell.w3_alt,0.0,1.0 )
 
-    cdef float u_alt = au * thecell.w1_alt + bu*thecell.w2_alt + cu*thecell.w3_alt
-    cdef float v_alt = av * thecell.w1_alt + bv*thecell.w2_alt + cv*thecell.w3_alt
+    cdef float u_alt = au * w1_alt_clamped + bu * w2_alt_clamped + cu * w3_alt_clamped
+    cdef float v_alt = av * w1_alt_clamped + bv * w2_alt_clamped + cv * w3_alt_clamped
     
     # get the texture
     cdef s_texture256* thetexture= <s_texture256*> (texture_array.pointer_map[material.texture_id_array[0]]) 
     
-    cdef int use_repeat = material.texture_mapping_options & TT3DE_TEXTURE_MAPPING_OPTION_REPEAT
-    cdef int use_transp = material.texture_mapping_options & TT3DE_TEXTURE_MAPPING_OPTION_TRANSPARENCY
-    
+    cdef int use_repeat =( material.texture_mapping_options & TT3DE_TEXTURE_MAPPING_OPTION_REPEAT) > 0
+    cdef int use_transp = (material.texture_mapping_options & TT3DE_TEXTURE_MAPPING_OPTION_TRANSPARENCY) > 0
+
+
+    cdef int application_result_front = 0
+    cdef int application_result_back = 0
+
+
     map_uv_generic(thetexture,use_repeat,use_transp,
                     u,v,
-                    &(aleph[0]),&(aleph[1]),&(aleph[2]))
+                    &(aleph[0]),&(aleph[1]),&(aleph[2]),&application_result_front)
+
 
     map_uv_generic(thetexture,use_repeat,use_transp,
                     u_alt,v_alt,
-                    &(aleph[3]),&(aleph[4]),&(aleph[5]))
+                    &(aleph[3]),&(aleph[4]),&(aleph[5]),&application_result_back)
+    if application_result_front or application_result_back:
+        aleph[6] = material.glyph_a 
+        aleph[7] = material.glyph_b 
 
-    # set the glyph id
-    aleph[6] = material.glyph_a 
-    aleph[7] = material.glyph_b 
 
 cdef void apply_mode_double_perlin_noise(s_material* material,
                 unsigned char *aleph, 
                 s_drawbuffer_cell* thecell ,
                 s_drawing_primitive* the_primitive,
                 s_geometry* the_geometry,
-                s_texture_array* texture_array) noexcept nogil:
+                s_texture_array* texture_array,
+                int* apply_finished) noexcept nogil:
     #unpack the uvs 
     cdef float au = the_geometry.uv_array[0]
     cdef float av = the_geometry.uv_array[1]
@@ -531,4 +579,7 @@ cdef void apply_mode_double_perlin_noise(s_material* material,
 
     # set the glyph id
     aleph[6] = material.glyph_a 
-    aleph[7] = material.glyph_b 
+    aleph[7] = material.glyph_b
+
+
+    apply_finished[0] = TT3DE_APPLY_ALL_DONE

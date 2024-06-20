@@ -3,9 +3,9 @@
 ctypedef packed struct s_texture256:
     int height;
     int width;
-    char tr_r;
-    char tr_g;
-    char tr_b;
+    unsigned char tr_r;
+    unsigned char tr_g;
+    unsigned char tr_b;
     unsigned char data[256][256][3];
 
 ctypedef packed struct s_texture_array:
@@ -40,5 +40,11 @@ cdef class Texture2D:
     cpdef tuple get_pixel_uv(self, double u, double v)
     cpdef void set_pixel_uv(self, double u, double v, unsigned char r, unsigned char g, unsigned char b)
 
-cdef void map_uv_generic(s_texture256* texture,const int repeat, const int transparency, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil
-cdef void calc_uv( const int repeat, const int width, const int height, const float u, const float v, int* wi,int* hi) noexcept nogil
+cdef void map_uv_generic(s_texture256* texture,
+                        const int repeat, const int transparency,
+                        const float u, const float v,
+                        unsigned char* r,unsigned char* g,unsigned char* b,
+                        int* apply_finished) noexcept nogil
+    
+cdef void calc_uv( const int repeat, const int width, const int height,
+                 const float u, const float v, int* wi,int* hi) noexcept nogil

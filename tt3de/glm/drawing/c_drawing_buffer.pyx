@@ -14,6 +14,10 @@ from rich.color_triplet import ColorTriplet
 
 from tt3de.glm.drawing.c_drawing_buffer cimport s_drawbuffer_cell,s_canvas_cell
 
+
+DEF DEPTH_BUFFER_COUNT = 2
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef class DrawingBuffer:
@@ -22,7 +26,7 @@ cdef class DrawingBuffer:
     def __cinit__(self, int width,int height):
         cdef int _size = width*height
         
-        self._raw_data = <s_drawbuffer_cell*>malloc(_size * sizeof(s_drawbuffer_cell))
+        self._raw_data = <s_drawbuffer_cell*>malloc( DEPTH_BUFFER_COUNT * _size * sizeof(s_drawbuffer_cell))
         if not self._raw_data:
             raise MemoryError("Failed to allocate depth buffer.")
 
@@ -93,13 +97,19 @@ cdef class DrawingBuffer:
             #((self.canvas[idx]).aleph) = [0,0,0, 0,0,0, 0,0]
             memset(self.aleph(idx), 0, 8*sizeof(unsigned char))
             # clear depth buffer 
-            init_s_drawbuffer_cell(& (self.drawbuffer[idx]),init_depth)
+            init_s_drawbuffer_cell(& (self.drawbuffer[(DEPTH_BUFFER_COUNT*idx)]),init_depth)
+            init_s_drawbuffer_cell(& (self.drawbuffer[(DEPTH_BUFFER_COUNT*idx)+1]),init_depth)
 
     cpdef void set_depth_content(self,const int xi,const int yi,
                                 float depth_value, 
                                 float w1,
                                 float w2,
                                 float w3 ,
+
+                                float w1_alt,
+                                float w2_alt,
+                                float w3_alt ,
+
                                 int   node_id,
                                 int   geom_id,
                                 int   material_id ,
@@ -111,24 +121,29 @@ cdef class DrawingBuffer:
             w1,
             w2,
             w3 ,
+            w1_alt,
+            w2_alt,
+            w3_alt,
             node_id,
             geom_id,
             material_id ,
             primitiv_id ,
         )
-    def get_depth_buff_content(self,xi:int,yi:int):
+    def get_depth_buff_content(self,xi:int,yi:int, layer:int = 0):
         #lol =  self.canvas[self.linear_idx(xi,yi)]
-        athing = self._raw_data[self.linear_idx(xi,yi)]
+        athing = self._raw_data[(self.linear_idx(xi,yi)*DEPTH_BUFFER_COUNT)+layer]
         return athing
 
-
-    def get_depth_min_max(self)->tuple[int,int]:
-
+    def get_depth_min_max(self,layer:int =0)->tuple[int,int]:
+        cdef int buffer_index = 0;
+    
+        cdef s_drawbuffer_cell athing 
         max_depth:float = -10**8
         min_depth:float = 10**8
         depth_val:float = 0
         for i in range(self.size):
-            athing = self._raw_data[i]
+            buffer_index = (i *  DEPTH_BUFFER_COUNT) + layer
+            athing = self._raw_data[buffer_index ]
 
             depth_val = athing.depth_value
             if depth_val> max_depth:
@@ -136,6 +151,8 @@ cdef class DrawingBuffer:
             if depth_val< min_depth:
                 min_depth = depth_val
         return min_depth,max_depth
+
+
     cpdef void set_canvas_content(self,
     
         int xi,
@@ -238,7 +255,7 @@ cdef class DrawingBuffer:
 
     
     
-    cpdef list drawbuffer_to_list(self):
+    cpdef list drawbuffer_to_list(self,int layer=0):
         # will return the list of the drawbuffer elements. 
         cdef list ret = []
         cdef int idx = 0
@@ -268,41 +285,7 @@ cdef void init_s_drawbuffer_cell(s_drawbuffer_cell* x, const float depth):
     memset(x, 0, sizeof(s_drawbuffer_cell))
     x[0].depth_value = depth
 
-
-
 cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
-        const int raw_array_width,
-        const int xi,const int yi,
-        const float depth_value, 
-        const float w1 ,
-        const float w2 ,
-        const float w3 ,
-        const int   node_id,
-        const int   geom_id,
-        const int   material_id ,
-        const int   primitiv_id ,
-    ) noexcept nogil:
-    # Set depth content with a testing. assume it is used for simple rendering.
-
-    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
-    if depth_value < thecell.depth_value:
-        thecell.depth_value = depth_value
-        thecell.w1 = w1
-        thecell.w2 = w2
-        thecell.w3 = w3 
-
-        thecell.w1_alt = 1
-        thecell.w2_alt = 1
-        thecell.w3_alt = 1
-
-        thecell.primitiv_id = primitiv_id
-        thecell.geom_id = geom_id
-        thecell.node_id = node_id
-        thecell.material_id = material_id
-
-
-
-cdef void set_depth_content_with_alts(s_drawbuffer_cell* the_raw_array,
         const int raw_array_width,
         const int xi,const int yi,
         const float depth_value, 
@@ -318,23 +301,39 @@ cdef void set_depth_content_with_alts(s_drawbuffer_cell* the_raw_array,
         const int   primitiv_id ,
     ) noexcept nogil:
     # Set depth content with a testing. assume it is used for double rendering.
+    cdef int the_point = ((yi*raw_array_width)+xi) * DEPTH_BUFFER_COUNT
+    cdef int the_layer = 0
+    cdef int is_done = 0
+    cdef s_drawbuffer_cell* thecell 
+    cdef s_drawbuffer_cell* thenextcell 
+    
+    
+    while the_layer < DEPTH_BUFFER_COUNT and is_done==0:
+    
+        thecell= &(the_raw_array[the_point+the_layer]) #&self.drawbuffer[self.linear_idx(xi,yi)]
+        if depth_value < thecell.depth_value:
+            # moving current cell to next layer
+            if the_layer+1<DEPTH_BUFFER_COUNT:
+                thenextcell= &(the_raw_array[the_point+the_layer+1]) 
+                thenextcell[0] = thecell[0]
 
-    cdef s_drawbuffer_cell* thecell = &(the_raw_array[(yi*raw_array_width)+xi]) #&self.drawbuffer[self.linear_idx(xi,yi)]
-    if depth_value < thecell.depth_value:
-        thecell.depth_value = depth_value
-        thecell.w1 = w1
-        thecell.w2 = w2
-        thecell.w3 = w3 
+            # set myself
+            thecell.depth_value = depth_value
+            thecell.w1 = w1
+            thecell.w2 = w2
+            thecell.w3 = w3 
 
-        thecell.w1_alt = w1_alt
-        thecell.w2_alt = w2_alt
-        thecell.w3_alt = w3_alt
+            thecell.w1_alt = w1_alt
+            thecell.w2_alt = w2_alt
+            thecell.w3_alt = w3_alt
 
-        thecell.primitiv_id = primitiv_id
-        thecell.geom_id = geom_id
-        thecell.node_id = node_id
-        thecell.material_id = material_id
-
+            thecell.primitiv_id = primitiv_id
+            thecell.geom_id = geom_id
+            thecell.node_id = node_id
+            thecell.material_id = material_id
+            is_done = 1
+        else:
+            the_layer += 1
 
 
 cdef void set_canvas_content(s_canvas_cell* the_raw_array,

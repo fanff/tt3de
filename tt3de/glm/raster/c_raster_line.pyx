@@ -133,6 +133,8 @@ cdef void set_in_depth_buffer(s_drawbuffer_cell* the_raw_array, int raw_array_wi
         ) noexcept nogil:
     set_depth_content(the_raw_array,raw_array_width,x,y,
         depth, wa,0.0,0.0,
+        
+        0.0,0.0,0.0, # alt weights
         dprim[0].node_id,  # pass node_id
         dprim[0].geometry_id, # pass geom 
         dprim[0].material_id,

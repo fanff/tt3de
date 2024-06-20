@@ -142,11 +142,17 @@ class MaterialPerfab:
         texture_array.load_texture256_from_list(
             fast_load("models/sky1.bmp").img_data
         )
+        texture_array.load_texture256_from_list(
+            fast_load("models/numbersheet.bmp").img_data,
+            0,0,255
+        )
+
+
 
         material_buffer = MaterialBuffer()
 
         # a background colorizer; index 0 
-        mat = Material(texturemode=3)
+        mat = Material(texturemode=TT3DEMaterialMode.STATIC_BACK_ALBEDO.value)
         mat.set_albedo_front(1, 2, 3)
         mat.set_albedo_back(100, 80, 80)
         material_buffer.add_material(mat)
@@ -173,7 +179,15 @@ class MaterialPerfab:
         material_buffer.add_material(mat2)
 
 
-
+        # double raster Texture 4 (number_sheet texture)
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([4, -1, -1])
+        mops = TT3DEMaterialTextureMappingOptions()
+        mops.texture_mapping_repetition = 0
+        mops.texture_transparency_mode = 1
+        mat2.set_texture_mapping_options(mops.get_value())
+        material_buffer.add_material(mat2)
 
         return texture_array, material_buffer
     

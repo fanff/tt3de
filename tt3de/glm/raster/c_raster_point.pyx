@@ -22,6 +22,7 @@ cdef void raster_point (
     
     set_depth_content(drawing_buffer, raw_array_width, xi,yi, 
             depth, 1.0,0.0,0.0,  
+            0.5,0.5,0.0,
             dprim.node_id,  # pass node_id
             dprim.geometry_id, # pass geom 
             dprim.material_id,

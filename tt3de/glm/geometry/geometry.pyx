@@ -122,10 +122,11 @@ cdef class GeometryBuffer:
         self.content_idx += 1
 
     cpdef add_point_to_buffer(self, float x, float y, float z, list uv_list, int node_id, int material_id):
-        cdef float uv_array[8]
-        if len(uv_list) != 8:
-            raise ValueError("UV list must contain exactly 8 elements.")
-        for i in range(8):
+        cdef float uv_array[32]
+        if len(uv_list) != 32:
+            raise ValueError("UV list must contain exactly 32 elements. [au,av, bu,bv]  for 8 layers")
+
+        for i in range(32):
             uv_array[i] = uv_list[i]
         self.add_point(x, y, z, uv_array, node_id, material_id)
 
@@ -144,3 +145,16 @@ cdef class GeometryBuffer:
         for i in range(48):
             uv_array[i] = uv_list[i]
         self.add_triangle(point_a[0], point_a[1], point_a[2], point_b[0], point_b[1], point_b[2], point_c[0], point_c[1], point_c[2], uv_array, node_id, material_id)
+
+
+    cpdef add_polygon_to_buffer(self,list vertex,list face_uvs, int node_id, int material_id):
+        cdef int facecount = len(face_uvs)
+        cdef float uv_array[48]
+        for face_idx in range(facecount):
+            the_uv = face_uvs[face_idx]
+            point_a = vertex[0]
+            point_b = vertex[facecount+1]
+            point_c = vertex[facecount+2]
+            for i in range(48):
+                uv_array[i] = the_uv[i]
+            self.add_triangle(point_a[0], point_a[1], point_a[2], point_b[0], point_b[1], point_b[2], point_c[0], point_c[1], point_c[2], uv_array, node_id, material_id)

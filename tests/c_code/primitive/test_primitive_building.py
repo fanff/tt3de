@@ -59,7 +59,7 @@ class Test_PrimitiveBuilding(unittest.TestCase):
         geom_buffer = GeometryBuffer(10)
         self.assertEqual(geom_buffer.geometry_count(), 0)
         point1_x, point1_y, point1_z = 1.0, 2.0, 3.0
-        point1_uv_array = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        point1_uv_array = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]*4
         point1_node_id = 100
         point1_material_id = 200
         geom_buffer.add_point_to_buffer(

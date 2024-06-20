@@ -135,7 +135,7 @@ class Test_ApplyMaterialMethod(unittest.TestCase):
         self.assertEqual(geometry_buffer.geometry_count(), 0)
 
         x, y, z = 0.1, 0.2, 1.0
-        uv_array = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        uv_array = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]*4
         node_id = 100
         material_id = 1
         geometry_buffer.add_point_to_buffer(x, y, z, uv_array, node_id, material_id)

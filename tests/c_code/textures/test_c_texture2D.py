@@ -79,6 +79,38 @@ class Test_TextureArray(unittest.TestCase):
         self.assertEqual(texture_array.get_pixel_of(1,5.1,5.1,repeat=True), [205, 146, 112])
 
 
+    def test_mapping_transp(self):
+        texture_array = TextureArray()
+        self.assertEqual(texture_array.size(), 0)
+        texture_array.load_texture256_from_list(
+            fast_load("models/numbersheet.bmp").img_data,
+            0,0,255 #this is the transparent color
+        )
+        self.assertEqual(texture_array.get_pixel_of(0,0.0,0.0,repeat=False,
+                                                    transp=False), [0, 0, 255])
+        
+        self.assertEqual(texture_array.get_pixel_of(0,0.0,0.0,repeat=False,
+                                                    transp=True), [0, 0, 0])
+        
+        self.assertEqual(texture_array.get_pixel_of(0,0.5,0.5,repeat=False,
+                                                    transp=True), [0, 0, 0])
+        
+
+        self.assertEqual(texture_array.size(), 1)
+
+    def test_mapping_transp2(self):
+        texture_array = TextureArray()
+        self.assertEqual(texture_array.size(), 0)
+        texture_array.load_texture256_from_list(
+            fast_load("models/numbersheet.bmp").img_data,
+            0,0,222 # this is not the transparent color
+        )
+        self.assertEqual(texture_array.get_pixel_of(0,0.0,0.0,repeat=False,
+                                                    transp=False), [0, 0, 255])
+        
+        self.assertEqual(texture_array.get_pixel_of(0,0.0,0.0,repeat=False,
+                                                    transp=True), [0, 0, 255])
+        self.assertEqual(texture_array.size(), 1)
 
 
 

@@ -236,6 +236,10 @@ class Test_DrawCell(unittest.TestCase):
             2.0,  # weights
             3.0,  #
             4.0,  #
+
+            5.0,
+            6.0,
+            7.0,
             node_id,
             geom_id,
             material_id,
@@ -244,12 +248,7 @@ class Test_DrawCell(unittest.TestCase):
 
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple)
 
-        modified_ = drawbuffer.drawbuffer_to_list()
-
-        self.assertEqual(modified_[0], inpuut_tuple)
-
-        db_return = drawbuffer.get_depth_buff_content(0, 0)
-        print(db_return)
+        db_return = drawbuffer.get_depth_buff_content(0, 0 , layer=0)
         self.assertEqual(
             db_return,
             {
@@ -257,9 +256,246 @@ class Test_DrawCell(unittest.TestCase):
                 "w1": 2.0,
                 "w2": 3.0,
                 "w3": 4.0,
-                "w1_alt": 1.0,
-                "w2_alt": 1.0,
-                "w3_alt": 1.0,
+                "w1_alt": 5.0,
+                "w2_alt": 6.0,
+                "w3_alt": 7.0,
+                "primitiv_id": primitiv_id,
+                "geom_id": geom_id,
+                "node_id": node_id,
+                "material_id": material_id,
+            },
+        )
+
+        db_return_layer1 = drawbuffer.get_depth_buff_content(0, 0 , layer=1)
+        self.assertEqual(
+            db_return_layer1,
+            {
+                "depth_value": 10.0,
+                "w1": 0.0,
+                "w2": 0.0,
+                "w3": 0.0,
+                "w1_alt": 0.0,
+                "w2_alt": 0.0,
+                "w3_alt": 0.0,
+                "primitiv_id": 0,
+                "geom_id": 0,
+                "node_id": 0,
+                "material_id": 0,
+            },
+        )
+
+
+
+        mind, maxd = drawbuffer.get_depth_min_max(layer=0)
+        self.assertEqual(mind, 1.0)
+        self.assertEqual(maxd, 10.0)
+
+        mind, maxd = drawbuffer.get_depth_min_max(layer=1)
+        self.assertEqual(mind, 10.0)
+        self.assertEqual(maxd, 10.0)
+
+
+        drawbuffer_to_pil(drawbuffer, img_name="set_depth_00.png", layer="depth")
+    def test_set_depth_movelayer(self):
+        w, h = 32, 32
+        count = w * h
+        drawbuffer = DrawingBuffer(w, h)
+
+        # setting initial depth buffer to 10
+        drawbuffer.hard_clear(10)
+
+        drawbuffer_list = drawbuffer.drawbuffer_to_list()
+
+        self.assertEqual(len(drawbuffer_list), count)
+
+        adepthelement_list = drawbuffer_list[0]
+
+        self.assertEqual(len(adepthelement_list), 8)
+        self.assertEqual(adepthelement_list[0], 10.0)
+
+        # setting info in the depth buffer
+        _0_primitiv_id = 42
+        _0_geom_id = 12
+        _0_node_id = 222
+        _0_material_id = 3
+
+        inpuut_tuple_0 = [
+            1.0,  # depth value
+            2.0,  # weights
+            3.0,  #
+            4.0,  #
+
+            5.0,
+            6.0,
+            7.0,
+            _0_node_id,
+            _0_geom_id,
+            _0_material_id,
+            _0_primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_0)
+
+
+
+        # setting AGAIN info in the depth buffer
+        _1_primitiv_id = 24
+        _1_geom_id = 21
+        _1_node_id = 333
+        _1_material_id = 1
+
+        inpuut_tuple_1 = [
+            1.0,  # depth value # is same
+            20.0,  # weights
+            30.0,  #
+            40.0,  #
+
+            50.0,
+            60.0,
+            70.0,
+            _1_node_id,
+            _1_geom_id,
+            _1_material_id,
+            _1_primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_1)
+
+
+
+        # the layer 0 contains the 0
+        db_return = drawbuffer.get_depth_buff_content(0, 0 , layer=0)
+        self.assertEqual(
+            db_return,
+            {
+                "depth_value": 1.0,
+                "w1": 2.0,
+                "w2": 3.0,
+                "w3": 4.0,
+                "w1_alt": 5.0,
+                "w2_alt": 6.0,
+                "w3_alt": 7.0,
+                "primitiv_id": _0_primitiv_id,
+                "geom_id": _0_geom_id,
+                "node_id": _0_node_id,
+                "material_id": _0_material_id,
+            },
+            
+        )
+
+        # the layer 1 contains the 1 (not moved, just jumped over) 
+        db_return_layer1 = drawbuffer.get_depth_buff_content(0, 0 , layer=1)
+        self.assertEqual(
+            db_return_layer1,
+            {
+                "depth_value": 1.0,
+                "w1": 20.0,
+                "w2": 30.0,
+                "w3": 40.0,
+                "w1_alt": 50.0,
+                "w2_alt": 60.0,
+                "w3_alt": 70.0,
+                "primitiv_id": _1_primitiv_id,
+                "geom_id": _1_geom_id,
+                "node_id": _1_node_id,
+                "material_id": _1_material_id,
+            },
+        )
+
+    def test_set_depth_movelayer_diffent_depth(self):
+        w, h = 32, 32
+        count = w * h
+        drawbuffer = DrawingBuffer(w, h)
+
+        # setting initial depth buffer to 10
+        drawbuffer.hard_clear(10)
+
+        drawbuffer_list = drawbuffer.drawbuffer_to_list()
+
+        self.assertEqual(len(drawbuffer_list), count)
+
+        adepthelement_list = drawbuffer_list[0]
+
+        self.assertEqual(len(adepthelement_list), 8)
+        self.assertEqual(adepthelement_list[0], 10.0)
+
+        # setting info in the depth buffer
+        primitiv_id = 42
+        geom_id = 12
+        node_id = 222
+        material_id = 3
+
+        inpuut_tuple_0 = [
+            3.0,  # depth value
+            2.0,  # weights
+            3.0,  #
+            4.0,  #
+
+            5.0,
+            6.0,
+            7.0,
+            node_id,
+            geom_id,
+            material_id,
+            primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_0)
+
+
+
+        # setting AGAIN info in the depth buffer
+        primitiv_id = 24
+        geom_id = 21
+        node_id = 333
+        material_id = 1
+
+        inpuut_tuple_1 = [
+            1.0,  # depth value # is before the previous one
+            20.0,  # weights
+            30.0,  #
+            40.0,  #
+
+            50.0,
+            60.0,
+            70.0,
+            node_id,
+            geom_id,
+            material_id,
+            primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_1)
+
+        db_return = drawbuffer.get_depth_buff_content(0, 0 , layer=0)
+        self.assertEqual(
+            db_return,
+            {
+                "depth_value": 1.0,
+                "w1": 20.0,
+                "w2": 30.0,
+                "w3": 40.0,
+                "w1_alt": 50.0,
+                "w2_alt": 60.0,
+                "w3_alt": 70.0,
+                "primitiv_id": 24,
+                "geom_id": 21,
+                "node_id": 333,
+                "material_id": 1,
+            },
+        )
+
+        db_return_layer1 = drawbuffer.get_depth_buff_content(0, 0 , layer=1)
+        self.assertEqual(
+            db_return_layer1,
+            {
+                "depth_value": 3.0,
+                "w1": 2.0,
+                "w2": 3.0,
+                "w3": 4.0,
+                "w1_alt": 5.0,
+                "w2_alt": 6.0,
+                "w3_alt": 7.0,
                 "primitiv_id": 42,
                 "geom_id": 12,
                 "node_id": 222,
@@ -267,11 +503,106 @@ class Test_DrawCell(unittest.TestCase):
             },
         )
 
-        mind, maxd = drawbuffer.get_depth_min_max()
-        self.assertEqual(mind, 1.0)
-        self.assertEqual(maxd, 10.0)
+    def test_set_depth_different_depth(self):
+        w, h = 32, 32
+        count = w * h
+        drawbuffer = DrawingBuffer(w, h)
 
-        drawbuffer_to_pil(drawbuffer, img_name="set_depth_00.png", layer="depth")
+        # setting initial depth buffer to 10
+        drawbuffer.hard_clear(10)
+
+        drawbuffer_list = drawbuffer.drawbuffer_to_list()
+
+        self.assertEqual(len(drawbuffer_list), count)
+
+        adepthelement_list = drawbuffer_list[0]
+
+        self.assertEqual(len(adepthelement_list), 8)
+        self.assertEqual(adepthelement_list[0], 10.0)
+
+        # setting info in the depth buffer
+        primitiv_id = 42
+        geom_id = 12
+        node_id = 222
+        material_id = 3
+
+        inpuut_tuple_0 = [
+            1.0,  # depth value # this one is in front
+            2.0,  # weights
+            3.0,  #
+            4.0,  #
+
+            5.0,
+            6.0,
+            7.0,
+            node_id,
+            geom_id,
+            material_id,
+            primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_0)
+
+
+
+        # setting AGAIN info in the depth buffer
+        primitiv_id = 24
+        geom_id = 21
+        node_id = 333
+        material_id = 1
+
+        inpuut_tuple_1 = [
+            3.0,  #  THIS one it in the back
+            20.0,  # weights
+            30.0,  #
+            40.0,  #
+
+            50.0,
+            60.0,
+            70.0,
+            node_id,
+            geom_id,
+            material_id,
+            primitiv_id,
+        ]
+
+        drawbuffer.set_depth_content(0, 0, *inpuut_tuple_1)
+
+        db_return = drawbuffer.get_depth_buff_content(0, 0 , layer=0)
+        self.assertEqual(
+            db_return,
+            {
+                "depth_value": 1.0,
+                "w1": 2.0,
+                "w2": 3.0,
+                "w3": 4.0,
+                "w1_alt": 5.0,
+                "w2_alt": 6.0,
+                "w3_alt": 7.0,
+                "primitiv_id": 42,
+                "geom_id": 12,
+                "node_id": 222,
+                "material_id": 3,
+            },
+        )
+
+        db_return_layer1 = drawbuffer.get_depth_buff_content(0, 0 , layer=1)
+        self.assertEqual(
+            db_return_layer1,
+            {
+                "depth_value": 3.0,
+                "w1": 20.0,
+                "w2": 30.0,
+                "w3": 40.0,
+                "w1_alt": 50.0,
+                "w2_alt": 60.0,
+                "w3_alt": 70.0,
+                "primitiv_id": 24,
+                "geom_id": 21,
+                "node_id": 333,
+                "material_id": 1,
+            },
+        )
 
 def max_hash(bit_reductions):
     """

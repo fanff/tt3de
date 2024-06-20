@@ -1,5 +1,8 @@
 
 from libc.math cimport floor,ceil,round
+from libc.math cimport fmin, fmax
+
+
 ctypedef fused cnumeric:
     double 
     float
@@ -33,7 +36,8 @@ cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept 
         return _a
 
 
-
+cdef inline float clampf(float value,const float minvalue, const float maxvalue) noexcept nogil:
+    return fmin(fmax(value, minvalue), maxvalue)
 
 
 

@@ -70,6 +70,7 @@ class GLMTester(TT3DView):
 
             self.root2Dnode.elements.append(a2dnode)
 
+        #a dding a second time the texture
         a2dnode = TT2DNode()
         a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
         a2dmesh.material_id = 3
@@ -94,8 +95,6 @@ class GLMTester(TT3DView):
             uva.y = uva.y
             uvb.y = uvb.y
             uvc.y = uvc.y
-
-
         a2dnode.local_transform = glm.translate(
             glm.vec3(1.0, float(.0) ,0.0)
         ) *glm.scale(glm.vec3(1.7777778*2, 1.0,1.0))
@@ -104,6 +103,25 @@ class GLMTester(TT3DView):
 
 
 
+        # adding a square + texture, with the transparent stuff
+        a2dnode = TT2DNode()
+        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh.material_id = 4 # this one has transparency enabled
+        a2dnode.elements.append(a2dmesh)
+        a2dnode.local_transform = glm.translate(
+            glm.vec3(-1, float(-1) ,0.0) 
+        ) * glm.scale(glm.vec3(1.0, 1.0,1.0))
+        self.root2Dnode.elements.append(a2dnode)
+
+        # adding a square + texture, withoutthe transparent stuff
+        a2dnode = TT2DNode()
+        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh.material_id = 3 # this one not transparent ; texture of sky 
+        a2dnode.elements.append(a2dmesh)
+        a2dnode.local_transform = glm.translate(
+            glm.vec3(-1, float(-1.2) ,0.2) # notice slitly moved to the back
+        ) * glm.scale(glm.vec3(1.0, 1.0,1.0))
+        self.root2Dnode.elements.append(a2dnode)
 
         # final append
         self.rc.append(self.root2Dnode)

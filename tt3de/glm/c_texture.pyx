@@ -25,16 +25,16 @@ cdef class TextureArray:
     def get_wh_of(self,i:int ):
         cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
         return [atext.width,atext.height]
-    def get_pixel_of(self,i:int, u:float,v:float, repeat:bool = True):
+    def get_pixel_of(self,i:int, u:float,v:float, repeat:bool = True, transp:bool = True):
         cdef s_texture256* atext = <s_texture256*> (self.raw_array.pointer_map[i])
 
         cdef unsigned char r = 0
         cdef unsigned char g = 0
         cdef unsigned char b = 0
         cdef int use_repeat = 1 if repeat else 0
-        cdef int use_transp = 0
-
-        map_uv_generic(atext,use_repeat,use_transp, u,v,&r,&g,&b)
+        cdef int use_transp = 1 if transp else 0
+        cdef int result = 0
+        map_uv_generic(atext,use_repeat,use_transp, u,v,&r,&g,&b , &result)
 
         return [<int> r,
         <int> g,
@@ -48,9 +48,9 @@ cdef class TextureArray:
         atexture256.width = in_width
         atexture256.height = in_height
 
-        atexture256.tr_r=tr_r
-        atexture256.tr_g=tr_g
-        atexture256.tr_b=tr_b
+        atexture256.tr_r=<unsigned char> tr_r
+        atexture256.tr_g=<unsigned char> tr_g
+        atexture256.tr_b=<unsigned char> tr_b
 
 
         for i in range(in_height):
@@ -141,7 +141,11 @@ cdef void calc_uv( const int repeat, const int width, const int height, const fl
         hi[0] = <int> ( (<float> height) * max(0.0, min(0.9999, v))   )
 
 
-cdef void map_uv_generic(s_texture256* texture,const int repeat, const int transparency, const float u, const float v,unsigned char* r,unsigned char* g,unsigned char* b) noexcept nogil:
+cdef void map_uv_generic(s_texture256* texture,
+                        const int repeat, const int transparency,
+                        const float u, const float v,
+                        unsigned char* r,unsigned char* g,unsigned char* b,
+                        int* apply_finished) noexcept nogil:
     
     
     cdef int wi 
@@ -160,13 +164,13 @@ cdef void map_uv_generic(s_texture256* texture,const int repeat, const int trans
     on_text_b = texture.data[hi][wi][2]
 
 
-    if transparency==1 and (on_text_r == texture.tr_r and on_text_g == texture.tr_g and on_text_b == texture.tr_b):
+    if transparency!=0 and (on_text_r == texture.tr_r and on_text_g == texture.tr_g and on_text_b == texture.tr_b):
         pass
     else:
         r[0] = on_text_r 
         g[0] = on_text_g 
         b[0] = on_text_b 
-
+        apply_finished[0] = 1
 
 cpdef bench_n_uvcacl(Texture2D atexture,int count ):
     cdef unsigned char r,g,b;
