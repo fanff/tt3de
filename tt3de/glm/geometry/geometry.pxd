@@ -26,14 +26,19 @@ ctypedef packed struct s_geometry:
 cdef class GeometryBuffer:
 
     cdef s_geometry* _raw_content
-    cdef int size
-
+    cdef int max_size
     cdef unsigned int content_idx
+
+    cdef  int elements
     
     # methods
     cdef s_geometry* rawaccess(self)
     cpdef unsigned int geometry_count(self)
+    cpdef int element_count(self)
     cpdef void clear(self)
+
+    cdef void set_polygon_count(self, int at, int count) noexcept nogil
+
     cdef void add_point(self, float x, float y, float z, float uv_array[8], int node_id, int material_id)
     cdef void add_triangle(self, float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz, float uv_array[48], int node_id, int material_id)
     cdef void add_line(self, float ax, float ay, float az, float bx, float by, float bz, float uv_array[16], int node_id, int material_id)

@@ -29,6 +29,7 @@ class Test_GeometryBuffer(unittest.TestCase):
     def test_add_line(self):
         """Test adding a line and check for correct buffer update."""
         geom_buffer = GeometryBuffer(10)
+        geom_buffer.clear()
         start = [0, 0, 0]
         end = [1, 1, 1]
         uv_array = [0.1] * 16
@@ -43,6 +44,10 @@ class Test_GeometryBuffer(unittest.TestCase):
     def test_add_triangle(self):
         """Test adding a triangle and verify its addition to the buffer."""
         geom_buffer = GeometryBuffer(10)
+
+        geom_buffer.clear()
+
+        
         point_a = [0, 0, 0]
         point_b = [1, 0, 0]
         point_c = [0, 1, 0]
@@ -62,6 +67,7 @@ class Test_GeometryBuffer(unittest.TestCase):
     def test_add_polygon(self):
         """Test adding a triangle and verify its addition to the buffer."""
         geom_buffer = GeometryBuffer(10)
+        geom_buffer.clear()
         point_a = [0, 0, 0]
         point_b = [1, 0, 0]
         point_c = [0, 1, 0]
@@ -73,19 +79,19 @@ class Test_GeometryBuffer(unittest.TestCase):
         node_id = 102
         material_id = 202
 
-        vertex = [point_a,point_b,point_c , point_d]
-        uv_array = [uv_array_face1,uv_array_face2]
+        vertex = [ point_a, point_b, point_c , point_d]
+        uv_array = [uv_array_face1, uv_array_face2]
 
         geom_buffer.add_polygon_to_buffer(
             vertex, uv_array, node_id, material_id
         )
 
-        self.assertEqual(geom_buffer.geometry_count(), 1)
-
+        self.assertEqual(geom_buffer.geometry_count(), 2)
+        self.assertEqual(geom_buffer.element_count(), 1)
+#
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
-
-
+        self.assertEqual(geom_buffer.element_count(), 0)
 
         
     def test_buffer_overflow(self):

@@ -2238,7 +2238,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_codeobj__6 __pyx_mstate_global->__pyx_codeobj__6
 /* #### Code section: module_code ### */
 
-/* "tt3de/glm/c_math.pxd":8
+/* "tt3de/glm/c_math.pxd":11
  * 
  * 
  * cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2251,7 +2251,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":9
+  /* "tt3de/glm/c_math.pxd":12
  * 
  * cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2261,7 +2261,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":10
+    /* "tt3de/glm/c_math.pxd":13
  * cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2271,7 +2271,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":9
+    /* "tt3de/glm/c_math.pxd":12
  * 
  * cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2280,7 +2280,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":11
+  /* "tt3de/glm/c_math.pxd":14
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)             # <<<<<<<<<<<<<<
@@ -2289,7 +2289,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
  */
   __pyx_v_rounded_a = ((unsigned int)round(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":12
+  /* "tt3de/glm/c_math.pxd":15
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:             # <<<<<<<<<<<<<<
@@ -2299,7 +2299,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
   __pyx_t_1 = (__pyx_v_rounded_a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":13
+    /* "tt3de/glm/c_math.pxd":16
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2309,7 +2309,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":12
+    /* "tt3de/glm/c_math.pxd":15
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:             # <<<<<<<<<<<<<<
@@ -2318,7 +2318,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":15
+  /* "tt3de/glm/c_math.pxd":18
  *         return b
  *     else:
  *         return rounded_a             # <<<<<<<<<<<<<<
@@ -2330,7 +2330,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":8
+  /* "tt3de/glm/c_math.pxd":11
  * 
  * 
  * cdef inline unsigned int round_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2343,7 +2343,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screen(do
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":17
+/* "tt3de/glm/c_math.pxd":20
  *         return rounded_a
  * 
  * cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2356,7 +2356,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":18
+  /* "tt3de/glm/c_math.pxd":21
  * 
  * cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2366,7 +2366,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":19
+    /* "tt3de/glm/c_math.pxd":22
  * cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2376,7 +2376,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":18
+    /* "tt3de/glm/c_math.pxd":21
  * 
  * cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2385,7 +2385,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":20
+  /* "tt3de/glm/c_math.pxd":23
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)             # <<<<<<<<<<<<<<
@@ -2394,7 +2394,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
  */
   __pyx_v__a = ((unsigned int)ceil(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":21
+  /* "tt3de/glm/c_math.pxd":24
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2404,7 +2404,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
   __pyx_t_1 = (__pyx_v__a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":22
+    /* "tt3de/glm/c_math.pxd":25
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2414,7 +2414,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":21
+    /* "tt3de/glm/c_math.pxd":24
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2423,7 +2423,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":24
+  /* "tt3de/glm/c_math.pxd":27
  *         return b
  *     else:
  *         return _a             # <<<<<<<<<<<<<<
@@ -2435,7 +2435,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":17
+  /* "tt3de/glm/c_math.pxd":20
  *         return rounded_a
  * 
  * cdef inline unsigned int ceil_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2448,7 +2448,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screen(dou
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":26
+/* "tt3de/glm/c_math.pxd":29
  *         return _a
  * 
  * cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2461,7 +2461,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":27
+  /* "tt3de/glm/c_math.pxd":30
  * 
  * cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2471,7 +2471,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":28
+    /* "tt3de/glm/c_math.pxd":31
  * cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2481,7 +2481,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":27
+    /* "tt3de/glm/c_math.pxd":30
  * 
  * cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2490,7 +2490,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":29
+  /* "tt3de/glm/c_math.pxd":32
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)             # <<<<<<<<<<<<<<
@@ -2499,7 +2499,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
  */
   __pyx_v__a = ((unsigned int)floor(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":30
+  /* "tt3de/glm/c_math.pxd":33
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2509,7 +2509,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
   __pyx_t_1 = (__pyx_v__a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":31
+    /* "tt3de/glm/c_math.pxd":34
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2519,7 +2519,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":30
+    /* "tt3de/glm/c_math.pxd":33
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2528,7 +2528,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":33
+  /* "tt3de/glm/c_math.pxd":36
  *         return b
  *     else:
  *         return _a             # <<<<<<<<<<<<<<
@@ -2540,7 +2540,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":26
+  /* "tt3de/glm/c_math.pxd":29
  *         return _a
  * 
  * cdef inline unsigned int floor_in_screen(double value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2553,7 +2553,41 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screen(do
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":40
+/* "tt3de/glm/c_math.pxd":39
+ * 
+ * 
+ * cdef inline float clampf(float value,const float minvalue, const float maxvalue) noexcept nogil:             # <<<<<<<<<<<<<<
+ *     return fmin(fmax(value, minvalue), maxvalue)
+ * 
+ */
+
+static CYTHON_INLINE float __pyx_f_5tt3de_3glm_6c_math_clampf(float __pyx_v_value, float const __pyx_v_minvalue, float const __pyx_v_maxvalue) {
+  float __pyx_r;
+
+  /* "tt3de/glm/c_math.pxd":40
+ * 
+ * cdef inline float clampf(float value,const float minvalue, const float maxvalue) noexcept nogil:
+ *     return fmin(fmax(value, minvalue), maxvalue)             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_r = fmin(fmax(__pyx_v_value, __pyx_v_minvalue), __pyx_v_maxvalue);
+  goto __pyx_L0;
+
+  /* "tt3de/glm/c_math.pxd":39
+ * 
+ * 
+ * cdef inline float clampf(float value,const float minvalue, const float maxvalue) noexcept nogil:             # <<<<<<<<<<<<<<
+ *     return fmin(fmax(value, minvalue), maxvalue)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L0:;
+  return __pyx_r;
+}
+
+/* "tt3de/glm/c_math.pxd":44
  * 
  * 
  * cdef inline unsigned int round_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2566,7 +2600,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":41
+  /* "tt3de/glm/c_math.pxd":45
  * 
  * cdef inline unsigned int round_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2576,7 +2610,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":42
+    /* "tt3de/glm/c_math.pxd":46
  * cdef inline unsigned int round_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2586,7 +2620,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":41
+    /* "tt3de/glm/c_math.pxd":45
  * 
  * cdef inline unsigned int round_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2595,7 +2629,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":43
+  /* "tt3de/glm/c_math.pxd":47
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)             # <<<<<<<<<<<<<<
@@ -2604,7 +2638,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
  */
   __pyx_v_rounded_a = ((unsigned int)round(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":44
+  /* "tt3de/glm/c_math.pxd":48
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:             # <<<<<<<<<<<<<<
@@ -2614,7 +2648,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
   __pyx_t_1 = (__pyx_v_rounded_a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":45
+    /* "tt3de/glm/c_math.pxd":49
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2624,7 +2658,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":44
+    /* "tt3de/glm/c_math.pxd":48
  *         return 0
  *     cdef unsigned int rounded_a = <unsigned int> round(value)
  *     if rounded_a > b:             # <<<<<<<<<<<<<<
@@ -2633,7 +2667,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":47
+  /* "tt3de/glm/c_math.pxd":51
  *         return b
  *     else:
  *         return rounded_a             # <<<<<<<<<<<<<<
@@ -2645,7 +2679,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":40
+  /* "tt3de/glm/c_math.pxd":44
  * 
  * 
  * cdef inline unsigned int round_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2658,7 +2692,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_round_in_screenf(f
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":49
+/* "tt3de/glm/c_math.pxd":53
  *         return rounded_a
  * 
  * cdef inline unsigned int ceil_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2671,7 +2705,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":50
+  /* "tt3de/glm/c_math.pxd":54
  * 
  * cdef inline unsigned int ceil_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2681,7 +2715,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":51
+    /* "tt3de/glm/c_math.pxd":55
  * cdef inline unsigned int ceil_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2691,7 +2725,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":50
+    /* "tt3de/glm/c_math.pxd":54
  * 
  * cdef inline unsigned int ceil_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2700,7 +2734,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":52
+  /* "tt3de/glm/c_math.pxd":56
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)             # <<<<<<<<<<<<<<
@@ -2709,7 +2743,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
  */
   __pyx_v__a = ((unsigned int)ceil(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":53
+  /* "tt3de/glm/c_math.pxd":57
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2719,7 +2753,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
   __pyx_t_1 = (__pyx_v__a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":54
+    /* "tt3de/glm/c_math.pxd":58
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2729,7 +2763,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":53
+    /* "tt3de/glm/c_math.pxd":57
  *         return 0
  *     cdef unsigned int _a = <unsigned int> ceil(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2738,7 +2772,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":56
+  /* "tt3de/glm/c_math.pxd":60
  *         return b
  *     else:
  *         return _a             # <<<<<<<<<<<<<<
@@ -2750,7 +2784,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":49
+  /* "tt3de/glm/c_math.pxd":53
  *         return rounded_a
  * 
  * cdef inline unsigned int ceil_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2763,7 +2797,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_ceil_in_screenf(fl
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":58
+/* "tt3de/glm/c_math.pxd":62
  *         return _a
  * 
  * cdef inline unsigned int floor_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2776,7 +2810,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
   unsigned int __pyx_r;
   int __pyx_t_1;
 
-  /* "tt3de/glm/c_math.pxd":59
+  /* "tt3de/glm/c_math.pxd":63
  * 
  * cdef inline unsigned int floor_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2786,7 +2820,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
   __pyx_t_1 = (__pyx_v_value < 0.0);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":60
+    /* "tt3de/glm/c_math.pxd":64
  * cdef inline unsigned int floor_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -2796,7 +2830,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":59
+    /* "tt3de/glm/c_math.pxd":63
  * 
  * cdef inline unsigned int floor_in_screenf(float value, unsigned int b) noexcept nogil:
  *     if value < 0.0:             # <<<<<<<<<<<<<<
@@ -2805,7 +2839,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":61
+  /* "tt3de/glm/c_math.pxd":65
  *     if value < 0.0:
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)             # <<<<<<<<<<<<<<
@@ -2814,7 +2848,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
  */
   __pyx_v__a = ((unsigned int)floor(__pyx_v_value));
 
-  /* "tt3de/glm/c_math.pxd":62
+  /* "tt3de/glm/c_math.pxd":66
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2824,7 +2858,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
   __pyx_t_1 = (__pyx_v__a > __pyx_v_b);
   if (__pyx_t_1) {
 
-    /* "tt3de/glm/c_math.pxd":63
+    /* "tt3de/glm/c_math.pxd":67
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -2834,7 +2868,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "tt3de/glm/c_math.pxd":62
+    /* "tt3de/glm/c_math.pxd":66
  *         return 0
  *     cdef unsigned int _a = <unsigned int> floor(value)
  *     if _a > b:             # <<<<<<<<<<<<<<
@@ -2843,7 +2877,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
  */
   }
 
-  /* "tt3de/glm/c_math.pxd":65
+  /* "tt3de/glm/c_math.pxd":69
  *         return b
  *     else:
  *         return _a             # <<<<<<<<<<<<<<
@@ -2855,7 +2889,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
     goto __pyx_L0;
   }
 
-  /* "tt3de/glm/c_math.pxd":58
+  /* "tt3de/glm/c_math.pxd":62
  *         return _a
  * 
  * cdef inline unsigned int floor_in_screenf(float value, unsigned int b) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -2868,7 +2902,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":70
+/* "tt3de/glm/c_math.pxd":74
  * # Determinant calculation for specific cases:
  * 
  * cdef inline cnumeric flat_determinant_g((cnumeric )[3][3] mat):             # <<<<<<<<<<<<<<
@@ -2879,7 +2913,7 @@ static CYTHON_INLINE unsigned int __pyx_f_5tt3de_3glm_6c_math_floor_in_screenf(f
 static CYTHON_INLINE double __pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_flat_determinant_g(double (*__pyx_v_mat)[3]) {
   double __pyx_r;
 
-  /* "tt3de/glm/c_math.pxd":74
+  /* "tt3de/glm/c_math.pxd":78
  *     # Since the last row is [1, 1, 1], we can expand the determinant along this row:
  *     # det = a11 * (a22 - a23) - a12 * (a21 - a23) + a13 * (a21 - a22)
  *     return mat[0][0] * (mat[1][1] - mat[1][2]) - mat[0][1] * (mat[1][0] - mat[1][2]) + mat[0][2] * (mat[1][0] - mat[1][1])             # <<<<<<<<<<<<<<
@@ -2889,7 +2923,7 @@ static CYTHON_INLINE double __pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_flat_determi
   __pyx_r = (((((__pyx_v_mat[0])[0]) * (((__pyx_v_mat[1])[1]) - ((__pyx_v_mat[1])[2]))) - (((__pyx_v_mat[0])[1]) * (((__pyx_v_mat[1])[0]) - ((__pyx_v_mat[1])[2])))) + (((__pyx_v_mat[0])[2]) * (((__pyx_v_mat[1])[0]) - ((__pyx_v_mat[1])[1]))));
   goto __pyx_L0;
 
-  /* "tt3de/glm/c_math.pxd":70
+  /* "tt3de/glm/c_math.pxd":74
  * # Determinant calculation for specific cases:
  * 
  * cdef inline cnumeric flat_determinant_g((cnumeric )[3][3] mat):             # <<<<<<<<<<<<<<
@@ -2905,7 +2939,7 @@ static CYTHON_INLINE double __pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_flat_determi
 static CYTHON_INLINE float __pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_flat_determinant_g(float (*__pyx_v_mat)[3]) {
   float __pyx_r;
 
-  /* "tt3de/glm/c_math.pxd":74
+  /* "tt3de/glm/c_math.pxd":78
  *     # Since the last row is [1, 1, 1], we can expand the determinant along this row:
  *     # det = a11 * (a22 - a23) - a12 * (a21 - a23) + a13 * (a21 - a22)
  *     return mat[0][0] * (mat[1][1] - mat[1][2]) - mat[0][1] * (mat[1][0] - mat[1][2]) + mat[0][2] * (mat[1][0] - mat[1][1])             # <<<<<<<<<<<<<<
@@ -2915,7 +2949,7 @@ static CYTHON_INLINE float __pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_flat_determin
   __pyx_r = (((((__pyx_v_mat[0])[0]) * (((__pyx_v_mat[1])[1]) - ((__pyx_v_mat[1])[2]))) - (((__pyx_v_mat[0])[1]) * (((__pyx_v_mat[1])[0]) - ((__pyx_v_mat[1])[2])))) + (((__pyx_v_mat[0])[2]) * (((__pyx_v_mat[1])[0]) - ((__pyx_v_mat[1])[1]))));
   goto __pyx_L0;
 
-  /* "tt3de/glm/c_math.pxd":70
+  /* "tt3de/glm/c_math.pxd":74
  * # Determinant calculation for specific cases:
  * 
  * cdef inline cnumeric flat_determinant_g((cnumeric )[3][3] mat):             # <<<<<<<<<<<<<<
@@ -2928,7 +2962,7 @@ static CYTHON_INLINE float __pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_flat_determin
   return __pyx_r;
 }
 
-/* "tt3de/glm/c_math.pxd":77
+/* "tt3de/glm/c_math.pxd":81
  * 
  * 
  * cdef inline adjoint_mat(cnumeric[3][3] mat, cnumeric[3][3] adj_mat):             # <<<<<<<<<<<<<<
@@ -2947,7 +2981,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__pyx_fuse_0adjoint_mat", 1);
 
-  /* "tt3de/glm/c_math.pxd":84
+  /* "tt3de/glm/c_math.pxd":88
  * 
  *     # Elements of the input matrix
  *     cdef cnumeric a = mat[0][0]             # <<<<<<<<<<<<<<
@@ -2956,7 +2990,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_a = ((__pyx_v_mat[0])[0]);
 
-  /* "tt3de/glm/c_math.pxd":85
+  /* "tt3de/glm/c_math.pxd":89
  *     # Elements of the input matrix
  *     cdef cnumeric a = mat[0][0]
  *     cdef cnumeric b = mat[0][1]             # <<<<<<<<<<<<<<
@@ -2965,7 +2999,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_b = ((__pyx_v_mat[0])[1]);
 
-  /* "tt3de/glm/c_math.pxd":86
+  /* "tt3de/glm/c_math.pxd":90
  *     cdef cnumeric a = mat[0][0]
  *     cdef cnumeric b = mat[0][1]
  *     cdef cnumeric c = mat[0][2]             # <<<<<<<<<<<<<<
@@ -2974,7 +3008,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_c = ((__pyx_v_mat[0])[2]);
 
-  /* "tt3de/glm/c_math.pxd":87
+  /* "tt3de/glm/c_math.pxd":91
  *     cdef cnumeric b = mat[0][1]
  *     cdef cnumeric c = mat[0][2]
  *     cdef cnumeric d = mat[1][0]             # <<<<<<<<<<<<<<
@@ -2983,7 +3017,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_d = ((__pyx_v_mat[1])[0]);
 
-  /* "tt3de/glm/c_math.pxd":88
+  /* "tt3de/glm/c_math.pxd":92
  *     cdef cnumeric c = mat[0][2]
  *     cdef cnumeric d = mat[1][0]
  *     cdef cnumeric e = mat[1][1]             # <<<<<<<<<<<<<<
@@ -2992,7 +3026,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_e = ((__pyx_v_mat[1])[1]);
 
-  /* "tt3de/glm/c_math.pxd":89
+  /* "tt3de/glm/c_math.pxd":93
  *     cdef cnumeric d = mat[1][0]
  *     cdef cnumeric e = mat[1][1]
  *     cdef cnumeric f = mat[1][2]             # <<<<<<<<<<<<<<
@@ -3001,7 +3035,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_f = ((__pyx_v_mat[1])[2]);
 
-  /* "tt3de/glm/c_math.pxd":94
+  /* "tt3de/glm/c_math.pxd":98
  * 
  *     #diff y
  *     adj_mat[0][0] = e - f             # <<<<<<<<<<<<<<
@@ -3010,7 +3044,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[0]) = (__pyx_v_e - __pyx_v_f);
 
-  /* "tt3de/glm/c_math.pxd":95
+  /* "tt3de/glm/c_math.pxd":99
  *     #diff y
  *     adj_mat[0][0] = e - f
  *     adj_mat[0][1] = f - d             # <<<<<<<<<<<<<<
@@ -3019,7 +3053,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[1]) = (__pyx_v_f - __pyx_v_d);
 
-  /* "tt3de/glm/c_math.pxd":96
+  /* "tt3de/glm/c_math.pxd":100
  *     adj_mat[0][0] = e - f
  *     adj_mat[0][1] = f - d
  *     adj_mat[0][2] = d - e             # <<<<<<<<<<<<<<
@@ -3028,7 +3062,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[2]) = (__pyx_v_d - __pyx_v_e);
 
-  /* "tt3de/glm/c_math.pxd":99
+  /* "tt3de/glm/c_math.pxd":103
  * 
  *     # diff x
  *     adj_mat[1][0] = c - b             # <<<<<<<<<<<<<<
@@ -3037,7 +3071,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[0]) = (__pyx_v_c - __pyx_v_b);
 
-  /* "tt3de/glm/c_math.pxd":100
+  /* "tt3de/glm/c_math.pxd":104
  *     # diff x
  *     adj_mat[1][0] = c - b
  *     adj_mat[1][1] = a - c             # <<<<<<<<<<<<<<
@@ -3046,7 +3080,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[1]) = (__pyx_v_a - __pyx_v_c);
 
-  /* "tt3de/glm/c_math.pxd":101
+  /* "tt3de/glm/c_math.pxd":105
  *     adj_mat[1][0] = c - b
  *     adj_mat[1][1] = a - c
  *     adj_mat[1][2] = b - a             # <<<<<<<<<<<<<<
@@ -3055,7 +3089,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[2]) = (__pyx_v_b - __pyx_v_a);
 
-  /* "tt3de/glm/c_math.pxd":104
+  /* "tt3de/glm/c_math.pxd":108
  * 
  * 
  *     adj_mat[2][0] = b*f - c*e             # <<<<<<<<<<<<<<
@@ -3064,7 +3098,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[0]) = ((__pyx_v_b * __pyx_v_f) - (__pyx_v_c * __pyx_v_e));
 
-  /* "tt3de/glm/c_math.pxd":105
+  /* "tt3de/glm/c_math.pxd":109
  * 
  *     adj_mat[2][0] = b*f - c*e
  *     adj_mat[2][1] = c*d - a*f             # <<<<<<<<<<<<<<
@@ -3073,7 +3107,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[1]) = ((__pyx_v_c * __pyx_v_d) - (__pyx_v_a * __pyx_v_f));
 
-  /* "tt3de/glm/c_math.pxd":106
+  /* "tt3de/glm/c_math.pxd":110
  *     adj_mat[2][0] = b*f - c*e
  *     adj_mat[2][1] = c*d - a*f
  *     adj_mat[2][2] = a*e - b*d             # <<<<<<<<<<<<<<
@@ -3082,7 +3116,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_0__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[2]) = ((__pyx_v_a * __pyx_v_e) - (__pyx_v_b * __pyx_v_d));
 
-  /* "tt3de/glm/c_math.pxd":77
+  /* "tt3de/glm/c_math.pxd":81
  * 
  * 
  * cdef inline adjoint_mat(cnumeric[3][3] mat, cnumeric[3][3] adj_mat):             # <<<<<<<<<<<<<<
@@ -3108,7 +3142,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__pyx_fuse_1adjoint_mat", 1);
 
-  /* "tt3de/glm/c_math.pxd":84
+  /* "tt3de/glm/c_math.pxd":88
  * 
  *     # Elements of the input matrix
  *     cdef cnumeric a = mat[0][0]             # <<<<<<<<<<<<<<
@@ -3117,7 +3151,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_a = ((__pyx_v_mat[0])[0]);
 
-  /* "tt3de/glm/c_math.pxd":85
+  /* "tt3de/glm/c_math.pxd":89
  *     # Elements of the input matrix
  *     cdef cnumeric a = mat[0][0]
  *     cdef cnumeric b = mat[0][1]             # <<<<<<<<<<<<<<
@@ -3126,7 +3160,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_b = ((__pyx_v_mat[0])[1]);
 
-  /* "tt3de/glm/c_math.pxd":86
+  /* "tt3de/glm/c_math.pxd":90
  *     cdef cnumeric a = mat[0][0]
  *     cdef cnumeric b = mat[0][1]
  *     cdef cnumeric c = mat[0][2]             # <<<<<<<<<<<<<<
@@ -3135,7 +3169,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_c = ((__pyx_v_mat[0])[2]);
 
-  /* "tt3de/glm/c_math.pxd":87
+  /* "tt3de/glm/c_math.pxd":91
  *     cdef cnumeric b = mat[0][1]
  *     cdef cnumeric c = mat[0][2]
  *     cdef cnumeric d = mat[1][0]             # <<<<<<<<<<<<<<
@@ -3144,7 +3178,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_d = ((__pyx_v_mat[1])[0]);
 
-  /* "tt3de/glm/c_math.pxd":88
+  /* "tt3de/glm/c_math.pxd":92
  *     cdef cnumeric c = mat[0][2]
  *     cdef cnumeric d = mat[1][0]
  *     cdef cnumeric e = mat[1][1]             # <<<<<<<<<<<<<<
@@ -3153,7 +3187,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_e = ((__pyx_v_mat[1])[1]);
 
-  /* "tt3de/glm/c_math.pxd":89
+  /* "tt3de/glm/c_math.pxd":93
  *     cdef cnumeric d = mat[1][0]
  *     cdef cnumeric e = mat[1][1]
  *     cdef cnumeric f = mat[1][2]             # <<<<<<<<<<<<<<
@@ -3162,7 +3196,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   __pyx_v_f = ((__pyx_v_mat[1])[2]);
 
-  /* "tt3de/glm/c_math.pxd":94
+  /* "tt3de/glm/c_math.pxd":98
  * 
  *     #diff y
  *     adj_mat[0][0] = e - f             # <<<<<<<<<<<<<<
@@ -3171,7 +3205,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[0]) = (__pyx_v_e - __pyx_v_f);
 
-  /* "tt3de/glm/c_math.pxd":95
+  /* "tt3de/glm/c_math.pxd":99
  *     #diff y
  *     adj_mat[0][0] = e - f
  *     adj_mat[0][1] = f - d             # <<<<<<<<<<<<<<
@@ -3180,7 +3214,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[1]) = (__pyx_v_f - __pyx_v_d);
 
-  /* "tt3de/glm/c_math.pxd":96
+  /* "tt3de/glm/c_math.pxd":100
  *     adj_mat[0][0] = e - f
  *     adj_mat[0][1] = f - d
  *     adj_mat[0][2] = d - e             # <<<<<<<<<<<<<<
@@ -3189,7 +3223,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[0])[2]) = (__pyx_v_d - __pyx_v_e);
 
-  /* "tt3de/glm/c_math.pxd":99
+  /* "tt3de/glm/c_math.pxd":103
  * 
  *     # diff x
  *     adj_mat[1][0] = c - b             # <<<<<<<<<<<<<<
@@ -3198,7 +3232,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[0]) = (__pyx_v_c - __pyx_v_b);
 
-  /* "tt3de/glm/c_math.pxd":100
+  /* "tt3de/glm/c_math.pxd":104
  *     # diff x
  *     adj_mat[1][0] = c - b
  *     adj_mat[1][1] = a - c             # <<<<<<<<<<<<<<
@@ -3207,7 +3241,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[1]) = (__pyx_v_a - __pyx_v_c);
 
-  /* "tt3de/glm/c_math.pxd":101
+  /* "tt3de/glm/c_math.pxd":105
  *     adj_mat[1][0] = c - b
  *     adj_mat[1][1] = a - c
  *     adj_mat[1][2] = b - a             # <<<<<<<<<<<<<<
@@ -3216,7 +3250,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[1])[2]) = (__pyx_v_b - __pyx_v_a);
 
-  /* "tt3de/glm/c_math.pxd":104
+  /* "tt3de/glm/c_math.pxd":108
  * 
  * 
  *     adj_mat[2][0] = b*f - c*e             # <<<<<<<<<<<<<<
@@ -3225,7 +3259,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[0]) = ((__pyx_v_b * __pyx_v_f) - (__pyx_v_c * __pyx_v_e));
 
-  /* "tt3de/glm/c_math.pxd":105
+  /* "tt3de/glm/c_math.pxd":109
  * 
  *     adj_mat[2][0] = b*f - c*e
  *     adj_mat[2][1] = c*d - a*f             # <<<<<<<<<<<<<<
@@ -3234,7 +3268,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[1]) = ((__pyx_v_c * __pyx_v_d) - (__pyx_v_a * __pyx_v_f));
 
-  /* "tt3de/glm/c_math.pxd":106
+  /* "tt3de/glm/c_math.pxd":110
  *     adj_mat[2][0] = b*f - c*e
  *     adj_mat[2][1] = c*d - a*f
  *     adj_mat[2][2] = a*e - b*d             # <<<<<<<<<<<<<<
@@ -3243,7 +3277,7 @@ static CYTHON_INLINE PyObject *__pyx_fuse_1__pyx_f_5tt3de_3glm_6c_math_adjoint_m
  */
   ((__pyx_v_adj_mat[2])[2]) = ((__pyx_v_a * __pyx_v_e) - (__pyx_v_b * __pyx_v_d));
 
-  /* "tt3de/glm/c_math.pxd":77
+  /* "tt3de/glm/c_math.pxd":81
  * 
  * 
  * cdef inline adjoint_mat(cnumeric[3][3] mat, cnumeric[3][3] adj_mat):             # <<<<<<<<<<<<<<
