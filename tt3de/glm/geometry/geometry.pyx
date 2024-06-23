@@ -96,11 +96,12 @@ cdef class GeometryBuffer:
         geom.node_id = node_id
         geom.material_id = material_id
         self.content_idx += 1
-    cdef void set_polygon_count(self, int at, int count) noexcept nogil:
-        cdef s_geometry* geom = &self._raw_content[self.content_idx]
-        geom.geom_type = 3  # Polygon
-        geom.polygon_count = count
 
+
+    cdef void set_polygon_count(self, int at, int count) noexcept nogil:
+        cdef s_geometry* geom = &self._raw_content[at]
+        geom[0].geom_type = 3  # Polygon
+        geom[0].polygon_count = count
 
     cdef void add_triangle(self, float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz, float uv_array[48], int node_id, int material_id):
         if not self.can_add():
@@ -156,7 +157,8 @@ cdef class GeometryBuffer:
         cdef float uv_array[48]
         cdef int face_idx = 0
 
-        self.set_polygon_count(self.content_idx,facecount)
+        cdef int polygon_index = self.content_idx
+
         for face_idx in range(facecount):
             the_uv = face_uvs[face_idx]
             point_a = vertex[0]
@@ -166,6 +168,7 @@ cdef class GeometryBuffer:
                 uv_array[i] = the_uv[i]
             self.add_triangle(point_a[0], point_a[1], point_a[2], point_b[0], point_b[1], point_b[2], point_c[0], point_c[1], point_c[2], uv_array, node_id, material_id)
 
+        self.set_polygon_count(polygon_index,facecount)
         self.elements += 1
 
         

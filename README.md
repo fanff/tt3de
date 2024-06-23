@@ -24,6 +24,13 @@ python setup.py build_ext --inplace
 ```
 
 
+## testing *
+
+```bash 
+poetry run python demos\2d\texture_tests.py
+
+```
+
 
 
 ### trick for pythonpath 

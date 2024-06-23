@@ -1,5 +1,4 @@
 
-
 ctypedef packed struct s_geometry:
     unsigned char geom_type # 0 is point, 1 is line , 2 is triangle , 3 is polygon
     int polygon_count

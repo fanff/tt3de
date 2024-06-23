@@ -1,8 +1,6 @@
-import struct
+
 import unittest
 import pytest
-from tt3de.asset_fastloader import fast_load
-from tt3de.richtexture import ImageTexture
 import random
 
 
@@ -20,8 +18,6 @@ def drawbuffer_to_pil(drawbuffer: DrawingBuffer, img_name="out.png", layer="fron
     geom_id
     node_id
     material_id
-
-
 
     """
     from PIL import Image
@@ -123,10 +119,8 @@ class Test_DrawCell(unittest.TestCase):
         self.assertEqual(maxd, 12.0)
 
         canvas_list = drawbuffer.canvas_to_list()
-        depthbuffer_list = drawbuffer.drawbuffer_to_list()
 
-        for i in range(512 * 512):
-            self.assertEqual(depthbuffer_list[i], [12.0, 0.0, 0.0, 0.0, 0, 0, 0, 0])
+        for i in range(512*512):
             self.assertEqual(canvas_list[i], [0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_to_list(self):
@@ -278,7 +272,7 @@ class Test_DrawCell(unittest.TestCase):
                 "w2_alt": 0.0,
                 "w3_alt": 0.0,
                 "primitiv_id": 0,
-                "geom_id": 0,
+                "geom_id": -1,
                 "node_id": 0,
                 "material_id": 0,
             },

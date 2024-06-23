@@ -11,33 +11,6 @@ DEF PRIMITIVE_TYPE_POINT=0
 DEF PRIMITIVE_TYPE_LINE=1
 DEF PRIMITIVE_TYPE_TRIANGLE=2
 
-cpdef s_drawing_primitive make_point_primitive(int  node_id,
-                                               int  geometry_id,
-                                               int  material_id,
-                                               int  unique_id,
-                                                int ax,
-                                                int ay,
-                                                float depth
-                                               ):
-    cdef s_drawing_primitive aprimitiv 
-
-    aprimitiv.node_id=node_id
-    aprimitiv.geometry_id=geometry_id
-    aprimitiv.material_id=material_id
-    aprimitiv.unique_id = unique_id
-    aprimitiv.mat[2][0] = depth
-
-
-
-    aprimitiv.ax = ax 
-    aprimitiv.ay = ay 
-
-
-
-    return aprimitiv
-
-
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef class PrimitivesBuffer:
@@ -68,15 +41,24 @@ cdef class PrimitivesBuffer:
         return self.an_arrayofstuff.size<self.size
     cpdef void clear(self):
         self.an_arrayofstuff.size=0
-    cpdef void add_triangle(self,int node_id,  int  geometry_id,  int  material_id, 
+
+
+    def add_triangle(self,int node_id,  int  geometry_id,  int  material_id, 
         float ax, float ay, float az, 
         float bx, float by, float bz, 
-        float cx, float cy, float cz):
-        if self.an_arrayofstuff.size < self.an_arrayofstuff.capacity :         
+        float cx, float cy, float cz, list uv_array):
+
+        cdef float uvs[48] 
+        cdef int uv_idx 
+
+        if self.an_arrayofstuff.size < self.an_arrayofstuff.capacity :  
+            for uv_idx in range(48):
+                uvs[uv_idx] = uv_array[uv_idx]
             _add_triangle_no_object(&self.an_arrayofstuff,node_id,geometry_id,material_id,
                 ax,ay,az,
                 bx,by,bz,
-                cx,cy,cz)
+                cx,cy,cz,
+                &(uvs[0]))
             self.an_arrayofstuff.size+=1     
 
     cpdef void add_line(self, int  node_id,  int  geometry_id,  int  material_id,  float ax,  float ay,  float az,  float bx,  float by,  float bz):
@@ -98,16 +80,32 @@ cdef class PrimitivesBuffer:
     
     
     
-    cpdef s_drawing_primitive get_primitive(self,int ixd):
-        cdef s_drawing_primitive lol = s_drawing_primitive()
-        #cdef s_drawing_primitive* dfssdf =self.index_of(ixd)
-        memcpy(&lol,self.index_of(ixd) , self.an_arrayofstuff.elementSize)
-        return lol
+    def get_primitive(self,int ixd) -> dict:
+        cdef s_drawing_primitive* lol =self.index_of(ixd)
+
+        return {
+            "clipped": lol.clipped,
+            "primitive_type_id" : lol.primitive_type_id ,
+            "node_id" : lol.node_id,
+            "geometry_id" : lol.geometry_id,
+            "material_id":lol.material_id,
+            "unique_id": lol.unique_id,
+            "mat" : lol.mat,
+            "adjoint" : lol.adjoint,
+            "flat_determinant" : lol.flat_determinant,
+            "ax": lol.ax ,
+            "ay": lol.ay ,
+            "bx": lol.bx ,
+            "by": lol.by ,
+            "cx": lol.cx ,
+            "cy": lol.cy ,
+        }
 
 
-cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
-                             int  geometry_id,
-                             int  material_id,
+cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,
+                            int node_id,
+                            int  geometry_id,
+                            int  material_id,
                             float ax,
                             float ay,
                             float az,
@@ -119,6 +117,8 @@ cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
                             float cx,
                             float cy,
                             float cz,
+
+                            float * uv_array,
                             ) :
     cdef s_drawing_primitive* aprimitiv=<s_drawing_primitive* > ((<char*> ((primitiv_buffer_array).data)) + sizeof(s_drawing_primitive) * primitiv_buffer_array.size )
     aprimitiv.primitive_type_id=2
@@ -128,6 +128,9 @@ cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
     aprimitiv.geometry_id=geometry_id
     aprimitiv.material_id=material_id
     aprimitiv.unique_id = <int> primitiv_buffer_array.size
+    aprimitiv.uv_array = uv_array
+
+
     aprimitiv.mat[0][0] = ax
     aprimitiv.mat[1][0] = ay
     aprimitiv.mat[2][0] = az

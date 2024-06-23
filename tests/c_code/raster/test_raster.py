@@ -122,6 +122,7 @@ class Test_RasterPrecalcTriangle(unittest.TestCase):
             10.0,
             3.0,
             1.0,
+            [0.0]*48
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -153,6 +154,7 @@ class Test_RasterPrecalcTriangle(unittest.TestCase):
             10.0,
             3.0,
             1.0,
+            [0.0]*48
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -310,7 +312,7 @@ class Test_RasterAll_point(unittest.TestCase):
         self.assertEqual(elem_of_dephtbuffer["w3"], 0.0)
 
         self.assertEqual(elem_of_dephtbuffer["node_id"], 0)
-        self.assertEqual(elem_of_dephtbuffer["geom_id"], 0)
+        self.assertEqual(elem_of_dephtbuffer["geom_id"], -1)
         self.assertEqual(elem_of_dephtbuffer["material_id"], 0)
         self.assertEqual(elem_of_dephtbuffer["primitiv_id"], 0)
 
@@ -363,7 +365,7 @@ class Test_RasterAll_point(unittest.TestCase):
         self.assertEqual(elem_of_dephtbuffer["w3"], 0.0)
 
         self.assertEqual(elem_of_dephtbuffer["node_id"], 0)
-        self.assertEqual(elem_of_dephtbuffer["geom_id"], 0)
+        self.assertEqual(elem_of_dephtbuffer["geom_id"], -1)
         self.assertEqual(elem_of_dephtbuffer["material_id"], 0)
         self.assertEqual(elem_of_dephtbuffer["primitiv_id"], 0)
 
@@ -670,6 +672,7 @@ class Test_RasterAll_Triangle(unittest.TestCase):
             5.5,
             28.8,
             1.0,
+            [0.0]*48
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -705,6 +708,7 @@ class Test_RasterAll_Triangle(unittest.TestCase):
             5.5,
             24.8,
             1.0,
+            [0.0]*48
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)

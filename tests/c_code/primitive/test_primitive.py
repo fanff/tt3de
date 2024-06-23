@@ -1,20 +1,8 @@
 import unittest
 import pytest
-from tt3de.asset_fastloader import fast_load
-from tt3de.richtexture import ImageTexture
 
-
-from tt3de.glm.primitives.primitives import make_point_primitive
 from tt3de.glm.primitives.primitives import PrimitivesBuffer
 import itertools
-
-
-class Test_Primitive(unittest.TestCase):
-    def test_createPoint(self):
-        apoint = make_point_primitive(0, 0, 0, 0, 0, 0, 0.0)  # ids  # xiyi  # depth
-
-        apoint
-
 
 class Test_PrimitivesBuffer(unittest.TestCase):
 
@@ -78,6 +66,7 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             10.0,
             3.0,
             1.0,
+            [0.0]*48,
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -108,7 +97,6 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 10)
 
     def test_add_point(self):
-        apoint = make_point_primitive(0, 0, 0, 0, 0, 0, 0.0)  # ids  # xiyi  # depth
 
         pb = PrimitivesBuffer(3)
 

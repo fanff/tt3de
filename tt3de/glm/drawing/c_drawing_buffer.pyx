@@ -91,14 +91,14 @@ cdef class DrawingBuffer:
 
     cpdef void hard_clear(self,float init_depth):
         cdef int idx
+        cdef int layer_idx
         for idx in range(self.size):
-            
             # clear canvas
             #((self.canvas[idx]).aleph) = [0,0,0, 0,0,0, 0,0]
             memset(self.aleph(idx), 0, 8*sizeof(unsigned char))
-            # clear depth buffer 
-            init_s_drawbuffer_cell(& (self.drawbuffer[(DEPTH_BUFFER_COUNT*idx)]),init_depth)
-            init_s_drawbuffer_cell(& (self.drawbuffer[(DEPTH_BUFFER_COUNT*idx)+1]),init_depth)
+            for layer_idx in range(DEPTH_BUFFER_COUNT):
+                # clear depth buffer 
+                init_s_drawbuffer_cell(& (self.drawbuffer[(DEPTH_BUFFER_COUNT*idx)+layer_idx]),init_depth)
 
     cpdef void set_depth_content(self,const int xi,const int yi,
                                 float depth_value, 
@@ -134,6 +134,12 @@ cdef class DrawingBuffer:
         athing = self._raw_data[(self.linear_idx(xi,yi)*DEPTH_BUFFER_COUNT)+layer]
         return athing
 
+    def get_depth_buff_contents(self,xi:int,yi:int):
+        res = []
+        for layer in range(DEPTH_BUFFER_COUNT):
+
+            res.append( self._raw_data[(self.linear_idx(xi,yi)*DEPTH_BUFFER_COUNT)+layer])
+        return res
     def get_depth_min_max(self,layer:int =0)->tuple[int,int]:
         cdef int buffer_index = 0;
     
@@ -284,6 +290,7 @@ cdef class DrawingBuffer:
 cdef void init_s_drawbuffer_cell(s_drawbuffer_cell* x, const float depth):
     memset(x, 0, sizeof(s_drawbuffer_cell))
     x[0].depth_value = depth
+    x[0].geom_id = -1
 
 cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
         const int raw_array_width,
@@ -311,7 +318,10 @@ cdef void set_depth_content(s_drawbuffer_cell* the_raw_array,
     while the_layer < DEPTH_BUFFER_COUNT and is_done==0:
     
         thecell= &(the_raw_array[the_point+the_layer]) #&self.drawbuffer[self.linear_idx(xi,yi)]
-        if depth_value < thecell.depth_value:
+
+        if thecell.geom_id == geom_id:
+            is_done= 1
+        elif depth_value < thecell.depth_value:
             # moving current cell to next layer
             if the_layer+1<DEPTH_BUFFER_COUNT:
                 thenextcell= &(the_raw_array[the_point+the_layer+1]) 

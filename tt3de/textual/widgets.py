@@ -500,3 +500,34 @@ class RenderInfo(Widget, can_focus=False):
     def update_frame_count(self, frame_count: int):
         l: Label = self.query_one("#frame_idx")
         l.update(f"Frame: {frame_count}")
+
+
+
+from textual.widgets import DataTable
+DEPTH_BUFFER_COLUMNS=["L#","depth","geom","node","mat","prim"]
+class DepthBufferInfo(Widget, can_focus=False):
+    DEFAULT_CSS = """
+
+    DepthBufferInfo{
+        min-height: 10;
+    }
+
+
+    """
+    def compose(self) -> ComposeResult:
+        yield DataTable()
+    def on_mount(self):
+        table = self.query_one(DataTable)
+        table.add_columns(*DEPTH_BUFFER_COLUMNS)
+        table.add_row(*([0]*len(DEPTH_BUFFER_COLUMNS)),key="0")
+        table.add_row(*([1]*len(DEPTH_BUFFER_COLUMNS)),key="1")
+    def update_depthinfo(self,updated_values):
+        table:DataTable = self.query_one(DataTable)
+        for idx, content in enumerate(updated_values):
+            table.update_cell_at((idx,0),idx)
+            table.update_cell_at((idx,1),content["depth_value"])
+            table.update_cell_at((idx,2),content["geom_id"])
+            table.update_cell_at((idx,3),content["node_id"])
+            table.update_cell_at((idx,4),content["material_id"])
+            table.update_cell_at((idx,5),content["primitiv_id"])
+

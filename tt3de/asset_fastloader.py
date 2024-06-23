@@ -3,6 +3,7 @@ from tt3de.asset_load import load_bmp, load_obj, read_file
 
 from tt3de.richtexture import ImageTexture
 from tt3de.tt3de import Point2D, Point3D, Triangle3D
+from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.utils import TT3DEMaterialMode, TT3DEMaterialTextureMappingOptions
 
 
@@ -246,6 +247,50 @@ class Prefab2D:
         m.uvmap = texture_coords
         return m
 
+    @staticmethod
+    def unitary_square_polygon() -> TT2Polygon:
+        vertices = [
+                Point3D(0.0, 0.0, 1.0),
+                Point3D(1.0, 0.0, 1.0),
+                Point3D(1.0, 1.0, 1.0),
+                Point3D(0.0, 1.0, 1.0),
+            ]
+        texture_coords = [
+            [
+                Point2D(0.0, 0),
+                Point2D(1.0, 0.0),
+                Point2D(1.0, 1.0),
+            ],
+            [
+                Point2D(0.0, 0),
+                Point2D(1.0, 1.0),
+                Point2D(0.0, 1.0),
+            ],
+        ]
+
+        m = TT2Polygon()
+        m.vertex_list = vertices
+        m.uvmap = texture_coords
+        return m
+    @staticmethod
+    def uv_coord_from_atlas(atlas_item_size:int=32,idx_x:int = 0,idx_y:int = 0) -> list:
+
+        atlas_step = float(atlas_item_size)/256
+        u_min,u_max = idx_x*atlas_step,(idx_x+1)*(atlas_step)
+        v_min,v_max = idx_y*atlas_step,(idx_y+1)*(atlas_step)
+
+        return [
+            [
+                Point2D(u_min, v_min),
+                Point2D(u_max, v_min),
+                Point2D(u_max, v_max),
+            ],
+            [
+                Point2D(u_min, v_min),
+                Point2D(u_max, v_max),
+                Point2D(u_min, v_max),
+            ],
+        ]
 
 def prefab_mesh_single_square(meshcls):
     vertices = [

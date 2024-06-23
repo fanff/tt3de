@@ -70,23 +70,28 @@ class Test_Static_Mode(unittest.TestCase):
         raster_precalc(primitive_buffer, drawing_buffer)
         raster_all(primitive_buffer, drawing_buffer, mb)
 
+        depthp_pix_0 = drawing_buffer.get_depth_buff_content(0, 0 , layer=0)
+
+
+        self.assertEqual(depthp_pix_0, {
+                "depth_value": 1.0,
+                "w1": 1.0,
+                "w2": 0.0,
+                "w3": 0.0,
+                "w1_alt": 0.5,
+                "w2_alt": 0.5,
+                "w3_alt": 0.0,
+                "primitiv_id": 0,
+                "geom_id": 0,
+                "node_id": node_id,
+                "material_id": material_id,
+            })  # 
+        
         apply_pixel_shader(
             primitive_buffer, drawing_buffer, mb, geometry_buffer, texture_array_object
         )
 
         canvas_list = drawing_buffer.canvas_to_list()
-        depth_buffer_list = drawing_buffer.drawbuffer_to_list()
-
-        depthp_pix_0 = depth_buffer_list[0]
-        self.assertEqual(depthp_pix_0[0], 1.0)  # depth
-        self.assertEqual(depthp_pix_0[1], 1.0)  # weights to vertice 2D
-        self.assertEqual(depthp_pix_0[2], 0.0)  # weights
-        self.assertEqual(depthp_pix_0[3], 0.0)  # weights
-
-        self.assertEqual(depthp_pix_0[4], 100)  # node id
-        self.assertEqual(depthp_pix_0[5], 0)  #
-        self.assertEqual(depthp_pix_0[6], 1)  # material_id
-        self.assertEqual(depthp_pix_0[7], 0)  #
 
         self.assertEqual(
             canvas_list[0], [23, 45, 56, 0, 0, 0, 0, 0]
@@ -96,11 +101,6 @@ class Test_Static_Mode(unittest.TestCase):
             self.assertEqual(
                 anypix, [0, 0, 0, 0, 0, 0, 0, 0]
             )  # because material here is the 0, mode 0 is donothing
-
-        for anypix in depth_buffer_list[1:]:
-            self.assertEqual(
-                anypix, [1000.0, 0.0, 0.0, 0.0, 0, 0, 0, 0]
-            )  # because this is the raw canvas here.
 
     def test_mode_3_static_back_albedo(self):
 
@@ -156,18 +156,21 @@ class Test_Static_Mode(unittest.TestCase):
         )
 
         canvas_list = drawing_buffer.canvas_to_list()
-        depth_buffer_list = drawing_buffer.drawbuffer_to_list()
+        depthp_pix_0 = drawing_buffer.get_depth_buff_content(0, 0 , layer=0)
 
-        depthp_pix_0 = depth_buffer_list[0]
-        self.assertEqual(depthp_pix_0[0], 1.0)  # depth
-        self.assertEqual(depthp_pix_0[1], 1.0)  # weights to vertice 2D
-        self.assertEqual(depthp_pix_0[2], 0.0)  # weights
-        self.assertEqual(depthp_pix_0[3], 0.0)  # weights
-
-        self.assertEqual(depthp_pix_0[4], 100)  # node id
-        self.assertEqual(depthp_pix_0[5], 0)  #
-        self.assertEqual(depthp_pix_0[6], 1)  # material_id
-        self.assertEqual(depthp_pix_0[7], 0)  #
+        self.assertEqual(depthp_pix_0, {
+                "depth_value": 1.0,
+                "w1": 1.0,
+                "w2": 0.0,
+                "w3": 0.0,
+                "w1_alt": 0.5,
+                "w2_alt": 0.5,
+                "w3_alt": 0.0,
+                "primitiv_id": 0,
+                "geom_id": 0,
+                "node_id": node_id,
+                "material_id": material_id,
+            })  # 
 
         self.assertEqual(
             canvas_list[0], [0, 0, 0, 4, 5, 6, 0, 0]
@@ -177,12 +180,6 @@ class Test_Static_Mode(unittest.TestCase):
             self.assertEqual(
                 anypix, [0, 0, 0, 0, 0, 0, 0, 0]
             )  # because material here is the 0, mode 0 is donothing
-
-        for anypix in depth_buffer_list[1:]:
-            self.assertEqual(
-                anypix, [1000.0, 0.0, 0.0, 0.0, 0, 0, 0, 0]
-            )  # because this is the raw canvas here.
-
 
 
     def test_mode_double_raster_full_transp(self):
@@ -266,7 +263,7 @@ class Test_Static_Mode(unittest.TestCase):
                 "w2_alt": 0.0,
                 "w3_alt": 0.0,
                 "primitiv_id": 0,
-                "geom_id": 0,
+                "geom_id": -1,
                 "node_id": 0,
                 "material_id": 0,
             })  # the layer on the back is untouched
@@ -369,7 +366,7 @@ class Test_Static_Mode(unittest.TestCase):
                 "w2_alt": 0.0,
                 "w3_alt": 0.0,
                 "primitiv_id": 0,
-                "geom_id": 0,
+                "geom_id": -1,
                 "node_id": 0,
                 "material_id": 0,
             })  # the layer on the back is untouched
@@ -473,7 +470,7 @@ class Test_Static_Mode(unittest.TestCase):
                 "w2_alt": 0.0,
                 "w3_alt": 0.0,
                 "primitiv_id": 0,
-                "geom_id": 0,
+                "geom_id": -1,
                 "node_id": 0,
                 "material_id": 0,
             })  # the layer on the back is untouched

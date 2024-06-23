@@ -49,8 +49,6 @@ DEF TT3DE_APPLY_BACK_DONE = 2
 DEF TT3DE_APPLY_GLYPH_DONE = 4
 DEF TT3DE_APPLY_ALL_DONE = 7
 
-DEF CONSTANT_A_THIRD = 1.0/3.0
-DEF CONSTANT_TWO_THIRD = 2.0/3.0
 
 DEF DEPTH_BUFFER_COUNT = 2
 
@@ -355,12 +353,12 @@ cdef void apply_mode_uv_mapping_debug(s_material* material,
                 s_geometry* the_geometry,
                 s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
-    cdef float au = the_geometry.uv_array[0]
-    cdef float av = the_geometry.uv_array[1]
-    cdef float bu = the_geometry.uv_array[2]
-    cdef float bv = the_geometry.uv_array[3]
-    cdef float cu = the_geometry.uv_array[4]
-    cdef float cv = the_geometry.uv_array[5]
+    cdef float au = the_primitive.uv_array[0]
+    cdef float av = the_primitive.uv_array[1]
+    cdef float bu = the_primitive.uv_array[2]
+    cdef float bv = the_primitive.uv_array[3]
+    cdef float cu = the_primitive.uv_array[4]
+    cdef float cv = the_primitive.uv_array[5]
 
 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
@@ -384,12 +382,12 @@ cdef void apply_mode_uv_mapping_texture_id(s_material* material,
                 int* apply_finished
                 ) noexcept nogil:
     #unpack the uvs 
-    cdef float au = the_geometry.uv_array[0]
-    cdef float av = the_geometry.uv_array[1]
-    cdef float bu = the_geometry.uv_array[2]
-    cdef float bv = the_geometry.uv_array[3]
-    cdef float cu = the_geometry.uv_array[4]
-    cdef float cv = the_geometry.uv_array[5]
+    cdef float au = the_primitive.uv_array[0]
+    cdef float av = the_primitive.uv_array[1]
+    cdef float bu = the_primitive.uv_array[2]
+    cdef float bv = the_primitive.uv_array[3]
+    cdef float cu = the_primitive.uv_array[4]
+    cdef float cv = the_primitive.uv_array[5]
 
     # get uv coordinates 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
@@ -438,12 +436,12 @@ cdef void apply_mode_debug_double_uv_map(s_material* material,
                 s_geometry* the_geometry,
                 s_texture_array* texture_array) noexcept nogil:
     #unpack the uvs 
-    cdef float au = the_geometry.uv_array[0]
-    cdef float av = the_geometry.uv_array[1]
-    cdef float bu = the_geometry.uv_array[2]
-    cdef float bv = the_geometry.uv_array[3]
-    cdef float cu = the_geometry.uv_array[4]
-    cdef float cv = the_geometry.uv_array[5]
+    cdef float au = the_primitive.uv_array[0]
+    cdef float av = the_primitive.uv_array[1]
+    cdef float bu = the_primitive.uv_array[2]
+    cdef float bv = the_primitive.uv_array[3]
+    cdef float cu = the_primitive.uv_array[4]
+    cdef float cv = the_primitive.uv_array[5]
 
 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
@@ -487,12 +485,12 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
 
                 
     #unpack the uvs layer 1 
-    cdef float au = the_geometry.uv_array[0]
-    cdef float av = the_geometry.uv_array[1]
-    cdef float bu = the_geometry.uv_array[2]
-    cdef float bv = the_geometry.uv_array[3]
-    cdef float cu = the_geometry.uv_array[4]
-    cdef float cv = the_geometry.uv_array[5]
+    cdef float au = the_primitive.uv_array[0]
+    cdef float av = the_primitive.uv_array[1]
+    cdef float bu = the_primitive.uv_array[2]
+    cdef float bv = the_primitive.uv_array[3]
+    cdef float cu = the_primitive.uv_array[4]
+    cdef float cv = the_primitive.uv_array[5]
 
     # get uv coordinates 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
@@ -538,12 +536,12 @@ cdef void apply_mode_double_perlin_noise(s_material* material,
                 s_texture_array* texture_array,
                 int* apply_finished) noexcept nogil:
     #unpack the uvs 
-    cdef float au = the_geometry.uv_array[0]
-    cdef float av = the_geometry.uv_array[1]
-    cdef float bu = the_geometry.uv_array[2]
-    cdef float bv = the_geometry.uv_array[3]
-    cdef float cu = the_geometry.uv_array[4]
-    cdef float cv = the_geometry.uv_array[5]
+    cdef float au = the_primitive.uv_array[0]
+    cdef float av = the_primitive.uv_array[1]
+    cdef float bu = the_primitive.uv_array[2]
+    cdef float bv = the_primitive.uv_array[3]
+    cdef float cu = the_primitive.uv_array[4]
+    cdef float cv = the_primitive.uv_array[5]
 
     # get uv coordinates 
     cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3

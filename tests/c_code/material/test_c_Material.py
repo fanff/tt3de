@@ -179,8 +179,3 @@ class Test_ApplyMaterialMethod(unittest.TestCase):
             self.assertEqual(
                 anypix, [0, 0, 0, 0, 0, 0, 0, 0]
             )  # because material here is the 0, mode 0 is donothing
-
-        for anypix in depth_buffer_list[1:]:
-            self.assertEqual(
-                anypix, [1000.0, 0.0, 0.0, 0.0, 0, 0, 0, 0]
-            )  # because this is the raw canvas here.

@@ -28,13 +28,14 @@ from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
 
 from tt3de.textual.widgets import (
     CameraConfig,
+    DepthBufferInfo,
     FloatSelector,
     RenderInfo,
     Vector3Selector,
 )
 from tt3de.textual_widget import TT3DView
 
-from tt3de.tt_2dnodes import TT2DMesh, TT2DNode
+from tt3de.tt_2dnodes import TT2DMesh, TT2DNode, TT2Polygon
 
 
 class GLMTester(TT3DView):
@@ -70,9 +71,9 @@ class GLMTester(TT3DView):
 
             self.root2Dnode.elements.append(a2dnode)
 
-        #a dding a second time the texture
+        #adding a second time the texture
         a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh: TT2Polygon = Prefab2D.unitary_square_polygon()
         a2dmesh.material_id = 3
         a2dnode.elements.append(a2dmesh)
         a2dnode.local_transform = glm.translate(
@@ -84,7 +85,7 @@ class GLMTester(TT3DView):
 
         # adding a long stuff to have a repeated texture
         a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh: TT2Polygon = Prefab2D.unitary_square_polygon()
         a2dmesh.material_id = 3
         a2dnode.elements.append(a2dmesh)
 
@@ -105,23 +106,37 @@ class GLMTester(TT3DView):
 
         # adding a square + texture, with the transparent stuff
         a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh: TT2Polygon = Prefab2D.unitary_square_polygon()
         a2dmesh.material_id = 4 # this one has transparency enabled
+        a2dmesh.uvmap = Prefab2D.uv_coord_from_atlas(32,0,1)
+
         a2dnode.elements.append(a2dmesh)
         a2dnode.local_transform = glm.translate(
             glm.vec3(-1, float(-1) ,0.0) 
-        ) * glm.scale(glm.vec3(1.0, 1.0,1.0))
+        ) * glm.scale(glm.vec3(1.2, 1.2,1.0)) 
         self.root2Dnode.elements.append(a2dnode)
 
         # adding a square + texture, withoutthe transparent stuff
         a2dnode = TT2DNode()
-        a2dmesh: TT2DMesh = Prefab2D.unitary_square(TT2DMesh)
+        a2dmesh: TT2Polygon = Prefab2D.unitary_square_polygon()
         a2dmesh.material_id = 3 # this one not transparent ; texture of sky 
         a2dnode.elements.append(a2dmesh)
         a2dnode.local_transform = glm.translate(
             glm.vec3(-1, float(-1.2) ,0.2) # notice slitly moved to the back
         ) * glm.scale(glm.vec3(1.0, 1.0,1.0))
         self.root2Dnode.elements.append(a2dnode)
+
+
+        # adding a square + texture as a polygon. without the transparent stuff
+        a2dnode = TT2DNode()
+        a2dpoly = Prefab2D.unitary_square_polygon()
+        a2dpoly.material_id = 3 # this one not transparent ; texture of sky 
+        a2dnode.elements.append(a2dpoly)
+        a2dnode.local_transform = glm.translate(
+            glm.vec3(-0.8, float(-.7) ,0.1) # notice slitly moved to the back
+        ) * glm.scale(glm.vec3(1.0, 1.0,1.0))
+        self.root2Dnode.elements.append(a2dnode)
+
 
         # final append
         self.rc.append(self.root2Dnode)
@@ -160,7 +175,13 @@ class GLMTester(TT3DView):
                 pass
                 # info_box: Static = self.parent.query_one(".lastevent")
                 # info_box.update(f"leaving!")
-
+            case events.MouseMove:
+                event: events.MouseMove = event
+                
+                athing = self.rc.drawing_buffer.get_depth_buff_contents(event.x,event.y)
+                depth_info: DepthBufferInfo = self.parent.query_one(DepthBufferInfo)
+                depth_info.update_depthinfo(athing)
+                
             case events.Key:
                 event: events.Key = event
                 match event.key:
@@ -197,6 +218,7 @@ class Content(Static):
             yield Static("", classes="lastevent")
             yield CameraConfig()
             yield RenderInfo()
+            yield DepthBufferInfo()
         yield GLMTester()
 
     def on_camera_config_projection_changed(

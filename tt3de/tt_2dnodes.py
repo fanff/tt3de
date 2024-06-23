@@ -2,7 +2,7 @@ from types import TracebackType
 from typing import Any, List, Optional
 import glm
 from typing_extensions import Self
-
+import itertools
 from tt3de.glm.pyglmtexture import GLMCamera
 from tt3de.tt3de import Point2D
 from tt3de.utils import (
@@ -61,7 +61,12 @@ class TT2DMesh(TT2DNode):
         self.glm_elements_4 = [
             [p3d_tovec4(a), p3d_tovec4(b), p3d_tovec4(c)]
             for (a, b, c) in (self.elements)
-        ]
+        ]   
+
+        import itertools
+
+        self.uvmap_prepared = itertools.chain([[pa.x,pa.y,pb.x,pb.y,pc.x,pc.y] for face_idx, (pa,pb,pc) in  enumerate(self.uvmap)])
+
 
     def draw(self, camera: GLMCamera, geometry_buffer, model_matrix=None, node_id=0):
         if model_matrix is not None:
@@ -82,7 +87,47 @@ class TT2DMesh(TT2DNode):
             c = [c.x, c.y, c.z]
             uva, uvb, uvc = self.uvmap[faceidx]
 
-            uvs = [uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y] + [0.0] * 42
+            face_uv = [uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y] + [0.0] * 42
             geometry_buffer.add_triangle_to_buffer(
-                a, b, c, uvs, node_id, self.material_id  # uv list  # node_id
+                a, b, c, face_uv, node_id, self.material_id  # uv list  # node_id
             )
+
+
+
+class TT2Polygon(TT2DNode):
+
+    def __init__(
+        self, name: str = None, transform: Optional[glm.mat3] = None, material_id=0
+    ):
+        super().__init__(name=name, transform=transform)
+        self.vertex_list = []
+        self.uvmap:List[tuple[Point2D,Point2D,Point2D]] = []
+        self.material_id = material_id
+
+    def cache_output(self, segmap):
+
+        self.uvmap_prepared = [[pa.x,pa.y,pb.x,pb.y,pc.x,pc.y]*8 for face_idx, (pa,pb,pc) in  enumerate(self.uvmap)]
+        
+
+        self.glm_elements_4 = [   p3d_tovec4(v) for v in (self.vertex_list)        ]   
+
+        
+
+
+
+    def draw(self, camera: GLMCamera, geometry_buffer, model_matrix=None, node_id=0):
+        if model_matrix is not None:
+            _model_matrix = model_matrix * self.local_transform
+        else:
+            _model_matrix = self.local_transform
+        tr = camera.view_matrix_2D * _model_matrix
+        
+        transformed_vertex = (tr*vertex
+                            for vertex in (self.glm_elements_4))
+        transformed_vertex= [[vertex.x,vertex.y,vertex.z]
+                            for vertex in transformed_vertex]
+        
+        geometry_buffer.add_polygon_to_buffer(
+            transformed_vertex, self.uvmap_prepared, node_id, self.material_id  # uv list  # node_id
+        )
+

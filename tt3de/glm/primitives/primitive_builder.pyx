@@ -29,6 +29,11 @@ cdef void c_build_primitives(s_geometry* geom_buffer, unsigned int geometry_coun
     # geom could be generative and build other stuff.
     cdef int current_geom_idx = 0
     cdef s_geometry* geom
+    cdef int current_triangle_idx = 0
+    cdef int current_node_id = 0
+    cdef int current_material_id = 0
+    cdef int current_polygon_count = 0
+
 
     if geometry_count > primitiv_buffer_array.capacity :  
         return
@@ -46,6 +51,7 @@ cdef void c_build_primitives(s_geometry* geom_buffer, unsigned int geometry_coun
                 geom.az
             )
             primitiv_buffer_array.size+=1
+            current_geom_idx += 1
         elif (geom).geom_type == LINE:
             _add_line(primitiv_buffer_array,
                 geom.node_id,
@@ -59,6 +65,7 @@ cdef void c_build_primitives(s_geometry* geom_buffer, unsigned int geometry_coun
                 geom.bz
             )
             primitiv_buffer_array.size+=1
+            current_geom_idx += 1
         elif (geom).geom_type == TRIANGLE:
             _add_triangle_no_object(primitiv_buffer_array,
                 geom.node_id,
@@ -72,25 +79,35 @@ cdef void c_build_primitives(s_geometry* geom_buffer, unsigned int geometry_coun
                 geom.bz,
                 geom.cx,
                 geom.cy,
-                geom.cz
+                geom.cz,
+                geom.uv_array
             )
             primitiv_buffer_array.size+=1
+            current_geom_idx += 1
 
-        elif (geom).geom_type == POLYGON:
-            _add_triangle_no_object(primitiv_buffer_array,
-                geom.node_id,
-                current_geom_idx,  # Assuming geometry_id is the index in the geometry buffer
-                geom.material_id,
-                geom.ax,
-                geom.ay,
-                geom.az,
-                geom.bx,
-                geom.by,
-                geom.bz,
-                geom.cx,
-                geom.cy,
-                geom.cz
-            )
-            primitiv_buffer_array.size+=1
+        elif geom.geom_type == POLYGON:
+            # keep this one as reference
+            current_node_id = geom.node_id
+            current_material_id = geom.material_id
+            current_polygon_count = geom.polygon_count
+            for current_triangle_idx in range(current_polygon_count):
+                geom = (<s_geometry* > ((<char*> geom_buffer) + sizeof(s_geometry) * (current_geom_idx+current_triangle_idx) ))
 
-        current_geom_idx += 1
+                _add_triangle_no_object(primitiv_buffer_array,
+                    current_node_id,
+                    current_geom_idx,  
+                    current_material_id,
+                    geom.ax,
+                    geom.ay,
+                    geom.az,
+                    geom.bx,
+                    geom.by,
+                    geom.bz,
+                    geom.cx,
+                    geom.cy,
+                    geom.cz,
+                    geom.uv_array
+                )
+                primitiv_buffer_array.size+=1
+            current_geom_idx += current_polygon_count
+        

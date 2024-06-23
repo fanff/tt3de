@@ -14,6 +14,9 @@ ctypedef packed struct s_drawing_primitive:
     int geometry_id
     int material_id
     int unique_id
+
+    float * uv_array
+    
     
     # fields arbitrary compatible with any kind of primitive
     
@@ -72,24 +75,6 @@ cdef class PrimitivesBuffer:
         return <s_drawing_primitive* > ((<char*> ((&self.an_arrayofstuff).data)) + sizeof(s_drawing_primitive) * idx )
 
 
-    cpdef s_drawing_primitive get_primitive(self,int ixd)
-    
-    
-    cpdef void add_triangle(self, int  node_id,
-                            int  geometry_id,
-                            int  material_id,
-                            float ax,
-                            float ay,
-                            float az,
-
-                            float bx,
-                            float by,
-                            float bz,
-
-                            float cx,
-                            float cy,
-                            float cz,
-                            )
     cpdef void add_line(self, int  node_id,
                             int  geometry_id,
                             int  material_id,
@@ -112,9 +97,10 @@ cdef class PrimitivesBuffer:
 
 
 
-cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
-                             int  geometry_id,
-                             int  material_id,
+cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,
+                            int node_id,
+                            int  geometry_id,
+                            int  material_id,
                             float ax,
                             float ay,
                             float az,
@@ -126,6 +112,8 @@ cdef void _add_triangle_no_object(s_buffer* primitiv_buffer_array,int node_id,
                             float cx,
                             float cy,
                             float cz,
+
+                            float * uv_array,
                             ) 
 
 cdef void _add_line(s_buffer* primitiv_buffer_array, int  node_id,
