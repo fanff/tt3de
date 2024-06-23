@@ -492,14 +492,19 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     cdef float cu = the_primitive.uv_array[4]
     cdef float cv = the_primitive.uv_array[5]
 
+    cdef float w1_clamped = thecell.w1 # clampf( thecell.w1, 0.0, 1.0 )
+    cdef float w2_clamped = thecell.w2 # clampf( thecell.w2, 0.0, 1.0 )
+    cdef float w3_clamped = thecell.w3 # clampf( thecell.w3, 0.0, 1.0 )
+
+
     # get uv coordinates 
-    cdef float u = au * thecell.w1 + bu*thecell.w2 + cu*thecell.w3
-    cdef float v = av * thecell.w1 + bv*thecell.w2 + cv*thecell.w3
+    cdef float u = au * w1_clamped + bu * w2_clamped + cu * w3_clamped
+    cdef float v = av * w1_clamped + bv * w2_clamped + cv * w3_clamped
 
 
-    cdef float w1_alt_clamped = clampf(thecell.w1_alt,0.0,1.0 )
-    cdef float w2_alt_clamped = clampf(thecell.w2_alt,0.0,1.0 )
-    cdef float w3_alt_clamped = clampf(thecell.w3_alt,0.0,1.0 )
+    cdef float w1_alt_clamped = thecell.w1_alt #clampf(thecell.w1_alt,0.0,1.0 )
+    cdef float w2_alt_clamped = thecell.w2_alt #clampf(thecell.w2_alt,0.0,1.0 )
+    cdef float w3_alt_clamped = thecell.w3_alt #clampf(thecell.w3_alt,0.0,1.0 )
 
     cdef float u_alt = au * w1_alt_clamped + bu * w2_alt_clamped + cu * w3_alt_clamped
     cdef float v_alt = av * w1_alt_clamped + bv * w2_alt_clamped + cv * w3_alt_clamped
@@ -523,7 +528,7 @@ cdef void apply_mode_double_up_mapping_texture_id(s_material* material,
     map_uv_generic(thetexture,use_repeat,use_transp,
                     u_alt,v_alt,
                     &(aleph[3]),&(aleph[4]),&(aleph[5]),&application_result_back)
-    if application_result_front or application_result_back:
+    if application_result_front and application_result_back:
         aleph[6] = material.glyph_a 
         aleph[7] = material.glyph_b 
 

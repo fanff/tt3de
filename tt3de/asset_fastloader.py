@@ -147,6 +147,10 @@ class MaterialPerfab:
             fast_load("models/numbersheet.bmp").img_data,
             0,0,255
         )
+        texture_array.load_texture256_from_list(
+            fast_load("models/sprite_sheet_8px.bmp").img_data,
+            0,0,0
+        )
 
 
 
@@ -186,6 +190,28 @@ class MaterialPerfab:
         mat2.set_texture_ids([4, -1, -1])
         mops = TT3DEMaterialTextureMappingOptions()
         mops.texture_mapping_repetition = 0
+        mops.texture_transparency_mode = 1
+        mat2.set_texture_mapping_options(mops.get_value())
+        material_buffer.add_material(mat2)
+
+
+        # double raster Texture 4 (number_sheet texture) ; with repetition
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([4, -1, -1])
+        mops = TT3DEMaterialTextureMappingOptions()
+        mops.texture_mapping_repetition = 1
+        mops.texture_transparency_mode = 1
+        mat2.set_texture_mapping_options(mops.get_value())
+        material_buffer.add_material(mat2)
+
+
+        # double raster Texture 4 (8px sprite sheet) ; with repetition
+        mat2 = Material(texturemode=TT3DEMaterialMode.DOUBLE_UV_MAPPING_TEXT1.value)
+        mat2.set_glyph(0, 157)
+        mat2.set_texture_ids([5, -1, -1])
+        mops = TT3DEMaterialTextureMappingOptions()
+        mops.texture_mapping_repetition = 1
         mops.texture_transparency_mode = 1
         mat2.set_texture_mapping_options(mops.get_value())
         material_buffer.add_material(mat2)
@@ -276,8 +302,10 @@ class Prefab2D:
     def uv_coord_from_atlas(atlas_item_size:int=32,idx_x:int = 0,idx_y:int = 0) -> list:
 
         atlas_step = float(atlas_item_size)/256
-        u_min,u_max = idx_x*atlas_step,(idx_x+1)*(atlas_step)
-        v_min,v_max = idx_y*atlas_step,(idx_y+1)*(atlas_step)
+
+        ministep = 0.01/256
+        u_min,u_max = (idx_x*atlas_step) + ministep, ((idx_x+1)*atlas_step) - ministep
+        v_min,v_max = (idx_y*atlas_step) + ministep, ((idx_y+1)*atlas_step) - ministep
 
         return [
             [

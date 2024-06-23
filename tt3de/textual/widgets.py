@@ -515,13 +515,16 @@ class DepthBufferInfo(Widget, can_focus=False):
 
     """
     def compose(self) -> ComposeResult:
+        yield Label(id="location")
         yield DataTable()
     def on_mount(self):
         table = self.query_one(DataTable)
         table.add_columns(*DEPTH_BUFFER_COLUMNS)
         table.add_row(*([0]*len(DEPTH_BUFFER_COLUMNS)),key="0")
         table.add_row(*([1]*len(DEPTH_BUFFER_COLUMNS)),key="1")
-    def update_depthinfo(self,updated_values):
+    def update_depthinfo(self,updated_values:list,x:int=0,y:int=0):
+        label:Label = self.query_one(Label)
+        label.update(f"at: {x} , {y}")
         table:DataTable = self.query_one(DataTable)
         for idx, content in enumerate(updated_values):
             table.update_cell_at((idx,0),idx)
