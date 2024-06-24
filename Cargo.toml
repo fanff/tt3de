@@ -17,4 +17,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 nalgebra = "0.33.0"
+nalgebra-glm = "0.3"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
+
+[profile.dev]
+opt-level = 1

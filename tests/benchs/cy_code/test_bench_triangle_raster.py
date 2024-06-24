@@ -4,7 +4,7 @@ import pytest
 
 from tt3de.glm.raster.raster import raster_precalc
 from tt3de.glm.raster.raster import raster_all
-from tt3de.glm.primitives.primitives import PrimitivesBuffer
+from tt3de. glm.primitives.primitives import PrimitivesBuffer
 from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
 
 from tt3de.glm.primitives.primitive_builder import build_primitives
@@ -17,7 +17,7 @@ def cversion(primitive_buffer, drawing_buffer, material_buffer):
     raster_all(primitive_buffer, drawing_buffer, material_buffer)
 
 
-sizes = [32, 64, 128, 256, 512, 2048, 4096]
+sizes = [32, 64,128, 256, 512, 2048, 4096]
 
 
 @pytest.mark.parametrize("size", sizes)
