@@ -116,3 +116,21 @@ This is in Cython.
 [MaterialApplication] : This stage processes each fragment to determine its final color and other attributes.
 
 
+
+## Rust version test. 
+
+How to setup 
+
+* git clone this repo somewhere 
+* if you have poetry just run `poetry install`
+* if you don't have poetry 
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install poetry 
+poetry install 
+```
+
+* Now compile the Rust stuff with `maturin develop` 
+* The unit test of the rtt3de should work
