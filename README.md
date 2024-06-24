@@ -54,11 +54,11 @@ on vscode  launch.josn
 
 The Cython engine uses 5 elementary buffers to work:
 
-* Drawing: Store the depth buffer & the canvas buffer. 
-* Geometry: store a geometry to draw, Point/line/triangle obviously, but could be a Sphere, Cube, Ribon ... 
-* Primitives: store an atomic element for drawing. here, only point/line/triangle.
-* Material: Store how your geometry is painted. Can be static color / texture application, or combo of it.   
-* Textures: Store basically the array of pixels of a 2D texture. Its an image, basically. 
+* DrawingBuffer: Store the depth buffer & the canvas buffer. 
+* GeometryBuffer: store a geometry to draw, Point/line/triangle obviously, but could be a Sphere, Cube, Ribon ... 
+* PrimitivesBuffer: store an atomic element for drawing. here, only point/line/triangle.
+* MaterialBuffer: Store how your geometry is painted. Can be static color / texture application, or combo of it.   
+* TextureBuffer: Store basically the array of pixels of a 2D texture. Its an image, basically with rgb value 
 
 The rendering process goes as follow:
 
