@@ -20,4 +20,7 @@ enum PrimitiveElements {
         p_start: usize,
         p_end: usize,
     },
+    Static {
+        index: usize,
+    },
 }

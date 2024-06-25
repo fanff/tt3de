@@ -16,12 +16,14 @@ impl Clone for GeomReferences {
     }
 }
 
+#[derive(Debug)]
 pub struct Point {
     geom_ref: GeomReferences,
     pa: usize,
     pb: usize,
 }
 
+#[derive(Debug)]
 pub struct Line {
     geom_ref: GeomReferences,
     pa: usize,
@@ -48,21 +50,30 @@ impl Clone for Polygon {
 #[derive(Debug)]
 pub enum GeomElement {
     Point,
-    Line,
+    Line(Line),
     Polygon(Polygon),
 }
 
-#[pyclass]
 pub struct GeometryBuffer {
-    max_size: i32,
+    max_size: usize,
     content: Box<[GeomElement]>,
 }
 
-#[pymethods]
 impl GeometryBuffer {
+    fn add_point() {}
+    fn add_polygon() {}
+}
+
+#[pyclass]
+pub struct GeometryBufferPy {
+    buffer: GeometryBuffer,
+}
+
+#[pymethods]
+impl GeometryBufferPy {
     #[new]
     #[pyo3(signature = (max_size=64))]
-    fn new(max_size: i32) -> Self {
+    fn new(max_size: usize) -> Self {
         let polygon_init = vec![
             Polygon {
                 geom_ref: GeomReferences {
@@ -72,15 +83,18 @@ impl GeometryBuffer {
                 p_start: 0,
                 p_end: 0,
             };
-            max_size as usize
+            max_size
         ];
 
         let geom_elements: Vec<GeomElement> =
             polygon_init.into_iter().map(GeomElement::Polygon).collect();
         // Step 3: Box the Vec<GeomElement>
         let content = geom_elements.into_boxed_slice();
-
-        GeometryBuffer { max_size, content }
+        GeometryBufferPy {
+            buffer: GeometryBuffer {
+                max_size: max_size,
+                content,
+            },
+        }
     }
 }
-
