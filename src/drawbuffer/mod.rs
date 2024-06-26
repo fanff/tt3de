@@ -35,7 +35,7 @@ impl Small16Drawing {
 }
 
 pub struct SegmentCache {
-    data: HashMap<(u8, u8, u8, u8, u8, u8, u8), Py<PyAny>>,
+    data: HashMap<u64, Py<PyAny>>,
     bit_size_front: [u8; 3],
     bit_size_back: [u8; 3],
 }
@@ -54,11 +54,11 @@ impl SegmentCache {
     }
 
     pub fn set_bit_size_back(&mut self, r: u8, g: u8, b: u8) {
-        self.bit_size_front = [r, g, b];
+        self.bit_size_back = [r, g, b];
         self.data = HashMap::new()
     }
 
-    fn get_hash(&self, f: Color, b: Color, glyph: u8) -> (u8, u8, u8, u8, u8, u8, u8) {
+    fn get_reduced(&self, f: Color, b: Color, glyph: u8) -> [u8; 7] {
         // lets reduce the accuraccy of the color by reducing the bit count.
         let hfr = f.r >> (8 - self.bit_size_front[0]);
         let hfg = f.g >> (8 - self.bit_size_front[1]);
@@ -69,24 +69,38 @@ impl SegmentCache {
         let hbb = b.b >> (8 - self.bit_size_back[2]);
 
         // now assemblate a hash value based on this.
-        (hfr, hfg, hfb, hbr, hbg, hbb, glyph)
-    }
-    pub fn insert(&mut self, f: Color, b: Color, glyph: u8, value: Py<PyAny>) {
-        let hash = self.get_hash(f, b, glyph);
-        self.data.insert(hash, value);
+        [hfr, hfg, hfb, hbr, hbg, hbb, glyph]
     }
 
-    pub fn insert_with_hash(&mut self, hash: (u8, u8, u8, u8, u8, u8, u8), value: Py<PyAny>) {
-        self.data.insert(hash, value);
+    pub fn insert_with_hash(&mut self, hash_value: u64, value: Py<PyAny>) {
+        self.data.insert(hash_value, value);
     }
 
-    pub fn get_with_hash(&self, hash: (u8, u8, u8, u8, u8, u8, u8)) -> Option<&Py<PyAny>> {
-        self.data.get(&hash)
+    pub fn get_with_hash(&self, hash_value: u64) -> Option<&Py<PyAny>> {
+        self.data.get(&hash_value)
     }
 
-    pub fn get(&self, f: Color, b: Color, glyph: u8) -> Option<&Py<PyAny>> {
-        let hash = self.get_hash(f, b, glyph);
-        self.data.get(&hash)
+    pub fn hash_tuple_to_int(&self, hash_tuple: [u8; 7]) -> u64 {
+        let mut hash: u64 = 0;
+
+        for i in 0..3 {
+            // Retain only the highest bits as specified by bit_reductions[i]
+            let reduced_num = hash_tuple[i] >> (8 - self.bit_size_front[i]);
+            // Shift the hash left by the number of bits retained and add the reduced number
+            hash = (hash << self.bit_size_front[i]) | reduced_num as u64;
+        }
+
+        for i in 0..3 {
+            // Retain only the highest bits as specified by bit_reductions[i]
+            let reduced_num = hash_tuple[i] >> (8 - self.bit_size_back[i]);
+            // Shift the hash left by the number of bits retained and add the reduced number
+            hash = (hash << self.bit_size_back[i]) | reduced_num as u64;
+        }
+
+        // Add  without any bit reduction
+        hash = (hash << 8) | hash_tuple[6] as u64;
+
+        hash
     }
 
     pub fn estimate_max_combinations(&self) -> u64 {
@@ -226,34 +240,25 @@ impl AbigDrawing {
                         let idx = row_idx * self.max_col + col_idx;
                         let cell = canvas[idx];
 
-                        let the_hashval = self.seg_cache.get_hash(
+                        let reduced_hash = self.seg_cache.get_reduced(
                             cell.front_color,
                             cell.back_color,
                             cell.glyph as u8,
                         );
+                        let hash_value = self.seg_cache.hash_tuple_to_int(reduced_hash);
 
-                        match self.seg_cache.get_with_hash(the_hashval) {
+                        match self.seg_cache.get_with_hash(hash_value) {
                             Some(value) => {
                                 append_method.call1((&value.clone_ref(py),)).unwrap();
                             }
                             None => {
                                 let f_triplet = self
                                     .color_triplet_class
-                                    .call1(
-                                        py,
-                                        (
-                                            cell.front_color.r,
-                                            cell.front_color.g,
-                                            cell.front_color.b,
-                                        ),
-                                    )
+                                    .call1(py, (reduced_hash[0], reduced_hash[1], reduced_hash[2]))
                                     .unwrap();
                                 let b_triplet = self
                                     .color_triplet_class
-                                    .call1(
-                                        py,
-                                        (cell.back_color.r, cell.back_color.g, cell.back_color.b),
-                                    )
+                                    .call1(py, (reduced_hash[3], reduced_hash[4], reduced_hash[5]))
                                     .unwrap();
                                 dict.set_item(
                                     intern!(py, "color"),
@@ -285,23 +290,22 @@ impl AbigDrawing {
                                     )
                                     .unwrap();
                                 self.seg_cache
-                                    .insert_with_hash(the_hashval, anewseg.clone_ref(py));
+                                    .insert_with_hash(hash_value, anewseg.clone_ref(py));
 
                                 append_method.call1((anewseg.clone_ref(py),)).unwrap();
                             }
                         }
                     } else {
                         // we are outbound ; we need to feed some extra segments
-                        // requested line count
-                        let seg = self.seg_cache.get_with_hash((0, 0, 0, 0, 0, 0, 0)).unwrap();
+                        let seg = self.seg_cache.get_with_hash(0).unwrap();
                         append_method.call1((seg.clone_ref(py),)).unwrap();
                     }
                 }
                 append_row_method.call1((&arow_list,)).unwrap();
             } else {
-                // we are outbound ; we need to feed some extra lines
+                // we are outbound ; we need to feed extra line with the good number of columns
                 // requested line count
-                let seg = self.seg_cache.get_with_hash((0, 0, 0, 0, 0, 0, 0)).unwrap();
+                let seg = self.seg_cache.get_with_hash(0).unwrap();
 
                 for _col_idx in min_x..max_x {
                     append_method.call1((seg.clone_ref(py),)).unwrap();

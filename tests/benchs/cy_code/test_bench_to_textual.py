@@ -41,9 +41,11 @@ def test_to_list_hashed(benchmark, size):
     rc = CyRenderContext(size,size)
     benchmark(canvas_to_list_hashed, rc,size)
 
-
+## this version is SUUUUUPER slow; because of all the instanciation that happen inside. 
+# no cache / nothing here. 
 def r_version1(gb,size):
-    res = gb.to_textual(0,size,0,size)
+    pass
+    # res = gb.to_textual(0,size,0,size)
 
 
 @pytest.mark.parametrize("size", sizes)
