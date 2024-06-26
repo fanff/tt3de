@@ -1,3 +1,4 @@
+from typing import Dict
 import unittest
 
 
@@ -18,7 +19,7 @@ class Test_VertexBuffer(unittest.TestCase):
         from rtt3de import VertexBufferPy,TransformPackPy
         abuffer = VertexBufferPy()
         trpack = TransformPackPy()
-
+        self.assertEqual(abuffer.get_max_content(),128)
         abuffer.set_v3(1,2,3,1)
         self.assertEqual(abuffer.get_v3_t(0),(0,0,0))
         self.assertEqual(abuffer.get_v3_t(1),(1,2,3))
@@ -26,7 +27,7 @@ class Test_VertexBuffer(unittest.TestCase):
         
         self.assertEqual(abuffer.get_v4_t(0),(0,0,0,0))
 
-        
+
     def test_multmv(self):
         from rtt3de import VertexBufferPy,TransformPackPy
         import glm
@@ -37,10 +38,10 @@ class Test_VertexBuffer(unittest.TestCase):
         trpack.set_model_matrix_glm(glm.mat4(1))
         trpack.set_view_matrix_glm(glm.mat4(1))
 
-        for i in range(128):
+        for i in range(abuffer.get_max_content()):
             abuffer.set_v3(1+i,2+i,3+i,i)
 
-        abuffer.apply_mv(trpack,0,128)
+        abuffer.apply_mv(trpack,0,abuffer.get_max_content())
         z = abuffer.get_v4_t(0)
         self.assertEqual(z,(1.0, 2.0, 3.0, 0.0))
         # check conformal with glm calculation :
@@ -100,22 +101,7 @@ class Test_TransformationPack(unittest.TestCase):
         self.assertEqual(m4_as_tuple,out)
 
 
-class Test_Small8Drawing(unittest.TestCase):
-    def test_create_small8(self):
-        from rtt3de import Small8Drawing
-        gb = Small8Drawing()
-        as_str = str(gb)
-
-        gb.hard_clear(1000.0)
-
-        self.assertEqual(gb.get_at(0,0,0),1000.0)
-        self.assertEqual(gb.get_at(0,0,1),1000.0)
-
-        gb.hard_clear(10.0)
-
-        self.assertEqual(gb.get_at(1,1,0),10.0)
-        self.assertEqual(gb.get_at(1,1,1),10.0)
-    
+class Test_DrawBuffer(unittest.TestCase):
     def test_create_verybig(self):
         from rtt3de import AbigDrawing
 
@@ -143,9 +129,15 @@ class Test_Small8Drawing(unittest.TestCase):
         self.assertEqual(ccelldict,hyp)
 
 
+    def test_apply_material(self):
+        from rtt3de import AbigDrawing
 
+        gb = AbigDrawing(10,10)
+        gb.hard_clear(100.0)
 
-    def test_create(self):
+        gb.apply_material()
+
+    def test_create16(self):
         from rtt3de import Small16Drawing
         gb = Small16Drawing()
 
@@ -161,3 +153,55 @@ class Test_Small8Drawing(unittest.TestCase):
 
 
 
+    def test_to_textual_2(self):
+        from rtt3de import AbigDrawing
+        gb = AbigDrawing(10,10)
+        gb.hard_clear(100.0)    
+
+        res = gb.to_textual_2(0,10,0,10)
+        self.assertEqual(len(res),10)
+        self.assertEqual(len(res[0]),10)
+
+
+
+        res = gb.to_textual_2(0,10,1,9)
+        self.assertEqual(len(res),8)
+        self.assertEqual(len(res[0]),10)
+
+
+    def test_to_textual_2_out_bound_x(self):
+        from rtt3de import AbigDrawing
+        gb = AbigDrawing(10,10)
+        gb.hard_clear(100.0)    
+
+
+        res = gb.to_textual_2(0,13,1,3)
+        self.assertEqual(len(res),2)
+        self.assertEqual(len(res[0]),13)
+
+
+        res = gb.to_textual_2(5,13+5,1,3)
+        self.assertEqual(len(res),2)
+        self.assertEqual(len(res[0]),13)
+
+
+
+        res = gb.to_textual_2(5,504+5,1,3)
+        self.assertEqual(len(res),2)
+        self.assertEqual(len(res[0]),504)
+
+    def test_to_textual_2_out_bound_y(self):
+        from rtt3de import AbigDrawing
+        gb = AbigDrawing(10,10)
+        gb.hard_clear(100.0)    
+
+        
+        res = gb.to_textual_2(0,3,1,30)
+        self.assertEqual(len(res),29)
+        self.assertEqual(len(res[0]),3)
+
+
+
+        res = gb.to_textual_2(0,30,1,30)
+        self.assertEqual(len(res),29)
+        self.assertEqual(len(res[0]),30)

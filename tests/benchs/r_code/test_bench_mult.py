@@ -20,7 +20,7 @@ def test_r_mmulti(benchmark):
     trpack.set_model_matrix_glm(glm.translate(glm.vec3(1,2,3)))
     trpack.set_view_matrix_glm(glm.translate(glm.vec3(1,2,3)))
 
-    for i in range(128):
+    for i in range(abuffer.get_max_content()):
         abuffer.set_v3(1+i,2+i,3+i,i)
         
     benchmark(rversion,abuffer,trpack)

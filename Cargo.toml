@@ -21,4 +21,4 @@ nalgebra-glm = "0.3"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 
 [profile.dev]
-opt-level = 1
+opt-level = 3

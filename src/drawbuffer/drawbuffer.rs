@@ -166,7 +166,8 @@ impl<const L: usize, A: Scalar> DrawBuffer<L, A> {
         x
     }
 
-    pub fn iterpix(&mut self) {
+    // will apply the material for every pixel.
+    pub fn apply_material(&mut self) {
         let mut dummyvar = 0;
         for (depth_cell, canvascell) in self.depthbuffer.iter().zip(self.canvas.iter_mut()) {
             for depth_layer in (0..L).rev() {

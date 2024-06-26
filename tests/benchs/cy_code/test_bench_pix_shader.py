@@ -26,7 +26,7 @@ def cversion(primitive_buffer, drawing_buffer, mb, geometry_buffer, ta):
     apply_pixel_shader(primitive_buffer, drawing_buffer, mb, geometry_buffer, ta)
 
 
-sizes = [32, 64, 128, 256]
+sizes = [32, 64, 128, 256,512]
 mode = [0, 1, 2]
 
 

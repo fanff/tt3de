@@ -1,16 +1,16 @@
-use std::borrow::BorrowMut;
+
 
 use nalgebra::{ArrayStorage, U1};
-use nalgebra_glm::{vec4, Mat4, TVec4, Vec3, Vec4};
+use nalgebra_glm::{ Mat4, TVec4, Vec3, Vec4};
 
 #[derive(Debug)]
-pub struct VertexBuffer {
+pub struct VertexBuffer<const C: usize> {
     /// seems like this should be done that way ?128 row, 1 column ?
-    v3content: ArrayStorage<Vec3, 1, 128>,
-    v4content: ArrayStorage<Vec4, 1, 128>,
+    v3content: ArrayStorage<Vec3, 1, C>,
+    v4content: ArrayStorage<Vec4, 1, C>,
 }
 
-impl VertexBuffer {
+impl<const C: usize> VertexBuffer<C> {
     // set the given vertex at the given location
     fn set_vertex(&mut self, v3: &Vec3, idx: usize) {
         self.v3content.as_mut_slice()[idx] = *v3;
@@ -49,26 +49,36 @@ use pyo3::{prelude::*, types::PyTuple};
 
 #[pyclass]
 pub struct VertexBufferPy {
-    buffer: VertexBuffer,
+    buffer: VertexBuffer<128>,
+    max_content: usize,
 }
 
 #[pymethods]
 impl VertexBufferPy {
     #[new]
     fn new() -> VertexBufferPy {
+        const max_content: usize = 128;
         let v3 = Vec3::zeros();
         let v4 = Vec4::zeros();
 
         // Create the ArrayStorage for a 3x2 matrix with f64 elements
         //let storage = ArrayStorage::<f64, 3, 2>(flat_data);
 
-        let v3content = ArrayStorage([[v3]; 128]);
-        let v4content = ArrayStorage([[v4]; 128]);
+        let v3content = ArrayStorage([[v3]; max_content]);
+        let v4content = ArrayStorage([[v4]; max_content]);
         let vb = VertexBuffer {
             v3content,
             v4content,
         };
-        VertexBufferPy { buffer: vb }
+        VertexBufferPy {
+            buffer: vb,
+            max_content: max_content,
+        }
+    }
+
+    fn get_max_content(&self, py: Python) -> Py<PyAny> {
+        let x = self.max_content as i32;
+        x.into_py(py)
     }
 
     fn set_v3(&mut self, x: f32, y: f32, z: f32, idx: usize) {
