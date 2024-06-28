@@ -134,3 +134,59 @@ poetry install
 
 * Now compile the Rust stuff with `maturin develop` 
 * The unit test of the rtt3de should work
+
+
+### Ideas 
+
+
+**Static Immediate Render**
+
+* This is a mode within the "PrimitiveBuffer". 
+* It accept one single number from 0..1024. + Row & Column for locating + a "material" ; wich will provide the coloring we want. 
+* Each number correspond to a cell in the `models\sprite_sheet_8px.bmp`. (the sheet it 256x256 pix;  each cell is 8x8 , there is 32 row, 32 cols =1024 cell with small sprite in it.)
+
+*at compile time*
+
+* Each cell is converted to severals static functions, containing the minimal code to raster the cell, (all pixel that are not black basically). 
+* the function should accept parameter; like the color we pick. 
+
+* Because we render in ascii mode, several mode of raster can be picked; 
+  * 1:1 mode:    consider the ascii pixel as one full pixel. we replace in the canvas the full block. (more detail bellow)
+
+  * 1:2 mode (or double raster mode) : consider the ascii pixel as 2 full pixel. the canvas will contains the "half-block UPPer"; the back and front color make the bottom/top color respectivelly. 
+  In this mode; the tricky part is when it is necessary to change only half of the ascii char.  Depending on where you blit (top/bottom) the other one might need to be updated as well. 
+
+   
+Extra for the 1:1 Mode: 
+
+* In this mode we "redraw" the whole ascii char; there we can take some flexibility to have a specific "glyph" or set of glyph. 
+* For instance; consider drawing a square of  3px X 3px , the middle pix beeing transparent. 
+    * It can be raster with blocks brackets '┌' "┑" etc ..  ; 
+    * or other blocks  like : "▛▀▜" etc.. 
+
+* being able to swith mode quickly is key; because it allows some kind of animation; keeping the same "sprite" ; just changing its "way of prining". 
+
+
+
+
+
+Usage of this mode: 
+
+The user can instanciate (in py) a special "2DNode" that represent sprites we want to render with this mode. Typical targets are: 
+
+* UI text subject to change; but forcibly readable. Think about a hud in flying sim; or the "gold level" in Warcraft 1 ; 
+* Mouse Cursor; always over everything
+
+
+
+
+
+The user set the material, and list of glyph and a vertexidx we want to blit on. All Cached in the MaterialBuffer, & VertexBuffer & Geometry buffer. Just like normal object. 
+
+when the render goes; 
+* Geometry makes primitive; (and apply necessary clipping)
+* Primitive are rasterized (but not the Static one yet; they are kept for later)
+* Pixel shader apply (all the rest is colorized correctly)
+* StaticPrimitive apply : -> now the Static apply kickin. 
+
+

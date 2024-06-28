@@ -50,3 +50,48 @@ def test_bench_triangle_raster(benchmark, size):
     raster_precalc(primitive_buffer, drawing_buffer)
 
     benchmark(cversion, primitive_buffer, drawing_buffer, MaterialBuffer())
+
+
+from rtt3de import PrimitiveBufferPy
+from rtt3de import AbigDrawing
+
+from rtt3de import raster_all_py
+
+
+def rust_version(primitive_buffer, drawing_buffer):
+    raster_all_py(primitive_buffer, drawing_buffer)
+
+
+@pytest.mark.parametrize("size", sizes)
+@pytest.mark.benchmark(group="triangle_raster")
+def test_bench_rust_triangle_raster(benchmark, size):
+
+    drawing_buffer = AbigDrawing(256, 256)
+    drawing_buffer.hard_clear(1000)
+
+    primitive_buffer = PrimitiveBufferPy(2000)
+    
+    # create a geometry buffer to hold the initial elemnts
+    for i in range(1000):
+
+        primitive_buffer.add_triangle(
+            102, # node
+            202, # geom
+            303,  # material 
+            2, # row col
+            2,
+            1.0,
+
+            5,  # top
+            size, # right
+            1.0,
+
+
+            6, # bottom
+            size, # left 
+            1.0,
+        )
+
+    benchmark(rust_version, primitive_buffer, drawing_buffer)
+
+

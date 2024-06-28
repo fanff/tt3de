@@ -1,7 +1,6 @@
-
-
+use crate::utils::convert_pymat4;
 use nalgebra::{ArrayStorage, U1};
-use nalgebra_glm::{ Mat4, TVec4, Vec3, Vec4};
+use nalgebra_glm::{Mat4, TVec4, Vec3, Vec4};
 
 #[derive(Debug)]
 pub struct VertexBuffer<const C: usize> {
@@ -157,21 +156,4 @@ impl TransformPackPy {
         let t = PyTuple::new_bound(py, self.data.model_matrix.as_slice());
         t.into()
     }
-}
-
-fn convert_pymat4(py: Python, values: Py<PyAny>) -> Mat4 {
-    let r = values.call_method0(py, "to_tuple").unwrap();
-    let outer_tuple: &PyTuple = r.extract(py).unwrap();
-
-    // Create an iterator over the nested tuples
-    let nested_tuples_iter = outer_tuple.iter().map(|item| {
-        // Extract each inner tuple
-        let inner_tuple: (f32, f32, f32, f32) = item.extract().unwrap();
-        inner_tuple
-    });
-
-    // Flatten the nested tuples into an iterator of floats
-    let flat_iter = nested_tuples_iter.flat_map(|(a, b, c, d)| vec![a, b, c, d]);
-
-    Mat4::from_iterator(flat_iter)
 }

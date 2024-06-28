@@ -1,8 +1,17 @@
-use pyo3::{intern, prelude::*, types::PyList};
+use nalgebra_glm::Vec3;
+use pyo3::{
+    intern,
+    prelude::*,
+    types::{PyList, PyTuple},
+};
 pub mod drawbuffer;
 use drawbuffer::*;
 use pyo3::types::PyDict;
 use std::{borrow::BorrowMut, collections::HashMap};
+pub mod glyphset;
+use glyphset::*;
+
+use crate::utils::convert_glm_vec3;
 
 #[pyclass]
 pub struct Small16Drawing {
@@ -117,9 +126,10 @@ impl SegmentCache {
 
 #[pyclass]
 pub struct AbigDrawing {
-    db: DrawBuffer<2, f32>,
+    pub db: DrawBuffer<2, f32>,
     max_row: usize,
     max_col: usize,
+    layer_count: usize,
 
     segment_class: Py<PyAny>,
     style_class: Py<PyAny>,
@@ -142,7 +152,17 @@ impl AbigDrawing {
         let style_class = rich_style_module.getattr("Style").unwrap();
         let color_class = rich_color_module.getattr("Color").unwrap();
         let color_triplet_class = rich_color_triplet_module.getattr("ColorTriplet").unwrap();
+        let mut segment_cache = SegmentCache::new([3, 3, 3], [3, 3, 3]);
+        let aseg0 = create_textual_segment(
+            py,
+            [0, 0, 0, 0, 0, 0, 0],
+            &color_triplet_class,
+            &color_class,
+            &segment_class,
+            &style_class,
+        );
 
+        segment_cache.insert_with_hash(0, aseg0);
         AbigDrawing {
             db: DrawBuffer::new(
                 max_row,
@@ -152,14 +172,17 @@ impl AbigDrawing {
             ),
             max_row: max_row,
             max_col: max_col,
+            layer_count: 2,
             segment_class: segment_class.into(),
             style_class: style_class.into(),
             color_class: color_class.into(),
             color_triplet_class: color_triplet_class.into(),
-            seg_cache: SegmentCache::new([3, 3, 3], [3, 3, 3]),
+            seg_cache: segment_cache,
         }
     }
-
+    pub fn layer_count(&self) -> usize {
+        return self.layer_count;
+    }
     //set the number of bit for every channel of the front color.
     pub fn set_bit_size_front(&mut self, r: u8, g: u8, b: u8) {
         self.seg_cache.set_bit_size_front(r, g, b)
@@ -176,28 +199,110 @@ impl AbigDrawing {
         (self.db.borrow_mut()).clear_depth(init_value)
     }
 
-    fn get_at(&self, r: usize, c: usize, l: usize) -> f32 {
-        self.db.get_depth(r, c, l)
+    fn get_depth_buff_content(&self, r: usize, c: usize, layer: usize) -> f32 {
+        self.db.get_depth(r, c, layer)
+    }
+    fn get_min_max_depth(&self, py: Python, layer: usize) -> Py<PyTuple> {
+        let mima = self.db.get_min_max_depth(layer);
+        mima.into_py(py)
     }
 
-    fn get_depth_buffer_cell(&self, py: Python, r: usize, c: usize, l: usize) -> Py<PyDict> {
-        let cell = self.db.get_depth_buffer_cell(r, c);
+    fn set_depth_content(
+        &mut self,
+        py: Python,
+        row: usize,
+        col: usize,
+        depth: f32,
+        weight: Py<PyAny>,
+        weight_2: Py<PyAny>,
+        node_id: usize,
+        geom_id: usize,
+        material_id: usize,
+        primitive_id: usize,
+    ) {
+        let w: Vec3 = convert_glm_vec3(py, weight);
+        let w_alt: Vec3 = convert_glm_vec3(py, weight_2);
+
+        self.db.set_depth_content(
+            row,
+            col,
+            depth,
+            w,
+            w_alt,
+            node_id,
+            geom_id,
+            material_id,
+            primitive_id,
+        )
+    }
+
+    fn get_pix_info_element(&self, py: Python, idx: usize) -> Py<PyDict> {
+        let pix_info_element = self.db.pixbuffer[idx];
         let dict = PyDict::new_bound(py);
 
-        let sdsd = self.db.pixbuffer[cell.pixinfo[l]];
+        let wslice = pix_info_element.w.as_slice();
+        let w_1_slice = pix_info_element.w_1.as_slice();
+        dict.set_item("w", wslice).unwrap();
+        dict.set_item("w_1", w_1_slice).unwrap();
 
-        // Assuming DepthBufferCell has some fields `field1` and `field2`
-        dict.set_item("depth", cell.depth[l]).unwrap();
-        //sdsd.w: TVec3<T>,
-        //sdsd.w_1: TVec3<T>,
-
-        dict.set_item("material_id", sdsd.material_id).unwrap();
-        dict.set_item("primitive_id", sdsd.primitive_id).unwrap();
-        dict.set_item("node_id", sdsd.node_id).unwrap();
-        dict.set_item("geometry_id", sdsd.geometry_id).unwrap();
+        dict.set_item("material_id", pix_info_element.material_id)
+            .unwrap();
+        dict.set_item("primitive_id", pix_info_element.primitive_id)
+            .unwrap();
+        dict.set_item("node_id", pix_info_element.node_id).unwrap();
+        dict.set_item("geometry_id", pix_info_element.geometry_id)
+            .unwrap();
         dict.into()
     }
 
+    fn get_depth_buffer_cell(&self, py: Python, r: usize, c: usize, layer: usize) -> Py<PyDict> {
+        let cell = self.db.get_depth_buffer_cell(r, c);
+        let dict = PyDict::new_bound(py);
+
+        let pix_info_element = self.db.pixbuffer[cell.pixinfo[layer]];
+
+        // Assuming DepthBufferCell has some fields `field1` and `field2`
+        dict.set_item("depth", cell.depth[layer]).unwrap();
+        dict.set_item("pix_info", cell.pixinfo[layer]).unwrap();
+
+        let wslice = pix_info_element.w.as_slice();
+        let w_1_slice = pix_info_element.w_1.as_slice();
+        dict.set_item("w", wslice).unwrap();
+        dict.set_item("w_1", w_1_slice).unwrap();
+
+        dict.set_item("material_id", pix_info_element.material_id)
+            .unwrap();
+        dict.set_item("primitive_id", pix_info_element.primitive_id)
+            .unwrap();
+        dict.set_item("node_id", pix_info_element.node_id).unwrap();
+        dict.set_item("geometry_id", pix_info_element.geometry_id)
+            .unwrap();
+        dict.into()
+    }
+
+    fn set_canvas_cell(
+        &mut self,
+        r: usize,
+        c: usize,
+        front_color_tuple: [u8; 4],
+        back_color_tuple: [u8; 4],
+        glyph: u8,
+    ) {
+        let frontc = Color {
+            r: front_color_tuple[0],
+            g: front_color_tuple[1],
+            b: front_color_tuple[2],
+            a: front_color_tuple[3],
+        };
+        let backc = Color {
+            r: back_color_tuple[0],
+            g: back_color_tuple[1],
+            b: back_color_tuple[2],
+            a: back_color_tuple[3],
+        };
+
+        self.db.set_canvas_content(r, c, frontc, backc, glyph)
+    }
     fn get_canvas_cell(&self, py: Python, r: usize, c: usize) -> Py<PyDict> {
         let cell = self.db.get_canvas_cell(r, c);
         let dict = PyDict::new_bound(py); // this will be super slow
@@ -276,12 +381,14 @@ impl AbigDrawing {
                                 )
                                 .unwrap();
 
+                                let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
+
                                 let anewseg = self
                                     .segment_class
                                     .call1(
                                         py,
                                         (
-                                            "?",
+                                            theglyph,
                                             &self
                                                 .style_class
                                                 .call_bound(py, (), Some(&dict))
@@ -378,13 +485,39 @@ impl AbigDrawing {
         PyList::new_bound(py, rows).into()
     }
 }
+fn create_textual_segment(
+    py: Python,
+    reduced_hash: [u8; 7],
+    color_triplet_class: &Bound<PyAny>,
+    color_class: &Bound<PyAny>,
+    segment_class: &Bound<PyAny>,
+    style_class: &Bound<PyAny>,
+) -> Py<PyAny> {
+    let dict = PyDict::new_bound(py);
+    let f_triplet = color_triplet_class
+        .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
+        .unwrap();
+    let b_triplet = color_triplet_class
+        .call1((reduced_hash[3], reduced_hash[4], reduced_hash[5]))
+        .unwrap();
+    dict.set_item(
+        intern!(py, "color"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (f_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
 
-fn get_color_cache_index(r: u8, g: u8, b: u8) -> usize {
-    ((r / 4) as usize) * 64 * 64 + ((g / 4) as usize) * 64 + ((b / 4) as usize)
-}
-
-// Function to retrieve the color triplet from the buffer
-fn get_color_triplet(color_buffer: &Vec<Py<PyAny>>, r: u8, g: u8, b: u8) -> &Py<PyAny> {
-    let index = get_color_cache_index(r, g, b);
-    &color_buffer[index]
+    dict.set_item(
+        intern!(py, "bgcolor"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (b_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
+    let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
+    let anewseg = segment_class
+        .call1((theglyph, &style_class.call((), Some(&dict)).unwrap()))
+        .unwrap();
+    anewseg.into()
 }
