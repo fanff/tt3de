@@ -2,17 +2,10 @@ from typing import Dict
 import unittest
 
 
-class Test_Material(unittest.TestCase):
-    def test_create(self):
-        raise Exception("not done")
-class Test_GeometryBuffer(unittest.TestCase):
-    def test_create(self):
-        from rtt3de import GeometryBufferPy
-        gb = GeometryBufferPy()
-        as_str = str(gb)
+from rtt3de import VertexBufferPy,TransformPackPy
+
 class Test_VertexBuffer(unittest.TestCase):
     def test_create(self):
-        from rtt3de import VertexBufferPy,TransformPackPy
         abuffer = VertexBufferPy()
         trpack = TransformPackPy()
         self.assertEqual(abuffer.get_max_content(),128)
@@ -22,6 +15,45 @@ class Test_VertexBuffer(unittest.TestCase):
         
         
         self.assertEqual(abuffer.get_v4_t(0),(0,0,0,0))
+
+    def test_add_vertex(self):
+        from rtt3de import VertexBufferPy
+        import glm
+        abuffer = VertexBufferPy()
+
+        self.assertEqual(abuffer.add_vertex(1,2,3),0)
+        self.assertEqual(abuffer.add_vertex(1,2,3),1)
+        self.assertEqual(abuffer.add_vertex(1,2,3),2)
+        self.assertEqual(abuffer.get_vertex_size(),3)
+
+    def test_add_uv(self):
+        from rtt3de import VertexBufferPy
+        import glm
+        abuffer = VertexBufferPy()
+
+        self.assertEqual(abuffer.get_uv_size(),0)
+        retidex = abuffer.add_uv(glm.vec2(1.0,1.5),glm.vec2(2.0,2.5),glm.vec2(3.0,3.5))
+        self.assertEqual(retidex,0)
+        self.assertEqual(abuffer.get_uv_size(),1)
+
+        ret1 = abuffer.add_uv(glm.vec2(1.1,1.1),glm.vec2(2.1,2.1),glm.vec2(3.1,3.1))
+        self.assertEqual(ret1,1)
+        self.assertEqual(abuffer.get_uv_size(),2)
+
+        self.assertEqual(abuffer.get_uv(0),(
+            (1.0,1.5),
+            (2.0,2.5),
+            (3.0,3.5)
+        )
+        
+        )
+        # self.assertEqual(abuffer.get_uv(1),(
+        #     (1.1,1.1),
+        #     (2.1,2.1),
+        #     (3.1,3.1)
+        # )
+        # 
+        # )
 
 
     def test_multmv(self):

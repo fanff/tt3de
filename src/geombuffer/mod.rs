@@ -1,72 +1,125 @@
 use nalgebra_glm::TVec4;
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyDict};
 
-#[derive(Debug)]
-struct GeomReferences {
-    node_id: usize,
-    material_id: usize,
-}
-
-impl Clone for GeomReferences {
-    fn clone(&self) -> Self {
-        GeomReferences {
-            node_id: self.node_id,
-            material_id: self.material_id,
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+pub struct GeomReferences {
+    pub node_id: usize,
+    pub material_id: usize,
 }
 
 #[derive(Debug)]
 pub struct Point {
-    geom_ref: GeomReferences,
-    pa: usize,
-    pb: usize,
+    pub geom_ref: GeomReferences,
+    pub pa: usize,
 }
 
 #[derive(Debug)]
 pub struct Line {
     geom_ref: GeomReferences,
-    pa: usize,
-    pb: usize,
-}
-
-#[derive(Debug)]
-pub struct Polygon {
-    geom_ref: GeomReferences,
     p_start: usize,
     p_end: usize,
 }
 
-impl Clone for Polygon {
-    fn clone(&self) -> Self {
-        Polygon {
-            geom_ref: self.geom_ref.clone(), // assuming GeomReferences implements Clone
-            p_start: self.p_start,
-            p_end: self.p_end,
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+pub struct Polygon {
+    pub geom_ref: GeomReferences,
+    pub p_start: usize,
+    pub p_end: usize,
+
+    pub uv_start: usize,
+    pub uv_end: usize,
 }
 
 #[derive(Debug)]
 pub enum GeomElement {
-    Point,
+    Point(Point),
     Line(Line),
     Polygon(Polygon),
 }
 
 pub struct GeometryBuffer {
-    max_size: usize,
-    content: Box<[GeomElement]>,
+    pub max_size: usize,
+    pub content: Box<[GeomElement]>,
+    pub current_size: usize,
 }
 
 impl GeometryBuffer {
-    fn add_point() {}
-    fn add_polygon() {}
+    fn add_point(&mut self, pidx: usize, node_id: usize, material_id: usize) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+
+        let elem = GeomElement::Point(Point {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            pa: pidx,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
+    fn add_line(
+        &mut self,
+        p_start: usize,
+        p_end: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+        let elem = GeomElement::Line(Line {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            p_start: p_start,
+            p_end: p_end,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
+
+    fn add_polygon(
+        &mut self,
+        p_start: usize,
+        p_end: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+        uv_end: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+        let geom_ref = GeomReferences {
+            node_id,
+            material_id,
+        };
+        let p = Polygon {
+            geom_ref,
+            p_start,
+            p_end,
+            uv_start,
+            uv_end,
+        };
+
+        let elem = GeomElement::Polygon(p);
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
 }
 
 #[pyclass]
 pub struct GeometryBufferPy {
-    buffer: GeometryBuffer,
+    pub buffer: GeometryBuffer,
 }
 
 #[pymethods]
@@ -82,6 +135,8 @@ impl GeometryBufferPy {
                 },
                 p_start: 0,
                 p_end: 0,
+                uv_start: 0,
+                uv_end: 0,
             };
             max_size
         ];
@@ -94,7 +149,72 @@ impl GeometryBufferPy {
             buffer: GeometryBuffer {
                 max_size: max_size,
                 content,
+                current_size: 0,
             },
         }
     }
+
+    fn get_element(&self, py: Python, idx: usize) -> Py<PyDict> {
+        geometry_into_dict(py, &self.buffer.content[idx])
+    }
+
+    fn clear(&mut self) {
+        self.buffer.current_size = 0;
+    }
+
+    fn geometry_count(&self) -> usize {
+        self.buffer.current_size
+    }
+    fn add_point(&mut self, py: Python, p_idx: usize, node_id: usize, material_id: usize) -> usize {
+        self.buffer.add_point(p_idx, node_id, material_id)
+    }
+    fn add_polygon(
+        &mut self,
+        py: Python,
+        p_start: usize,
+        p_end: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+        uv_end: usize,
+    ) -> usize {
+        self.buffer
+            .add_polygon(p_start, p_end, node_id, material_id, uv_start, uv_end)
+    }
+    fn add_line(
+        &mut self,
+        py: Python,
+        p_start: usize,
+        p_end: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        self.buffer.add_line(p_start, p_end, node_id, material_id)
+    }
+}
+
+fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
+    let dict = PyDict::new_bound(py);
+
+    match pi {
+        GeomElement::Point(pi) => {
+            dict.set_item("pa", pi.pa).unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
+                .unwrap();
+        }
+        GeomElement::Line(l) => todo!(),
+        GeomElement::Polygon(p) => {
+            dict.set_item("p_start", p.p_start).unwrap();
+            dict.set_item("p_end", p.p_end).unwrap();
+        }
+    }
+    dict.into()
+}
+fn geometry_ref_into_dict(py: Python, pi: &GeomReferences) -> Py<PyDict> {
+    let dict = PyDict::new_bound(py);
+
+    dict.set_item("node_id", pi.node_id).unwrap();
+    dict.set_item("material_id", pi.material_id).unwrap();
+
+    dict.into()
 }

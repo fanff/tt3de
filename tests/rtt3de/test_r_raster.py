@@ -43,6 +43,8 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
             24, # bottom
             0, # left 
             2.0,
+
+            0
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -111,7 +113,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
             3230,
             0,
             1.0,
-
+            0
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -137,4 +139,3 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
         self.assertGreater(litpixcount,1000) 
         # for some reason 1024 is not achieved. 
         # probeably because the horizontal lines have weird misses ? 
-        

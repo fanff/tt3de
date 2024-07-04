@@ -1,5 +1,9 @@
-use nalgebra_glm::{Mat4, Vec3};
-use pyo3::{types::PyTuple, Py, PyAny, Python};
+use crate::texturebuffer::RGBA;
+use nalgebra_glm::{Mat4, Vec2, Vec3};
+use pyo3::{
+    types::{PyAnyMethods, PyTuple, PyTupleMethods},
+    Bound, Py, PyAny, Python,
+};
 
 pub fn convert_pymat4(py: Python, values: Py<PyAny>) -> Mat4 {
     let r = values.call_method0(py, "to_tuple").unwrap();
@@ -23,4 +27,60 @@ pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {
     let (a, b, c): (f32, f32, f32) = r.extract(py).unwrap();
 
     Vec3::new(a, b, c)
+}
+pub fn convert_glm_vec2(py: Python, values: Py<PyAny>) -> Vec2 {
+    let r = values.call_method0(py, "to_tuple").unwrap();
+    let (a, b): (f32, f32) = r.extract(py).unwrap();
+
+    Vec2::new(a, b)
+}
+
+pub fn convert_tuple_texture_rgba(py: Python, tuple: Py<PyAny>) -> Option<RGBA> {
+    let tuple = tuple.as_ref(py).downcast::<PyTuple>().ok()?;
+    match tuple.len() {
+        3 => {
+            let (a, b, c): (u8, u8, u8) = tuple.extract().unwrap();
+            Some(RGBA {
+                r: a,
+                g: b,
+                b: c,
+                a: 255,
+            })
+        }
+        4 => {
+            let (a, b, c, d): (u8, u8, u8, u8) = tuple.extract().unwrap();
+            Some(RGBA {
+                r: a,
+                g: b,
+                b: c,
+                a: d,
+            })
+        }
+        _ => None,
+    }
+}
+
+pub fn convert_tuple_rgba(tuple: &Bound<PyTuple>) -> Option<RGBA> {
+    let size = tuple.len() as usize;
+    match size {
+        3 => {
+            let (a, b, c): (u8, u8, u8) = tuple.extract().unwrap();
+            Some(RGBA {
+                r: a,
+                g: b,
+                b: c,
+                a: 255,
+            })
+        }
+        4 => {
+            let (a, b, c, d): (u8, u8, u8, u8) = tuple.extract().unwrap();
+            Some(RGBA {
+                r: a,
+                g: b,
+                b: c,
+                a: d,
+            })
+        }
+        _ => None,
+    }
 }

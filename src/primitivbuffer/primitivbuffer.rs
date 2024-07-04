@@ -4,19 +4,6 @@ use nalgebra::{ArrayStorage, U1};
 use nalgebra_glm::{Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
 
 #[derive(Clone, Copy)]
-pub struct UVArray<const DIM: usize, const UVCOUNT: usize, UVACC: Number> {
-    uv_array: ArrayStorage<TVec2<UVACC>, DIM, UVCOUNT>,
-}
-
-impl<const DIM: usize, const UVCOUNT: usize, UVACC: Number> UVArray<DIM, UVCOUNT, UVACC> {
-    pub fn new() -> Self {
-        let d = TVec2::new(UVACC::zero(), UVACC::zero());
-        let uv_array = ArrayStorage([[d; DIM]; UVCOUNT]);
-        UVArray { uv_array }
-    }
-}
-
-#[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Number> {
     pub row: usize,
     pub col: usize,
@@ -32,26 +19,26 @@ pub struct PrimitivReferences {
 }
 
 #[derive(Clone, Copy)]
-pub enum PrimitiveElements<const UVCOUNT: usize, UVACC: Number, DEPTHACC: Number> {
+pub enum PrimitiveElements<DEPTHACC: Number> {
     Point {
         fds: PrimitivReferences,
         row: usize,
         col: usize,
         depth: DEPTHACC,
-        uv: UVArray<2, UVCOUNT, UVACC>,
+        uv: usize,
     },
     Line {
         fds: PrimitivReferences,
         pa: usize,
         pb: usize,
-        uv: UVArray<2, UVCOUNT, UVACC>,
+        uv: usize,
     },
     Triangle {
         fds: PrimitivReferences,
         pa: PointInfo<DEPTHACC>,
         pb: PointInfo<DEPTHACC>,
         pc: PointInfo<DEPTHACC>,
-        uv: UVArray<3, UVCOUNT, UVACC>,
+        uv: usize,
     },
     Static {
         fds: PrimitivReferences,
@@ -59,16 +46,15 @@ pub enum PrimitiveElements<const UVCOUNT: usize, UVACC: Number, DEPTHACC: Number
     },
 }
 
-pub struct PrimitiveBuffer<const UVCOUNT: usize, DEPTHACC: Number> {
+pub struct PrimitiveBuffer<DEPTHACC: Number> {
     pub max_size: usize,
     pub current_size: usize,
-    pub content: Box<[PrimitiveElements<UVCOUNT, f32, DEPTHACC>]>,
+    pub content: Box<[PrimitiveElements<DEPTHACC>]>,
 }
 
-impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> {
+impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
     pub fn new(max_size: usize) -> Self {
-        let p = UVArray::new();
-        let init_array: Vec<PrimitiveElements<UVCOUNT, f32, DEPTHACC>> = vec![
+        let init_array: Vec<PrimitiveElements<DEPTHACC>> = vec![
             PrimitiveElements::Triangle {
                 fds: PrimitivReferences {
                     node_id: 0,
@@ -76,7 +62,7 @@ impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> 
                     geometry_id: 0,
                     primitive_id: 0,
                 },
-                uv: p,
+                uv: 0,
                 pa: PointInfo {
                     row: 0,
                     col: 0,
@@ -114,6 +100,7 @@ impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> 
         row: usize,
         col: usize,
         depth: DEPTHACC,
+        uv: usize,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
@@ -125,7 +112,6 @@ impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> 
             primitive_id: self.current_size,
         };
 
-        let uv: UVArray<2, UVCOUNT, f32> = UVArray::new();
         let apoint = PrimitiveElements::Point {
             fds: pr,
             row: row,
@@ -139,7 +125,16 @@ impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> 
 
         self.current_size - 1
     }
-    pub fn add_line(&mut self) {
+    pub fn add_line(
+        &mut self,
+        node_id: usize,
+        geometry_id: usize,
+        material_id: usize,
+        row: usize,
+        col: usize,
+        depth: DEPTHACC,
+        uv: usize,
+    ) {
         todo!()
     }
     pub fn add_triangle(
@@ -156,7 +151,7 @@ impl<const UVCOUNT: usize, DEPTHACC: Number> PrimitiveBuffer<UVCOUNT, DEPTHACC> 
         p_c_row: usize,
         p_c_col: usize,
         p_c_depth: DEPTHACC,
-        uv: UVArray<3, UVCOUNT, f32>,
+        uv: usize,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;

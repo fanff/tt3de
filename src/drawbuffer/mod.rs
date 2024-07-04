@@ -31,9 +31,7 @@ impl Small16Drawing {
             ),
         }
     }
-    fn apply_material(&mut self) {
-        self.db.apply_material()
-    }
+
     fn hard_clear(&mut self, init_value: f32) {
         (self.db.borrow_mut()).clear_depth(init_value)
     }
@@ -192,9 +190,6 @@ impl AbigDrawing {
         self.seg_cache.set_bit_size_back(r, g, b)
     }
 
-    fn apply_material(&mut self) {
-        self.db.apply_material()
-    }
     fn hard_clear(&mut self, init_value: f32) {
         (self.db.borrow_mut()).clear_depth(init_value)
     }

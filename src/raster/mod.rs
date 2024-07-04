@@ -187,8 +187,8 @@ fn raster_triangle<const DEPTHCOUNT: usize>(
     }
 }
 
-pub fn raster_element<const UVCONT: usize, const DEPTHCOUNT: usize>(
-    element: &PrimitiveElements<UVCONT, f32, f32>,
+pub fn raster_element<const DEPTHCOUNT: usize>(
+    element: &PrimitiveElements<f32>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
@@ -213,8 +213,8 @@ pub fn raster_element<const UVCONT: usize, const DEPTHCOUNT: usize>(
     }
 }
 
-pub fn raster_all<const UVCONT: usize, const DEPTHCOUNT: usize>(
-    primitivbuffer: &PrimitiveBuffer<UVCONT, f32>,
+pub fn raster_all<const DEPTHCOUNT: usize>(
+    primitivbuffer: &PrimitiveBuffer<f32>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {

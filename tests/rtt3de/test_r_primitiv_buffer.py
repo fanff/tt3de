@@ -67,7 +67,8 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             1.0,
             1,
             3,
-            1.0
+            1.0,
+            uv=1,
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
@@ -79,11 +80,31 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         self.assertEqual(not_precalculated["material_id"], 3)
         self.assertEqual(not_precalculated["primitive_id"], 0)
 
-        xxxyyyzzz = list(itertools.chain(*(not_precalculated["mat"])))
+        primitive_buffer.add_triangle(
+            1,
+            2,
+            3,
+            2,
+            2,
+            1.0,
+            5,
+            8,
+            1.0,
+            1,
+            3,
+            1.0,
+            uv=1,
+        )
 
-        self.assert_comparelist(xxxyyyzzz[:3], [2.2, 5.5, 10.0])
+        self.assertEqual(primitive_buffer.primitive_count(),2)
 
-        self.assert_comparelist(xxxyyyzzz[-3:], [1.0, 1.0, 1.0])
+        not_precalculated = primitive_buffer.get_primitive(0)
+        self.assertEqual(not_precalculated["primitive_id"], 0)
+
+        not_precalculated = primitive_buffer.get_primitive(1)
+        self.assertEqual(not_precalculated["primitive_id"], 1)
+
+
 
     def test_add_point_overflow(self):
         primitive_buffer = PrimitiveBufferPy(10)
@@ -94,7 +115,10 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             node_id = 1
             geom_id = 2
             material_id = 3
-            primitive_buffer.add_point(node_id, geom_id, material_id, *xyzfloat_point)
+            primitive_buffer.add_point(node_id, geom_id, material_id, row=1,
+                                    col=2,
+                                     depth=3.0,
+                                      uv=1)
         self.assertEqual(primitive_buffer.primitive_count(), 10)
 
     def test_add_point(self):
@@ -106,7 +130,11 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         node_id = 1
         geom_id = 2
         material_id = 3
-        primitive_buffer.add_point(node_id, geom_id, material_id, *xyzfloat_point)
+        primitive_buffer.add_point(node_id, geom_id, material_id,
+                                   row=1,
+                                    col=2,
+                                     depth=3.0,
+                                      uv=1)
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         not_precalculated = primitive_buffer.get_primitive(0)
@@ -120,13 +148,13 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             not_precalculated["primitive_id"], 0
         )  # should be the primitive id itself
 
-        xxxyyyzzz = list(itertools.chain(*(not_precalculated["mat"])))
-        self.assertAlmostEqual(xxxyyyzzz[0], 1.0, 5)
-        self.assertAlmostEqual(xxxyyyzzz[3], 2.0, 5)
-        self.assertAlmostEqual(xxxyyyzzz[6], 3.0, 5)
+
 
         # adding a second point
-        primitive_buffer.add_point(5, 6, 7, *xyzfloat_point)
+        primitive_buffer.add_point(5, 6, 7, row=1,
+                                    col=2,
+                                     depth=3.0,
+                                      uv=1)
 
         # checking the second point is correct
         self.assertEqual(primitive_buffer.primitive_count(), 2)
@@ -136,7 +164,7 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         self.assertEqual(point_1["node_id"], 5)
         self.assertEqual(point_1["geometry_id"], 6)
         self.assertEqual(point_1["material_id"], 7)
-        self.assertEqual(point_1["unique_id"], 1)  # should be the primitive id itself
+        self.assertEqual(point_1["primitive_id"], 1)  # should be the primitive id itself
 
         # checking the first point is still correct
         point_0 = primitive_buffer.get_primitive(0)
@@ -146,6 +174,6 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         self.assertEqual(point_0["node_id"], node_id)
         self.assertEqual(point_0["geometry_id"], geom_id)
         self.assertEqual(point_0["material_id"], material_id)
-        self.assertEqual(point_0["unique_id"], 0)  # should be the primitive id itself
+        self.assertEqual(point_0["primitive_id"], 0)  # should be the primitive id itself
 
         

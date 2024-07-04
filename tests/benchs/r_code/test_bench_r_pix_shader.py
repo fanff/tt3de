@@ -1,28 +1,12 @@
 import pytest
+from rtt3de import AbigDrawing
+from rtt3de import apply_material_py
+from rtt3de import MaterialBufferPy
+from rtt3de import TextureBufferPy
 
 
-from tt3de.glm.raster.raster import raster_precalc
-from tt3de.glm.raster.raster import raster_all
-from tt3de.glm.primitives.primitives import PrimitivesBuffer
-from tt3de.glm.drawing.c_drawing_buffer import DrawingBuffer
-from tt3de.glm.c_texture import TextureArray
-
-
-from tt3de.glm.material.c_material import apply_pixel_shader
-
-
-from tt3de.glm.material.c_material import Material
-from tt3de.glm.material.c_material import MaterialBuffer
-
-from tt3de.glm.primitives.primitive_builder import build_primitives
-
-from tt3de.glm.geometry.geometry import GeometryBuffer
-
-LOOP_COUNT = 1000
-
-
-def rversion(gb):
-    gb.apply_material()
+def rversion(material_buffer,texture_buffer,drawing_buffer):
+    apply_material_py(material_buffer,texture_buffer,drawing_buffer)
 
 
 sizes = [16,32, 64, 128, 256,512]
@@ -32,10 +16,14 @@ sizes = [16,32, 64, 128, 256,512]
 @pytest.mark.benchmark(group="pix_shader_loop")
 def test_bench_full_pass(benchmark, n):
 
-    from rtt3de import AbigDrawing
+    texture_buffer = TextureBufferPy(12)
 
-    gb = AbigDrawing(n,n)
-    gb.hard_clear(100.0)
+    material_buffer = MaterialBufferPy()
+    material_buffer.add_static((255,90,90,255),(5,10,20,255),0) 
+
+
+    drawing_buffer = AbigDrawing(n,n)
+    drawing_buffer.hard_clear(100.0)
 
     
-    benchmark(rversion,gb)
+    benchmark(rversion,material_buffer,texture_buffer,drawing_buffer)

@@ -9,7 +9,7 @@ def read_file(obj_file):
         return fin.read()
 
 
-def load_bmp(f):
+def load_bmp(f)-> List[List[int]]:
     def read_bytes(f, num):
         return struct.unpack("<" + "B" * num, f.read(num))
 

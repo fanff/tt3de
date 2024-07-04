@@ -5,6 +5,11 @@ use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
 use nalgebra_glm::Vec3;
 
+use crate::material::apply_material;
+use crate::material::MaterialBuffer;
+use crate::texturebuffer::TextureBuffer;
+use crate::texturebuffer::RGBA;
+
 /// Represents information about a pixel with variable accuracy.
 ///
 /// # Type Parameters
@@ -52,6 +57,15 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
+}
+
+impl Color {
+    pub fn copy_from(&mut self, rgba: &RGBA) {
+        self.r = rgba.r;
+        self.g = rgba.g;
+        self.b = rgba.b;
+        self.a = rgba.a;
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -243,23 +257,16 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
     }
 
     // will apply the material for every pixel.
-    pub fn apply_material(&mut self) {
-        let mut dummyvar = 0;
+    pub fn apply_material<const TEXTURESIZE: usize>(
+        &mut self,
+        material_buffer: &MaterialBuffer,
+        texture_buffer: &TextureBuffer<TEXTURESIZE>,
+    ) {
         for (depth_cell, canvascell) in self.depthbuffer.iter().zip(self.canvas.iter_mut()) {
             for depth_layer in (0..L).rev() {
-                let loll = self.pixbuffer[depth_cell.pixinfo[depth_layer]];
-                if loll.material_id == 3 {
-                    dummyvar += 1;
-                } else if loll.material_id == 2 {
-                    dummyvar -= 1;
-                }
+                let pix_info = self.pixbuffer[depth_cell.pixinfo[depth_layer]];
 
-                canvascell.back_color = Color {
-                    r: dummyvar,
-                    g: 0,
-                    b: 0,
-                    a: 0,
-                }
+                apply_material(material_buffer, texture_buffer, &pix_info, canvascell);
             }
         }
     }
@@ -285,7 +292,7 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
 
         let the_cell = &mut self.depthbuffer[the_point];
         while the_layer < L {
-            let mut pix_info_at_layer = (self.pixbuffer[the_cell.pixinfo[the_layer]]);
+            let pix_info_at_layer = (self.pixbuffer[the_cell.pixinfo[the_layer]]);
 
             let depth_at_layer = the_cell.depth[the_layer];
 

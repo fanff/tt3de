@@ -3,7 +3,8 @@
 import unittest
 from rtt3de import AbigDrawing
 import pytest
-
+from rtt3de import apply_material_py
+from rtt3de import MaterialBufferPy,TextureBufferPy
 import glm 
 
 class Test_DrawBuffer(unittest.TestCase):
@@ -80,11 +81,14 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(ccelldict,hyp)
     def test_apply_material(self):
         
+        
 
-        gb = AbigDrawing(10,10)
-        gb.hard_clear(100.0)
+        draw_buffer = AbigDrawing(10,10)
+        draw_buffer.hard_clear(100.0)
 
-        gb.apply_material()
+        material_buffer = MaterialBufferPy()
+        texture_buffer = TextureBufferPy(32)
+        apply_material_py(material_buffer,texture_buffer,draw_buffer)
 
 
 

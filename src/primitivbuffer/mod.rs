@@ -1,7 +1,7 @@
 pub mod primitivbuffer;
 use crate::utils::convert_pymat4;
 use nalgebra_glm::Number;
-use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements, UVArray};
+use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{
     intern,
     prelude::*,
@@ -10,12 +10,9 @@ use pyo3::{
     Py, Python,
 };
 
-const UV_LAYER_COUNT: usize = 6;
-
 #[pyclass]
 pub struct PrimitiveBufferPy {
-    pub content: PrimitiveBuffer<UV_LAYER_COUNT, f32>,
-    pub uv_layer_count: usize,
+    pub content: PrimitiveBuffer<f32>,
 }
 
 #[pymethods]
@@ -25,18 +22,11 @@ impl PrimitiveBufferPy {
     fn new(max_size: usize) -> Self {
         // Step 3: Box the Vec<GeomElement>
         let content = PrimitiveBuffer::new(max_size);
-        PrimitiveBufferPy {
-            content: content,
-            uv_layer_count: UV_LAYER_COUNT,
-        }
+        PrimitiveBufferPy { content: content }
     }
 
     fn primitive_count(&self) -> usize {
         self.content.current_size
-    }
-
-    const fn layer_count(&self) -> usize {
-        UV_LAYER_COUNT
     }
 
     fn add_point(
@@ -47,9 +37,10 @@ impl PrimitiveBufferPy {
         row: usize,
         col: usize,
         depth: f32,
+        uv: usize,
     ) -> usize {
         self.content
-            .add_point(node_id, geometry_id, material_id, row, col, depth)
+            .add_point(node_id, geometry_id, material_id, row, col, depth, uv)
     }
     fn add_line(&mut self) {
         todo!()
@@ -68,6 +59,7 @@ impl PrimitiveBufferPy {
         p_c_row: usize,
         p_c_col: usize,
         p_c_depth: f32,
+        uv: usize,
     ) -> usize {
         self.content.add_triangle(
             node_id,
@@ -82,7 +74,7 @@ impl PrimitiveBufferPy {
             p_c_row,
             p_c_col,
             p_c_depth,
-            UVArray::new(),
+            uv,
         )
     }
     fn add_static(&mut self) {
@@ -94,7 +86,7 @@ impl PrimitiveBufferPy {
     }
 }
 
-fn to_dict(py: Python, primitive: &PrimitiveElements<6, f32, f32>) -> Py<PyDict> {
+fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
     let dict = PyDict::new_bound(py);
 
     match primitive {
