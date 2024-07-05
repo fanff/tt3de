@@ -1,8 +1,8 @@
 use crate::texturebuffer::RGBA;
 use nalgebra_glm::{Mat4, Vec2, Vec3};
 use pyo3::{
-    types::{PyAnyMethods, PyTuple, PyTupleMethods},
-    Bound, Py, PyAny, Python,
+    types::{PyAnyMethods, PyList, PyTuple, PyTupleMethods},
+    Bound, Py, PyAny, Python, ToPyObject,
 };
 
 pub fn convert_pymat4(py: Python, values: Py<PyAny>) -> Mat4 {
@@ -20,6 +20,12 @@ pub fn convert_pymat4(py: Python, values: Py<PyAny>) -> Mat4 {
     let flat_iter = nested_tuples_iter.flat_map(|(a, b, c, d)| vec![a, b, c, d]);
 
     Mat4::from_iterator(flat_iter)
+}
+
+pub fn mat4_to_slicelist(py: Python, mat4: Mat4) -> Py<PyAny> {
+    let s = mat4.as_slice();
+    let list = PyList::new_bound(py, s);
+    list.into()
 }
 
 pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {

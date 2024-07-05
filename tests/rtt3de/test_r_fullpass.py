@@ -15,7 +15,7 @@ from rtt3de import raster_all_py,build_primitives_py,apply_material_py
 
 class Test_Stages(unittest.TestCase):
     def test_simple_fullrun(self):
-
+        transform_pack = TransformPackPy(64)
         texture_buffer = TextureBufferPy(12)
         img: ImageTexture = fast_load("models/test_screen32.bmp")
         data = img.chained_data()
@@ -49,7 +49,7 @@ class Test_Stages(unittest.TestCase):
         geometry_buffer.add_point(0,  node_id=0, material_id=1) ## this is the geomid default and MUST be the background. 
         
         
-        node_id = 100
+        node_id = 3
         material_id = 1
         geometry_buffer.add_polygon(0, 1, node_id, material_id,0)
 
@@ -58,7 +58,7 @@ class Test_Stages(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
         # build the primitives
-        build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
+        build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         raster_all_py(primitive_buffer, drawing_buffer)
@@ -72,13 +72,15 @@ class Test_PrimitivBuilding(unittest.TestCase):
         drawing_buffer.hard_clear(1000)
         vertex_buffer = VertexBufferPy()
         geometry_buffer = GeometryBufferPy(256)
+
+        transform_pack = TransformPackPy(64)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
 
 
         primitive_buffer = PrimitiveBufferPy(256)
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
-        build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
+        build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
     def test_one_default(self):
@@ -86,6 +88,9 @@ class Test_PrimitivBuilding(unittest.TestCase):
         drawing_buffer.hard_clear(1000)
         vertex_buffer = VertexBufferPy()
         geometry_buffer = GeometryBufferPy(256)
+        transform_pack = TransformPackPy(64)
+
+
         self.assertEqual(geometry_buffer.geometry_count(), 0)
         geometry_buffer.add_point(0,  node_id=0, material_id=0) ## this is the geomid default and MUST be the background. 
         self.assertEqual(geometry_buffer.geometry_count(), 1)
@@ -93,7 +98,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         primitive_buffer = PrimitiveBufferPy(256)
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
-        build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
+        build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
 
@@ -101,8 +106,8 @@ class Test_PrimitivBuilding(unittest.TestCase):
     def test_simple_one_triangle(self):
         drawing_buffer = AbigDrawing(512, 512)
         drawing_buffer.hard_clear(1000)
-
-
+        
+        transform_pack = TransformPackPy(64)
         vertex_buffer = VertexBufferPy()
         self.assertEqual(vertex_buffer.add_vertex(0.0,0.0,0.5),0)
         self.assertEqual(vertex_buffer.add_vertex(0.0,0.5,0.5),1)
@@ -116,7 +121,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(geometry_buffer.geometry_count(), 0)
         geometry_buffer.add_point(0,  node_id=0, material_id=0) ## this is the geomid default and MUST be the background. 
             
-        node_id = 100
+        node_id = 2
         material_id = 1
         self.assertEqual(geometry_buffer.add_polygon(0, 1, node_id, material_id,0),1)
 
@@ -126,7 +131,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
 
         # build the primitives
-        build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
+        build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
 
         prim0 = primitive_buffer.get_primitive(0)
         
@@ -147,7 +152,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         drawing_buffer = AbigDrawing(512, 512)
         drawing_buffer.hard_clear(1000)
 
-
+        transform_pack = TransformPackPy(64)
         vertex_buffer = VertexBufferPy()
         self.assertEqual(vertex_buffer.add_vertex(0.0,0.0,1.0),0)
         self.assertEqual(vertex_buffer.add_vertex(0.0,1.0,1.0),1)
@@ -162,7 +167,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         geometry_buffer.add_point(0,  node_id=0, material_id=0) ## this is the geomid default and MUST be the background. 
             
-        node_id = 100
+        node_id = 3
         material_id = 2
         self.assertEqual(geometry_buffer.add_polygon(0, 2, node_id, material_id,0),1)
 
@@ -172,7 +177,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
 
         # build the primitives
-        build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
+        build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
         self.assertEqual(primitive_buffer.primitive_count(), 2)
 
         prim0 = primitive_buffer.get_primitive(0)

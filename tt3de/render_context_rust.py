@@ -10,10 +10,11 @@ from rtt3de import PrimitiveBufferPy
 
 from rtt3de import raster_all_py,build_primitives_py,apply_material_py
 
-from tt3de.glm.pyglmtexture import GLMCamera
+
 from textual.strip import Strip
 from textual.geometry import Region
 
+from tt3de.glm_camera import GLMCamera
 from tt3de.tt3de import Drawable3D
 
 
@@ -51,9 +52,12 @@ class RustRenderContext():
 
     def render(self, camera: GLMCamera):
         self.primitive_buffer.clear()
+
+        self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)
         # build the primitives
         build_primitives_py(self.geometry_buffer,
                             self.vertex_buffer,
+                            self.transform_buffer,
                             self.drawing_buffer,
                             self.primitive_buffer)
         raster_all_py(self.primitive_buffer, self.drawing_buffer)

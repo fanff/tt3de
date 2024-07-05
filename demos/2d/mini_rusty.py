@@ -63,7 +63,6 @@ class GLMTester(TT3DView):
         # final append
         self.rc.append(self.root2Dnode)
 
-        self.absolute_location = glm.vec4(0.0, 0.0, 1.0,1.0)
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()
 
@@ -84,6 +83,7 @@ class GLMTester(TT3DView):
         cc.refresh_camera_rotation(
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
+        cc.refresh_camera_zoom(self.camera.zoom_2D)
         self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 
 
@@ -119,7 +119,7 @@ class GLMTester(TT3DView):
 
                         small_tr_vector = glm.vec3(-relx_px, -rely_px, 0.0)
                         
-                        self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
+                        # self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
 
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)

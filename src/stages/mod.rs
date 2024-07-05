@@ -11,7 +11,7 @@ use crate::{
     material::MaterialBufferPy,
     primitivbuffer::*,
     texturebuffer::TextureBufferPy,
-    vertexbuffer::{VertexBuffer, VertexBufferPy},
+    vertexbuffer::{TransformPack, TransformPackPy, VertexBuffer, VertexBufferPy},
 };
 pub mod clipping;
 use clipping::*;
@@ -23,11 +23,11 @@ fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
-    let va = vertex_buffer.get_at(polygon.p_start);
+    let va = vertex_buffer.get_world_space_vertex(polygon.p_start);
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + triangle_id;
-        let vb = vertex_buffer.get_at(p_start + 1);
-        let vc = vertex_buffer.get_at(p_start + 2);
+        let vb = vertex_buffer.get_world_space_vertex(p_start + 1);
+        let vc = vertex_buffer.get_world_space_vertex(p_start + 2);
 
         // clip the first triangle
         let mut output_buffer = TriangleBuffer::new();
@@ -59,7 +59,8 @@ fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
 }
 pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
     geombuffer: &GeometryBuffer,
-    vertex_buffer: &VertexBuffer<C>,
+    vertex_buffer: &mut VertexBuffer<C>,
+    transform_pack: &TransformPack,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
@@ -69,7 +70,7 @@ pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>
             crate::geombuffer::GeomElement::Point(p) => {
                 //grab the vertex idx
                 let point_vertex_idx = p.pa;
-                let v = vertex_buffer.get_at(point_vertex_idx);
+                let v = vertex_buffer.get_world_space_vertex(point_vertex_idx);
 
                 // convert from clip to screen space
                 let (col, row) = drawbuffer.ndc_to_screen_row_col(&v.xy());
@@ -85,6 +86,13 @@ pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>
             }
             crate::geombuffer::GeomElement::Line(l) => todo!(),
             crate::geombuffer::GeomElement::Polygon(p) => {
+                // apply mv operation
+                vertex_buffer.apply_mv(
+                    transform_pack.get_node_transform(p.geom_ref.node_id),
+                    &transform_pack.view_matrix,
+                    p.p_start,
+                    p.triangle_count + 2 + p.p_start,
+                );
                 poly_as_primitive(&p, geometry_id, vertex_buffer, drawbuffer, primitivbuffer)
             }
         }
@@ -94,14 +102,21 @@ pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>
 #[pyfunction]
 pub fn build_primitives_py(
     geometry_buffer: &GeometryBufferPy,
-    vbpy: &VertexBufferPy,
+    vbpy: &mut VertexBufferPy,
+    trbuffer_py: &TransformPackPy,
     dbpy: &AbigDrawing,
-    mut primitivbuffer: PyRefMut<'_, PrimitiveBufferPy>,
+    primitivbuffer: &mut PrimitiveBufferPy,
 ) {
     let geom_content = &geometry_buffer.buffer;
 
     let prim_content = &mut primitivbuffer.content;
-    build_primitives(geom_content, &vbpy.buffer, &dbpy.db, prim_content);
+    build_primitives(
+        geom_content,
+        &mut vbpy.buffer,
+        &trbuffer_py.data,
+        &dbpy.db,
+        prim_content,
+    );
 }
 
 #[pyfunction]

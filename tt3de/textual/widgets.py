@@ -324,6 +324,11 @@ class CameraConfig(Widget):
         input: "CameraConfig"
         value: tuple[float, float]
 
+    @dataclass
+    class ZoomChanged(Message):
+        input: "CameraConfig"
+        value: float
+
     _init_camera_position = None
 
     def __init__(
@@ -346,7 +351,7 @@ class CameraConfig(Widget):
             id="input_camera_position",
         )
 
-        yield Label("Angle: Yaw,Pitch")
+        yield Label("Yaw & Pitch Angle")
 
         yield FloatSelector(
             -1200.0,
@@ -365,12 +370,14 @@ class CameraConfig(Widget):
             id="input_camera_pitch",
         )
 
-        yield Label("Projection: Fov,min/max depth, factor")
+        yield Label("Fov")
         yield FloatSelector(
             30, 130, 50, mouse_factor=1.0, button_factor=1.0, id="input_camera_fov"
         )
+        yield Label("Min_depth & Max_depth")
         yield FloatSelector(0.00, 20, 0.2, 0.01, 0.1, id="input_camera_mindepth")
         yield FloatSelector(10, 1000, 100.0, id="input_camera_maxdepth")
+        yield Label("character_factor")
         yield FloatSelector(
             0.3,
             3.5,
@@ -378,6 +385,17 @@ class CameraConfig(Widget):
             mouse_factor=0.1,
             button_factor=0.1,
             id="input_character_factor",
+        )
+
+        yield Label("camera_zoom")
+
+        yield FloatSelector(
+            0.1,
+            3.5,
+            1.8,
+            mouse_factor=0.1,
+            button_factor=0.5,
+            id="input_camera_zoom",
         )
 
     # async def on_event(self,event):
@@ -395,6 +413,7 @@ class CameraConfig(Widget):
 
         rots_ids = ["input_camera_yaw", "input_camera_pitch"]
 
+        zoom_id = ["input_camera_zoom"]
         if event.input.id in proj_ids:
             event.bubble = False
             v = [self.query_one(f"#{wid}").current_value for wid in proj_ids]
@@ -404,6 +423,10 @@ class CameraConfig(Widget):
             event.bubble = False
             v = [self.query_one(f"#{wid}").current_value for wid in rots_ids]
             self.post_message(self.OrientationChanged(self, v))
+        elif event.input.id in zoom_id:
+            event.bubble = False
+            v = self.query_one(f"#{zoom_id[0]}").current_value
+            self.post_message(self.ZoomChanged(self, v))
         else:
             raise Exception("must be an error ?!")
 
@@ -432,6 +455,11 @@ class CameraConfig(Widget):
         if no_events:
             self.query_one(f"#input_camera_yaw").current_value = yaw
             self.query_one(f"#input_camera_pitch").current_value = pitch
+    def refresh_camera_zoom(self,zoom:float,no_events=True):
+        if no_events:
+            self.query_one(f"#input_camera_zoom").current_value = zoom
+        else:
+            self.query_one(f"#input_camera_zoom").current_buffer = zoom
 
 
 class RenderInfo(Widget, can_focus=False):

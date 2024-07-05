@@ -1,4 +1,4 @@
-use crate::utils::{convert_glm_vec2, convert_pymat4};
+use crate::utils::{convert_glm_vec2, convert_pymat4, mat4_to_slicelist};
 use nalgebra::{ArrayStorage, RawStorage};
 use nalgebra_glm::{Mat4, Number, TVec2, TVec3, TVec4, Vec2, Vec3, Vec4};
 
@@ -52,15 +52,18 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
 pub struct VertexBuffer<const C: usize> {
     pub v4content: ArrayStorage<Vec4, 1, C>,
 
+    // v4 into mv_calc after the mv calculation
+    pub mv_calc: ArrayStorage<Vec4, 1, C>,
     pub current_size: usize,
 }
 impl<const C: usize> VertexBuffer<C> {
-    fn new() -> VertexBuffer<C> {
+    pub fn new() -> Self {
         let v4: TVec4<f32> = TVec4::zeros(); // = Vec4::zeros();
 
         let v4content = ArrayStorage([[v4]; C]);
         let vb = VertexBuffer {
             v4content,
+            mv_calc: ArrayStorage([[v4]; C]),
             current_size: 0,
         };
         vb
@@ -73,37 +76,32 @@ impl<const C: usize> VertexBuffer<C> {
     pub fn get_at(&self, idx: usize) -> &Vec4 {
         &self.v4content.as_slice()[idx]
     }
+    pub fn get_world_space_vertex(&self, idx: usize) -> &Vec4 {
+        &self.mv_calc.as_slice()[idx]
+    }
 
     // set the given vertex at the given location
     fn set_vertex(&mut self, vert: &Vec4, idx: usize) {
         self.v4content.as_mut_slice()[idx] = *vert;
     }
 
-    // attempt at multiplying every vec3 of the v3content  by the matrix.
-    // result should be stored in the content at the same index
-    // param start is included; end is NOT included
-    fn mul_vertex(&mut self, m4: &Mat4, start: usize, end: usize) {
-        // Get mutable slices of the data in ArrayStorage
+    pub fn apply_mv(&mut self, model_matrix: &Mat4, view_matrix: &Mat4, start: usize, end: usize) {
+        let m4 = model_matrix * view_matrix;
         let v4_slice = self.v4content.as_mut_slice();
-
+        let mv_calc = self.mv_calc.as_mut_slice();
         for i in start..end {
             let avec = &v4_slice[i];
 
-            // Multiply the Vec4 by the matrix
-            let result: TVec4<f32> = m4 * avec;
-
             // Store the result in the content at the same index
-            v4_slice[i] = result;
+            mv_calc[i] = m4 * avec;
         }
-    }
-
-    fn apply_mv(&mut self, tr: &TransformPack, start: usize, end: usize) {
-        let ttt = tr.model_matrix * tr.view_matrix;
-        self.mul_vertex(&ttt, start, end);
     }
 }
 
-use pyo3::{prelude::*, types::PyTuple};
+use pyo3::{
+    prelude::*,
+    types::{PyList, PyTuple},
+};
 const MAX_VERTEX_CONTENT: usize = 128;
 const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 4;
 
@@ -117,18 +115,9 @@ pub struct VertexBufferPy {
 impl VertexBufferPy {
     #[new]
     fn new() -> VertexBufferPy {
-        let v4 = Vec4::zeros();
-
-        let v4content = ArrayStorage([[v4]; MAX_VERTEX_CONTENT]);
-        let vb = VertexBuffer {
-            v4content,
-            current_size: 0,
-        };
-        let uvb = UVBuffer::new();
-
         VertexBufferPy {
-            buffer: vb,
-            uv_array: uvb,
+            buffer: VertexBuffer::new(),
+            uv_array: UVBuffer::new(),
         }
     }
 
@@ -179,24 +168,40 @@ impl VertexBufferPy {
         t.into()
     }
 
-    fn apply_mv(&mut self, py: Python, t: Py<TransformPackPy>, start: usize, end: usize) {
+    fn get_world_space_vertex(&self, py: Python, idx: usize) -> Py<PyTuple> {
+        let result = self.buffer.mv_calc.as_slice()[idx];
+        let t = PyTuple::new_bound(py, [result.x, result.y, result.z, result.w]);
+        t.into()
+    }
+
+    fn apply_mv(
+        &mut self,
+        py: Python,
+        t: Py<TransformPackPy>,
+        node_id: usize,
+        start: usize,
+        end: usize,
+    ) {
         // Step 1: Borrow the TransformPackPy object using Bound stuff (magic!)
         let thething: &Bound<TransformPackPy> = t.bind(py);
 
         // Step 2: Access the `data` attribute safely  (magic!)
         let inner_data: &TransformPack = &thething.borrow().data;
 
-        self.buffer.apply_mv(inner_data, start, end)
+        self.buffer.apply_mv(
+            &inner_data.get_node_transform(node_id),
+            &inner_data.view_matrix,
+            start,
+            end,
+        )
     }
 }
 
 pub struct TransformPack {
-    model_matrix: Mat4,
-
-    model_transforms: Box<[Mat4]>,
-    view_matrix: Mat4,
-    project_matrix: Mat4,
-    environment_light: Vec3,
+    pub model_transforms: Box<[Mat4]>,
+    pub view_matrix: Mat4,
+    pub project_matrix: Mat4,
+    pub environment_light: Vec3,
 
     max_node_count: usize,
     current_count: usize,
@@ -208,7 +213,6 @@ impl TransformPack {
         let mmmm = Mat4::identity();
         let node_tr = vec![mmmm; max_node].into_boxed_slice();
         let vb = TransformPack {
-            model_matrix: mmmm,
             model_transforms: node_tr,
             view_matrix: mmmm,
             project_matrix: mmmm,
@@ -232,18 +236,18 @@ impl TransformPack {
         self.current_count - 1
     }
 
-    fn set_node_transform(&mut self, idx: usize, m4: Mat4) {
-        self.model_transforms[idx] = m4;
+    pub fn set_node_transform(&mut self, node_id: usize, m4: Mat4) {
+        self.model_transforms[node_id] = m4;
     }
 
-    fn get_node_transform(&self, idx: usize) -> &Mat4 {
-        &self.model_transforms[idx]
+    pub fn get_node_transform(&self, node_id: usize) -> &Mat4 {
+        &self.model_transforms[node_id]
     }
 }
 
 #[pyclass]
 pub struct TransformPackPy {
-    data: TransformPack,
+    pub data: TransformPack,
 }
 
 #[pymethods]
@@ -276,6 +280,9 @@ impl TransformPackPy {
 
     fn set_view_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
         self.data.view_matrix = convert_pymat4(py, value)
+    }
+    fn get_view_matrix(&self, py: Python) -> Py<PyAny> {
+        mat4_to_slicelist(py, self.data.view_matrix)
     }
 
     fn set_project_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {

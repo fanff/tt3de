@@ -65,44 +65,26 @@ class Test_VertexBuffer(unittest.TestCase):
         abuffer = VertexBufferPy()
         trpack = TransformPackPy(23)
         
-        trpack.set_view_matrix_glm(glm.mat4(1))
+        trpack.add_node_transform(glm.translate(glm.vec3(1,2,3)))
+
+        
+        trpack.set_view_matrix_glm(glm.identity(glm.mat4))
 
         for i in range(abuffer.get_max_content()):
             abuffer.add_vertex(1+i,2+i,3+i)
 
-        abuffer.apply_mv(trpack,0,abuffer.get_max_content())
+        abuffer.apply_mv(trpack,0,0,abuffer.get_max_content())
+
+
         z = abuffer.get_vertex(0)
         self.assertEqual(z,(1.0, 2.0, 3.0, 1.0))
-        # check conformal with glm calculation :
-
-        res = glm.mat4(1)*glm.mat4(1)*glm.vec4(1,2,3,1)
-        self.assertEqual(z,res.to_tuple())
 
         z = abuffer.get_vertex(1)
         self.assertEqual(z,(2.0, 3.0, 4.0, 1.0))
 
 
-class Test_TransformationPack(unittest.TestCase):
-    def test_create(self):
-        from rtt3de import TransformPackPy
-        trpack = TransformPackPy(23)
-
-        
-    def test_add_node(self):
-        
-        transform_buffer = TransformPackPy(128)
-
-        m4 = glm.translate(glm.vec3(1,2,3))
-
-        self.assertEqual(transform_buffer.node_count(),0)
-        self.assertEqual(transform_buffer.add_node_transform(m4),0)
-        self.assertEqual(transform_buffer.node_count(),1)
-
-        self.assertEqual(transform_buffer.add_node_transform(m4),1)
-        self.assertEqual(transform_buffer.node_count(),2)
-        transform_buffer.clear()
-        self.assertEqual(transform_buffer.node_count(),0)
-
-
-
-
+        z0_mv = abuffer.get_world_space_vertex(0)
+        self.assertEqual(z0_mv,(2.0, 4.0, 6.0, 1.0)) # translated
+        # check conformal with glm calculation :
+        res = glm.translate(glm.vec3(1,2,3))*glm.mat4(1)*glm.vec4(1,2,3,1)
+        self.assertEqual(z0_mv,res.to_tuple())
