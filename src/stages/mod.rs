@@ -1,4 +1,4 @@
-use nalgebra_glm::{Number, Real, Vec3, Vec4};
+use nalgebra_glm::{Number, Real, Vec2, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -13,19 +13,8 @@ use crate::{
     texturebuffer::TextureBufferPy,
     vertexbuffer::{VertexBuffer, VertexBufferPy},
 };
-
-fn ndc_to_screen(
-    v: &Vec3,
-    width: usize,
-    height: usize,
-    x_origin: usize,
-    y_origin: usize,
-) -> (usize, usize) {
-    let xscreen = (width as f32 / 2.0 * (v.x + 1.0) + x_origin as f32).round() as usize;
-    let yscreen = (height as f32 / 2.0 * (v.y + 1.0) + y_origin as f32).round() as usize;
-
-    (yscreen, xscreen)
-}
+pub mod clipping;
+use clipping::*;
 
 fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
     polygon: &Polygon,
@@ -35,54 +24,37 @@ fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
     let va = vertex_buffer.get_at(polygon.p_start);
-    let point_a = ndc_to_screen(va, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
+    for triangle_id in 0..polygon.triangle_count {
+        let p_start = polygon.p_start + triangle_id;
+        let vb = vertex_buffer.get_at(p_start + 1);
+        let vc = vertex_buffer.get_at(p_start + 2);
 
-    let mut vb = vertex_buffer.get_at(polygon.p_start + 1);
-    let mut point_b = ndc_to_screen(vb, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
-    let mut vc = vertex_buffer.get_at(polygon.p_start + 2);
-    let mut point_c = ndc_to_screen(vc, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
+        // clip the first triangle
+        let mut output_buffer = TriangleBuffer::new();
+        clip_triangle_to_clip_space(va, vb, vc, &mut output_buffer);
 
-    primitivbuffer.add_triangle(
-        polygon.geom_ref.node_id,
-        geometry_id,
-        polygon.geom_ref.material_id,
-        point_a.0,
-        point_a.1,
-        va.z,
-        point_b.0,
-        point_b.1,
-        vb.z,
-        point_c.0,
-        point_c.1,
-        vc.z,
-        polygon.uv_start,
-    );
+        for t in output_buffer.iter() {
+            // convert from clip to screen space
+            let point_a = drawbuffer.ndc_to_screen_row_col(&t[0].xy());
+            let point_b = drawbuffer.ndc_to_screen_row_col(&t[1].xy());
+            let point_c = drawbuffer.ndc_to_screen_row_col(&t[2].xy());
 
-    let mut current_triangle: usize = 1;
-    while current_triangle < polygon.triangle_count {
-        vb = vc;
-        point_b = point_c;
-
-        vc = vertex_buffer.get_at(polygon.p_start + 2 + current_triangle);
-        point_c = ndc_to_screen(vc, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
-
-        primitivbuffer.add_triangle(
-            polygon.geom_ref.node_id,
-            geometry_id,
-            polygon.geom_ref.material_id,
-            point_a.0,
-            point_a.1,
-            va.z,
-            point_b.0,
-            point_b.1,
-            vb.z,
-            point_c.0,
-            point_c.1,
-            vc.z,
-            polygon.uv_start + current_triangle,
-        );
-
-        current_triangle += 1;
+            primitivbuffer.add_triangle(
+                polygon.geom_ref.node_id,
+                geometry_id,
+                polygon.geom_ref.material_id,
+                point_a.0,
+                point_a.1,
+                va.z,
+                point_b.0,
+                point_b.1,
+                vb.z,
+                point_c.0,
+                point_c.1,
+                vc.z,
+                polygon.uv_start,
+            );
+        }
     }
 }
 pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
@@ -100,7 +72,7 @@ pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>
                 let v = vertex_buffer.get_at(point_vertex_idx);
 
                 // convert from clip to screen space
-                let (col, row) = ndc_to_screen(v, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
+                let (col, row) = drawbuffer.ndc_to_screen_row_col(&v.xy());
                 let _ = primitivbuffer.add_point(
                     p.geom_ref.node_id,
                     geometry_id,

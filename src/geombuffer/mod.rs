@@ -162,7 +162,6 @@ impl GeometryBufferPy {
     }
     fn add_polygon(
         &mut self,
-        py: Python,
         p_start: usize,
         triangle_count: usize,
         node_id: usize,

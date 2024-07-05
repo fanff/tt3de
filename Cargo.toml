@@ -22,5 +22,5 @@ criterion = "0.4.0"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 
 [profile.dev]
-
-opt-level = 3
+debug = true
+opt-level = 1

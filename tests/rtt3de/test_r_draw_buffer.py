@@ -142,8 +142,7 @@ class Test_DrawBuffer(unittest.TestCase):
             )
 
 
-        depth_content = drawbuffer.get_depth_buff_content(0, 0,0)
-        self.assertEqual(depth_content, 12.0)
+        
         mind, maxd = drawbuffer.get_min_max_depth(0)
 
         self.assertEqual(mind, 12.0)

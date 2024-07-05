@@ -211,9 +211,6 @@ impl AbigDrawing {
         (self.db.borrow_mut()).clear_depth(init_value)
     }
 
-    fn get_depth_buff_content(&self, r: usize, c: usize, layer: usize) -> f32 {
-        self.db.get_depth(r, c, layer)
-    }
     fn get_min_max_depth(&self, py: Python, layer: usize) -> Py<PyTuple> {
         let mima = self.db.get_min_max_depth(layer);
         mima.into_py(py)
@@ -267,8 +264,14 @@ impl AbigDrawing {
         dict.into()
     }
 
-    fn get_depth_buffer_cell(&self, py: Python, r: usize, c: usize, layer: usize) -> Py<PyDict> {
-        let cell = self.db.get_depth_buffer_cell(r, c);
+    fn get_depth_buffer_cell(
+        &self,
+        py: Python,
+        row: usize,
+        col: usize,
+        layer: usize,
+    ) -> Py<PyDict> {
+        let cell = self.db.get_depth_buffer_cell(row, col);
         let dict = PyDict::new_bound(py);
 
         let pix_info_element = self.db.pixbuffer[cell.pixinfo[layer]];

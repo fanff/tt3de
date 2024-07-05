@@ -1,4 +1,3 @@
-
 use nalgebra_glm::{normalize, Number, Real, TVec3};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
@@ -90,10 +89,14 @@ fn barycentric_coord(
     let px = col as f32;
     let py = row as f32;
 
+    // calculate the bar
     let denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
     let w1 = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denom;
     let w2 = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denom;
-    let w3 = 1.0 - w1 - w2;
+    //let w3 = 1.0 - w1 - w2;
+
+    // possible aleterative way of doing the calculation that might be more stable on the edges
+    let w3 = ((y1 - y2) * (px - x1) + (x2 - x1) * (py - y1)) / denom;
 
     (w1, w2, w3)
 }
@@ -142,26 +145,27 @@ fn raster_triangle<const DEPTHCOUNT: usize>(
         return;
     }
 
-    let minX = min_3_int(pa.col, pb.col, pc.col); // min3int(axi, bxi, cxi);
-    let mut maxX = max_3_int(pa.col, pb.col, pc.col); // min3int(ayi, byi, cyi);
+    let min_col = min_3_int(pa.col, pb.col, pc.col); // min3int(axi, bxi, cxi);
+    let mut max_col = max_3_int(pa.col, pb.col, pc.col); // min3int(ayi, byi, cyi);
 
-    let minY = min_3_int(pa.row, pb.row, pc.row); // max3int(axi, bxi, cxi);
-    let mut maxY = max_3_int(pa.row, pb.row, pc.row); // max3int(ayi, byi, cyi);
+    let min_row = min_3_int(pa.row, pb.row, pc.row); // max3int(axi, bxi, cxi);
+    let mut max_row = max_3_int(pa.row, pb.row, pc.row); // max3int(ayi, byi, cyi);
 
     // Clip against screen bounds
     // useless in usize space :)
     // minX = max_2_int(minX, 0);
     // minY = max_2_int(minY, 0);
 
-    maxX = min_2_int(maxX, drawing_buffer.col_count);
-    maxY = min_2_int(maxY, drawing_buffer.row_count);
+    max_col = min_2_int(max_col, drawing_buffer.col_count);
+    max_row = min_2_int(max_row, drawing_buffer.row_count);
 
-    for py in minY..maxY {
-        for px in minX..maxX {
-            let (w0, w1, w2) = barycentric_coord(pa, pb, pc, py, px);
+    for curr_row in min_row..max_row {
+        for curr_col in min_col..max_col {
+            let (w0, w1, w2) = barycentric_coord(pa, pb, pc, curr_row, curr_col);
 
             if w0 >= 0.0 && w1 >= 0.0 && w2 >= 0.0 {
-                let (w0_alt, w1_alt, w2_alt) = barycentric_coord_shift(pa, pb, pc, 0.49, py, px);
+                let (w0_alt, w1_alt, w2_alt) =
+                    barycentric_coord_shift(pa, pb, pc, 0.49, curr_row, curr_col);
 
                 let depth = pa.depth * w0 + pb.depth * w1 + pc.depth * w2;
 
@@ -169,8 +173,8 @@ fn raster_triangle<const DEPTHCOUNT: usize>(
                     prim_ref,
                     drawing_buffer,
                     depth,
-                    px,
-                    py,
+                    curr_col,
+                    curr_row,
                     w0,
                     w1,
                     w2,

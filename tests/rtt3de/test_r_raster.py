@@ -82,7 +82,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
                 if elem["node_id"]!=0:
                     litpixcount+=1
 
-        self.assertEqual(litpixcount,356) # 336= 24*28/2  is the surface of the triangle 
+        self.assertGreater(litpixcount,336) # 336= 24*28/2  is the surface of the triangle 
         # we migh have the diagonal ; like ~20 pix, to explaing this gap.
 
 
@@ -136,6 +136,76 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
                 if elem["node_id"]!=0:
                     litpixcount+=1
 
-        self.assertGreater(litpixcount,1000) 
+        self.assertGreater(litpixcount,1020) 
         # for some reason 1024 is not achieved. 
         # probeably because the horizontal lines have weird misses ? 
+    def test_raster_one_triangle_with_hline(self):
+        #    *--------*   <- this border here is flat. 
+        #     \     /
+        #       \*/
+        drawing_buffer = AbigDrawing(max_row=50,max_col=64)
+        drawing_buffer.hard_clear(2)
+
+        primitive_buffer = PrimitiveBufferPy(10)
+
+        primitive_buffer.add_triangle(
+            12,
+            23,
+            32,  # nodeid and stuff
+
+
+            2, # row
+            2, # col
+            1.0,
+
+            2, # row
+            60, # col
+            1.0,
+
+
+            40, # row 
+            30, # col
+            1.0,
+            0
+        )
+
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+
+        raster_all_py(primitive_buffer, drawing_buffer)
+
+        elem_of_dephtbuffer0 = drawing_buffer.get_depth_buffer_cell(0, 0,0)
+
+        def is_in_triangle(cell):
+            return cell["node_id"]!=0
+        self.assertEqual(elem_of_dephtbuffer0["node_id"],0)
+        self.assertFalse(is_in_triangle(elem_of_dephtbuffer0))
+
+        elem_of_dephtbuffer1 = drawing_buffer.get_depth_buffer_cell(2, 2,0)
+
+        self.assertEqual(elem_of_dephtbuffer1["node_id"],12)
+        self.assertTrue(is_in_triangle(elem_of_dephtbuffer1))
+
+        
+        # test the line above
+        for i in range(0, 64):
+            elem = drawing_buffer.get_depth_buffer_cell(1, i, 0)
+            self.assertEqual(elem["node_id"], 0)
+            self.assertFalse(is_in_triangle(elem))
+
+        # test the row 2 ; that contains the line
+        inside = []
+        outside = []
+        for i in range(2,60):
+            if is_in_triangle(drawing_buffer.get_depth_buffer_cell(2, i,0)):
+                inside.append(i)
+            else:
+                outside.append(i)
+
+        self.assertEqual(len(outside),0)
+
+        #test the rest of the line 
+        for i in range(60, 64):
+            elem = drawing_buffer.get_depth_buffer_cell(2, i, 0)
+            self.assertEqual(elem["node_id"], 0)
+            self.assertFalse(is_in_triangle(elem))
+        

@@ -11,12 +11,8 @@ class Test_VertexBuffer(unittest.TestCase):
 
 
         self.assertEqual(abuffer.get_max_content(),128)
-        abuffer.set_v3(1,2,3,1)
-        self.assertEqual(abuffer.get_v3_t(0),(0,0,0))
-        self.assertEqual(abuffer.get_v3_t(1),(1,2,3))
-        
-        
-        self.assertEqual(abuffer.get_v4_t(0),(0,0,0,0))
+        abuffer.add_vertex(1,2,3)
+        self.assertEqual(abuffer.get_vertex(0),(1.0,2.0,3.0,1.0))
 
     def test_add_vertex(self):
         from rtt3de import VertexBufferPy
@@ -24,9 +20,13 @@ class Test_VertexBuffer(unittest.TestCase):
         abuffer = VertexBufferPy()
 
         self.assertEqual(abuffer.add_vertex(1,2,3),0)
-        self.assertEqual(abuffer.add_vertex(1,2,3),1)
-        self.assertEqual(abuffer.add_vertex(1,2,3),2)
+        self.assertEqual(abuffer.add_vertex(12,22,32),1)
+        self.assertEqual(abuffer.add_vertex(11,21,31),2)
         self.assertEqual(abuffer.get_vertex_size(),3)
+
+        self.assertEqual(abuffer.get_vertex(0),(1.0,2.0,3.0,1.0))
+        self.assertEqual(abuffer.get_vertex(1),(12.0,22.0,32.0,1.0))
+        self.assertEqual(abuffer.get_vertex(2),(11.0,21.0,31.0,1.0))
 
     def test_add_uv(self):
         from rtt3de import VertexBufferPy
@@ -68,18 +68,18 @@ class Test_VertexBuffer(unittest.TestCase):
         trpack.set_view_matrix_glm(glm.mat4(1))
 
         for i in range(abuffer.get_max_content()):
-            abuffer.set_v3(1+i,2+i,3+i,i)
+            abuffer.add_vertex(1+i,2+i,3+i)
 
         abuffer.apply_mv(trpack,0,abuffer.get_max_content())
-        z = abuffer.get_v4_t(0)
-        self.assertEqual(z,(1.0, 2.0, 3.0, 0.0))
+        z = abuffer.get_vertex(0)
+        self.assertEqual(z,(1.0, 2.0, 3.0, 1.0))
         # check conformal with glm calculation :
 
-        res = glm.mat4(1)*glm.mat4(1)*glm.vec4(1,2,3,0)
+        res = glm.mat4(1)*glm.mat4(1)*glm.vec4(1,2,3,1)
         self.assertEqual(z,res.to_tuple())
 
-        z = abuffer.get_v4_t(1)
-        self.assertEqual(z,(2.0, 3.0, 4.0, 0.0))
+        z = abuffer.get_vertex(1)
+        self.assertEqual(z,(2.0, 3.0, 4.0, 1.0))
 
 
 class Test_TransformationPack(unittest.TestCase):

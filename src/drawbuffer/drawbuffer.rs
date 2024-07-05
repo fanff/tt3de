@@ -3,6 +3,7 @@ use std::borrow::BorrowMut;
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
+use nalgebra_glm::Vec2;
 
 use crate::material::apply_material;
 use crate::material::MaterialBuffer;
@@ -50,6 +51,8 @@ pub struct DrawBuffer<const L: usize, A: Number> {
     pub pixbuffer: Box<[PixInfo<A>]>,
     pub row_count: usize,
     pub col_count: usize,
+
+    pub half_size: Vec2,
 }
 
 #[derive(Clone, Copy)]
@@ -197,6 +200,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             pixbuffer,
             col_count,
             row_count,
+            half_size: Vec2::new(col_count as f32 / 2.0, row_count as f32 / 2.0),
         }
     }
 
@@ -207,14 +211,27 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         }
     }
 
+    pub fn ndc_to_screen_row_col(&self, v: &Vec2) -> (usize, usize) {
+        let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
+
+        // vectorial summ and multiplication; component wise
+
+        &sumoftwovec.component_mul_assign(&self.half_size);
+
+        // round to the nearest integer
+        (
+            sumoftwovec.y.round() as usize,
+            sumoftwovec.x.round() as usize,
+        )
+    }
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
         let d = x.depth[l];
         d
     }
 
-    pub fn get_depth_buffer_cell(&self, r: usize, c: usize) -> DepthBufferCell<DEPTHACC, L> {
-        let x = self.depthbuffer[r * self.col_count + c];
+    pub fn get_depth_buffer_cell(&self, row: usize, col: usize) -> DepthBufferCell<DEPTHACC, L> {
+        let x = self.depthbuffer[row * self.col_count + col];
 
         x
     }

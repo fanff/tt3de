@@ -65,9 +65,6 @@ class Test_Stages(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 1)
         apply_material_py(material_buffer,texture_buffer,vertex_buffer,primitive_buffer,drawing_buffer)
 
-        
-
-
 class Test_PrimitivBuilding(unittest.TestCase):
 
     def test_empty_build(self):
@@ -107,17 +104,16 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
 
         vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0,0.0,1.0),0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0,1.0,1.0),1)
-        self.assertEqual(vertex_buffer.add_vertex(1.0,1.0,1.0),2)
-        self.assertEqual(vertex_buffer.add_vertex(1.0,0.0,1.0),3)
+        self.assertEqual(vertex_buffer.add_vertex(0.0,0.0,0.5),0)
+        self.assertEqual(vertex_buffer.add_vertex(0.0,0.5,0.5),1)
+        self.assertEqual(vertex_buffer.add_vertex(0.5,0.5,0.5),2)
+
+        self.assertEqual(vertex_buffer.add_vertex(0.5,0.0,0.5),3)
 
 
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-
-
         geometry_buffer.add_point(0,  node_id=0, material_id=0) ## this is the geomid default and MUST be the background. 
             
         node_id = 100
@@ -131,20 +127,20 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         # build the primitives
         build_primitives_py(geometry_buffer,vertex_buffer,drawing_buffer, primitive_buffer)
-        self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         prim0 = primitive_buffer.get_primitive(0)
+        
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
 
         self.assertEqual(prim0,{
             "primitive_id":0,
             "geometry_id":1,
             "node_id":node_id,
             "material_id":material_id,
-            'pa': { 'col': 256, 'row': 256, 'depth': 1.0},
-            'pb': { 'col': 256, 'row': 512, 'depth': 1.0},
-            'pc': { 'col': 512, 'row': 512, 'depth': 1.0},
+            'pa': { 'col': 256, 'row': 256, 'depth': 0.5},
+            'pb': { 'col': 256, 'row': 384, 'depth': 0.5},
+            'pc': { 'col': 384, 'row': 384, 'depth': 0.5},
         })
-
 
 
     def test_simple_two_triangle(self):

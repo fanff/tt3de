@@ -84,6 +84,9 @@ class GLMTester(TT3DView):
         cc.refresh_camera_rotation(
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
+        self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
+
+
         context_log:RustRenderContextInfo = self.parent.query_one(RustRenderContextInfo)
 
         context_log.update_counts({"geom":self.rc.geometry_buffer.geometry_count(),
@@ -133,6 +136,7 @@ class Content(Static):
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield CameraConfig()
+            yield RenderInfo()
             yield RustRenderContextInfo()
         yield GLMTester()
 

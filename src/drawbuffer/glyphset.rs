@@ -1,4 +1,3 @@
-
 pub const GLYPH_STATIC_STR: [&'static str; 256] = [
     // Printable ASCII characters
     " ", "!", "'", "#", "$", "%", "&", "\"", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2",
@@ -19,3 +18,14 @@ pub const GLYPH_STATIC_STR: [&'static str; 256] = [
     "♚", "♛", "♜", "♝", "♞", "♟", //cards set
     "♠", "♣", "♥", "♦", //
 ];
+
+fn find_glyph_indices(input: &str) -> Vec<Option<usize>> {
+    input
+        .chars()
+        .map(|ch| {
+            GLYPH_STATIC_STR
+                .iter()
+                .position(|&glyph| glyph == ch.to_string())
+        })
+        .collect()
+}

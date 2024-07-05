@@ -15,12 +15,11 @@ def test_r_mmulti(benchmark):
 
     from rtt3de import VertexBufferPy,TransformPackPy
     abuffer = VertexBufferPy()
-    trpack = TransformPackPy()
+    trpack = TransformPackPy(12)
 
-    trpack.set_model_matrix_glm(glm.translate(glm.vec3(1,2,3)))
     trpack.set_view_matrix_glm(glm.translate(glm.vec3(1,2,3)))
 
     for i in range(abuffer.get_max_content()):
-        abuffer.set_v3(1+i,2+i,3+i,i)
+        abuffer.add_vertex(1+i,2+i,3+i)
         
     benchmark(rversion,abuffer,trpack)
