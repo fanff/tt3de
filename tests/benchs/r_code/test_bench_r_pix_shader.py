@@ -2,11 +2,11 @@ import pytest
 from rtt3de import AbigDrawing
 from rtt3de import apply_material_py
 from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
+from rtt3de import TextureBufferPy,VertexBufferPy,PrimitiveBufferPy
 
 
-def rversion(material_buffer,texture_buffer,drawing_buffer):
-    apply_material_py(material_buffer,texture_buffer,drawing_buffer)
+def rversion(material_buffer,texture_buffer,vertex_buffer,primitive_buffer,drawing_buffer):
+    apply_material_py(material_buffer,texture_buffer,vertex_buffer,primitive_buffer,drawing_buffer)
 
 
 sizes = [16,32, 64, 128, 256,512]
@@ -24,6 +24,7 @@ def test_bench_full_pass(benchmark, n):
 
     drawing_buffer = AbigDrawing(n,n)
     drawing_buffer.hard_clear(100.0)
-
+    vertex_buffer = VertexBufferPy()
+    primitive_buffer = PrimitiveBufferPy(3)
     
-    benchmark(rversion,material_buffer,texture_buffer,drawing_buffer)
+    benchmark(rversion,material_buffer,texture_buffer,vertex_buffer,primitive_buffer,drawing_buffer)

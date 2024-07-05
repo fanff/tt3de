@@ -1,13 +1,15 @@
 from typing import Dict
 import unittest
 
-
+import glm
 from rtt3de import VertexBufferPy,TransformPackPy
 
 class Test_VertexBuffer(unittest.TestCase):
     def test_create(self):
         abuffer = VertexBufferPy()
-        trpack = TransformPackPy()
+        trpack = TransformPackPy(232)
+
+
         self.assertEqual(abuffer.get_max_content(),128)
         abuffer.set_v3(1,2,3,1)
         self.assertEqual(abuffer.get_v3_t(0),(0,0,0))
@@ -61,9 +63,8 @@ class Test_VertexBuffer(unittest.TestCase):
         import glm
 
         abuffer = VertexBufferPy()
-        trpack = TransformPackPy()
+        trpack = TransformPackPy(23)
         
-        trpack.set_model_matrix_glm(glm.mat4(1))
         trpack.set_view_matrix_glm(glm.mat4(1))
 
         for i in range(abuffer.get_max_content()):
@@ -84,47 +85,24 @@ class Test_VertexBuffer(unittest.TestCase):
 class Test_TransformationPack(unittest.TestCase):
     def test_create(self):
         from rtt3de import TransformPackPy
-        trpack = TransformPackPy()
+        trpack = TransformPackPy(23)
 
         
-        inmat = [1.0]*16
-        trpack.set_model_matrix(inmat)
-        out = trpack.get_model_matrix_tuple()
-        self.assertEqual(tuple(inmat),out)
-
+    def test_add_node(self):
         
+        transform_buffer = TransformPackPy(128)
 
-
-
-    def test_set_glm_aslist(self):
-        from rtt3de import TransformPackPy
-        import glm
-        import itertools
-        trpack = TransformPackPy()
         m4 = glm.translate(glm.vec3(1,2,3))
 
-        m4list = m4.to_list()
-        as_list = list(itertools.chain(*m4.to_list()))
-        trpack.set_model_matrix(as_list)
-        as_tuple = tuple(as_list)
-        out = trpack.get_model_matrix_tuple()
+        self.assertEqual(transform_buffer.node_count(),0)
+        self.assertEqual(transform_buffer.add_node_transform(m4),0)
+        self.assertEqual(transform_buffer.node_count(),1)
 
-        self.assertEqual(as_tuple,out)
-    def test_set_glm_as_tuple_rust(self):
-        from rtt3de import TransformPackPy
-        import glm
-        import itertools
-        trpack = TransformPackPy()
-
-        # make a glm matrix
-        m4 = glm.translate(glm.vec3(1,2,3))
-        m4_as_tuple = tuple(list(itertools.chain(*m4.to_list())))
-        m4.to_tuple()
-        # give the matrix 
-        trpack.set_model_matrix_glm(m4)
+        self.assertEqual(transform_buffer.add_node_transform(m4),1)
+        self.assertEqual(transform_buffer.node_count(),2)
+        transform_buffer.clear()
+        self.assertEqual(transform_buffer.node_count(),0)
 
 
-        # check result
-        out = trpack.get_model_matrix_tuple()
-        self.assertEqual(m4_as_tuple,out)
+
 

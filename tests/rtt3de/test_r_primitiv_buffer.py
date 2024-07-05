@@ -26,11 +26,11 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         line_node_id = 1
         line_geometry_id = 2
         line_material_id = 3
-        line_ax = 2.2
-        line_ay = 3.2
+        line_ax = 2
+        line_ay = 3
         line_az = 1.0
-        line_bx = 5.6
-        line_by = 8.7
+        line_bx = 5
+        line_by = 8
         line_bz = 1.0
         primitive_buffer.add_line(
             line_node_id,
@@ -42,14 +42,15 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             line_bx,
             line_by,
             line_bz,
+            0
         )
 
-        not_precalculated = primitive_buffer.get_primitive(0)
+        aprimitiv = primitive_buffer.get_primitive(0)
 
-        self.assertEqual(not_precalculated["node_id"], line_node_id)
-        self.assertEqual(not_precalculated["geometry_id"], line_geometry_id)
-        self.assertEqual(not_precalculated["material_id"], line_material_id)
-        self.assertEqual(not_precalculated["unique_id"], 0)
+        self.assertEqual(aprimitiv["node_id"], line_node_id)
+        self.assertEqual(aprimitiv["geometry_id"], line_geometry_id)
+        self.assertEqual(aprimitiv["material_id"], line_material_id)
+        self.assertEqual(aprimitiv["primitive_id"], 0)
 
     def test_addTriangle(self):
         primitive_buffer = PrimitiveBufferPy(10)
@@ -73,12 +74,12 @@ class Test_PrimitivesBuffer(unittest.TestCase):
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
-        not_precalculated = primitive_buffer.get_primitive(0)
+        a_primitiv = primitive_buffer.get_primitive(0)
 
-        self.assertEqual(not_precalculated["node_id"], 1)
-        self.assertEqual(not_precalculated["geometry_id"], 2)
-        self.assertEqual(not_precalculated["material_id"], 3)
-        self.assertEqual(not_precalculated["primitive_id"], 0)
+        self.assertEqual(a_primitiv["node_id"], 1)
+        self.assertEqual(a_primitiv["geometry_id"], 2)
+        self.assertEqual(a_primitiv["material_id"], 3)
+        self.assertEqual(a_primitiv["primitive_id"], 0)
 
         primitive_buffer.add_triangle(
             1,
@@ -98,12 +99,15 @@ class Test_PrimitivesBuffer(unittest.TestCase):
 
         self.assertEqual(primitive_buffer.primitive_count(),2)
 
-        not_precalculated = primitive_buffer.get_primitive(0)
-        self.assertEqual(not_precalculated["primitive_id"], 0)
+        a_primitiv = primitive_buffer.get_primitive(0)
+        self.assertEqual(a_primitiv["primitive_id"], 0)
 
-        not_precalculated = primitive_buffer.get_primitive(1)
-        self.assertEqual(not_precalculated["primitive_id"], 1)
+        a_primitiv = primitive_buffer.get_primitive(1)
+        self.assertEqual(a_primitiv["primitive_id"], 1)
 
+
+        primitive_buffer.clear()
+        self.assertEqual(primitive_buffer.primitive_count(),0)
 
 
     def test_add_point_overflow(self):

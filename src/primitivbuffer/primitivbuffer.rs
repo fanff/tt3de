@@ -1,7 +1,4 @@
-use std::iter::from_fn;
-
-use nalgebra::{ArrayStorage, U1};
-use nalgebra_glm::{Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
+use nalgebra_glm::Number;
 
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Number> {
@@ -29,8 +26,8 @@ pub enum PrimitiveElements<DEPTHACC: Number> {
     },
     Line {
         fds: PrimitivReferences,
-        pa: usize,
-        pb: usize,
+        pa: PointInfo<DEPTHACC>,
+        pb: PointInfo<DEPTHACC>,
         uv: usize,
     },
     Triangle {
@@ -44,6 +41,34 @@ pub enum PrimitiveElements<DEPTHACC: Number> {
         fds: PrimitivReferences,
         index: usize,
     },
+}
+
+impl<DEPTHACC: Number> PrimitiveElements<DEPTHACC> {
+    pub fn get_uv_idx(&self) -> usize {
+        match self {
+            PrimitiveElements::Point {
+                fds: _,
+                row: _,
+                col: _,
+                depth: _,
+                uv,
+            } => *uv,
+            PrimitiveElements::Line {
+                fds: _,
+                pa: _,
+                pb: _,
+                uv,
+            } => *uv,
+            PrimitiveElements::Triangle {
+                fds: _,
+                pa: _,
+                pb: _,
+                pc: _,
+                uv,
+            } => *uv,
+            PrimitiveElements::Static { fds: _, index: _ } => 0,
+        }
+    }
 }
 
 pub struct PrimitiveBuffer<DEPTHACC: Number> {
@@ -130,12 +155,40 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        row: usize,
-        col: usize,
-        depth: DEPTHACC,
+        p_a_row: usize,
+        p_a_col: usize,
+        p_a_depth: DEPTHACC,
+        p_b_row: usize,
+        p_b_col: usize,
+        p_b_depth: DEPTHACC,
         uv: usize,
-    ) {
-        todo!()
+    ) -> usize {
+        let pa = PointInfo {
+            row: p_a_row,
+            col: p_a_col,
+            depth: p_a_depth,
+        };
+
+        let elem = PrimitiveElements::Line {
+            fds: PrimitivReferences {
+                geometry_id: geometry_id,
+                material_id: material_id,
+                node_id: node_id,
+                primitive_id: self.current_size,
+            },
+            pa: pa,
+            uv: uv,
+            pb: PointInfo {
+                row: p_b_row,
+                col: p_b_col,
+                depth: p_b_depth,
+            },
+        };
+        self.content[self.current_size] = elem;
+
+        self.current_size += 1;
+
+        self.current_size - 1
     }
     pub fn add_triangle(
         &mut self,
@@ -172,7 +225,6 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
         let apoint = PrimitiveElements::Triangle {
             fds: pr,
             pa: pa,
-            uv: uv,
             pb: PointInfo {
                 row: p_b_row,
                 col: p_b_col,
@@ -183,6 +235,7 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
                 col: p_c_col,
                 depth: p_c_depth,
             },
+            uv: uv,
         };
         self.content[self.current_size] = apoint;
 
@@ -192,5 +245,9 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
     }
     pub fn add_static(&mut self) {
         todo!()
+    }
+
+    pub fn clear(&mut self) {
+        self.current_size = 0;
     }
 }

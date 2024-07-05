@@ -3,12 +3,13 @@ use std::borrow::BorrowMut;
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
-use nalgebra_glm::Vec3;
 
 use crate::material::apply_material;
 use crate::material::MaterialBuffer;
+use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::TextureBuffer;
 use crate::texturebuffer::RGBA;
+use crate::vertexbuffer::UVBuffer;
 
 /// Represents information about a pixel with variable accuracy.
 ///
@@ -160,12 +161,12 @@ pub const CANVAS_CELL_INIT: CanvasCell = CanvasCell {
 };
 
 // here theL ( layer) are like.. bounded; A is accuracy of the depth buffer (f32 usually)
-impl<const L: usize, A: Number> DrawBuffer<L, A> {
+impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     pub fn new(
         row_count: usize,
         col_count: usize,
-        default_depth: DepthBufferCell<A, L>,
-        inipix: PixInfo<A>,
+        default_depth: DepthBufferCell<DEPTHACC, L>,
+        inipix: PixInfo<DEPTHACC>,
     ) -> Self {
         // this store the depth for every cell, for every "layer" + and index
         let mut depthbuffer = vec![default_depth; row_count * col_count].into_boxed_slice();
@@ -181,7 +182,7 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
         // the pix
         for row in 0..row_count {
             for col in 0..col_count {
-                let idx = (row * col_count + col);
+                let idx = row * col_count + col;
 
                 (&mut depthbuffer[idx]).set_init_pix_ref(idx * L);
             }
@@ -200,19 +201,19 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
     }
 
     #[inline(always)] // should this help ?!
-    pub fn clear_depth(&mut self, value: A) {
+    pub fn clear_depth(&mut self, value: DEPTHACC) {
         for (idx, depth_cell) in self.depthbuffer.iter_mut().enumerate() {
             depth_cell.clear(value, idx * L);
         }
     }
 
-    pub fn get_depth(&self, r: usize, c: usize, l: usize) -> A {
+    pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
         let d = x.depth[l];
         d
     }
 
-    pub fn get_depth_buffer_cell(&self, r: usize, c: usize) -> DepthBufferCell<A, L> {
+    pub fn get_depth_buffer_cell(&self, r: usize, c: usize) -> DepthBufferCell<DEPTHACC, L> {
         let x = self.depthbuffer[r * self.col_count + c];
 
         x
@@ -223,9 +224,9 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
         x
     }
 
-    pub fn get_min_max_depth(&self, layer: usize) -> (A, A) {
-        let mut min_value: A = A::max_value();
-        let mut max_value: A = A::min_value();
+    pub fn get_min_max_depth(&self, layer: usize) -> (DEPTHACC, DEPTHACC) {
+        let mut min_value: DEPTHACC = DEPTHACC::max_value();
+        let mut max_value: DEPTHACC = DEPTHACC::min_value();
 
         for depth_cell in self.depthbuffer.iter() {
             let content = depth_cell.depth[layer];
@@ -250,25 +251,10 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
         glyph: u8,
     ) {
         let idx = r * self.col_count + c;
-        let mut stuff = self.canvas[idx];
+        let stuff = &mut self.canvas[idx];
         stuff.front_color = front_color;
         stuff.back_color = back_color;
         stuff.glyph = glyph;
-    }
-
-    // will apply the material for every pixel.
-    pub fn apply_material<const TEXTURESIZE: usize>(
-        &mut self,
-        material_buffer: &MaterialBuffer,
-        texture_buffer: &TextureBuffer<TEXTURESIZE>,
-    ) {
-        for (depth_cell, canvascell) in self.depthbuffer.iter().zip(self.canvas.iter_mut()) {
-            for depth_layer in (0..L).rev() {
-                let pix_info = self.pixbuffer[depth_cell.pixinfo[depth_layer]];
-
-                apply_material(material_buffer, texture_buffer, &pix_info, canvascell);
-            }
-        }
     }
 
     // The set_depth_content function is responsible for setting a new depth value into a
@@ -279,9 +265,9 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
         &mut self,
         row: usize,
         col: usize,
-        depth: A,
-        w: nalgebra_glm::TVec3<A>,
-        w_alt: nalgebra_glm::TVec3<A>,
+        depth: DEPTHACC,
+        w: nalgebra_glm::TVec3<DEPTHACC>,
+        w_alt: nalgebra_glm::TVec3<DEPTHACC>,
         node_id: usize,
         geom_id: usize,
         material_id: usize,
@@ -292,7 +278,7 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
 
         let the_cell = &mut self.depthbuffer[the_point];
         while the_layer < L {
-            let pix_info_at_layer = (self.pixbuffer[the_cell.pixinfo[the_layer]]);
+            let pix_info_at_layer = self.pixbuffer[the_cell.pixinfo[the_layer]];
 
             let depth_at_layer = the_cell.depth[the_layer];
 
@@ -347,6 +333,38 @@ impl<const L: usize, A: Number> DrawBuffer<L, A> {
             } else {
                 the_layer += 1;
             }
+        }
+    }
+}
+
+// will apply the material for every pixel.
+pub fn apply_material_on<
+    const TEXTURESIZE: usize,
+    const UVCOUNT: usize,
+    const DEPTHLAYER: usize,
+>(
+    draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
+    material_buffer: &MaterialBuffer,
+    texture_buffer: &TextureBuffer<TEXTURESIZE>,
+    uv_buffer: &UVBuffer<UVCOUNT, f32>,
+    primitive_buffer: &PrimitiveBuffer<f32>,
+) {
+    for (depth_cell, canvascell) in draw_buffer
+        .depthbuffer
+        .iter()
+        .zip(draw_buffer.canvas.iter_mut())
+    {
+        for depth_layer in (0..DEPTHLAYER).rev() {
+            let pix_info = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
+
+            apply_material(
+                material_buffer,
+                texture_buffer,
+                &uv_buffer,
+                &primitive_buffer,
+                &pix_info,
+                canvascell,
+            );
         }
     }
 }

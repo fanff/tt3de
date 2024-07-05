@@ -1,23 +1,21 @@
-use std::{
-    borrow::BorrowMut,
-    ops::{Mul, Sub},
-};
-
-use nalgebra_glm::{normalize, Number, Real, TVec3, Vec3, Vec4};
-use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
-use pyo3::{pyfunction, IntoPy, Py, PyAny, PyRefMut, Python};
+use nalgebra_glm::{Number, Real, Vec3, Vec4};
+use primitivbuffer::PrimitiveBuffer;
+use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
-    drawbuffer::{self, drawbuffer::DrawBuffer, AbigDrawing},
+    drawbuffer::{
+        drawbuffer::{apply_material_on, DrawBuffer},
+        AbigDrawing,
+    },
     geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
-    material::{apply_material, MaterialBufferPy},
+    material::MaterialBufferPy,
     primitivbuffer::*,
-    texturebuffer::{self, TextureBufferPy},
+    texturebuffer::TextureBufferPy,
     vertexbuffer::{VertexBuffer, VertexBufferPy},
 };
 
 fn ndc_to_screen(
-    v: &Vec4,
+    v: &Vec3,
     width: usize,
     height: usize,
     x_origin: usize,
@@ -30,24 +28,24 @@ fn ndc_to_screen(
 }
 
 fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
-    p: &Polygon,
+    polygon: &Polygon,
     geometry_id: usize,
     vertex_buffer: &VertexBuffer<C>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
-    let va = vertex_buffer.get_at(p.p_start);
+    let va = vertex_buffer.get_at(polygon.p_start);
     let point_a = ndc_to_screen(va, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
 
-    let mut vb = vertex_buffer.get_at(p.p_start + 1);
+    let mut vb = vertex_buffer.get_at(polygon.p_start + 1);
     let mut point_b = ndc_to_screen(vb, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
-    let mut vc = vertex_buffer.get_at(p.p_start + 2);
+    let mut vc = vertex_buffer.get_at(polygon.p_start + 2);
     let mut point_c = ndc_to_screen(vc, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
 
     primitivbuffer.add_triangle(
-        p.geom_ref.node_id,
+        polygon.geom_ref.node_id,
         geometry_id,
-        p.geom_ref.material_id,
+        polygon.geom_ref.material_id,
         point_a.0,
         point_a.1,
         va.z,
@@ -57,21 +55,21 @@ fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
         point_c.0,
         point_c.1,
         vc.z,
-        p.uv_start,
+        polygon.uv_start,
     );
 
     let mut current_triangle: usize = 1;
-    while current_triangle < p.p_end - p.p_start - 3 {
+    while current_triangle < polygon.triangle_count {
         vb = vc;
         point_b = point_c;
 
-        vc = vertex_buffer.get_at(p.p_start + 2 + current_triangle);
+        vc = vertex_buffer.get_at(polygon.p_start + 2 + current_triangle);
         point_c = ndc_to_screen(vc, drawbuffer.col_count, drawbuffer.row_count, 0, 0);
 
         primitivbuffer.add_triangle(
-            p.geom_ref.node_id,
+            polygon.geom_ref.node_id,
             geometry_id,
-            p.geom_ref.material_id,
+            polygon.geom_ref.material_id,
             point_a.0,
             point_a.1,
             va.z,
@@ -81,7 +79,7 @@ fn poly_as_primitive<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>(
             point_c.0,
             point_c.1,
             vc.z,
-            p.uv_start + current_triangle,
+            polygon.uv_start + current_triangle,
         );
 
         current_triangle += 1;
@@ -123,7 +121,6 @@ pub fn build_primitives<const C: usize, const PIXCOUNT: usize, DEPTHACC: Number>
 
 #[pyfunction]
 pub fn build_primitives_py(
-    py: Python,
     geometry_buffer: &GeometryBufferPy,
     vbpy: &VertexBufferPy,
     dbpy: &AbigDrawing,
@@ -137,14 +134,19 @@ pub fn build_primitives_py(
 
 #[pyfunction]
 pub fn apply_material_py(
-    py: Python,
     material_buffer: &MaterialBufferPy,
     texturebuffer: &TextureBufferPy,
+    vertex_buffer: &VertexBufferPy,
+    primitivbuffer: &PrimitiveBufferPy,
     mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
 ) {
-    let matbuff_content = &material_buffer.content;
+    let draw_buffer_content: &mut DrawBuffer<2, f32> = &mut draw_buffer_py.db;
 
-    let draw_buffer_content = &mut draw_buffer_py.db;
-    let texturebuffer_contetnt = &texturebuffer.data;
-    draw_buffer_content.apply_material(matbuff_content, texturebuffer_contetnt)
+    apply_material_on(
+        draw_buffer_content,
+        &material_buffer.content,
+        &texturebuffer.data,
+        &vertex_buffer.uv_array,
+        &primitivbuffer.content,
+    );
 }

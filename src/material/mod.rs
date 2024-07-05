@@ -1,16 +1,12 @@
-use pyo3::{
-    pyclass, pymethods,
-    types::{PyAnyMethods, PyTuple, PyTupleMethods},
-    Bound, Py, Python,
-};
+use nalgebra_glm::{TVec3, Vec3};
+use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
 
 use crate::{
-    drawbuffer::{
-        self,
-        drawbuffer::{CanvasCell, PixInfo},
-    },
+    drawbuffer::drawbuffer::{CanvasCell, PixInfo},
+    primitivbuffer::primitivbuffer::PrimitiveBuffer,
     texturebuffer::{TextureBuffer, RGBA},
     utils::convert_tuple_rgba,
+    vertexbuffer::{UVBuffer, VertexBuffer},
 };
 
 pub struct MaterialBuffer {
@@ -75,14 +71,27 @@ pub enum Material {
         glyph_idx: u8,
     },
 }
+pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
+    pixinfo: &PixInfo<DEPTHACC>,
+    (ua, va, ub, vb, uc, vc): (DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC),
+) -> (DEPTHACC, DEPTHACC) {
+    let uvec: TVec3<DEPTHACC> = TVec3::new(ua, ub, uc);
+    let vvec: TVec3<DEPTHACC> = TVec3::new(va, vb, vc);
 
-pub fn apply_material<T: nalgebra_glm::Number, const SIZE: usize>(
+    (pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec))
+}
+
+pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<SIZE>,
-    pixinfo: &PixInfo<T>,
+    uv_buffer: &UVBuffer<UVCOUNT, f32>,
+    primitive_buffer: &PrimitiveBuffer<f32>,
+    pixinfo: &PixInfo<f32>,
     cell: &mut CanvasCell,
 ) {
     let mat = &material_buffer.mats[pixinfo.material_id];
+
+    let prim = &primitive_buffer.content[pixinfo.primitive_id];
 
     match mat {
         Material::DoNothing {} => {}
@@ -91,11 +100,19 @@ pub fn apply_material<T: nalgebra_glm::Number, const SIZE: usize>(
             glyph_idx,
         } => {
             cell.glyph = *glyph_idx;
-            let u: f32 = 0.0;
-            let v: f32 = 1.0;
-            let c = texture_buffer.get_rgba_at(*albedo_texture_idx, u, v);
-            cell.front_color.copy_from(&c);
-            //cell.back_color.copy_from(back_color);
+
+            let uv_idx = prim.get_uv_idx();
+            let (uva, uvb, uvc) = uv_buffer.get_uv(uv_idx);
+            let (ufront, vfront) =
+                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y));
+
+            let front_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, ufront, vfront);
+            cell.front_color.copy_from(&front_rgba);
+
+            let (uback, vback) = calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y));
+
+            let back_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, uback, vback);
+            cell.front_color.copy_from(&back_rgba);
         }
         Material::StaticColor {
             front_color,

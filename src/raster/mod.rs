@@ -1,11 +1,7 @@
-use std::{
-    borrow::BorrowMut,
-    ops::{Mul, Sub},
-};
 
-use nalgebra_glm::{normalize, Number, Real, TVec3, Vec3};
+use nalgebra_glm::{normalize, Number, Real, TVec3};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
-use pyo3::{pyfunction, IntoPy, Py, PyAny, PyRefMut, Python};
+use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
     drawbuffer::{drawbuffer::DrawBuffer, AbigDrawing},
@@ -146,10 +142,10 @@ fn raster_triangle<const DEPTHCOUNT: usize>(
         return;
     }
 
-    let mut minX = min_3_int(pa.col, pb.col, pc.col); // min3int(axi, bxi, cxi);
+    let minX = min_3_int(pa.col, pb.col, pc.col); // min3int(axi, bxi, cxi);
     let mut maxX = max_3_int(pa.col, pb.col, pc.col); // min3int(ayi, byi, cyi);
 
-    let mut minY = min_3_int(pa.row, pb.row, pc.row); // max3int(axi, bxi, cxi);
+    let minY = min_3_int(pa.row, pb.row, pc.row); // max3int(axi, bxi, cxi);
     let mut maxY = max_3_int(pa.row, pb.row, pc.row); // max3int(ayi, byi, cyi);
 
     // Clip against screen bounds

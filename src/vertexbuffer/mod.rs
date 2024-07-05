@@ -1,5 +1,5 @@
 use crate::utils::{convert_glm_vec2, convert_pymat4};
-use nalgebra::{ArrayStorage, RawStorage, RawStorageMut, U1};
+use nalgebra::{ArrayStorage, RawStorage};
 use nalgebra_glm::{Mat4, Number, TVec2, TVec3, TVec4, Vec2, Vec3, Vec4};
 
 #[derive(Debug)]
@@ -19,12 +19,12 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
         uvb
     }
     // set the given vertex at the given location
-    fn set_uv(&mut self, uv: &TVec2<UVACC>, idx: usize) {
+    pub fn set_uv(&mut self, uv: &TVec2<UVACC>, idx: usize) {
         self.uv_array.as_mut_slice()[idx] = *uv;
     }
 
     // set the given vertex at the given location
-    fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
+    pub fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
         let x = self.uv_array.linear_index(self.uv_size, 0);
         self.set_uv(uva, x);
 
@@ -39,7 +39,7 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
         returned
     }
 
-    fn get_uv(&self, idx: usize) -> (TVec2<UVACC>, TVec2<UVACC>, TVec2<UVACC>) {
+    pub fn get_uv(&self, idx: usize) -> (TVec2<UVACC>, TVec2<UVACC>, TVec2<UVACC>) {
         (
             self.uv_array.as_slice()[self.uv_array.linear_index(idx, 0)],
             self.uv_array.as_slice()[self.uv_array.linear_index(idx, 1)],
@@ -74,9 +74,14 @@ impl<const C: usize> VertexBuffer<C> {
         self.current_size += 1;
         self.current_size - 1
     }
-    pub fn get_at(&self, idx: usize) -> &Vec4 {
+    pub fn get_at_vec4(&self, idx: usize) -> &Vec4 {
         &self.v4content.as_slice()[idx]
     }
+
+    pub fn get_at(&self, idx: usize) -> &Vec3 {
+        &self.v3content.as_slice()[idx]
+    }
+
     // set the given vertex at the given location
     fn set_vertex(&mut self, v3: &Vec3, idx: usize) {
         self.v3content.as_mut_slice()[idx] = *v3;
@@ -207,10 +212,53 @@ impl VertexBufferPy {
 
 pub struct TransformPack {
     model_matrix: Mat4,
+
+    model_transforms: Box<[Mat4]>,
     view_matrix: Mat4,
     project_matrix: Mat4,
-
     environment_light: Vec3,
+
+    max_node_count: usize,
+    current_count: usize,
+}
+
+impl TransformPack {
+    fn new(max_node: usize) -> Self {
+        let v3 = Vec3::zeros();
+        let mmmm = Mat4::identity();
+        let node_tr = vec![mmmm; max_node].into_boxed_slice();
+        let vb = TransformPack {
+            model_matrix: mmmm,
+            model_transforms: node_tr,
+            view_matrix: mmmm,
+            project_matrix: mmmm,
+            environment_light: v3,
+            max_node_count: max_node,
+            current_count: 0,
+        };
+        vb
+    }
+
+    fn clear(&mut self) {
+        self.current_count = 0
+    }
+
+    fn add_node_transform(&mut self, m4: Mat4) -> usize {
+        if self.current_count >= self.max_node_count {
+            return self.current_count;
+        }
+        self.model_transforms[self.current_count] = m4;
+        self.current_count += 1;
+        self.current_count - 1
+    }
+
+    fn set_node_transform(&mut self, idx: usize, m4: Mat4) {
+        self.model_transforms[idx] = m4;
+    }
+
+    fn get_node_transform(&self, idx: usize) -> &Mat4 {
+        &self.model_transforms[idx]
+    }
 }
 
 #[pyclass]
@@ -221,36 +269,36 @@ pub struct TransformPackPy {
 #[pymethods]
 impl TransformPackPy {
     #[new]
-    fn new() -> TransformPackPy {
-        let v3 = Vec3::zeros();
-        let mmmm = Mat4::identity();
+    fn new(max_node: usize) -> TransformPackPy {
+        TransformPackPy {
+            data: TransformPack::new(max_node),
+        }
+    }
+    fn clear(&mut self) {
+        self.data.clear()
+    }
+    fn node_count(&self) -> usize {
+        self.data.current_count
+    }
+    fn add_node_transform(&mut self, py: Python, value: Py<PyAny>) -> usize {
+        let m4 = convert_pymat4(py, value);
+        self.data.add_node_transform(m4)
+    }
+    fn set_node_transform(&mut self, py: Python, idx: usize, value: Py<PyAny>) {
+        let m4 = convert_pymat4(py, value);
+        self.data.set_node_transform(idx, m4);
+    }
 
-        let vb = TransformPack {
-            model_matrix: mmmm,
-            view_matrix: mmmm,
-            project_matrix: mmmm,
-            environment_light: v3,
-        };
-        TransformPackPy { data: vb }
+    fn get_node_transform(&self, py: Python, idx: usize) -> Py<PyTuple> {
+        let t = PyTuple::new_bound(py, self.data.get_node_transform(idx).as_slice());
+        t.into()
     }
-    fn set_model_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
-        self.data.model_matrix = convert_pymat4(py, value)
-    }
+
     fn set_view_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
         self.data.view_matrix = convert_pymat4(py, value)
     }
 
     fn set_project_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
         self.data.project_matrix = convert_pymat4(py, value)
-    }
-
-    fn set_model_matrix(&mut self, values: [f32; 16]) {
-        let m = Mat4::from_column_slice(&values);
-        self.data.model_matrix = m
-    }
-
-    fn get_model_matrix_tuple(&mut self, py: Python) -> Py<PyTuple> {
-        let t = PyTuple::new_bound(py, self.data.model_matrix.as_slice());
-        t.into()
     }
 }

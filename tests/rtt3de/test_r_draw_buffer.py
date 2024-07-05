@@ -6,6 +6,9 @@ import pytest
 from rtt3de import apply_material_py
 from rtt3de import MaterialBufferPy,TextureBufferPy
 import glm 
+from rtt3de import VertexBufferPy,TransformPackPy
+from rtt3de import PrimitiveBufferPy
+
 
 class Test_DrawBuffer(unittest.TestCase):
     
@@ -88,9 +91,15 @@ class Test_DrawBuffer(unittest.TestCase):
 
         material_buffer = MaterialBufferPy()
         texture_buffer = TextureBufferPy(32)
-        apply_material_py(material_buffer,texture_buffer,draw_buffer)
 
+        vertex_buffer = VertexBufferPy()
+        primitive_buffer = PrimitiveBufferPy(3)
+        apply_material_py(material_buffer,texture_buffer,vertex_buffer,primitive_buffer,draw_buffer)
 
+    def test_wh_canvas(self):
+        drawbuffer = AbigDrawing(max_row=23, max_col=178)
+        self.assertEqual(drawbuffer.get_row_count(),23)
+        self.assertEqual(drawbuffer.get_col_count(),178)
 
     def test_clear_canvas(self):
         drawbuffer = AbigDrawing(512, 512)
@@ -168,13 +177,13 @@ class Test_DrawBuffer(unittest.TestCase):
 
         canvas_content = drawbuffer.get_canvas_cell(3, 0)
         hyp = {
-            "f_r":0, 
-            "f_b":0, 
+            "f_r":3, 
+            "f_b":255, 
             "f_g":0, 
-            "b_r":0, 
-            "b_g":0, 
-            "b_b":0, 
-            "glyph":0
+            "b_r":2, 
+            "b_g":3, 
+            "b_b":4, 
+            "glyph":8
         }
         self.assertEqual(len(canvas_content), 7)
         self.assertEqual(canvas_content, hyp)
@@ -200,13 +209,13 @@ class Test_DrawBuffer(unittest.TestCase):
 
         canvas_content = drawbuffer.get_canvas_cell(1,3)
         hyp = {
-            "f_r":0, 
-            "f_b":0, 
+            "f_r":3, 
+            "f_b":255, 
             "f_g":0, 
-            "b_r":0, 
-            "b_g":0, 
-            "b_b":0, 
-            "glyph":0
+            "b_r":2, 
+            "b_g":3, 
+            "b_b":4, 
+            "glyph":8
         }
         self.assertEqual(len(canvas_content), 7)
         self.assertEqual(canvas_content, hyp)
@@ -543,25 +552,52 @@ class Test_totextual(unittest.TestCase):
     
     def test_to_textual_2(self):
         from rtt3de import AbigDrawing
-        gb = AbigDrawing(10,10)
+        gb = AbigDrawing(max_row=10,max_col=20)
         gb.hard_clear(100.0)    
+        gb.set_canvas_cell(0,0,(0,100,200,255),(200,100,0,255),1)
 
-        res = gb.to_textual_2(0,10,0,10)
+        gb.set_bit_size_front(8,8,8)
+        gb.set_bit_size_back(8,8,8)
+        
+        at00 = gb.get_canvas_cell(0,0)
+        self.assertEqual( at00 , {
+            "f_r":0, 
+            "f_g":100, 
+            "f_b":200, 
+            "b_r":200, 
+            "b_g":100, 
+            "b_b":0, 
+            "glyph":1
+        })
+
+        
+        res = gb.to_textual_2(min_x=0,max_x=20,  min_y=0,max_y=10)
+
+
         self.assertEqual(len(res),10)
-        self.assertEqual(len(res[0]),10)
+        self.assertEqual(len(res[0]),20)
 
 
+        pix0 = res[0][0]
+        self.assertEqual(pix0.text,"!")
+        colr = pix0.style.color.triplet
 
-        res = gb.to_textual_2(0,10,1,9)
+        self.assertEqual(colr.red,0)
+        self.assertEqual(colr.green,100)
+        self.assertEqual(colr.blue,200)
+        
+
+        res = gb.to_textual_2(min_x=0,max_x=10,  min_y=1,max_y=9)
         self.assertEqual(len(res),8)
         self.assertEqual(len(res[0]),10)
 
 
     def test_to_textual_2_out_bound_x(self):
         from rtt3de import AbigDrawing
-        gb = AbigDrawing(10,10)
+        gb = AbigDrawing(max_row=178,max_col=19)
         gb.hard_clear(100.0)    
-
+        gb.set_bit_size_front(8,8,8)
+        gb.set_bit_size_back(8,8,8)
 
         res = gb.to_textual_2(0,13,1,3)
         self.assertEqual(len(res),2)
@@ -578,6 +614,12 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(len(res),2)
         self.assertEqual(len(res[0]),504)
 
+
+        res = gb.to_textual_2(min_x=0,max_x=20, min_y=0,max_y=178)
+        self.assertEqual(len(res),178)
+        self.assertEqual(len(res[0]),20)
+
+
     def test_to_textual_2_out_bound_y(self):
         from rtt3de import AbigDrawing
         gb = AbigDrawing(10,10)
@@ -592,4 +634,22 @@ class Test_totextual(unittest.TestCase):
 
         res = gb.to_textual_2(0,30,1,30)
         self.assertEqual(len(res),29)
-        self.assertEqual(len(res[0]),30)
+        self.assertEqual(len(res[0]),30)    
+
+    def test_to_textual_2_zero_init(self):
+        
+        gb = AbigDrawing(max_row=0,  max_col=0)
+
+        gb.set_bit_size_front(8,8,8)
+        gb.set_bit_size_back(8,8,8)
+        gb.hard_clear(100)
+        self.assertEqual(gb.get_col_count(),0)
+        self.assertEqual(gb.get_row_count(),0)
+
+        res = gb.to_textual_2(min_x=0,max_x=178, min_y=0,max_y=25)
+
+
+        self.assertEqual(len(res),25)
+        self.assertEqual(len(res[0]),178)   
+
+

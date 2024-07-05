@@ -55,7 +55,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         node_id = 102
         material_id = 202
         geom_buffer.add_polygon(
-            0,5,  node_id, material_id, 0,3
+            0,1,  node_id, material_id, 0
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
@@ -68,30 +68,23 @@ class Test_GeometryBuffer(unittest.TestCase):
         """Test adding a triangle and verify its addition to the buffer."""
         geom_buffer = GeometryBufferPy(10)
         geom_buffer.clear()
-        point_a = [0, 0, 0]
-        point_b = [1, 0, 0]
-        point_c = [0, 1, 0]
-        point_d = [1, 1, 0]
 
-        uv_array_face1 = [0.1] * 48
-        uv_array_face2 = [0.1] * 48
 
         node_id = 102
         material_id = 202
 
-        vertex = [ point_a, point_b, point_c , point_d]
-        uv_array = [uv_array_face1, uv_array_face2]
-
         geom_buffer.add_polygon(
-            0,2, node_id, material_id, 0,3
+            2,23, node_id, material_id, 32
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
+        elem0 = geom_buffer.get_element(0)
+        self.assertEqual(elem0,{'p_start': 2, 'triangle_count': 23, 'uv_start': 32} )
+
 #
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
-        
     def test_buffer_overflow(self):
         """Test it does not crash and ignore stuff"""
         geom_buffer = GeometryBufferPy(

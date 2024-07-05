@@ -1,4 +1,3 @@
-use nalgebra_glm::TVec4;
 use pyo3::{prelude::*, types::PyDict};
 
 #[derive(Debug, Clone, Copy)]
@@ -24,10 +23,8 @@ pub struct Line {
 pub struct Polygon {
     pub geom_ref: GeomReferences,
     pub p_start: usize,
-    pub p_end: usize,
-
     pub uv_start: usize,
-    pub uv_end: usize,
+    pub triangle_count: usize,
 }
 
 #[derive(Debug)]
@@ -88,28 +85,24 @@ impl GeometryBuffer {
     fn add_polygon(
         &mut self,
         p_start: usize,
-        p_end: usize,
+        triangle_count: usize,
         node_id: usize,
         material_id: usize,
         uv_start: usize,
-        uv_end: usize,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
         }
-        let geom_ref = GeomReferences {
-            node_id,
-            material_id,
-        };
-        let p = Polygon {
-            geom_ref,
-            p_start,
-            p_end,
-            uv_start,
-            uv_end,
-        };
 
-        let elem = GeomElement::Polygon(p);
+        let elem = GeomElement::Polygon(Polygon {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            p_start,
+            uv_start,
+            triangle_count,
+        });
 
         self.content[self.current_size] = elem;
         self.current_size += 1;
@@ -134,9 +127,8 @@ impl GeometryBufferPy {
                     material_id: 0,
                 },
                 p_start: 0,
-                p_end: 0,
                 uv_start: 0,
-                uv_end: 0,
+                triangle_count: 1,
             };
             max_size
         ];
@@ -172,14 +164,13 @@ impl GeometryBufferPy {
         &mut self,
         py: Python,
         p_start: usize,
-        p_end: usize,
+        triangle_count: usize,
         node_id: usize,
         material_id: usize,
         uv_start: usize,
-        uv_end: usize,
     ) -> usize {
         self.buffer
-            .add_polygon(p_start, p_end, node_id, material_id, uv_start, uv_end)
+            .add_polygon(p_start, triangle_count, node_id, material_id, uv_start)
     }
     fn add_line(
         &mut self,
@@ -205,7 +196,8 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
         GeomElement::Line(l) => todo!(),
         GeomElement::Polygon(p) => {
             dict.set_item("p_start", p.p_start).unwrap();
-            dict.set_item("p_end", p.p_end).unwrap();
+            dict.set_item("triangle_count", p.triangle_count).unwrap();
+            dict.set_item("uv_start", p.uv_start).unwrap();
         }
     }
     dict.into()

@@ -1,14 +1,6 @@
 pub mod primitivbuffer;
-use crate::utils::convert_pymat4;
-use nalgebra_glm::Number;
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
-use pyo3::{
-    intern,
-    prelude::*,
-    pyclass, pymethods,
-    types::{PyDict, PyList, PyTuple},
-    Py, Python,
-};
+use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 
 #[pyclass]
 pub struct PrimitiveBufferPy {
@@ -24,7 +16,9 @@ impl PrimitiveBufferPy {
         let content = PrimitiveBuffer::new(max_size);
         PrimitiveBufferPy { content: content }
     }
-
+    fn clear(&mut self) {
+        self.content.clear();
+    }
     fn primitive_count(&self) -> usize {
         self.content.current_size
     }
@@ -42,9 +36,33 @@ impl PrimitiveBufferPy {
         self.content
             .add_point(node_id, geometry_id, material_id, row, col, depth, uv)
     }
-    fn add_line(&mut self) {
-        todo!()
+    fn add_line(
+        &mut self,
+        node_id: usize,
+        geometry_id: usize,
+        material_id: usize,
+        p_a_row: usize,
+        p_a_col: usize,
+        p_a_depth: f32,
+        p_b_row: usize,
+        p_b_col: usize,
+        p_b_depth: f32,
+        uv: usize,
+    ) -> usize {
+        self.content.add_line(
+            node_id,
+            geometry_id,
+            material_id,
+            p_a_row,
+            p_a_col,
+            p_a_depth,
+            p_b_row,
+            p_b_col,
+            p_b_depth,
+            uv,
+        )
     }
+
     fn add_triangle(
         &mut self,
         node_id: usize,
@@ -102,7 +120,7 @@ fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
             // Assuming DepthBufferCell has some fields `field1` and `field2`
             dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
             dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
-            dict.set_item("pb", point_info_into_dict(py, &pc)).unwrap();
+            dict.set_item("pc", point_info_into_dict(py, &pc)).unwrap();
         }
         &PrimitiveElements::Point {
             fds,
@@ -120,8 +138,8 @@ fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
         &PrimitiveElements::Line { fds, pa, pb, uv } => {
             into_dict(py, &fds, &dict);
             // Assuming DepthBufferCell has some fields `field1` and `field2`
-            dict.set_item("p_start", pa).unwrap();
-            dict.set_item("p_end", pb).unwrap();
+            dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
+            dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
         }
         &PrimitiveElements::Static { fds, index } => {
             into_dict(py, &fds, &dict);

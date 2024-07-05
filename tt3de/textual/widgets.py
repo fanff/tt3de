@@ -534,3 +534,22 @@ class DepthBufferInfo(Widget, can_focus=False):
             table.update_cell_at((idx,4),content["material_id"])
             table.update_cell_at((idx,5),content["primitiv_id"])
 
+class RustRenderContextInfo(Widget, can_focus=False):
+    DEFAULT_CSS = """
+
+    RustRenderContextInfo{
+        min-height: 3;
+    }
+
+
+    """
+    def compose(self) -> ComposeResult:
+        yield Label(id="location")
+        
+    def on_mount(self):
+        pass
+    def update_counts(self,updates:dict):
+            
+        label:Label = self.query_one(Label)
+        label.update(str(updates))
+        

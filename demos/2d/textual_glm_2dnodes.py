@@ -45,7 +45,7 @@ class GLMTester(TT3DView):
 
     def initialize(self):
 
-        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.set_0()
+        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.rust_set_0()
         self.root2Dnode = TT2DNode()
 
         materialidx = 1

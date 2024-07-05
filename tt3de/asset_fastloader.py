@@ -23,9 +23,20 @@ def fast_load(obj_file: str, cls=None):
 from tt3de.glm.c_texture import TextureArray
 from tt3de.glm.material.c_material import MaterialBuffer
 from tt3de.glm.material.c_material import Material
-
+from rtt3de import MaterialBufferPy
+from rtt3de import TextureBufferPy
+from rtt3de import VertexBufferPy,TransformPackPy
 
 class MaterialPerfab:
+    @staticmethod
+    def rust_set_0() -> Tuple[TextureBufferPy, MaterialBufferPy]:
+        texture_buffer = TextureBufferPy(32)
+        material_buffer = MaterialBufferPy()
+        material_buffer.add_static((200,10,10),(50,50,100),2)
+        material_buffer.add_static((10,200,10),(50,100,50),2)
+        material_buffer.add_static((10,10,200),(100,50,50),2)
+        
+        return texture_buffer,material_buffer
 
     @staticmethod
     def set_0() -> Tuple[TextureArray, MaterialBuffer]:
@@ -237,7 +248,7 @@ class Prefab2D:
         ]
 
         m = meshclass()
-        m.elements = [vertices]
+        m.vertex_list = vertices
         m.uvmap = [texture_coords]
         return m
 

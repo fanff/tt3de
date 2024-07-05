@@ -135,6 +135,8 @@ pub struct AbigDrawing {
     color_triplet_class: Py<PyAny>,
 
     seg_cache: SegmentCache,
+
+    pub default_segment: Py<PyAny>,
 }
 
 #[pymethods]
@@ -159,7 +161,14 @@ impl AbigDrawing {
             &segment_class,
             &style_class,
         );
-
+        let default_segment = create_textual_segment(
+            py,
+            [255, 0, 0, 30, 30, 30, 1],
+            &color_triplet_class,
+            &color_class,
+            &segment_class,
+            &style_class,
+        );
         segment_cache.insert_with_hash(0, aseg0);
         AbigDrawing {
             db: DrawBuffer::new(
@@ -176,10 +185,18 @@ impl AbigDrawing {
             color_class: color_class.into(),
             color_triplet_class: color_triplet_class.into(),
             seg_cache: segment_cache,
+            default_segment: default_segment,
         }
     }
     pub fn layer_count(&self) -> usize {
         return self.layer_count;
+    }
+
+    pub fn get_row_count(&self) -> usize {
+        self.db.row_count
+    }
+    pub fn get_col_count(&self) -> usize {
+        self.db.col_count
     }
     //set the number of bit for every channel of the front color.
     pub fn set_bit_size_front(&mut self, r: u8, g: u8, b: u8) {
@@ -277,8 +294,8 @@ impl AbigDrawing {
 
     fn set_canvas_cell(
         &mut self,
-        r: usize,
-        c: usize,
+        row: usize,
+        col: usize,
         front_color_tuple: [u8; 4],
         back_color_tuple: [u8; 4],
         glyph: u8,
@@ -296,8 +313,9 @@ impl AbigDrawing {
             a: back_color_tuple[3],
         };
 
-        self.db.set_canvas_content(r, c, frontc, backc, glyph)
+        self.db.set_canvas_content(row, col, frontc, backc, glyph)
     }
+
     fn get_canvas_cell(&self, py: Python, r: usize, c: usize) -> Py<PyDict> {
         let cell = self.db.get_canvas_cell(r, c);
         let dict = PyDict::new_bound(py); // this will be super slow
@@ -329,29 +347,42 @@ impl AbigDrawing {
         let canvas = &self.db.canvas;
         let dict = PyDict::new_bound(py);
 
+        // create a list of rows
         let all_rows_list = PyList::empty_bound(py);
         let append_row_method = all_rows_list.getattr(intern!(py, "append")).unwrap();
         for row_idx in min_y..max_y {
+            // create a list of stuff for this current row.
             let arow_list = PyList::empty_bound(py);
             let append_method = arow_list.getattr(intern!(py, "append")).unwrap();
             if row_idx < self.max_row {
+                // the row_idx is inside the screen;
+                // we can iterate on the columns
                 for col_idx in min_x..max_x {
                     if col_idx < self.max_col {
-                        let idx = row_idx * self.max_col + col_idx;
-                        let cell = canvas[idx];
+                        // the col_idx is withing the screen
 
+                        // calculate a linear index
+                        let idx = row_idx * self.max_col + col_idx;
+                        // get the cell
+                        let cell = &canvas[idx];
+
+                        // calculate the reduced pixel values
                         let reduced_hash = self.seg_cache.get_reduced(
                             cell.front_color,
                             cell.back_color,
                             cell.glyph as u8,
                         );
+                        // calculate the hash
                         let hash_value = self.seg_cache.hash_tuple_to_int(reduced_hash);
 
+                        // find in the cache the Segment
                         match self.seg_cache.get_with_hash(hash_value) {
                             Some(value) => {
+                                // we have a segment; so let insert in the current row
                                 append_method.call1((&value.clone_ref(py),)).unwrap();
                             }
                             None => {
+                                // we don't have a segment, we should create it.
                                 let f_triplet = self
                                     .color_triplet_class
                                     .call1(py, (reduced_hash[0], reduced_hash[1], reduced_hash[2]))
@@ -391,15 +422,17 @@ impl AbigDrawing {
                                         ),
                                     )
                                     .unwrap();
+
+                                // store segment in the cache.
                                 self.seg_cache
                                     .insert_with_hash(hash_value, anewseg.clone_ref(py));
-
+                                // add the segment to the current line
                                 append_method.call1((anewseg.clone_ref(py),)).unwrap();
                             }
                         }
                     } else {
                         // we are outbound ; we need to feed some extra segments
-                        let seg = self.seg_cache.get_with_hash(0).unwrap();
+                        let seg = &self.default_segment;
                         append_method.call1((seg.clone_ref(py),)).unwrap();
                     }
                 }
@@ -407,8 +440,8 @@ impl AbigDrawing {
             } else {
                 // we are outbound ; we need to feed extra line with the good number of columns
                 // requested line count
-                let seg = self.seg_cache.get_with_hash(0).unwrap();
-
+                //let seg = self.seg_cache.get_with_hash(0).unwrap();
+                let seg = &self.default_segment;
                 for _col_idx in min_x..max_x {
                     append_method.call1((seg.clone_ref(py),)).unwrap();
                 }

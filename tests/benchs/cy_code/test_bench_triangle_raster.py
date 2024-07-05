@@ -90,6 +90,8 @@ def test_bench_rust_triangle_raster(benchmark, size):
             6, # bottom
             size, # left 
             1.0,
+
+            0
         )
 
     benchmark(rust_version, primitive_buffer, drawing_buffer)
@@ -130,6 +132,7 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
                 6, # bottom
                 size, # left 
                 depth,
+                0
             )
     elif mode=="SAME":
         #ALL triangles have rigourousely 
@@ -151,7 +154,7 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
 
                 6, # bottom
                 size, # left 
-                1.0,
+                1.0,0
             )
     elif mode == "BELLOW":
         # every triangle is "bellow the previous one"
@@ -172,7 +175,7 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
 
                 6, # bottom
                 size, # left 
-                depth,
+                depth,0
             )
     assert (primitive_buffer.primitive_count(), tri_count)
     benchmark(rust_version, primitive_buffer, drawing_buffer)

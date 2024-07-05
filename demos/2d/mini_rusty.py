@@ -30,11 +30,12 @@ from tt3de.textual.widgets import (
     CameraConfig,
     FloatSelector,
     RenderInfo,
+    RustRenderContextInfo,
     Vector3Selector,
 )
 from tt3de.textual_widget import TT3DView
 
-from tt3de.tt_2dnodes import TT2DMesh, TT2DNode
+from tt3de.tt_2dnodes import TT2DMesh, TT2DNode, TT2Polygon
 
 
 class GLMTester(TT3DView):
@@ -51,58 +52,13 @@ class GLMTester(TT3DView):
         self.root2Dnode = TT2DNode()
 
         # first triangle 
-        a2dmesh: TT2DMesh = Prefab2D.unitary_triangle(TT2DMesh)
+        a2dmesh: TT2Polygon = Prefab2D.unitary_triangle(TT2Polygon)
         a2dmesh.material_id = 2
-        a2dmesh.elements[0][0].z = 0.1
-        a2dmesh.elements[0][1].z = 0.1
-        a2dmesh.elements[0][2].z = 1.0
-
-        a2dmesh.elements[0][2].z = 1.0
         a2dmesh.local_transform = glm.translate(
             glm.vec3(float(0) + 0.1, float(0) + 0.1,0.0)
         ) * glm.rotate(0.3,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
 
         self.root2Dnode.elements.append(a2dmesh)
-
-        # seconde triangle 
-        a2dmesh: TT2DMesh = Prefab2D.unitary_triangle(TT2DMesh)
-        a2dmesh.material_id = 2
-        a2dmesh.elements[0][0].z = 1.0
-        a2dmesh.elements[0][1].z = 1.0
-        a2dmesh.elements[0][2].z = 0.1
-        a2dmesh.local_transform = glm.translate(
-            glm.vec3(float(1) + 0.1, float(1) + 0.1,0.0)
-        ) * glm.rotate(1.9,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
-
-        self.root2Dnode.elements.append(a2dmesh)
-
-        # third triangle 
-        a2dmesh: TT2DMesh = Prefab2D.unitary_triangle(TT2DMesh)
-        a2dmesh.material_id = 2
-        a2dmesh.elements[0][0].z = 1.0
-        a2dmesh.elements[0][1].z = 1.0
-        a2dmesh.elements[0][2].z = 0.1
-        a2dmesh.local_transform = glm.translate(
-            glm.vec3(float(.11) + 0.1, float(.2) + 0.1,0.0)
-        ) * glm.rotate(-1,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
-
-        self.root2Dnode.elements.append(a2dmesh)
-
-
-        # 4rth triangle 
-        a2dmesh: TT2DMesh = Prefab2D.unitary_triangle(TT2DMesh)
-        a2dmesh.material_id = 2
-        a2dmesh.elements[0][0].z = 1.0
-        a2dmesh.elements[0][1].z = 1.0
-        a2dmesh.elements[0][2].z = 0.1
-        a2dmesh.local_transform = glm.translate(
-            glm.vec3(float(.91), float(.3) + 0.1,0.0)
-        ) * glm.rotate(0.2,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
-
-        self.root2Dnode.elements.append(a2dmesh)
-
-
-
 
         # final append
         self.rc.append(self.root2Dnode)
@@ -128,7 +84,10 @@ class GLMTester(TT3DView):
         cc.refresh_camera_rotation(
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
+        context_log:RustRenderContextInfo = self.parent.query_one(RustRenderContextInfo)
 
+        context_log.update_counts({"geom":self.rc.geometry_buffer.geometry_count(),
+                                   "prim":self.rc.primitive_buffer.primitive_count()})
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
@@ -174,6 +133,7 @@ class Content(Static):
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield CameraConfig()
+            yield RustRenderContextInfo()
         yield GLMTester()
 
     def on_camera_config_projection_changed(
