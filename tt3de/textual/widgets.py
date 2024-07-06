@@ -581,3 +581,19 @@ class RustRenderContextInfo(Widget, can_focus=False):
         label:Label = self.query_one(Label)
         label.update(str(updates))
         
+from textual.widgets import Log
+class EngineLog(Widget):
+    DEFAULT_CSS = """
+
+    EngineLog{
+        max-height: 10;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Log()
+
+
+    def add_line(self,txt:str):
+        log:Log = self.query_one(Log)
+        log.write_line(txt)

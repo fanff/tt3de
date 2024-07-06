@@ -1,13 +1,19 @@
-use nalgebra_glm::{TVec3, Vec3};
-use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
-
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
-    texturebuffer::{TextureBuffer, RGBA},
     utils::convert_tuple_rgba,
     vertexbuffer::{UVBuffer, VertexBuffer},
 };
+
+use super::texturebuffer::texture_buffer::TextureBuffer;
+use super::texturebuffer::RGBA;
+
+use nalgebra_glm::{Number, TVec3, Vec3};
+
+mod noise;
+use noise::*;
+
+use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
 
 pub struct MaterialBuffer {
     pub max_size: usize,
@@ -70,15 +76,24 @@ pub enum Material {
         back_color: RGBA,
         glyph_idx: u8,
     },
+    Noise {
+        noise: NoiseMaterial,
+        glyph_idx: u8,
+    },
 }
+
 pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
     pixinfo: &PixInfo<DEPTHACC>,
     (ua, va, ub, vb, uc, vc): (DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC),
+    weight_idx: usize,
 ) -> (DEPTHACC, DEPTHACC) {
     let uvec: TVec3<DEPTHACC> = TVec3::new(ua, ub, uc);
     let vvec: TVec3<DEPTHACC> = TVec3::new(va, vb, vc);
 
-    (pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec))
+    match weight_idx {
+        1 => (pixinfo.w_1.dot(&uvec), pixinfo.w_1.dot(&vvec)),
+        _ => (pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec)),
+    }
 }
 
 pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
@@ -101,15 +116,15 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
         } => {
             cell.glyph = *glyph_idx;
 
-            let uv_idx = prim.get_uv_idx();
-            let (uva, uvb, uvc) = uv_buffer.get_uv(uv_idx);
+            let (uva, uvb, uvc) = uv_buffer.get_uv(prim.get_uv_idx());
             let (ufront, vfront) =
-                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y));
+                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
 
             let front_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, ufront, vfront);
             cell.front_color.copy_from(&front_rgba);
 
-            let (uback, vback) = calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y));
+            let (uback, vback) =
+                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 1);
 
             let back_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, uback, vback);
             cell.front_color.copy_from(&back_rgba);
@@ -123,7 +138,32 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
             cell.front_color.copy_from(front_color);
             cell.back_color.copy_from(back_color);
         }
+        Material::Noise { noise, glyph_idx } => {
+            let (uva, uvb, uvc) = uv_buffer.get_uv(prim.get_uv_idx());
+            let (ufront, vfront) =
+                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
+
+            let valuefront = apply_noise(noise, pixinfo, ufront, vfront);
+
+            cell.glyph = *glyph_idx;
+
+            let front_rgba = RGBA {
+                r: (valuefront * 255.0) as u8,
+                g: (valuefront * 255.0) as u8,
+                b: (valuefront * 255.0) as u8,
+                a: 255,
+            };
+            cell.front_color.copy_from(&front_rgba);
+            cell.back_color.copy_from(&front_rgba);
+        }
     }
+}
+
+pub fn apply_noise<T: Number>(noise: &NoiseMaterial, pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
+    let noise = noise.make_instance();
+    let noise_val = noise.get_noise_2d(u, v);
+    let noise_val = (noise_val + 1.0) / 2.0;
+    noise_val
 }
 
 #[pyclass]

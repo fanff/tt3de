@@ -28,6 +28,7 @@ from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
 
 from tt3de.textual.widgets import (
     CameraConfig,
+    EngineLog,
     FloatSelector,
     RenderInfo,
     RustRenderContextInfo,
@@ -50,6 +51,10 @@ class GLMTester(TT3DView):
         self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.rust_set_0()
         # create a root node 
         self.root2Dnode = TT2DNode()
+        self.root2Dnode.local_transform = glm.translate(
+            glm.vec3(-.5, .2 ,  0.0)
+        )
+
 
         # first triangle 
         a2dmesh: TT2Polygon = Prefab2D.unitary_triangle(TT2Polygon)
@@ -58,7 +63,7 @@ class GLMTester(TT3DView):
             glm.vec3(float(0) + 0.1, float(0) + 0.1,0.0)
         ) * glm.rotate(0.3,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
 
-        self.root2Dnode.elements.append(a2dmesh)
+        self.root2Dnode.add_child(a2dmesh)
 
         # final append
         self.rc.append(self.root2Dnode)
@@ -109,18 +114,22 @@ class GLMTester(TT3DView):
                 event: events.MouseDown = event
                 match event.button:
                     case 1:
-                        relx_px = (
-                            (float(event.x) - (self.camera.screen_width / 2))
-                        ) / (self.camera.screen_width * self.camera.zoom_2D)
-                        rely_px = (
-                            (float(event.y) - (self.camera.screen_height / 2))
-                        ) / (self.camera.screen_height * self.camera.zoom_2D)
 
+                        screen_click_position = glm.vec3(float(event.x), float(event.y), 0.0)
+                        # convert to screen to clip space 
+                        clip_click_position = glm.vec3(
+                            screen_click_position.x / self.size.width * 2 - 1,
+                            1 - screen_click_position.y / self.size.height * 2,
+                            0.0,
+                        )
 
-                        small_tr_vector = glm.vec3(-relx_px, -rely_px, 0.0)
-                        
+                        # convert to world space using the view matrix
+                        world_click_position = glm.inverse(self.camera.view_matrix_2D) * clip_click_position
+
+                        self.camera.view_matrix_2D
                         # self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
-
+                        self.parent.query_one("EngineLog").add_line(f"click ! {str(world_click_position)}")
+                        
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
             case events.MouseScrollUp:
@@ -135,9 +144,12 @@ class Content(Static):
 
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
+            yield EngineLog()
             yield CameraConfig()
             yield RenderInfo()
             yield RustRenderContextInfo()
+
+
         yield GLMTester()
 
     def on_camera_config_projection_changed(

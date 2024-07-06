@@ -5,10 +5,10 @@ use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
 use nalgebra_glm::Vec2;
 
+use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::apply_material;
 use crate::material::MaterialBuffer;
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
-use crate::texturebuffer::TextureBuffer;
 use crate::texturebuffer::RGBA;
 use crate::vertexbuffer::UVBuffer;
 
@@ -213,11 +213,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
     pub fn ndc_to_screen_row_col(&self, v: &Vec2) -> (usize, usize) {
         let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
-
         // vectorial summ and multiplication; component wise
-
-        &sumoftwovec.component_mul_assign(&self.half_size);
-
+        sumoftwovec.component_mul_assign(&self.half_size);
         // round to the nearest integer
         (
             sumoftwovec.y.round() as usize,

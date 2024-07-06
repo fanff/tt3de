@@ -1,9 +1,10 @@
-use crate::texturebuffer::RGBA;
 use nalgebra_glm::{Mat4, Vec2, Vec3};
 use pyo3::{
     types::{PyAnyMethods, PyList, PyTuple, PyTupleMethods},
     Bound, Py, PyAny, Python, ToPyObject,
 };
+
+use super::texturebuffer::RGBA;
 
 pub fn convert_pymat4(py: Python, values: Py<PyAny>) -> Mat4 {
     let r = values.call_method0(py, "to_tuple").unwrap();

@@ -19,6 +19,9 @@ pub const GLYPH_STATIC_STR: [&'static str; 256] = [
     "♠", "♣", "♥", "♦", //
 ];
 
+pub const HALF_UPPER_BLOCK: usize = 95;
+pub const HALF_LOWER_BLOCK: usize = 99;
+
 fn find_glyph_indices(input: &str) -> Vec<Option<usize>> {
     input
         .chars()

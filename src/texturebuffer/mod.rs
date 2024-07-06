@@ -1,5 +1,21 @@
 use crate::utils::convert_tuple_texture_rgba;
+use fastnoise_lite::{FastNoiseLite, NoiseType};
 use pyo3::{pyclass, pymethods, types::PyList, Py, PyAny, Python};
+
+pub mod noise_texture;
+use noise_texture::*;
+pub mod atlas_texture;
+use atlas_texture::*;
+pub mod texture_buffer;
+use texture_buffer::*;
+
+#[derive(Clone, Copy)]
+pub struct RGBA {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
 
 #[derive(Clone)]
 pub struct Texture<const SIZE: usize> {
@@ -49,20 +65,6 @@ impl<const SIZE: usize> Texture<SIZE> {
         // Return the color at the computed coordinates
         self.data[y * SIZE + x]
     }
-}
-
-#[derive(Clone)]
-pub struct TextureAtlas<const SIZE: usize> {
-    texture: Texture<SIZE>,
-    pix_size: usize, // how many pixel size are the atlas elements? 8px is small, 16 is normal
-}
-
-#[derive(Clone, Copy)]
-pub struct RGBA {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
 }
 
 #[derive(Clone)]
@@ -125,6 +127,7 @@ pub enum TextureType<const SIZE: usize> {
     Custom(TextureCustom<SIZE>),
     Fixed(Texture<SIZE>),
     Atlas(TextureAtlas<SIZE>),
+    Noise(NoiseTexture),
 }
 
 impl<const SIZE: usize> TextureType<SIZE> {
@@ -133,89 +136,8 @@ impl<const SIZE: usize> TextureType<SIZE> {
             TextureType::Custom(t) => t.uv_map(u, v),
             TextureType::Fixed(t) => t.uv_map(u, v),
             TextureType::Atlas(t) => t.texture.uv_map(u, v),
+            TextureType::Noise(t) => t.uv_map(u, v),
         }
-    }
-}
-
-pub struct TextureBuffer<const SIZE: usize> {
-    pub max_size: usize,
-    pub current_size: usize,
-    pub textures: Box<[TextureType<SIZE>]>,
-}
-
-impl<const SIZE: usize> TextureBuffer<SIZE> {
-    pub fn new(max_size: usize) -> TextureBuffer<SIZE> {
-        let init_color = RGBA {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 255,
-        };
-        let init_texture = TextureType::Fixed(Texture::<SIZE>::new(init_color, true, true));
-        // Create a fixed-size array of None values
-        let textures = vec![init_texture; max_size].into_boxed_slice();
-
-        TextureBuffer {
-            max_size,
-            current_size: 0,
-            textures,
-        }
-    }
-
-    pub fn get_rgba_at(&self, idx: usize, u: f32, v: f32) -> RGBA {
-        let atexture = &self.textures[idx];
-        let color = atexture.uv_map(u, v);
-
-        color
-    }
-    pub fn get_wh_of(&self, idx: usize) -> (usize, usize) {
-        let atext = &self.textures[idx];
-
-        match atext {
-            TextureType::Custom(t) => (t.width, t.height),
-            TextureType::Fixed(_) => (SIZE, SIZE),
-            TextureType::Atlas(_) => (SIZE, SIZE),
-        }
-    }
-    pub fn add_texture_from_iter<I: IntoIterator<Item = RGBA>>(
-        &mut self,
-        width: usize,
-        height: usize,
-        input: I,
-    ) -> usize {
-        if self.current_size >= self.max_size {
-            panic!("Texture buffer is full");
-        }
-
-        let texture_type = if width == SIZE && height == SIZE {
-            TextureType::Fixed(Texture::<SIZE>::from_iter(input, true, true))
-        } else {
-            TextureType::Custom(TextureCustom::<SIZE>::new(input, width, height, true, true))
-        };
-
-        self.textures[self.current_size] = texture_type;
-        self.current_size += 1;
-
-        self.current_size - 1
-    }
-
-    pub fn add_atlas_texture_from_iter<I: IntoIterator<Item = RGBA>>(
-        &mut self,
-        pix_size: usize,
-        input: I,
-    ) -> usize {
-        if self.current_size >= self.max_size {
-            panic!("Texture buffer is full");
-        }
-
-        let atlas_texture = TextureAtlas {
-            texture: Texture::<SIZE>::from_iter(input, true, true),
-            pix_size,
-        };
-
-        self.textures[self.current_size] = TextureType::Atlas(atlas_texture);
-        self.current_size += 1;
-        self.current_size - 1
     }
 }
 
@@ -281,6 +203,9 @@ impl TextureBufferPy {
         let texture_iter = TextureIterator::new(py, &pixels.as_ref(py));
 
         self.data.add_texture_from_iter(width, height, texture_iter)
+    }
+    fn add_noise_texture(&mut self, seed: i32, int_config: i32) -> usize {
+        self.data.add_noise_texture(seed, int_config)
     }
 
     fn get_rgba_at(&self, idx: usize, u: f32, v: f32) -> (u8, u8, u8, u8) {
