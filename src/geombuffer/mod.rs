@@ -10,6 +10,7 @@ pub struct GeomReferences {
 pub struct Point {
     pub geom_ref: GeomReferences,
     pub pa: usize,
+    pub uv_idx: usize,
 }
 
 #[derive(Debug)]
@@ -29,9 +30,10 @@ pub struct Polygon {
 
 #[derive(Debug)]
 pub enum GeomElement {
-    Point(Point),
+    Point3D(Point),
     Line(Line),
     Polygon(Polygon),
+    Polygon3D(Polygon),
 }
 
 pub struct GeometryBuffer {
@@ -41,23 +43,31 @@ pub struct GeometryBuffer {
 }
 
 impl GeometryBuffer {
-    fn add_point(&mut self, pidx: usize, node_id: usize, material_id: usize) -> usize {
+    fn add_point(
+        &mut self,
+        pidx: usize,
+        uv_idx: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
         }
 
-        let elem = GeomElement::Point(Point {
+        let elem = GeomElement::Point3D(Point {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
             },
             pa: pidx,
+            uv_idx,
         });
 
         self.content[self.current_size] = elem;
         self.current_size += 1;
         self.current_size - 1
     }
+
     fn add_line(
         &mut self,
         p_start: usize,
@@ -95,6 +105,32 @@ impl GeometryBuffer {
         }
 
         let elem = GeomElement::Polygon(Polygon {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            p_start,
+            uv_start,
+            triangle_count,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
+    fn add_polygon3d(
+        &mut self,
+        p_start: usize,
+        triangle_count: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+
+        let elem = GeomElement::Polygon3D(Polygon {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
@@ -157,8 +193,15 @@ impl GeometryBufferPy {
     fn geometry_count(&self) -> usize {
         self.buffer.current_size
     }
-    fn add_point(&mut self, py: Python, p_idx: usize, node_id: usize, material_id: usize) -> usize {
-        self.buffer.add_point(p_idx, node_id, material_id)
+    fn add_point(
+        &mut self,
+        py: Python,
+        p_idx: usize,
+        uv_idx: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        self.buffer.add_point(p_idx, uv_idx, node_id, material_id)
     }
     fn add_polygon(
         &mut self,
@@ -170,6 +213,17 @@ impl GeometryBufferPy {
     ) -> usize {
         self.buffer
             .add_polygon(p_start, triangle_count, node_id, material_id, uv_start)
+    }
+    fn add_polygon3d(
+        &mut self,
+        p_start: usize,
+        triangle_count: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+    ) -> usize {
+        self.buffer
+            .add_polygon3d(p_start, triangle_count, node_id, material_id, uv_start)
     }
     fn add_line(
         &mut self,
@@ -187,13 +241,18 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
     let dict = PyDict::new_bound(py);
 
     match pi {
-        GeomElement::Point(pi) => {
+        GeomElement::Point3D(pi) => {
             dict.set_item("pa", pi.pa).unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
                 .unwrap();
         }
         GeomElement::Line(l) => todo!(),
         GeomElement::Polygon(p) => {
+            dict.set_item("p_start", p.p_start).unwrap();
+            dict.set_item("triangle_count", p.triangle_count).unwrap();
+            dict.set_item("uv_start", p.uv_start).unwrap();
+        }
+        GeomElement::Polygon3D(p) => {
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();

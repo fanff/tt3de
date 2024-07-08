@@ -230,8 +230,6 @@ class MaterialPerfab:
         return texture_array, material_buffer
     
 
-
-
 class Prefab2D:
 
     @staticmethod

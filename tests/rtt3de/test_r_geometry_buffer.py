@@ -19,10 +19,10 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer = GeometryBufferPy(10)
         self.assertEqual(geom_buffer.geometry_count(), 0)
         pidx = 0
-        uv_array = [0.1, 0.2]*16
+        uv_idx = 0
         node_id = 100
         material_id = 200
-        geom_buffer.add_point(pidx, node_id, material_id)
+        geom_buffer.add_point(pidx,uv_idx, node_id, material_id)
 
         # Access the raw content if possible to verify or check content_idx increase
         self.assertEqual(geom_buffer.geometry_count(), 1)
@@ -91,7 +91,7 @@ class Test_GeometryBuffer(unittest.TestCase):
             10
         )  # Start with a small buffer size to test resizing
         for i in range(100):  # Add more items than the initial size
-            geom_buffer.add_point(0,  100, 200)
+            geom_buffer.add_point(0, 0, 100, 200)
 
         self.assertEqual(geom_buffer.geometry_count(), 10)
         geom_buffer.clear()

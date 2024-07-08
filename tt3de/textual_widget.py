@@ -48,7 +48,7 @@ class TT3DView(Container):
 
     timing_registry = TimingRegistry()
 
-    camera = None
+    camera :GLMCamera= None
     last_frame_time = 0.0
     cached_result = None
     cwr = None
@@ -70,16 +70,9 @@ class TT3DView(Container):
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
-        if self.use_native_python:
-            self.camera = FPSCamera(pos=Point3D(0, 0, 0))
-            self.camera.point_at(Point3D(0, 0, 1))
-            self.rc = RenderContext(self.size.width, self.size.height)
-            self.rc.setup_segment_cache(self.app.console)
-
-        else:
-            self.camera = GLMCamera(Point3D(0, 0, 0), 90, 90)
-            self.camera.point_at(glm.vec3(0, 0, 1))
-            self.rc = RustRenderContext(self.size.width, self.size.height)
+        self.camera = GLMCamera(Point3D(0, 0, 0), 90, 90)
+        self.camera.point_at(glm.vec3(0, 0, 1))
+        self.rc = RustRenderContext(self.size.width, self.size.height)
         self.initialize()
         ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
         self.last_frame_time = time()-1.0
@@ -96,10 +89,10 @@ class TT3DView(Container):
                 )
             if event.delta_y != 0:
                 offset = self.screen.get_offset(self)
-                self.camera.pitch = math.radians(
-                    (((event.y - offset.y) / self.size.height) - 0.5) * 160
-                )
-                self.camera.update_rotation()
+                #self.camera.pitch = math.radians(
+                #    (((event.y - offset.y) / self.size.height) - 0.5) * 160
+                #)
+                #self.camera.update_rotation()
 
         elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True

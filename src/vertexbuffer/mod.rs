@@ -39,11 +39,11 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
         returned
     }
 
-    pub fn get_uv(&self, idx: usize) -> (TVec2<UVACC>, TVec2<UVACC>, TVec2<UVACC>) {
+    pub fn get_uv(&self, idx: usize) -> (&TVec2<UVACC>, &TVec2<UVACC>, &TVec2<UVACC>) {
         (
-            self.uv_array.as_slice()[self.uv_array.linear_index(idx, 0)],
-            self.uv_array.as_slice()[self.uv_array.linear_index(idx, 1)],
-            self.uv_array.as_slice()[self.uv_array.linear_index(idx, 2)],
+            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 0)],
+            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 1)],
+            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 2)],
         )
     }
 }
@@ -76,10 +76,12 @@ impl<const C: usize> VertexBuffer<C> {
     pub fn get_at(&self, idx: usize) -> &Vec4 {
         &self.v4content.as_slice()[idx]
     }
-    pub fn get_world_space_vertex(&self, idx: usize) -> &Vec4 {
+    pub fn get_clip_space_vertex(&self, idx: usize) -> &Vec4 {
         &self.mv_calc.as_slice()[idx]
     }
-
+    pub fn get_vertex_count(&self) -> usize {
+        self.current_size
+    }
     // set the given vertex at the given location
     fn set_vertex(&mut self, vert: &Vec4, idx: usize) {
         self.v4content.as_mut_slice()[idx] = *vert;
@@ -96,12 +98,28 @@ impl<const C: usize> VertexBuffer<C> {
             mv_calc[i] = m4 * avec;
         }
     }
+
+    pub fn apply_mvp(
+        &mut self,
+        model_matrix: &Mat4,
+        view_matrix: &Mat4,
+        projection_matrix: &Mat4,
+        start: usize,
+        end: usize,
+    ) {
+        let m4 = projection_matrix * view_matrix * model_matrix;
+        let v4_slice = self.v4content.as_mut_slice();
+        let mv_calc = self.mv_calc.as_mut_slice();
+        for i in start..end {
+            let avec = &v4_slice[i];
+
+            // Store the result in the content at the same index
+            mv_calc[i] = m4 * avec;
+        }
+    }
 }
 
-use pyo3::{
-    prelude::*,
-    types::{PyList, PyTuple},
-};
+use pyo3::{prelude::*, types::PyTuple};
 const MAX_VERTEX_CONTENT: usize = 128;
 const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 4;
 
@@ -127,7 +145,7 @@ impl VertexBufferPy {
         let vc: Vec2 = convert_glm_vec2(py, uvc);
         self.uv_array.add_uv(&va, &vb, &vc)
     }
-    fn get_uv_size(&self, py: Python) -> usize {
+    fn get_uv_size(&self, _py: Python) -> usize {
         self.uv_array.uv_size
     }
 
@@ -143,15 +161,16 @@ impl VertexBufferPy {
         tt.into()
     }
 
-    fn get_uv_max_content(&self, py: Python) -> usize {
+    fn get_uv_max_content(&self, _py: Python) -> usize {
         MAX_UV_CONTENT
     }
 
-    fn get_max_content(&self, py: Python) -> usize {
+    fn get_max_content(&self, _py: Python) -> usize {
         MAX_VERTEX_CONTENT
     }
-    fn get_vertex_size(&self, py: Python) -> usize {
-        self.buffer.current_size
+
+    fn get_vertex_count(&self, _py: Python) -> usize {
+        self.buffer.get_vertex_count()
     }
     fn add_vertex(&mut self, x: f32, y: f32, z: f32) -> usize {
         let ve = Vec4::new(x, y, z, 1.0);
@@ -168,8 +187,8 @@ impl VertexBufferPy {
         t.into()
     }
 
-    fn get_world_space_vertex(&self, py: Python, idx: usize) -> Py<PyTuple> {
-        let result = self.buffer.mv_calc.as_slice()[idx];
+    fn get_clip_space_vertex(&self, py: Python, idx: usize) -> Py<PyTuple> {
+        let result = self.buffer.get_clip_space_vertex(idx);
         let t = PyTuple::new_bound(py, [result.x, result.y, result.z, result.w]);
         t.into()
     }
@@ -190,17 +209,35 @@ impl VertexBufferPy {
 
         self.buffer.apply_mv(
             &inner_data.get_node_transform(node_id),
-            &inner_data.view_matrix,
+            &inner_data.view_matrix_2d,
             start,
             end,
         )
+    }
+
+    pub fn apply_mvp(
+        &mut self,
+        py: Python,
+        t: Py<TransformPackPy>,
+        node_id: usize,
+        start: usize,
+        end: usize,
+    ) {
+        let thething: &Bound<TransformPackPy> = t.bind(py);
+        let inner_data: &TransformPack = &thething.borrow().data;
+        let model_matrix: &Mat4 = &inner_data.get_node_transform(node_id);
+        let view_matrix: &Mat4 = &inner_data.view_matrix_3d;
+        let projection_matrix: &Mat4 = &inner_data.projection_matrix_3d;
+        self.buffer
+            .apply_mvp(model_matrix, view_matrix, projection_matrix, start, end)
     }
 }
 
 pub struct TransformPack {
     pub model_transforms: Box<[Mat4]>,
-    pub view_matrix: Mat4,
-    pub project_matrix: Mat4,
+    pub view_matrix_2d: Mat4,
+    pub view_matrix_3d: Mat4,
+    pub projection_matrix_3d: Mat4,
     pub environment_light: Vec3,
 
     max_node_count: usize,
@@ -214,8 +251,9 @@ impl TransformPack {
         let node_tr = vec![mmmm; max_node].into_boxed_slice();
         let vb = TransformPack {
             model_transforms: node_tr,
-            view_matrix: mmmm,
-            project_matrix: mmmm,
+            view_matrix_2d: mmmm,
+            view_matrix_3d: mmmm,
+            projection_matrix_3d: mmmm,
             environment_light: v3,
             max_node_count: max_node,
             current_count: 0,
@@ -279,13 +317,25 @@ impl TransformPackPy {
     }
 
     fn set_view_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
-        self.data.view_matrix = convert_pymat4(py, value)
+        self.data.view_matrix_2d = convert_pymat4(py, value)
     }
     fn get_view_matrix(&self, py: Python) -> Py<PyAny> {
-        mat4_to_slicelist(py, self.data.view_matrix)
+        mat4_to_slicelist(py, self.data.view_matrix_2d)
     }
 
-    fn set_project_matrix_glm(&mut self, py: Python, value: Py<PyAny>) {
-        self.data.project_matrix = convert_pymat4(py, value)
+    fn set_view_matrix_3d(&mut self, py: Python, value: Py<PyAny>) {
+        self.data.view_matrix_3d = convert_pymat4(py, value)
+    }
+    fn get_view_matrix_3d(&self, py: Python) -> Py<PyAny> {
+        mat4_to_slicelist(py, self.data.view_matrix_2d)
+    }
+
+    /// set the projection matrix
+    fn set_projection_matrix(&mut self, py: Python, value: Py<PyAny>) {
+        self.data.projection_matrix_3d = convert_pymat4(py, value)
+    }
+    /// get the projection matrix
+    fn get_projection_matrix(&self, py: Python) -> Py<PyAny> {
+        mat4_to_slicelist(py, self.data.projection_matrix_3d)
     }
 }

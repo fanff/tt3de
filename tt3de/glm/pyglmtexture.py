@@ -128,7 +128,7 @@ class GLMMesh3D(Mesh3D):
         screeninfo = glm.vec4(0, 0, 1, 1)
 
         proj_vertices = [
-            glm.projectZO(v, camera._model_inverse, perspective_matrix, screeninfo)
+            glm.projectZO(v, camera.view_matrix_3D, perspective_matrix, screeninfo)
             for v in self.glm_vertices
         ]
 
@@ -153,14 +153,14 @@ class GLMMesh3D(Mesh3D):
     def draw(self, camera: GLMCamera, geometry_buffer, node_id=0):
 
         screen_width, screen_height = camera.screen_width, camera.screen_height
-        perspective_matrix = camera.perspective
+        perspective_matrix = camera.perspective_matrix
 
         view_port_matrix = glm.scale(
             vec3(float(screen_width) / 2.0, float(screen_height) / 2.0, 1.0)
         ) * glm.translate(vec3(1, 1, 0.0))
         # in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
         view_space_vertices = [
-            (camera._model_inverse) * vertex for vertex in self.glm_vertices_4
+            (camera.view_matrix_3D) * vertex for vertex in self.glm_vertices_4
         ]
 
         triangle_in_clip_space = [
@@ -172,7 +172,7 @@ class GLMMesh3D(Mesh3D):
         ]
 
         # keep an inversion for the whole transform :
-        inverse_perspective = glm.inverse(perspective_matrix * camera._model_inverse)
+        inverse_perspective = glm.inverse(perspective_matrix * camera.view_matrix_3D)
         plane_of_the_clip_space = clipping_space_planes()
 
         for triangle_idx, (v_idx1, v_idx2, v_idx3) in enumerate(self.triangles_vindex):
@@ -295,16 +295,16 @@ class GLMNode3D(Drawable3D):
     def draw(self, camera: GLMCamera, *args) -> Iterable[object]:
 
         cpos = camera.pos
-        cmod = camera._model_inverse
+        cmod = camera.view_matrix_3D
 
         # move the camera
-        camera._model_inverse = camera._model_inverse * self.local_transform
+        camera.view_matrix_3D = camera.view_matrix_3D * self.local_transform
 
         for element_idx, element in enumerate(self.elems):
             element.draw(camera, *args)
         # reset the camera
         camera.pos = cpos
-        camera._model_inverse = cmod
+        camera.view_matrix_3D = cmod
 
     def render_point(self, some_info):
         (otherinfo, element) = some_info

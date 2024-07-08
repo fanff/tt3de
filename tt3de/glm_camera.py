@@ -17,13 +17,8 @@ class GLMCamera:
         dist_max=100,
         character_factor=1.8,
     ):
-        self.pos = glm.vec3(pos.x, pos.y, pos.z)
-
         self.screen_width = screen_width
         self.screen_height = screen_height
-
-        self.pitch = 0
-        self.yaw = 0
 
         self.fov_radians = fov_radians
         self.dist_min = dist_min
@@ -33,13 +28,11 @@ class GLMCamera:
         self.zoom_2D = 1.0
 
         self.view_matrix_2D = glm.scale(glm.vec2(self.character_factor, 1.0))
-
-        self.perspective: glm.mat4 = glm.mat4(1.0)
-        self._rotation: glm.mat4 = glm.mat4(1.0)
-        self.update_rotation()
+        self.view_matrix_3D: glm.mat4 = glm.lookAt(glm.vec3(pos.x, pos.y, pos.z), glm.vec3(pos.x, pos.y, pos.z) + glm.vec3(0, 0, 1), glm.vec3(0, -1, 0))
+        self.perspective_matrix: glm.mat4 = glm.mat4(1.0)
         self.update_perspective()
         self.update_2d_perspective()
-
+    
     def recalc_fov_h(self, w, h):
         if self.screen_width != w or self.screen_height != h:
             self.screen_width = w
@@ -71,7 +64,7 @@ class GLMCamera:
 
         w, h = self.screen_width, self.screen_height * self.character_factor
 
-        self.perspective = glm.perspectiveFovZO(
+        self.perspective_matrix = glm.perspectiveFovZO(
             (self.fov_radians * h) / w, w, h, self.dist_min, self.dist_max
         )
 
@@ -92,64 +85,63 @@ class GLMCamera:
         self.update_2d_perspective()
 
     def move(self, delta: glm.vec3):
-        self.pos += delta
-        self.update_rotation()
+        self.view_matrix_3D = glm.translate(delta) * self.view_matrix_3D
+
 
     def move_at(self, pos: glm.vec3):
-        self.pos = pos
-        self.update_rotation()
+        self.move(pos - self.pos)
 
     def move_side(self, dist: float):
-        self.pos += glm.cross(self.direction_vector(), glm.vec3(0, 1, 0)) * dist
-        self.update_rotation()
+        self.view_matrix_3D = glm.translate(self.right_vector() * dist) * self.view_matrix_3D
 
     def move_forward(self, dist: float):
-        self.pos -= self.direction_vector() * dist
-        self.update_rotation()
+        self.view_matrix_3D = glm.translate(self.direction_vector() * dist) * self.view_matrix_3D
 
     def rotate_left_right(self, angle: float):
-        self.yaw -= angle
-        self.update_rotation()
+        
+        self.view_matrix_3D = glm.rotate(angle, glm.vec3(0, 1, 0)) * self.view_matrix_3D
 
     def rotate_up_down(self, angle: float):
-        self.pitch = self.pitch + angle
-        self.update_rotation()
+        self.view_matrix_3D = glm.rotate(angle, self.right_vector()) * self.view_matrix_3D
+
 
     def set_yaw_pitch(self, yaw: float, pitch: float):
+        """Set the yaw and pitch of the camera. 
+        The yaw is the rotation around the y-axis and the pitch is the rotation around the x-axis.
+        To calculate the view matrix we proceed as follow :
+        1. Separate the rotation from the translation in the view matrix
+        2. Apply the yaw and pitch rotations
+        3. Apply the translation
+
+        """
         self.yaw = yaw
         self.pitch = pitch
-        self.update_rotation()
 
-    def update_rotation(self):
-        # pitch is around x axis , yaw is around y axis
-        self._rotation = glm.rotate(self.yaw, glm.vec3(0, 1, 0)) * glm.rotate(
-            self.pitch, glm.vec3(1, 0, 0)
-        )
+        # 1. Separate the rotation from the translation in the view matrix
 
-        self.recalc_model_inverse()
-
-    def recalc_model_inverse(self):
-        self._model_inverse = glm.inverse(self._rotation) * glm.translate(-self.pos)
-
-    def project(
-        self, point: glm.vec3, perspective: glm.mat4x4, screen_info=glm.vec4(0, 0, 1, 1)
-    ) -> glm.vec3:
-
-        return glm.projectZO(point, self._model_inverse, perspective, screen_info)
+        
 
     def point_at(self, target: glm.vec3):
-        direction = target - self.pos
-        self.yaw = glm.atan(
-            direction.x, direction.z
-        )  # math.atan2(direction.x, direction.z)
-        self.pitch = glm.atan(-direction.y, glm.length(direction.xz))
+        # calculate the right vector using the up vector
+        right = glm.cross(glm.vec3(0, 1, 0), target - self.position_vector())
+        # calculate the up vector
+        up = glm.cross(target - self.position_vector(), right)
 
-        self.update_rotation()
+
+        self.view_matrix_3D = glm.lookAt(self.position_vector(), target, up)
 
     def direction_vector(self) -> glm.vec3:
         # directional vector extracted from the matrix
-        return glm.row(self._model_inverse, 2).xyz
-
+        return -glm.row(self.view_matrix_3D, 2).xyz
+    def up_vector(self) -> glm.vec3:
+        # directional up vector extracted from the matrix
+        return glm.row(self.view_matrix_3D, 1).xyz
+    def right_vector(self) -> glm.vec3:
+        # directional right vector extracted from the matrix
+        return glm.row(self.view_matrix_3D, 0).xyz
+    def position_vector(self)-> glm.vec3:
+        # position vector extracted from the matrix
+        return glm.row(self.view_matrix_3D, 3).xyz
     def __str__(self):
         return f"GLMCamera({self.pos,self.direction_vector()},yaw={self.yaw},pitch={self.pitch})"
 

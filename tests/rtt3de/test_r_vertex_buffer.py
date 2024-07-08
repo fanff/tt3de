@@ -22,7 +22,7 @@ class Test_VertexBuffer(unittest.TestCase):
         self.assertEqual(abuffer.add_vertex(1,2,3),0)
         self.assertEqual(abuffer.add_vertex(12,22,32),1)
         self.assertEqual(abuffer.add_vertex(11,21,31),2)
-        self.assertEqual(abuffer.get_vertex_size(),3)
+        self.assertEqual(abuffer.get_vertex_count(),3)
 
         self.assertEqual(abuffer.get_vertex(0),(1.0,2.0,3.0,1.0))
         self.assertEqual(abuffer.get_vertex(1),(12.0,22.0,32.0,1.0))
@@ -67,7 +67,7 @@ class Test_VertexBuffer(unittest.TestCase):
         
         trpack.add_node_transform(glm.translate(glm.vec3(1,2,3)))
 
-        
+
         trpack.set_view_matrix_glm(glm.identity(glm.mat4))
 
         for i in range(abuffer.get_max_content()):
@@ -83,7 +83,7 @@ class Test_VertexBuffer(unittest.TestCase):
         self.assertEqual(z,(2.0, 3.0, 4.0, 1.0))
 
 
-        z0_mv = abuffer.get_world_space_vertex(0)
+        z0_mv = abuffer.get_clip_space_vertex(0)
         self.assertEqual(z0_mv,(2.0, 4.0, 6.0, 1.0)) # translated
         # check conformal with glm calculation :
         res = glm.translate(glm.vec3(1,2,3))*glm.mat4(1)*glm.vec4(1,2,3,1)

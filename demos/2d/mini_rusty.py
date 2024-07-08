@@ -26,6 +26,7 @@ from textual.validation import Function, Number, ValidationResult, Validator
 from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
 
 
+from tt3de.prefab3d import Prefab3D
 from tt3de.textual.widgets import (
     CameraConfig,
     EngineLog,
@@ -37,6 +38,7 @@ from tt3de.textual.widgets import (
 from tt3de.textual_widget import TT3DView
 
 from tt3de.tt_2dnodes import TT2DMesh, TT2DNode, TT2Polygon
+from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DView):
@@ -49,7 +51,7 @@ class GLMTester(TT3DView):
         
         # prepare a bunch of material
         self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.rust_set_0()
-        # create a root node 
+        # create a root 2D node 
         self.root2Dnode = TT2DNode()
         self.root2Dnode.local_transform = glm.translate(
             glm.vec3(-.5, .2 ,  0.0)
@@ -65,8 +67,16 @@ class GLMTester(TT3DView):
 
         self.root2Dnode.add_child(a2dmesh)
 
+
+        # create a root 3D node 
+        self.root3Dnode = TT3DNode()
+        polygon3D = Prefab3D.unitary_triangle()
+        polygon3D.material_id = 1
+        self.root3Dnode.add_child(polygon3D)
+
         # final append
         self.rc.append(self.root2Dnode)
+        self.rc.append(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()
@@ -82,12 +92,13 @@ class GLMTester(TT3DView):
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
+        v = self.camera.position_vector()
         cc.refresh_camera_position(
-            (self.camera.pos.x, self.camera.pos.y, self.camera.pos.z)
+            (v.x, v.y, v.z)
         )
-        cc.refresh_camera_rotation(
-            (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
-        )
+        #cc.refresh_camera_rotation(
+        #    (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
+        #)
         cc.refresh_camera_zoom(self.camera.zoom_2D)
         self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 
@@ -129,7 +140,7 @@ class GLMTester(TT3DView):
                         self.camera.view_matrix_2D
                         # self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
                         self.parent.query_one("EngineLog").add_line(f"click ! {str(world_click_position)}")
-                        
+
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
             case events.MouseScrollUp:
@@ -173,11 +184,11 @@ class Demo3dView(App):
     TT3DView {
         
         height: 100%;
-        width: 5fr;
+        width: 4fr;
     }
 
     .someinfo {
-        height: auto;
+        height: 100%;
         width: 1fr;
         border: solid red;
     }

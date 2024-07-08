@@ -1,5 +1,6 @@
 
 from typing import List
+import glm
 from rtt3de import GeometryBufferPy
 from rtt3de import AbigDrawing
 from rtt3de import MaterialBufferPy
@@ -28,7 +29,7 @@ class RustRenderContext():
         self.material_buffer = MaterialBufferPy()
         self.vertex_buffer = VertexBufferPy()
         self.geometry_buffer = GeometryBufferPy(256)
-        self.geometry_buffer.add_point(0,  node_id=0, material_id=0)
+        self.geometry_buffer.add_point(0,0,  node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(256)
         self.transform_buffer = TransformPackPy(64)
         self.drawing_buffer = AbigDrawing(max_row=self.height,  max_col=self.width)
@@ -54,6 +55,12 @@ class RustRenderContext():
         self.primitive_buffer.clear()
 
         self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)
+
+        self.transform_buffer.set_view_matrix_3d(camera.view_matrix_3D)
+
+        self.transform_buffer.set_projection_matrix(camera.perspective_matrix)
+
+        
         # build the primitives
         build_primitives_py(self.geometry_buffer,
                             self.vertex_buffer,
