@@ -33,12 +33,13 @@ class Test_GeometryBuffer(unittest.TestCase):
         """Test adding a line and check for correct buffer update."""
         geom_buffer = GeometryBufferPy(10)
         geom_buffer.clear()
-        start = 0
-        end = 1
-        uv_array = [0.1] * 16
+        
+        
+        start_vertext_idx = 0
+        uv_start=0
         node_id = 101
         material_id = 201
-        geom_buffer.add_line(start, end, node_id, material_id)
+        geom_buffer.add_line3d(start_vertext_idx, node_id, material_id, uv_start )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
         geom_buffer.clear()

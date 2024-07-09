@@ -6,7 +6,46 @@ from rtt3de import AbigDrawing
 
 from rtt3de import raster_all_py
 
-from tests.c_code.drawing_buffer.test_draw_buffer import drawbuffer_to_pil
+class Test_Rust_RasterPoint(unittest.TestCase):
+    def test_raster_Oneoint(self):
+        drawing_buffer = AbigDrawing(32, 32)
+        drawing_buffer.hard_clear(10)
+
+        primitive_buffer = PrimitiveBufferPy(10)
+
+        node_id = 1
+        geom_id = 2
+        material_id = 3
+        primitive_buffer.add_point(node_id, geom_id, material_id, 
+                                   row=1,
+                                col=2,
+                                    depth=3.0,
+                                    uv=1)
+
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+
+        raster_all_py(primitive_buffer, drawing_buffer)
+        
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+
+        point_cell = drawing_buffer.get_depth_buffer_cell(1, 2,0)
+
+        not_point_cell = drawing_buffer.get_depth_buffer_cell(5, 5,0)
+        self.assertEqual(point_cell["node_id"],node_id)
+        self.assertEqual(point_cell["geometry_id"],geom_id)
+        self.assertEqual(point_cell["material_id"],material_id)
+        self.assertAlmostEqual(point_cell["w"][0],1.0)
+        self.assertAlmostEqual(point_cell["w"][1],0.0)
+        self.assertAlmostEqual(point_cell["w"][2],0.0)
+
+
+        self.assertEqual(not_point_cell["node_id"],0)
+        self.assertEqual(not_point_cell["geometry_id"],0)
+        self.assertEqual(not_point_cell["material_id"],0)
+        self.assertAlmostEqual(not_point_cell["w"][0],0.0)
+        self.assertAlmostEqual(not_point_cell["w"][1],0.0)
+        self.assertAlmostEqual(not_point_cell["w"][2],0.0)
+
 
 
 class Test_Rust_RasterTriangle(unittest.TestCase):

@@ -1,7 +1,7 @@
 import struct
 from typing import List, Tuple
 
-from tt3de.tt3de import Point3D, TextureCoordinate, Triangle3D
+from tt3de.tt3de import Point3D
 
 
 def read_file(obj_file):

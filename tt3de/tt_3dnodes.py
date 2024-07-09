@@ -68,3 +68,34 @@ class TT3DPolygon(TT3DNode):
 
         
         rc.geometry_buffer.add_polygon3d(start_idx,len(self.vertex_list)-2, self.node_id,self.material_id,start_uv)
+
+            
+class TT3DPoint(TT3DNode):
+
+    def __init__(
+        self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
+    ):
+        super().__init__(name=name, transform=transform)
+        self.vertex_list:List[Point3D] = []
+        self.uvmap:List[tuple[Point2D,Point2D,Point2D]] = []
+        self.material_id = material_id
+
+        self.node_id = None
+
+    def insert_in(self, rc:RustRenderContext, parent_transform:glm.mat4):
+        self.node_id = rc.transform_buffer.add_node_transform(parent_transform*self.local_transform)
+
+        start_idx = None
+        for p3d in (self.vertex_list):
+            vertex_idx = rc.vertex_buffer.add_vertex(p3d.x,p3d.y,p3d.z )
+            if start_idx is None:
+                start_idx = vertex_idx
+        
+        start_uv = None
+        for (uva,uvb,uvc) in self.uvmap:
+            idx = rc.vertex_buffer.add_uv(p2d_tovec2(uva),p2d_tovec2(uvb),p2d_tovec2(uvc) )
+            if start_uv is None:
+                start_uv = idx
+
+        
+        rc.geometry_buffer.add_point(start_idx,start_uv, self.node_id,self.material_id)

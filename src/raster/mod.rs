@@ -7,6 +7,10 @@ use crate::{
     primitivbuffer::*,
 };
 
+pub mod raster_line;
+use raster_line::*;
+pub mod raster_line_row;
+use raster_line_row::*;
 //  calculating min/max of multiple values;
 fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
     std::cmp::min(std::cmp::min(a, b), c)
@@ -49,6 +53,58 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
         prim_ref.material_id,
         prim_ref.primitive_id,
     );
+}
+#[cfg(test)]
+mod test_set_pixel {
+    use crate::{
+        drawbuffer::drawbuffer::DrawBuffer,
+        raster::{primitivbuffer::PrimitivReferences, set_pixel_double_weights},
+    };
+
+    #[test]
+    fn test_set_pixel_double_weights() {
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
+        let prim_ref = PrimitivReferences {
+            geometry_id: 1,
+            material_id: 2,
+            node_id: 3,
+            primitive_id: 4,
+        };
+        let w0 = 0.5;
+        let w1 = 0.5;
+        let w2 = 0.0;
+        let w0_alt = 0.5;
+        let w1_alt = 0.5;
+        let w2_alt = 0.0;
+        let depth = 0.0;
+        let px = 5;
+        let py = 5;
+        set_pixel_double_weights(
+            &prim_ref,
+            &mut drawing_buffer,
+            depth,
+            px,
+            py,
+            w0,
+            w1,
+            w2,
+            w0_alt,
+            w1_alt,
+            w2_alt,
+        );
+        let content_at_location_layer0 =
+            drawing_buffer.get_pix_buffer_content_at_row_col(py, px, 0);
+        let depth_cell = drawing_buffer.get_depth_buffer_cell(py, px);
+        assert_eq!(depth_cell.depth, [0.0, 100.0]);
+        //assert_eq!(content_at_location.w, [w0, w1, w2]);
+        assert_eq!(content_at_location_layer0.node_id, prim_ref.node_id);
+        assert_eq!(content_at_location_layer0.geometry_id, prim_ref.geometry_id);
+        assert_eq!(content_at_location_layer0.material_id, prim_ref.material_id);
+        assert_eq!(
+            content_at_location_layer0.primitive_id,
+            prim_ref.primitive_id
+        );
+    }
 }
 
 trait ToF32 {
@@ -187,25 +243,53 @@ fn raster_triangle<const DEPTHCOUNT: usize>(
     }
 }
 
+fn raster_point<const DEPTHCOUNT: usize>(
+    drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
+    prim_ref: &PrimitivReferences,
+    row: usize,
+    col: usize,
+    depth: f32,
+) {
+    if row >= drawing_buffer.row_count || col >= drawing_buffer.col_count {
+        return;
+    }
+    set_pixel_double_weights(
+        prim_ref,
+        drawing_buffer,
+        depth,
+        col,
+        row,
+        1.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.0,
+    )
+}
 pub fn raster_element<const DEPTHCOUNT: usize>(
     element: &PrimitiveElements<f32>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
-        PrimitiveElements::Line { fds, pa, pb, uv } => {}
+        PrimitiveElements::Line { fds, pa, pb, uv } => {
+            raster_line(drawing_buffer, fds, pa, pb);
+        }
         PrimitiveElements::Point {
             fds,
             row,
             col,
             depth,
-            uv,
-        } => todo!(),
+            uv: _,
+        } => {
+            raster_point(drawing_buffer, fds, *row, *col, *depth);
+        }
         PrimitiveElements::Triangle {
             fds,
             pa,
             pb,
             pc,
-            uv,
+            uv: _,
         } => {
             raster_triangle(drawing_buffer, fds, pa, pb, pc);
         }

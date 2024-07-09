@@ -3,42 +3,27 @@ import itertools
 from math import exp
 import math
 from typing import Iterable, List, Tuple
-from tt3de.asset_load import extract_palette
 from tt3de.glm.triangle_clipping import (
     Triangle,
     clip_triangle_in_planes,
     clipping_space_planes,
-    extract_planes,
     is_front_facing,
 )
-from tt3de.richtexture import ImageTexture, Segmap, StaticTexture, TextureAscii
 from tt3de.tt3de import (
-    Camera,
+    
     Drawable3D,
-    FPSCamera,
-    Line3D,
-    Mesh3D,
-    Node3D,
-    PPoint2D,
-    Point2D,
+    
     Point3D,
-    PointElem,
-    TextureCoordinate,
-    TextureTT3DE,
-    Triangle3D,
 )
-from rich.color import Color
-from rich.style import Style
-from rich.text import Segment
-from textual.strip import Strip
-
 import glm
 from glm import array as glma, i32vec2, ivec2, ivec3, mat3, mat4, vec2
-from glm import quat
 from glm import vec3, vec4
 
 from tt3de.utils import GLMTexturecoord, GLMTriangle
 from tt3de.glm_camera import GLMCamera
+
+
+
 def yvalue_from_adjoint_unprotected(adj_matrix: glm.mat3, side, x):
     a, b, c = glm.row(adj_matrix, side)
     alpha = -a / b
@@ -92,12 +77,12 @@ def glmtriangle_as_square(
             yield (xi, maxyi)
 
 
-class GLMMesh3D(Mesh3D):
+class GLMMesh3D():
     def __init__(self):
         self.vertices: List[Point3D] = []
         self.texture_coords: List[List[GLMTexturecoord]] = [[] for _ in range(8)]
         self.normals: List[Point3D] = []
-        self.triangles: List[Triangle3D] = []
+        self.triangles: List[Point3D] = []
         self.material_id: int = 0
 
     def cache_output(self, segmap):

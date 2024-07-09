@@ -51,31 +51,54 @@ class GLMTester(TT3DView):
         
         # prepare a bunch of material
         self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.rust_set_0()
-        # create a root 2D node 
-        self.root2Dnode = TT2DNode()
-        self.root2Dnode.local_transform = glm.translate(
-            glm.vec3(-.5, .2 ,  0.0)
-        )
-
-
-        # first triangle 
-        a2dmesh: TT2Polygon = Prefab2D.unitary_triangle(TT2Polygon)
-        a2dmesh.material_id = 2
-        a2dmesh.local_transform = glm.translate(
-            glm.vec3(float(0) + 0.1, float(0) + 0.1,0.0)
-        ) * glm.rotate(0.3,glm.vec3(0.0, 0.0,1.0))* glm.scale(glm.vec3(0.4, 1.2,1.0)) 
-
-        self.root2Dnode.add_child(a2dmesh)
-
 
         # create a root 3D node 
         self.root3Dnode = TT3DNode()
-        polygon3D = Prefab3D.unitary_triangle()
+
+        # center point
+        polygon3D = Prefab3D.unitary_Point()
+        polygon3D.local_transform = glm.translate(
+            glm.vec3(0,0,-1)
+        )
         polygon3D.material_id = 1
         self.root3Dnode.add_child(polygon3D)
 
+        
+        # center point (x)
+
+        polygon3D = Prefab3D.unitary_Point()
+        polygon3D.local_transform = glm.translate(
+            glm.vec3(1,0,-1)
+        )
+        polygon3D.material_id = 2
+        self.root3Dnode.add_child(polygon3D)
+
+        # top point (y)
+        polygon3D = Prefab3D.unitary_Point()
+        polygon3D.local_transform = glm.translate(
+            glm.vec3(0,1,-1)
+        )
+        polygon3D.material_id = 3
+        self.root3Dnode.add_child(polygon3D)
+
+        # front point (z)
+        polygon3D = Prefab3D.unitary_Point()
+        polygon3D.local_transform = glm.translate(
+            glm.vec3(0,0,0)
+        )
+        polygon3D.material_id = 4
+        self.root3Dnode.add_child(polygon3D)
+
+
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 4
+        tri.local_transform = glm.translate(
+            glm.vec3(0,3,0)
+        )
+        self.root3Dnode.add_child(tri)
+
+
         # final append
-        self.rc.append(self.root2Dnode)
         self.rc.append(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
@@ -96,9 +119,9 @@ class GLMTester(TT3DView):
         cc.refresh_camera_position(
             (v.x, v.y, v.z)
         )
-        #cc.refresh_camera_rotation(
-        #    (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
-        #)
+        cc.refresh_camera_rotation(
+            (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
+        )
         cc.refresh_camera_zoom(self.camera.zoom_2D)
         self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 

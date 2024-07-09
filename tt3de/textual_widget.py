@@ -70,8 +70,7 @@ class TT3DView(Container):
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
-        self.camera = GLMCamera(Point3D(0, 0, 0), 90, 90)
-        self.camera.point_at(glm.vec3(0, 0, 1))
+        self.camera = GLMCamera(glm.vec3(0, 0, -5), 90, 90)
         self.rc = RustRenderContext(self.size.width, self.size.height)
         self.initialize()
         ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
@@ -89,10 +88,10 @@ class TT3DView(Container):
                 )
             if event.delta_y != 0:
                 offset = self.screen.get_offset(self)
-                #self.camera.pitch = math.radians(
-                #    (((event.y - offset.y) / self.size.height) - 0.5) * 160
-                #)
-                #self.camera.update_rotation()
+                p = math.radians(
+                    (((event.y - offset.y) / self.size.height) - 0.5) * 160
+                )
+                self.camera.set_yaw_pitch(self.camera.yaw, p)
 
         elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True

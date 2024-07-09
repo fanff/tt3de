@@ -19,9 +19,17 @@ use clipping::*;
 pub mod point_clipping;
 use point_clipping::*;
 
+pub mod line_clipping;
+use line_clipping::*;
+
 fn perspective_divide(v: &Vec4) -> Vec3 {
     Vec3::new(v.x / v.w, v.y / v.w, v.z / v.w)
 }
+
+fn perspective_divide_v4_v4(v: &Vec4) -> Vec4 {
+    Vec4::new(v.x / v.w, v.y / v.w, v.z / v.w, 1.0)
+}
+
 fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec3, Vec3, Vec3) {
     (
         perspective_divide(va),
@@ -29,6 +37,7 @@ fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec3, Vec3, V
         perspective_divide(vc),
     )
 }
+
 fn poly_as_primitive<
     const C: usize,
     const MAX_UV_CONTENT: usize,
@@ -42,7 +51,6 @@ fn poly_as_primitive<
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
-    let mut output_buffer = TriangleBuffer::new();
     let va = vertex_buffer.get_clip_space_vertex(polygon.p_start);
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + triangle_id;
@@ -51,6 +59,7 @@ fn poly_as_primitive<
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the first triangle
+        let mut output_buffer = TriangleBuffer::new();
         clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
@@ -79,7 +88,6 @@ fn poly_as_primitive<
                 polygon.uv_start,
             );
         }
-        output_buffer.clear();
     }
 }
 pub fn build_primitives<
@@ -127,8 +135,26 @@ pub fn build_primitives<
                     );
                 }
             }
-            crate::geombuffer::GeomElement::Line(l) => todo!(),
+            crate::geombuffer::GeomElement::Line3D(l) => {
+                vertex_buffer.apply_mvp(
+                    transform_pack.get_node_transform(l.geom_ref.node_id),
+                    &transform_pack.view_matrix_3d,
+                    &transform_pack.projection_matrix_3d,
+                    l.p_start,
+                    l.p_start + 2,
+                );
+
+                line_as_primitive(
+                    &l,
+                    geometry_id,
+                    vertex_buffer,
+                    uv_array,
+                    drawbuffer,
+                    primitivbuffer,
+                )
+            }
             crate::geombuffer::GeomElement::Polygon(p) => {
+                todo!();
                 // apply mv operation
                 vertex_buffer.apply_mv(
                     transform_pack.get_node_transform(p.geom_ref.node_id),

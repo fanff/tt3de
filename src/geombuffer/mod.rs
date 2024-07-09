@@ -15,9 +15,9 @@ pub struct Point {
 
 #[derive(Debug)]
 pub struct Line {
-    geom_ref: GeomReferences,
-    p_start: usize,
-    p_end: usize,
+    pub geom_ref: GeomReferences,
+    pub p_start: usize,
+    pub uv_start: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -31,7 +31,7 @@ pub struct Polygon {
 #[derive(Debug)]
 pub enum GeomElement {
     Point3D(Point),
-    Line(Line),
+    Line3D(Line),
     Polygon(Polygon),
     Polygon3D(Polygon),
 }
@@ -68,23 +68,23 @@ impl GeometryBuffer {
         self.current_size - 1
     }
 
-    fn add_line(
+    fn add_line3d(
         &mut self,
         p_start: usize,
-        p_end: usize,
         node_id: usize,
         material_id: usize,
+        uv_start: usize,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
         }
-        let elem = GeomElement::Line(Line {
+        let elem = GeomElement::Line3D(Line {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
             },
             p_start: p_start,
-            p_end: p_end,
+            uv_start: uv_start,
         });
 
         self.content[self.current_size] = elem;
@@ -225,15 +225,15 @@ impl GeometryBufferPy {
         self.buffer
             .add_polygon3d(p_start, triangle_count, node_id, material_id, uv_start)
     }
-    fn add_line(
+    fn add_line3d(
         &mut self,
-        py: Python,
         p_start: usize,
-        p_end: usize,
         node_id: usize,
         material_id: usize,
+        uv_start: usize,
     ) -> usize {
-        self.buffer.add_line(p_start, p_end, node_id, material_id)
+        self.buffer
+            .add_line3d(p_start, node_id, material_id, uv_start)
     }
 }
 
@@ -246,7 +246,7 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
                 .unwrap();
         }
-        GeomElement::Line(l) => todo!(),
+        GeomElement::Line3D(l) => todo!(),
         GeomElement::Polygon(p) => {
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();

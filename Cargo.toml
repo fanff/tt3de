@@ -25,4 +25,4 @@ fastnoise-lite = "1.1.1"
 
 [profile.dev]
 debug = true
-opt-level = 1
+###### opt-level = 1

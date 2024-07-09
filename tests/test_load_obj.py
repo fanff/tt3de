@@ -3,7 +3,7 @@ import unittest
 
 from tt3de.asset_fastloader import fast_load
 from tt3de.asset_load import extract_palette, load_bmp, round_to_palette
-from tt3de.tt3de import Camera, FPSCamera, Mesh3D, Point3D, PointElem
+from tt3de.tt3de import Point3D
 
 
 def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
@@ -13,7 +13,7 @@ def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
 class TestLoad(unittest.TestCase):
 
     def test_simplecube(self):
-
+        Mesh3D = None
         amesh = fast_load("models/cube.obj", Mesh3D)
 
         self.assertEqual(len(amesh.triangles), 12)
@@ -44,5 +44,3 @@ class TestLoad(unittest.TestCase):
         self.assertLessEqual(len(extract_palette(roundedimg)), 64)
 
 
-if __name__ == "__main__":
-    unittest.main()

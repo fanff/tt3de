@@ -92,37 +92,26 @@ class TestMVP_Projection(unittest.TestCase):
 
         transform_buffer = TransformPackPy(64)
 
-        transform_buffer.set_projection_matrix(glm.perspectiveZO(glm.radians(90), 800/600, 1.0, 10.0))
+        transform_buffer.set_projection_matrix(glm.perspectiveFovLH_ZO(glm.radians(90), 800,600, 1.0, 10.0))
         
         
         camera_pos = glm.vec3(random.randint(-100,100), random.randint(-100,100), random.randint(-100,100))
         yaw = math.radians(random.randint(-100,100))
         pitch = math.radians(random.randint(-100,100))
 
-        # Calculate the front vector
-        front = glm.vec3(
-            math.cos(yaw) * math.cos(pitch),
-            math.sin(pitch),
-            math.sin(yaw) * math.cos(pitch)
-        )
-        front = glm.normalize(front)
+        camera = GLMCamera(camera_pos)
+        camera.set_yaw_pitch(yaw,pitch)
 
-        # Calculate the right vector
-        right = glm.normalize(glm.cross(front, glm.vec3(0.0, 1.0, 0.0)))
-        # Calculate the up vector
-        up = glm.normalize(glm.cross(right, front))
-        # Create the lookAt matrix
-        view_matrix = glm.lookAt(camera_pos, camera_pos + front, up)
         # create a view matrix from yaw and pitch and position
 
-        transform_buffer.set_view_matrix_3d(view_matrix)
+        transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
 
         vertex_buffer = VertexBufferPy()
         self.assertEqual(vertex_buffer.get_vertex_count(), 0)
 
         vertices = [
-            camera_pos+(front*3) # this point is in the middle, far enough from the camera; inside frustrum
+            camera_pos+(camera.direction_vector()*3) # this point is in the middle, far enough from the camera; inside frustrum
         ]
         for pidx , p3d in enumerate(vertices):
             self.assertEqual(vertex_buffer.add_vertex(p3d.x,p3d.y,p3d.z ),  pidx)
@@ -141,19 +130,17 @@ class TestMVP_Projection(unittest.TestCase):
     def test_simple_one_point_with_glm_camera(self):
         transform_buffer = TransformPackPy(64)
 
-        transform_buffer.set_projection_matrix(glm.perspectiveZO(glm.radians(90), 800/600, 1.0, 10.0))
+        transform_buffer.set_projection_matrix(glm.perspectiveFovLH_ZO(glm.radians(90), 800,600, 1.0, 10.0))
         
 
         camera_pos = glm.vec3(random.randint(-100,100), random.randint(-100,100), random.randint(-100,100))
         camera = GLMCamera(camera_pos)
-        yaw = math.radians(random.randint(-100,100))
-        pitch = math.radians(random.randint(-100,100))
+        yaw = math.radians(random.randint(-360,360))
+        pitch = math.radians(random.randint(-30,30))
         camera.set_yaw_pitch(yaw,pitch)
 
 
-        view_matrix = glm.lookAt(camera_pos, camera_pos + camera.direction_vector(), camera.up_vector())
-
-        transform_buffer.set_view_matrix_3d(view_matrix)
+        transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
         
         vertex_buffer = VertexBufferPy()
@@ -181,7 +168,7 @@ class TestMVP_Projection(unittest.TestCase):
     def test_many_points_with_glm_camera(self):
         transform_buffer = TransformPackPy(64)
 
-        transform_buffer.set_projection_matrix(glm.perspectiveZO(glm.radians(90), 800/600, 1.0, 10.0))
+        transform_buffer.set_projection_matrix(glm.perspectiveZO(glm.radians(90), 800/600, 1.0, 100.0))
         
         # camera is randomly placed and pointed
         camera_pos = glm.vec3(random.randint(-100,100), random.randint(-100,100), random.randint(-100,100))
@@ -191,16 +178,14 @@ class TestMVP_Projection(unittest.TestCase):
         camera.set_yaw_pitch(yaw,pitch)
 
 
-        view_matrix = glm.lookAt(camera_pos, camera_pos + camera.direction_vector(), camera.up_vector())
-
-        transform_buffer.set_view_matrix_3d(view_matrix)
+        transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
         
         vertex_buffer = VertexBufferPy()
         self.assertEqual(vertex_buffer.get_vertex_count(), 0)
 
 
-        point_inside_frustrum = camera_pos+(camera.direction_vector()*3)
+        point_inside_frustrum = camera_pos-(camera.direction_vector()*5)
 
         # adding one point in front of the camera inside the frustum
         vertices = [
@@ -225,6 +210,10 @@ class TestMVP_Projection(unittest.TestCase):
 
 
         pa_ndc = perspective_divide(pa)
+        pb_ndc = perspective_divide(pb)
+        pc_ndc = perspective_divide(pc)
+        pd_ndc = perspective_divide(pd)
+
         self.assertGreaterEqual(pa_ndc.x,-1.0)
         self.assertAlmostEqual(pa_ndc.y,0.0, 4)
         self.assertGreaterEqual(pa_ndc.z,0.0)

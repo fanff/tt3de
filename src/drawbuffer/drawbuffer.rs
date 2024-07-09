@@ -44,17 +44,6 @@ pub struct DepthBufferCell<A: Scalar, const L: usize> {
     //content: [(usize, A); L],
 }
 
-pub struct DrawBuffer<const L: usize, A: Number> {
-    /// seems like this should be done that way ? R rows, C column , L depth layer, A ccurcy
-    pub depthbuffer: Box<[DepthBufferCell<A, L>]>,
-    pub canvas: Box<[CanvasCell]>,
-    pub pixbuffer: Box<[PixInfo<A>]>,
-    pub row_count: usize,
-    pub col_count: usize,
-
-    pub half_size: Vec2,
-}
-
 #[derive(Clone, Copy)]
 pub struct Color {
     pub r: u8,
@@ -79,9 +68,20 @@ pub struct CanvasCell {
     pub glyph: u8,
 }
 
-impl<D: Scalar, const L: usize> DepthBufferCell<D, L> {
-    #[inline(always)]
-    fn clear(&mut self, value: D, idx: usize) {
+impl<DepthAccuracy: Number, const LayerCount: usize> DepthBufferCell<DepthAccuracy, LayerCount> {
+    fn new() -> Self {
+        DepthBufferCell {
+            pixinfo: [0; LayerCount],
+            depth: [DepthAccuracy::zero(); LayerCount],
+        }
+    }
+    fn new_set(value: DepthAccuracy) -> Self {
+        DepthBufferCell {
+            pixinfo: [0; LayerCount],
+            depth: [value; LayerCount],
+        }
+    }
+    fn clear(&mut self, value: DepthAccuracy, idx: usize) {
         for (layeridx, (d, p)) in self
             .depth
             .iter_mut()
@@ -94,26 +94,24 @@ impl<D: Scalar, const L: usize> DepthBufferCell<D, L> {
     }
 
     fn set_init_pix_ref(&mut self, idx: usize) {
-        for layer in 0..L {
+        for layer in 0..LayerCount {
             let lol = &mut (self.pixinfo[layer]);
             *(lol) = idx + layer
         }
     }
-
-    fn roll_from(&mut self, index: usize) {
-        if index >= L {
-            return;
-        }
-
-        let slice = &mut self.pixinfo[index..];
-        slice.rotate_left(1);
-
-        let depth_slice = &mut self.depth[index..];
-        depth_slice.rotate_left(1);
-    }
 }
 
 impl<T: nalgebra_glm::Number> PixInfo<T> {
+    fn new() -> Self {
+        PixInfo {
+            w: TVec3::zeros(),
+            w_1: TVec3::zeros(),
+            material_id: 0,
+            primitive_id: 0,
+            node_id: 0,
+            geometry_id: 0,
+        }
+    }
     fn clear(&mut self) {
         self.material_id = 0;
         self.primitive_id = 0;
@@ -138,15 +136,6 @@ pub fn create_pixinfo_init_f32() -> PixInfo<f32> {
     }
 }
 
-pub const DEPTH_BUFFER_CELL_INIT_F32_3L: DepthBufferCell<f32, 3> = DepthBufferCell {
-    pixinfo: [0, 1, 2],
-    depth: [0.1, 0.2, 0.3],
-};
-pub const DEPTH_BUFFER_CELL_INIT_F32_2L: DepthBufferCell<f32, 2> = DepthBufferCell {
-    pixinfo: [0, 0],
-    depth: [0.0, 0.0],
-};
-
 pub const CANVAS_CELL_INIT: CanvasCell = CanvasCell {
     back_color: Color {
         r: 0,
@@ -162,21 +151,30 @@ pub const CANVAS_CELL_INIT: CanvasCell = CanvasCell {
     },
     glyph: 0,
 };
+/// Stores the depth buffer, canvas, and pixel information for a drawing buffer.
+/// Template parameters are used to specify the number of depth layers and the accuracy of the depth buffer.
+pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, A: Number> {
+    pub depthbuffer: Box<[DepthBufferCell<A, DEPTH_LAYER_COUNT>]>,
+    pub canvas: Box<[CanvasCell]>,
+    pub pixbuffer: Box<[PixInfo<A>]>,
+    pub row_count: usize,
+    pub col_count: usize,
+
+    pub half_size: Vec2,
+}
 
 // here theL ( layer) are like.. bounded; A is accuracy of the depth buffer (f32 usually)
 impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
-    pub fn new(
-        row_count: usize,
-        col_count: usize,
-        default_depth: DepthBufferCell<DEPTHACC, L>,
-        inipix: PixInfo<DEPTHACC>,
-    ) -> Self {
+    pub fn new(row_count: usize, col_count: usize, default_depth: DEPTHACC) -> Self {
         // this store the depth for every cell, for every "layer" + and index
-        let mut depthbuffer = vec![default_depth; row_count * col_count].into_boxed_slice();
+        let mut depthbuffer =
+            vec![DepthBufferCell::new_set(default_depth); row_count * col_count].into_boxed_slice();
 
         // this store specific propertiees in RxCxL. The index inside the depth buffer is actually pointing into this
         // array.
         // reason is that we will often do "compare and move/swap"; by using the index I guess the swap is just "swaping u8, instead of swapping the whole struc";
+
+        let inipix: PixInfo<DEPTHACC> = PixInfo::new();
         let pixbuffer = vec![inipix; row_count * col_count * L].into_boxed_slice();
 
         // we init the depth buffer with the pixel info.
@@ -204,10 +202,14 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         }
     }
 
-    #[inline(always)] // should this help ?!
     pub fn clear_depth(&mut self, value: DEPTHACC) {
         for (idx, depth_cell) in self.depthbuffer.iter_mut().enumerate() {
             depth_cell.clear(value, idx * L);
+        }
+    }
+    pub fn clear_pixinfo(&mut self) {
+        for pixinfo in self.pixbuffer.iter_mut() {
+            pixinfo.clear();
         }
     }
 
@@ -233,6 +235,17 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         x
     }
 
+    pub fn get_pix_buffer_content_at_row_col(
+        &self,
+        row: usize,
+        col: usize,
+        layer_idx: usize,
+    ) -> &PixInfo<DEPTHACC> {
+        let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
+        let the_element_at_0 = &self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]];
+
+        the_element_at_0
+    }
     pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
         let x = self.canvas[r * self.col_count + c];
         x

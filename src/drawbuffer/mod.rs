@@ -23,12 +23,7 @@ impl Small16Drawing {
     #[new]
     fn new() -> Self {
         Small16Drawing {
-            db: DrawBuffer::new(
-                16,
-                16,
-                DEPTH_BUFFER_CELL_INIT_F32_2L,
-                create_pixinfo_init_f32(),
-            ),
+            db: DrawBuffer::new(16, 16, 0.0),
         }
     }
 
@@ -171,12 +166,7 @@ impl AbigDrawing {
         );
         segment_cache.insert_with_hash(0, aseg0);
         AbigDrawing {
-            db: DrawBuffer::new(
-                max_row,
-                max_col,
-                DEPTH_BUFFER_CELL_INIT_F32_2L,
-                create_pixinfo_init_f32(),
-            ),
+            db: DrawBuffer::new(max_row, max_col, 10.0),
             max_row: max_row,
             max_col: max_col,
             layer_count: 2,
@@ -208,7 +198,8 @@ impl AbigDrawing {
     }
 
     fn hard_clear(&mut self, init_value: f32) {
-        (self.db.borrow_mut()).clear_depth(init_value)
+        self.db.clear_depth(init_value);
+        self.db.clear_pixinfo();
     }
 
     fn get_min_max_depth(&self, py: Python, layer: usize) -> Py<PyTuple> {

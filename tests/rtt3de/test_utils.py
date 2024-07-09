@@ -12,4 +12,8 @@ def assertPointPrimitiveAlmostEqual(prim0,prim1):
     for key in ['row','col','depth']:
         assert math.isclose(prim0[key],prim1[key],abs_tol=0.001)
 
-        
+def assertLine3DPrimitiveKeyEqual(prim0,prim1):
+    for key in ['primitive_id','geometry_id','node_id','material_id']:
+        assert prim0[key] == prim1[key]
+
+

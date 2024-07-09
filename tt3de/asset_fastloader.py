@@ -2,7 +2,7 @@ from typing import Tuple
 from tt3de.asset_load import load_bmp, load_obj, read_file
 
 from tt3de.richtexture import ImageTexture
-from tt3de.tt3de import Point2D, Point3D, Triangle3D
+from tt3de.tt3de import Point2D, Point3D
 from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.utils import TT3DEMaterialMode, TT3DEMaterialTextureMappingOptions
 
@@ -33,8 +33,10 @@ class MaterialPerfab:
         texture_buffer = TextureBufferPy(32)
         material_buffer = MaterialBufferPy()
         material_buffer.add_static((200,10,10),(50,50,50),0)
-        material_buffer.add_static((10,200,10),(50,100,50),2)
-        material_buffer.add_static((10,10,200),(200,20,20),99)
+        material_buffer.add_static((200,200,200),(100,100,100),99) 
+        material_buffer.add_static((200,0,0),(100,100,100),50)  # R
+        material_buffer.add_static((10,200,0),(100,100,100),39) # G
+        material_buffer.add_static((10,5,200),(100,100,100),34) # B
         
         return texture_buffer,material_buffer
 

@@ -56,11 +56,13 @@ class RustRenderContext():
 
         self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)
 
-        self.transform_buffer.set_view_matrix_3d(camera.view_matrix_3D)
+        self.transform_buffer.set_view_matrix_3d(glm.inverse(camera._rot)*glm.translate(-camera._pos))
+        #transform_buffer.set_view_matrix_3d(glm.inverse(camera._rot)) # camera.view_matrix_3D())
+        #node_id = transform_buffer.add_node_transform(glm.translate(-camera._pos))#glm.mat4(1.0) )
+
 
         self.transform_buffer.set_projection_matrix(camera.perspective_matrix)
 
-        
         # build the primitives
         build_primitives_py(self.geometry_buffer,
                             self.vertex_buffer,
