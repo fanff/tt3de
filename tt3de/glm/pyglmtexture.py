@@ -3,12 +3,7 @@ import itertools
 from math import exp
 import math
 from typing import Iterable, List, Tuple
-from tt3de.glm.triangle_clipping import (
-    Triangle,
-    clip_triangle_in_planes,
-    clipping_space_planes,
-    is_front_facing,
-)
+
 from tt3de.tt3de import (
     
     Drawable3D,
@@ -106,132 +101,6 @@ class GLMMesh3D():
             for t in self.triangles
         ]
         # self.glm_uvmap = [[[glm.vec2(uv.x,uv.y) for uv in uvlayer] for uvlayer in t.uvmap] ]
-
-    def proj_vertices(
-        self, camera: GLMCamera, perspective_matrix, screen_width, screen_height
-    ):
-        screeninfo = glm.vec4(0, 0, 1, 1)
-
-        proj_vertices = [
-            glm.projectZO(v, camera.view_matrix_3D, perspective_matrix, screeninfo)
-            for v in self.glm_vertices
-        ]
-
-        vert_camera = self.glm_vertices - camera.pos
-        vert_camera_dist = vert_camera.map(glm.length)
-
-        # vert_camera_dist = [0]*len(self.glm_vertices)
-        for pa, pb, pc in self.triangles_vindex:
-            rp1 = proj_vertices[pa]
-            rp2 = proj_vertices[pb]
-            rp3 = proj_vertices[pc]
-
-            dist1 = vert_camera_dist[pa]
-            dist2 = vert_camera_dist[pb]
-            dist3 = vert_camera_dist[pc]
-
-            # yield ((rp1,vec4(0.0,0.0,0.0,dist1)),
-            #       (rp2,vec4(0.0,0.0,0.0,dist2)),
-            #       (rp3,vec4(0.0,0.0,0.0,dist3)))
-            yield ((rp1, (dist1)), (rp2, (dist2)), (rp3, (dist3)))
-
-    def draw(self, camera: GLMCamera, geometry_buffer, node_id=0):
-
-        screen_width, screen_height = camera.screen_width, camera.screen_height
-        perspective_matrix = camera.perspective_matrix
-
-        view_port_matrix = glm.scale(
-            vec3(float(screen_width) / 2.0, float(screen_height) / 2.0, 1.0)
-        ) * glm.translate(vec3(1, 1, 0.0))
-        # in_view_space = [camera._model_inverse * glm.vec4(vertex, 1.0) for vertex in self.glm_vertices]
-        view_space_vertices = [
-            (camera.view_matrix_3D) * vertex for vertex in self.glm_vertices_4
-        ]
-
-        triangle_in_clip_space = [
-            perspective_matrix * vertex for vertex in view_space_vertices
-        ]
-
-        triangle_in_clip_space_divided = [
-            vertex / vertex.w for vertex in triangle_in_clip_space
-        ]
-
-        # keep an inversion for the whole transform :
-        inverse_perspective = glm.inverse(perspective_matrix * camera.view_matrix_3D)
-        plane_of_the_clip_space = clipping_space_planes()
-
-        for triangle_idx, (v_idx1, v_idx2, v_idx3) in enumerate(self.triangles_vindex):
-            v_in_clip_space1 = triangle_in_clip_space_divided[v_idx1]
-            v_in_clip_space2 = triangle_in_clip_space_divided[v_idx2]
-            v_in_clip_space3 = triangle_in_clip_space_divided[v_idx3]
-
-            v_in_view_space1 = view_space_vertices[v_idx1]
-            v_in_view_space2 = view_space_vertices[v_idx2]
-            v_in_view_space3 = view_space_vertices[v_idx3]
-
-            v_in_clip_space_undiv_1 = triangle_in_clip_space[v_idx1]
-            v_in_clip_space_undiv_2 = triangle_in_clip_space[v_idx2]
-            v_in_clip_space_undiv_3 = triangle_in_clip_space[v_idx3]
-
-            # perform a rejection test, if the triangle is like "all outside of the same plane. "
-            a_triangle_in_clip_spance_not_divided = [
-                v_in_clip_space_undiv_1,
-                v_in_clip_space_undiv_2,
-                v_in_clip_space_undiv_3,
-            ]
-            a_clip_space_test = []
-            for vertice_in_clip_space in a_triangle_in_clip_spance_not_divided:
-                sometest = [
-                    -vertice_in_clip_space.w < vertice_in_clip_space.x,
-                    vertice_in_clip_space.x < vertice_in_clip_space.w,
-                    -vertice_in_clip_space.w < vertice_in_clip_space.y,
-                    vertice_in_clip_space.y < vertice_in_clip_space.w,
-                    -vertice_in_clip_space.w < vertice_in_clip_space.z,
-                    vertice_in_clip_space.z < vertice_in_clip_space.w,
-                ]
-
-                a_clip_space_test.append(sometest)
-            clipe_space_rejection = [
-                not (a_clip_space_test[0][plane_idx])
-                and not (a_clip_space_test[1][plane_idx])
-                and not (a_clip_space_test[2][plane_idx])
-                for plane_idx in range(6)
-            ]
-            # if any of the clip_space_rejection is True, it means that ALL vertices of the triangles are on the outside of this plane.
-            if any(clipe_space_rejection):
-                continue
-
-            triangle: Triangle = [v_in_clip_space1, v_in_clip_space2, v_in_clip_space3]
-
-            clipped_triangles = clip_triangle_in_planes(
-                triangle, plane_of_the_clip_space
-            )
-            for sub_triangle in clipped_triangles:
-
-                # lend in pixel coord
-                pixwin_coord = [view_port_matrix * (vertex) for vertex in sub_triangle]
-
-                if is_front_facing(pixwin_coord):
-                    a, b, c = pixwin_coord
-                else:
-                    a, c, b = pixwin_coord
-
-                min_window_space = vec3(0, 0, -float("infinity"))
-                max_window_space = vec3(
-                    screen_width - 1, screen_height - 1, float("infinity")
-                )
-
-                a = glm.clamp(vec3(a.xyz), min_window_space, max_window_space)
-                b = glm.clamp(vec3(b.xyz), min_window_space, max_window_space)
-                c = glm.clamp(vec3(c.xyz), min_window_space, max_window_space)
-                a = [a.x, a.y, a.z]
-                b = [b.x, b.y, b.z]
-                c = [c.x, c.y, c.z]
-
-                geometry_buffer.add_triangle_to_buffer(
-                    a, b, c, [0.0] * 48, node_id, self.material_id  # uv list  # node_id
-                )  # material_id
-
 
 def barycentric_coordinates(
     a: glm.vec3, b: glm.vec3, c: glm.vec3, p: glm.vec3

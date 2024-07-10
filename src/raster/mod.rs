@@ -7,10 +7,13 @@ use crate::{
     primitivbuffer::*,
 };
 
-pub mod raster_line;
-use raster_line::*;
 pub mod raster_line_row;
 use raster_line_row::*;
+pub mod raster_line_columns;
+use raster_line_columns::*;
+pub mod raster_line;
+use raster_line::*;
+
 //  calculating min/max of multiple values;
 fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
     std::cmp::min(std::cmp::min(a, b), c)

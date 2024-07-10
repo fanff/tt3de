@@ -22,8 +22,8 @@ pub fn clip_line_to_clip_space(pa: &Vec4, pb: &Vec4) -> Option<(Vec4, Vec4)> {
         Vec4::new(1.0, 0.0, 0.0, 1.0),  // Right
         Vec4::new(0.0, -1.0, 0.0, 1.0), // Bottom
         Vec4::new(0.0, 1.0, 0.0, 1.0),  // Top
-        Vec4::new(0.0, 0.0, -1.0, 1.0), // Near
-        Vec4::new(0.0, 0.0, 1.0, 1.0),  // Far
+        Vec4::new(0.0, 0.0, 1.0, 0.0), // Near
+        Vec4::new(0.0, 0.0, -1.0, 1.0),  // Far
     ];
     let mut pa_clipped = *pa;
     let mut pb_clipped = *pb;

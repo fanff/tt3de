@@ -21,6 +21,7 @@ nalgebra-glm = "0.3"
 criterion = "0.4.0"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 fastnoise-lite = "1.1.1"
+approx = "0.5.1"
 
 
 [profile.dev]

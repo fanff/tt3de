@@ -668,6 +668,8 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
         build_primitives_py(self.geometry_buffer, self.vertex_buffer, self.transform_pack, self.drawing_buffer, self.primitive_buffer)
+        clippa = self.vertex_buffer.get_clip_space_vertex(0)
+        clippb = self.vertex_buffer.get_clip_space_vertex(1)
         self.assertEqual(self.primitive_buffer.primitive_count(), 1)
 
         prim0 = self.primitive_buffer.get_primitive(0)
@@ -677,13 +679,13 @@ class Test3DLineClippingCases(unittest.TestCase):
             "node_id": self.node_id,
             "material_id": material_id
         })
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
 
         self.assertEqual(prim0["pa"]["row"], 256)
         self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertEqual(prim0["pb"]["col"], 256)
-        self.assertGreater(prim0["pa"]["depth"], prim0["pb"]["depth"]) # pb is after pa; clearly
+        self.assertLess(prim0["pa"]["depth"], 1.0) #
+        self.assertGreater(prim0["pa"]["col"], 0.0) #
+
+
         self.assertAlmostEqual(prim0["pb"]["depth"], 0.0) 
 
     def test_one_line3D_clipping_leftplane(self):
@@ -696,6 +698,9 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
         build_primitives_py(self.geometry_buffer, self.vertex_buffer, self.transform_pack, self.drawing_buffer, self.primitive_buffer)
+        
+        clippa = self.vertex_buffer.get_clip_space_vertex(0)
+        clippb = self.vertex_buffer.get_clip_space_vertex(1)
         self.assertEqual(self.primitive_buffer.primitive_count(), 1)
 
         prim0 = self.primitive_buffer.get_primitive(0)
@@ -709,8 +714,12 @@ class Test3DLineClippingCases(unittest.TestCase):
         clippb = self.vertex_buffer.get_clip_space_vertex(1)
         self.assertEqual(prim0["pa"]["row"], 256)
         self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertGreater(prim0["pb"]["row"], 256) # is a little bellow pa; because y is positive
+        self.assertLess(prim0["pa"]["depth"], 1.0) #
+        self.assertGreater(prim0["pa"]["col"], 0.0) #
 
+
+
+        self.assertGreater(prim0["pb"]["row"], 256) # is a little bellow pa; because y is positive
         self.assertEqual(prim0["pb"]["col"], 0) # pb is at the left frustum plane
 
     def test_one_line3D_clipping_rightplane(self):

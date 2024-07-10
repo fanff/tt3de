@@ -7,6 +7,44 @@ pub struct PointInfo<DEPTHACC: Number> {
     pub depth: DEPTHACC,
 }
 
+impl<DEPTHACC: Number> PointInfo<DEPTHACC> {
+    pub fn as_f32_row_col(&self) -> (f32, f32) {
+        (self.row as f32, self.col as f32)
+    }
+    pub fn as_vec2_row_col(&self) -> nalgebra_glm::Vec2 {
+        nalgebra_glm::vec2(self.row as f32, self.col as f32)
+    }
+}
+
+#[cfg(test)]
+pub mod test_point_info {
+    use crate::primitivbuffer::primitivbuffer::PointInfo;
+
+    #[test]
+    pub fn test_as_f32_point() {
+        let point: PointInfo<f32> = PointInfo {
+            row: 1,
+            col: 2,
+            depth: 3.0,
+        };
+        let (row, col) = point.as_f32_row_col();
+        assert_eq!(row, 1.0);
+        assert_eq!(col, 2.0);
+    }
+
+    #[test]
+    pub fn test_as_vec2_point() {
+        let point: PointInfo<f32> = PointInfo {
+            row: 1,
+            col: 2,
+            depth: 3.0,
+        };
+        let vec2 = point.as_vec2_row_col();
+        assert_eq!(vec2.x, 1.0);
+        assert_eq!(vec2.y, 2.0);
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct PrimitivReferences {
     pub node_id: usize,

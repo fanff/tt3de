@@ -13,12 +13,9 @@ from textual.widget import Widget
 from textual.widgets import (
     Static,
 )
-from abc import ABC, abstractmethod
+from abc import  abstractmethod
 from tt3de.glm.pyglmtexture import GLMCamera
-from tt3de.render_context_cy import CyRenderContext
 from tt3de.render_context_rust import RustRenderContext
-from tt3de.richtexture import RenderContext, StaticTexture, get_cube_vertices
-from tt3de.tt3de import FPSCamera, Line3D, Point3D, PointElem
 from textual.strip import Strip
 from textual.geometry import Region
 from textual.containers import Container

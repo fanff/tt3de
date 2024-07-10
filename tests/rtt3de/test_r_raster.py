@@ -1,5 +1,6 @@
 
 
+import math
 import unittest
 from rtt3de import PrimitiveBufferPy
 from rtt3de import AbigDrawing
@@ -47,6 +48,115 @@ class Test_Rust_RasterPoint(unittest.TestCase):
         self.assertAlmostEqual(not_point_cell["w"][2],0.0)
 
 
+class Test_Rust_RasterLine(unittest.TestCase):
+    def test_raster_OneLine(self):
+        drawing_buffer = AbigDrawing(32, 32)
+        drawing_buffer.hard_clear(10)
+
+        primitive_buffer = PrimitiveBufferPy(10)
+
+        node_id = 1
+        geom_id = 2
+        material_id = 3
+        
+        pa_row = 1
+        pa_col = 2
+        p_a_depth = 3.0
+
+        pb_row = 5
+        pb_col = 8
+        p_b_depth = 1.0
+
+
+        primitive_buffer.add_line(
+            node_id, geom_id, material_id,
+
+            pa_row,pa_col,p_a_depth,
+            pb_row,pb_col,p_b_depth,
+            uv=0
+        )
+
+
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+        raster_all_py(primitive_buffer, drawing_buffer)
+    def test_raster_ManyLines(self):
+        for pa_row in range(0, 10):
+            for pa_col in range(0, 10):
+                for pb_row in range(0, 10):
+                    for pb_col in range(0, 10):
+
+                        self._test_raster_line(pa_row, pa_col, pb_row, pb_col)
+                        
+
+    def _test_raster_line(self, pa_row, pa_col, pb_row, pb_col):
+        drawing_buffer = AbigDrawing(10, 10)
+        drawing_buffer.hard_clear(10)
+
+        primitive_buffer = PrimitiveBufferPy(10)
+
+        node_id = 1
+        geom_id = 2
+        material_id = 3
+        
+        
+        p_a_depth = 3.0
+
+        
+        p_b_depth = 1.0
+
+
+        primitive_buffer.add_line(
+            node_id, geom_id, material_id,
+
+            pa_row,pa_col,p_a_depth,
+            pb_row,pb_col,p_b_depth,
+            uv=0
+        )
+
+
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+        raster_all_py(primitive_buffer, drawing_buffer)
+
+        # get the cell of point a
+        point_a_cell = drawing_buffer.get_depth_buffer_cell(pa_row, pa_col,0)
+        self.assertEqual(point_a_cell["node_id"],node_id)
+        self.assertEqual(point_a_cell["geometry_id"],geom_id)
+        self.assertEqual(point_a_cell["material_id"],material_id)
+        # check the weights 
+        self.assertAlmostEqual(point_a_cell["w"][0],1.0,delta=0.001)
+        self.assertAlmostEqual(point_a_cell["w"][1],0.0,delta=0.001)
+        self.assertAlmostEqual(point_a_cell["w"][2],0.0)
+
+
+        if not (pa_row == pb_row and pa_col == pb_col):
+            # get the cell of point b
+            point_b_cell = drawing_buffer.get_depth_buffer_cell(pb_row, pb_col,0)
+            self.assertEqual(point_b_cell["node_id"],node_id)
+            self.assertEqual(point_b_cell["geometry_id"],geom_id)
+            self.assertEqual(point_b_cell["material_id"],material_id)
+            # check the weights
+            self.assertAlmostEqual(point_b_cell["w"][0],0.0,delta=0.001)
+            self.assertAlmostEqual(point_b_cell["w"][1],1.0,delta=0.001)
+            self.assertAlmostEqual(point_b_cell["w"][2],0.0)
+
+            ##self.assertGreaterEqual(point_b_cell["w"][0],0.0)
+
+        # iterate over the whole canvas and count pixel that are blit by the line 
+        litpixcount = 0
+        for i in range(10):
+            for j in range(10):
+                elem = drawing_buffer.get_depth_buffer_cell(i, j,0)
+
+                if elem["node_id"]!=0:
+                    litpixcount+=1
+
+        self.assertGreaterEqual(litpixcount,1)
+        
+        # the line is longter that the longest of the two axis.
+        self.assertGreaterEqual(litpixcount, max(abs(pa_row-pb_row),abs(pa_col-pb_col)) )
+
+        # the line is smaller than the length of itself ceilled 
+        self.assertLessEqual(litpixcount, math.sqrt((pa_row-pb_row)**2+(pa_col-pb_col)**2)+1 )
 
 class Test_Rust_RasterTriangle(unittest.TestCase):
     def test_raster_empty(self):

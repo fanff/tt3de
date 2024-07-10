@@ -33,14 +33,7 @@ from textual.layouts import horizontal
 
 from tt3de.textual_widget import TT3DView, TimingRegistry
 from tt3de.tt3de import (
-    FPSCamera,
-    Line3D,
-    Mesh3D,
-    Node3D,
     Point3D,
-    PointElem,
-    Quaternion,
-    Triangle3D,
 )
 
 

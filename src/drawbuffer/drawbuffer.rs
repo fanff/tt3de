@@ -1,4 +1,5 @@
 use std::borrow::BorrowMut;
+use std::cmp::min;
 
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
@@ -219,8 +220,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         sumoftwovec.component_mul_assign(&self.half_size);
         // round to the nearest integer
         (
-            sumoftwovec.y.round() as usize,
-            sumoftwovec.x.round() as usize,
+            min(sumoftwovec.y.round() as usize, self.row_count - 1),
+            min(sumoftwovec.x.round() as usize, self.col_count - 1),
         )
     }
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {

@@ -860,6 +860,7 @@ checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 name = "rtt3de"
 version = "0.1.0"
 dependencies = [
+ "approx 0.5.1",
  "criterion",
  "fastnoise-lite",
  "nalgebra 0.33.0",
