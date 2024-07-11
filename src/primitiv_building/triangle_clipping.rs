@@ -1,4 +1,4 @@
-use nalgebra_glm::{Vec2, Vec3, Vec4};
+use nalgebra_glm::{dot, Vec2, Vec3, Vec4};
 
 fn interpolate(p1: &Vec4, p2: &Vec4, t: f32) -> Vec4 {
     p1 + t * (p2 - p1)
@@ -62,9 +62,9 @@ pub fn clip_triangle_to_plane(
     plane: Vec4,
     output_buffer: &mut TriangleBuffer,
 ) {
-    let pa_dist = plane.dot(pa);
-    let pb_dist = plane.dot(pb);
-    let pc_dist = plane.dot(pc);
+    let pa_dist = dot(&plane, pa);
+    let pb_dist = dot(&plane, pb);
+    let pc_dist = dot(&plane, pc);
 
     let inside_pa = pa_dist >= 0.0;
     let inside_pb = pb_dist >= 0.0;
@@ -168,12 +168,12 @@ pub fn clip_triangle_to_clip_space(
 ) {
     // defining the plane of the clipping
     let planes = [
-        Vec4::new(1.0, 0.0, 0.0, 1.0),  // x + 1 >= 0
-        Vec4::new(-1.0, 0.0, 0.0, 1.0), // -x + 1 >= 0
-        Vec4::new(0.0, 1.0, 0.0, 1.0),  // y + 1 >= 0
-        Vec4::new(0.0, -1.0, 0.0, 1.0), // -y + 1 >= 0
-        Vec4::new(0.0, 0.0, 1.0, 1.0),  // z >= 0
-        Vec4::new(0.0, 0.0, -1.0, 1.0), // -z >= 0
+        Vec4::new(-1.0, 0.0, 0.0, 1.0), //
+        Vec4::new(1.0, 0.0, 0.0, 1.0),  //
+        Vec4::new(0.0, -1.0, 0.0, 1.0), //
+        Vec4::new(0.0, 1.0, 0.0, 1.0),  //
+        Vec4::new(0.0, 0.0, 1.0, 0.0),  //
+        Vec4::new(0.0, 0.0, -1.0, 1.0), //
     ];
 
     output_buffer.clear();
@@ -200,42 +200,14 @@ pub fn clip_triangle_to_clip_space(
 
         // repeat the process for the next plane
     }
-    let pav3: Vec3 = pa.xyz();
-    let pbv3: Vec3 = pb.xyz();
-    let pcv3: Vec3 = pc.xyz();
+
     // copy the clipped triangles to the output buffer
     for i in 0..input_buffer.count {
-        let cpa: Vec3 = input_buffer.content[i][0].xyz();
-        let cpb: Vec3 = input_buffer.content[i][1].xyz();
-        let cpc: Vec3 = input_buffer.content[i][2].xyz();
+        let cpa: Vec4 = input_buffer.content[i][0];
+        let cpb: Vec4 = input_buffer.content[i][1];
+        let cpc: Vec4 = input_buffer.content[i][2];
 
-        // calculate barycentric coordinates of cpa relative to the original pa,pb,pc triangle vertices
-        let w0a = ((pbv3 - pcv3).cross(&(cpa - pcv3))).norm()
-            / ((pbv3 - pcv3).cross(&(pav3 - pcv3))).norm();
-        let w1a = ((pcv3 - pav3).cross(&(cpa - pav3))).norm()
-            / ((pcv3 - pav3).cross(&(pbv3 - pav3))).norm();
-        let w2a = 1.0 - w0a - w1a;
-
-        // calculate barycentric coordinates of cpb
-        let w0b = ((pbv3 - pcv3).cross(&(cpb - pcv3))).norm()
-            / ((pbv3 - pcv3).cross(&(pav3 - pcv3))).norm();
-        let w1b = ((pcv3 - pav3).cross(&(cpb - pav3))).norm()
-            / ((pcv3 - pav3).cross(&(pbv3 - pav3))).norm();
-        let w2b = 1.0 - w0b - w1b;
-
-        // calculate barycentric coordinates of cpc
-        let w0c = ((pbv3 - pcv3).cross(&(cpc - pcv3))).norm()
-            / ((pbv3 - pcv3).cross(&(pav3 - pcv3))).norm();
-        let w1c = ((pcv3 - pav3).cross(&(cpc - pav3))).norm()
-            / ((pcv3 - pav3).cross(&(pbv3 - pav3))).norm();
-        let w2c = 1.0 - w0c - w1c;
-
-        // calculate the uv coordinates of the clipped vertex
-        let cuva = w0a * uva + w1a * uvb + w2a * uvc;
-        let cuvb = w0b * uva + w1b * uvb + w2b * uvc;
-        let cuvc = w0c * uva + w1c * uvb + w2c * uvc;
-
-        output_buffer.push(cpa, cpb, cpc, (&cuva, &cuvb, &cuvc));
+        output_buffer.push_no_uv(cpa, cpb, cpc);
     }
 }
 

@@ -29,7 +29,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
-    def test_add_line(self):
+    def test_add_line3d(self):
         """Test adding a line and check for correct buffer update."""
         geom_buffer = GeometryBufferPy(10)
         geom_buffer.clear()
@@ -55,7 +55,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         
         node_id = 102
         material_id = 202
-        geom_buffer.add_polygon(
+        geom_buffer.add_polygon3d(
             0,1,  node_id, material_id, 0
         )
 

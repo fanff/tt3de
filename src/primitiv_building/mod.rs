@@ -13,8 +13,9 @@ use crate::{
     texturebuffer::TextureBufferPy,
     vertexbuffer::{TransformPack, TransformPackPy, UVBuffer, VertexBuffer, VertexBufferPy},
 };
-pub mod clipping;
-use clipping::*;
+
+pub mod triangle_clipping;
+use triangle_clipping::*;
 
 pub mod point_clipping;
 use point_clipping::*;
@@ -59,18 +60,18 @@ fn poly_as_primitive<
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the first triangle
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer: TriangleBuffer = TriangleBuffer::new();
         clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
             let pdiv = perspective_divide_triplet(&t[0], &t[1], &t[2]);
-            let (va, vb, vc) = pdiv;
+            let (vadiv, vbdiv, vcdiv) = pdiv;
 
             // convert from ndc to screen space
-            let point_a = drawbuffer.ndc_to_screen_row_col(&va.xy());
-            let point_b = drawbuffer.ndc_to_screen_row_col(&vb.xy());
-            let point_c = drawbuffer.ndc_to_screen_row_col(&vc.xy());
+            let point_a = drawbuffer.ndc_to_screen_row_col(&vadiv.xy());
+            let point_b = drawbuffer.ndc_to_screen_row_col(&vbdiv.xy());
+            let point_c = drawbuffer.ndc_to_screen_row_col(&vcdiv.xy());
 
             primitivbuffer.add_triangle(
                 polygon.geom_ref.node_id,
@@ -78,13 +79,13 @@ fn poly_as_primitive<
                 polygon.geom_ref.material_id,
                 point_a.0,
                 point_a.1,
-                va.z,
+                vadiv.z,
                 point_b.0,
                 point_b.1,
-                vb.z,
+                vbdiv.z,
                 point_c.0,
                 point_c.1,
-                vc.z,
+                vcdiv.z,
                 polygon.uv_start,
             );
         }

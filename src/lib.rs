@@ -5,7 +5,7 @@ pub mod geombuffer;
 pub mod material;
 pub mod primitivbuffer;
 pub mod raster;
-pub mod stages;
+pub mod primitiv_building;
 pub mod texturebuffer;
 pub mod utils;
 pub mod vertexbuffer;
@@ -26,8 +26,8 @@ fn rtt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_class::<primitivbuffer::PrimitiveBufferPy>()?;
     m.add_function(wrap_pyfunction!(raster::raster_all_py, m)?)?;
-    m.add_function(wrap_pyfunction!(stages::build_primitives_py, m)?)?;
-    m.add_function(wrap_pyfunction!(stages::apply_material_py, m)?)?;
+    m.add_function(wrap_pyfunction!(primitiv_building::build_primitives_py, m)?)?;
+    m.add_function(wrap_pyfunction!(primitiv_building::apply_material_py, m)?)?;
 
     Ok(())
 }

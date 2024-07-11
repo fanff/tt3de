@@ -25,5 +25,5 @@ approx = "0.5.1"
 
 
 [profile.dev]
-debug = true
-###### opt-level = 1
+#debug = true
+opt-level = 3

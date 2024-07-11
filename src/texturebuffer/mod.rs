@@ -17,6 +17,12 @@ pub struct RGBA {
     pub a: u8,
 }
 
+impl RGBA {
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+}
+
 #[derive(Clone)]
 pub struct Texture<const SIZE: usize> {
     data: Box<[RGBA]>, // Fixed-size array of RGBA colors

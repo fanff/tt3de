@@ -72,7 +72,7 @@ pub fn line_as_primitive<
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer<f32>,
 ) {
-    // cooardinates of the two points of the line
+    // coordinates of the two points of the line
     // in clip space coordinates (x, y, z, w) (homogeneous coordinates)
     let pa = vertex_buffer.get_clip_space_vertex(line.p_start);
     let pb = vertex_buffer.get_clip_space_vertex(line.p_start + 1);

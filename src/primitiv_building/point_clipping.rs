@@ -1,3 +1,4 @@
+
 use nalgebra_glm::Vec4;
 
 /// Clips a point to the clip space.

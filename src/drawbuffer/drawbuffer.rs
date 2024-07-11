@@ -1,10 +1,13 @@
 use std::borrow::BorrowMut;
 use std::cmp::min;
 
+use nalgebra_glm::floor;
+use nalgebra_glm::max;
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
 use nalgebra_glm::Vec2;
+use nalgebra_glm::Vec3;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::apply_material;
@@ -28,9 +31,9 @@ use crate::vertexbuffer::UVBuffer;
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
 /// - `geometry_id`: An identifier for the geometry, which could refer to a specific geometric object or model.
 #[derive(Clone, Copy)]
-pub struct PixInfo<T: nalgebra_glm::Number> {
-    pub w: TVec3<T>,
-    pub w_1: TVec3<T>,
+pub struct PixInfo<WeightAccuracy: nalgebra_glm::Number> {
+    pub w: TVec3<WeightAccuracy>,
+    pub w_1: TVec3<WeightAccuracy>,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -54,11 +57,50 @@ pub struct Color {
 }
 
 impl Color {
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Color { r, g, b, a }
+    }
+
+    pub fn new_opaque_from_vec3(color_vec: &Vec3) -> Self {
+        let w = max(&floor(&(color_vec * 256.0)), 0.0);
+        Color::new(w.x as u8, w.y as u8, w.z as u8, 255)
+    }
+
     pub fn copy_from(&mut self, rgba: &RGBA) {
         self.r = rgba.r;
         self.g = rgba.g;
         self.b = rgba.b;
         self.a = rgba.a;
+    }
+}
+
+#[cfg(test)]
+mod test_drawbuffer_color {
+    use super::*;
+    #[test]
+    pub fn test_new_color() {
+        let color = Color::new(255, 0, 0, 255);
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 0);
+        assert_eq!(color.b, 0);
+        assert_eq!(color.a, 255);
+    }
+    #[test]
+    pub fn test_new_opaque_from_vec3() {
+        let color = Color::new_opaque_from_vec3(&Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 0);
+        assert_eq!(color.b, 0);
+        assert_eq!(color.a, 255);
+    }
+    #[test]
+    pub fn test_copy_from() {
+        let mut color: Color = Color::new(0, 0, 0, 0);
+        color.copy_from(&RGBA::new(255, 0, 0, 255));
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 0);
+        assert_eq!(color.b, 0);
+        assert_eq!(color.a, 255);
     }
 }
 

@@ -9,9 +9,14 @@ use super::texturebuffer::texture_buffer::TextureBuffer;
 use super::texturebuffer::RGBA;
 
 use nalgebra_glm::{Number, TVec3, Vec3};
+pub mod debug_mat;
+use debug_mat::*;
 
-mod noise;
-use noise::*;
+mod materials;
+use materials::*;
+
+mod noise_mat;
+use noise_mat::*;
 
 use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
 
@@ -62,24 +67,6 @@ impl MaterialBuffer {
         self.current_size += 1;
         retur
     }
-}
-
-#[derive(Clone)]
-pub enum Material {
-    DoNothing {},
-    Texture {
-        albedo_texture_idx: usize,
-        glyph_idx: u8,
-    },
-    StaticColor {
-        front_color: RGBA,
-        back_color: RGBA,
-        glyph_idx: u8,
-    },
-    Noise {
-        noise: NoiseMaterial,
-        glyph_idx: u8,
-    },
 }
 
 pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
@@ -156,6 +143,7 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
             cell.front_color.copy_from(&front_rgba);
             cell.back_color.copy_from(&front_rgba);
         }
+        Material::DebugWeight(m) => m.render_mat(cell, pixinfo, prim, texture_buffer, uv_buffer),
     }
 }
 

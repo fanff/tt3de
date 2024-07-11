@@ -92,7 +92,7 @@ impl GeometryBuffer {
         self.current_size - 1
     }
 
-    fn add_polygon(
+    fn add_polygon2d(
         &mut self,
         p_start: usize,
         triangle_count: usize,
@@ -203,7 +203,7 @@ impl GeometryBufferPy {
     ) -> usize {
         self.buffer.add_point(p_idx, uv_idx, node_id, material_id)
     }
-    fn add_polygon(
+    fn add_polygon2d(
         &mut self,
         p_start: usize,
         triangle_count: usize,
@@ -212,7 +212,7 @@ impl GeometryBufferPy {
         uv_start: usize,
     ) -> usize {
         self.buffer
-            .add_polygon(p_start, triangle_count, node_id, material_id, uv_start)
+            .add_polygon2d(p_start, triangle_count, node_id, material_id, uv_start)
     }
     fn add_polygon3d(
         &mut self,
