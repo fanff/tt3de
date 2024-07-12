@@ -50,13 +50,34 @@ impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
     }
 }
 
+pub fn half_clip_triangle_to_plane<const INNER_SIZE: usize>(
+    pa: &Vec4,
+    pb: &Vec4,
+    pc: &Vec4,
+    plane: Vec4,
+    uv_triplet: (&Vec2, &Vec2, &Vec2),
+    output_buffer: &mut TriangleBuffer<INNER_SIZE>,
+) {
+    let pa_dist = dot(&plane, pa);
+    let pb_dist = dot(&plane, pb);
+    let pc_dist = dot(&plane, pc);
+
+    let inside_pa = pa_dist >= 0.0;
+    let inside_pb = pb_dist >= 0.0;
+    let inside_pc = pc_dist >= 0.0;
+
+    if inside_pa || inside_pb || inside_pc {
+        output_buffer.push_vec4(*pa, *pb, *pc, uv_triplet);
+    }
+}
+
 /// Clip triangle to a single plane.
 /// this can add up to 2 triangles to the output buffer
 pub fn clip_triangle_to_plane<const INNER_SIZE: usize>(
     pa: &Vec4,
     pb: &Vec4,
     pc: &Vec4,
-    plane: Vec4,
+    plane: &Vec4,
     uv_triplet: (&Vec2, &Vec2, &Vec2),
     output_buffer: &mut TriangleBuffer<INNER_SIZE>,
 ) {
@@ -163,7 +184,7 @@ pub fn clip_triangle_to_plane<const INNER_SIZE: usize>(
 
 /// Clips a triangle to the view frustum in clip space.
 ///
-/// This function can generate additional triangles as clipping may produce up to 9 triangles.
+/// This function can generate additional triangles as clipping may produce more triangles
 /// In clip space, the view frustum is defined by −w ≤ x ≤ w, −w ≤ y ≤ w, and 0 ≤ z ≤ w.
 ///
 /// The algorithm clips the triangle against each of the six planes of the view frustum,
@@ -203,12 +224,12 @@ pub fn clip_triangle_to_clip_space(
 ) {
     // defining the plane of the clipping
     let planes = [
-        //Vec4::new(-1.0, 0.0, 0.0, 1.0), //
-        //Vec4::new(1.0, 0.0, 0.0, 1.0),  //
-        //Vec4::new(0.0, -1.0, 0.0, 1.0), //
-        //Vec4::new(0.0, 1.0, 0.0, 1.0),  //
-        Vec4::new(0.0, 0.0, 1.0, 0.0),  // near
-        Vec4::new(0.0, 0.0, -1.0, 1.0), // far
+        (Vec4::new(0.0, 0.0, 1.0, 0.0), 0),  // near
+        (Vec4::new(0.0, 0.0, -1.0, 1.0), 0), // far  // will use the full clipping method, generating more triangle potentially
+        (Vec4::new(-1.0, 0.0, 0.0, 1.0), 1), //
+        (Vec4::new(1.0, 0.0, 0.0, 1.0), 1),  //
+        (Vec4::new(0.0, -1.0, 0.0, 1.0), 1), //
+        (Vec4::new(0.0, 1.0, 0.0, 1.0), 1),  //
     ];
 
     output_buffer.clear();
@@ -221,21 +242,35 @@ pub fn clip_triangle_to_clip_space(
     let mut output_buffer_temp = &mut buffer2;
 
     // clip the triangle to each plane
-    for &plane in planes.iter() {
+    for (plane, method) in planes.iter() {
         output_buffer_temp.clear();
 
         // clip triangles in the input buffer to the current plane
         // writing into the output buffer
         for (vertex_triplet, uv_triplet) in input_buffer.iter() {
             let tri = vertex_triplet;
-            clip_triangle_to_plane(
-                &tri[0],
-                &tri[1],
-                &tri[2],
-                plane,
-                (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
-                output_buffer_temp,
-            );
+            match method {
+                1 => {
+                    half_clip_triangle_to_plane(
+                        &tri[0],
+                        &tri[1],
+                        &tri[2],
+                        *plane,
+                        (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
+                        output_buffer_temp,
+                    );
+                }
+                _ => {
+                    clip_triangle_to_plane(
+                        &tri[0],
+                        &tri[1],
+                        &tri[2],
+                        &plane,
+                        (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
+                        output_buffer_temp,
+                    );
+                }
+            }
         }
         // swap the input and output buffer
         std::mem::swap(&mut input_buffer, &mut output_buffer_temp);
@@ -477,7 +512,7 @@ mod tests_clip_triangle_to_plane {
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 1);
         assert_eq!(output_buffer.content[0], [pa, pb, pc]);
@@ -498,12 +533,12 @@ mod tests_clip_triangle_to_plane {
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane_left, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane_left, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 0);
 
         output_buffer.clear();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane_right, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane_right, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 1);
     }
@@ -522,14 +557,14 @@ mod tests_clip_triangle_to_plane {
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane_left, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane_left, uv_triplet, &mut output_buffer);
         // one result on the left
         assert_eq!(output_buffer.count, 1);
 
         output_buffer.clear();
 
         // no result on the right
-        clip_triangle_to_plane(&pa, &pb, &pc, plane_right, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane_right, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 0);
     }
@@ -553,7 +588,7 @@ mod tests_clip_triangle_to_plane {
         let plane = vec4(1.0, 0.0, 0.0, 1.0); // plane: x + 1 >= 0
 
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
         // one triangle is generated
         assert_eq!(output_buffer.count, 1);
 
@@ -584,7 +619,7 @@ mod tests_clip_triangle_to_plane {
         let plane = vec4(1.0, 0.0, 0.0, 1.0); // plane: x + 1 >= 0
 
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_plane(&pa, &pb, &pc, plane, uv_triplet, &mut output_buffer);
+        clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
 
         // two triangles are generated
         assert_eq!(output_buffer.count, 2);
