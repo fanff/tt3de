@@ -33,10 +33,14 @@ class MaterialPerfab:
         texture_buffer = TextureBufferPy(32)
         material_buffer = MaterialBufferPy()
         material_buffer.add_static((200,10,10),(50,50,50),0)
-        material_buffer.add_static((200,200,200),(100,100,100),99) 
+        material_buffer.add_static((200,200,200),(100,100,100),99) # white	
         material_buffer.add_static((200,0,0),(100,100,100),50)  # R
         material_buffer.add_static((10,200,0),(100,100,100),39) # G
         material_buffer.add_static((10,5,200),(100,100,100),34) # B
+
+        material_buffer.add_debug_weight(1) # 
+        material_buffer.add_debug_depth(1) # 
+        material_buffer.add_debug_uv(1) # 
         
         return texture_buffer,material_buffer
 

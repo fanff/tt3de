@@ -1,18 +1,37 @@
-use nalgebra_glm::Number;
+use nalgebra_glm::{floor, vec2, vec3, Number, Real, TVec2, TVec3, Vec2};
 
 #[derive(Clone, Copy)]
-pub struct PointInfo<DEPTHACC: Number> {
+pub struct PointInfo<DEPTHACC: Real> {
     pub row: usize,
     pub col: usize,
-    pub depth: DEPTHACC,
+    pub p: TVec3<DEPTHACC>,
 }
 
-impl<DEPTHACC: Number> PointInfo<DEPTHACC> {
-    pub fn as_f32_row_col(&self) -> (f32, f32) {
-        (self.row as f32, self.col as f32)
+impl PointInfo<f32> {
+    pub fn zero() -> Self {
+        PointInfo {
+            row: 0,
+            col: 0,
+            p: vec3(0.0, 0.0, 0.0),
+        }
     }
-    pub fn as_vec2_row_col(&self) -> nalgebra_glm::Vec2 {
-        nalgebra_glm::vec2(self.row as f32, self.col as f32)
+
+    pub fn new(row_f: f32, col_f: f32, depth: f32) -> Self {
+        PointInfo {
+            row: row_f as usize,
+            col: col_f as usize,
+            p: vec3(row_f, col_f, depth),
+        }
+    }
+    pub fn as_f32_row_col(&self) -> (f32, f32) {
+        (self.p.x, self.p.y)
+    }
+    pub fn as_vec2_row_col(&self) -> Vec2 {
+        self.p.xy()
+    }
+
+    pub fn depth(&self) -> f32 {
+        self.p.z
     }
 }
 
@@ -22,11 +41,7 @@ pub mod test_point_info {
 
     #[test]
     pub fn test_as_f32_point() {
-        let point: PointInfo<f32> = PointInfo {
-            row: 1,
-            col: 2,
-            depth: 3.0,
-        };
+        let point: PointInfo<f32> = PointInfo::new(1.0, 2.0, 3.0);
         let (row, col) = point.as_f32_row_col();
         assert_eq!(row, 1.0);
         assert_eq!(col, 2.0);
@@ -34,11 +49,7 @@ pub mod test_point_info {
 
     #[test]
     pub fn test_as_vec2_point() {
-        let point: PointInfo<f32> = PointInfo {
-            row: 1,
-            col: 2,
-            depth: 3.0,
-        };
+        let point: PointInfo<f32> = PointInfo::new(1.0, 2.0, 3.0);
         let vec2 = point.as_vec2_row_col();
         assert_eq!(vec2.x, 1.0);
         assert_eq!(vec2.y, 2.0);
@@ -64,16 +75,19 @@ pub enum PrimitiveElements<DEPTHACC: Number> {
     },
     Line {
         fds: PrimitivReferences,
-        pa: PointInfo<DEPTHACC>,
-        pb: PointInfo<DEPTHACC>,
+        pa: PointInfo<f32>,
+        pb: PointInfo<f32>,
         uv: usize,
     },
     Triangle {
-        fds: PrimitivReferences,
-        pa: PointInfo<DEPTHACC>,
-        pb: PointInfo<DEPTHACC>,
-        pc: PointInfo<DEPTHACC>,
+        primitive_reference: PrimitivReferences,
+        pa: PointInfo<f32>,
+        pb: PointInfo<f32>,
+        pc: PointInfo<f32>,
         uv: usize,
+        // store the original triangle definition before clipping
+        vertex_idx: usize,
+        triangle_id: usize,
     },
     Static {
         fds: PrimitivReferences,
@@ -98,49 +112,41 @@ impl<DEPTHACC: Number> PrimitiveElements<DEPTHACC> {
                 uv,
             } => *uv,
             PrimitiveElements::Triangle {
-                fds: _,
+                primitive_reference: _,
                 pa: _,
                 pb: _,
                 pc: _,
                 uv,
+                vertex_idx: _,
+                triangle_id: _,
             } => *uv,
             PrimitiveElements::Static { fds: _, index: _ } => 0,
         }
     }
 }
 
-pub struct PrimitiveBuffer<DEPTHACC: Number> {
+pub struct PrimitiveBuffer {
     pub max_size: usize,
     pub current_size: usize,
-    pub content: Box<[PrimitiveElements<DEPTHACC>]>,
+    pub content: Box<[PrimitiveElements<f32>]>,
 }
 
-impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
+impl PrimitiveBuffer {
     pub fn new(max_size: usize) -> Self {
-        let init_array: Vec<PrimitiveElements<DEPTHACC>> = vec![
+        let init_array: Vec<PrimitiveElements<f32>> = vec![
             PrimitiveElements::Triangle {
-                fds: PrimitivReferences {
+                primitive_reference: PrimitivReferences {
                     node_id: 0,
                     material_id: 0,
                     geometry_id: 0,
                     primitive_id: 0,
                 },
                 uv: 0,
-                pa: PointInfo {
-                    row: 0,
-                    col: 0,
-                    depth: DEPTHACC::zero()
-                },
-                pb: PointInfo {
-                    row: 0,
-                    col: 0,
-                    depth: DEPTHACC::zero()
-                },
-                pc: PointInfo {
-                    row: 0,
-                    col: 0,
-                    depth: DEPTHACC::zero()
-                },
+                pa: PointInfo::zero(),
+                pb: PointInfo::zero(),
+                pc: PointInfo::zero(),
+                vertex_idx: 0,
+                triangle_id: 0
             };
             max_size
         ];
@@ -162,7 +168,7 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
         material_id: usize,
         row: usize,
         col: usize,
-        depth: DEPTHACC,
+        depth: f32,
         uv: usize,
     ) -> usize {
         if self.current_size == self.max_size {
@@ -195,17 +201,13 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
         material_id: usize,
         p_a_row: usize,
         p_a_col: usize,
-        p_a_depth: DEPTHACC,
+        p_a_depth: f32,
         p_b_row: usize,
         p_b_col: usize,
-        p_b_depth: DEPTHACC,
+        p_b_depth: f32,
         uv: usize,
     ) -> usize {
-        let pa = PointInfo {
-            row: p_a_row,
-            col: p_a_col,
-            depth: p_a_depth,
-        };
+        let pa = PointInfo::new(p_a_row as f32, p_a_col as f32, p_a_depth);
 
         let elem = PrimitiveElements::Line {
             fds: PrimitivReferences {
@@ -216,11 +218,7 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
             },
             pa: pa,
             uv: uv,
-            pb: PointInfo {
-                row: p_b_row,
-                col: p_b_col,
-                depth: p_b_depth,
-            },
+            pb: PointInfo::new(p_b_row as f32, p_b_col as f32, p_b_depth),
         };
         self.content[self.current_size] = elem;
 
@@ -233,26 +231,22 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: usize,
-        p_a_col: usize,
-        p_a_depth: DEPTHACC,
-        p_b_row: usize,
-        p_b_col: usize,
-        p_b_depth: DEPTHACC,
-        p_c_row: usize,
-        p_c_col: usize,
-        p_c_depth: DEPTHACC,
-        uv: usize,
+        p_a_row: f32,
+        p_a_col: f32,
+        p_a_depth: f32,
+        p_b_row: f32,
+        p_b_col: f32,
+        p_b_depth: f32,
+        p_c_row: f32,
+        p_c_col: f32,
+        p_c_depth: f32,
+        uv_idx: usize,
+        vertex_idx: usize,
+        triangle_idx: usize,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
         }
-
-        let pa = PointInfo {
-            row: p_a_row,
-            col: p_a_col,
-            depth: p_a_depth,
-        };
 
         let pr = PrimitivReferences {
             geometry_id: geometry_id,
@@ -260,22 +254,15 @@ impl<DEPTHACC: Number> PrimitiveBuffer<DEPTHACC> {
             node_id: node_id,
             primitive_id: self.current_size,
         };
-        let apoint = PrimitiveElements::Triangle {
-            fds: pr,
-            pa: pa,
-            pb: PointInfo {
-                row: p_b_row,
-                col: p_b_col,
-                depth: p_b_depth,
-            },
-            pc: PointInfo {
-                row: p_c_row,
-                col: p_c_col,
-                depth: p_c_depth,
-            },
-            uv: uv,
+        self.content[self.current_size] = PrimitiveElements::Triangle {
+            primitive_reference: pr,
+            pa: PointInfo::new(p_a_row, p_a_col, p_a_depth),
+            pb: PointInfo::new(p_b_row, p_b_col, p_b_depth),
+            pc: PointInfo::new(p_c_row, p_c_col, p_c_depth),
+            uv: uv_idx,
+            vertex_idx: vertex_idx,
+            triangle_id: triangle_idx,
         };
-        self.content[self.current_size] = apoint;
 
         self.current_size += 1;
 

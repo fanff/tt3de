@@ -1,4 +1,4 @@
-use nalgebra_glm::{Number, Real, Vec2, Vec3, Vec4};
+use nalgebra_glm::{vec4, Number, Real, Vec2, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -47,20 +47,23 @@ fn poly_as_primitive<
 >(
     polygon: &Polygon,
     geometry_id: usize,
-    vertex_buffer: &VertexBuffer<C>,
+    vertex_buffer: &mut VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
-    primitivbuffer: &mut PrimitiveBuffer<f32>,
+    primitivbuffer: &mut PrimitiveBuffer,
 ) {
-    let va = vertex_buffer.get_clip_space_vertex(polygon.p_start);
+    let va = &vertex_buffer.get_clip_space_vertex(polygon.p_start);
+
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + triangle_id;
         let vb = vertex_buffer.get_clip_space_vertex(p_start + 1);
         let vc = vertex_buffer.get_clip_space_vertex(p_start + 2);
+
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the first triangle
-        let mut output_buffer: TriangleBuffer = TriangleBuffer::new();
+        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
         clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
@@ -69,41 +72,46 @@ fn poly_as_primitive<
             let (vadiv, vbdiv, vcdiv) = pdiv;
 
             // convert from ndc to screen space
-            let point_a = drawbuffer.ndc_to_screen_row_col(&vadiv.xy());
-            let point_b = drawbuffer.ndc_to_screen_row_col(&vbdiv.xy());
-            let point_c = drawbuffer.ndc_to_screen_row_col(&vcdiv.xy());
+            let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy()).yx();
+            let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy()).yx();
+            let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy()).yx();
 
+            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
             primitivbuffer.add_triangle(
                 polygon.geom_ref.node_id,
                 geometry_id,
                 polygon.geom_ref.material_id,
-                point_a.0,
-                point_a.1,
+                point_a.x,
+                point_a.y,
                 vadiv.z,
-                point_b.0,
-                point_b.1,
+                point_b.x,
+                point_b.y,
                 vbdiv.z,
-                point_c.0,
-                point_c.1,
+                point_c.x,
+                point_c.y,
                 vcdiv.z,
-                polygon.uv_start,
+                output_uv_index,
+                polygon.p_start,
+                triangle_id,
             );
         }
     }
 }
 pub fn build_primitives<
-    const C: usize,
+    const MAX_VERTEX_CONTENT: usize,
     const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
     DEPTHACC: Number,
 >(
     geombuffer: &GeometryBuffer,
-    vertex_buffer: &mut VertexBuffer<C>,
+    vertex_buffer: &mut VertexBuffer<MAX_VERTEX_CONTENT>,
     transform_pack: &TransformPack,
-    uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    uv_array_input: &UVBuffer<MAX_UV_CONTENT, f32>,
+    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
-    primitivbuffer: &mut PrimitiveBuffer<f32>,
+    primitivbuffer: &mut PrimitiveBuffer,
 ) {
+    uv_array_output.clear();
     for geometry_id in 1..geombuffer.current_size {
         let geom_element = geombuffer.content.get(geometry_id).unwrap();
         match geom_element {
@@ -149,28 +157,13 @@ pub fn build_primitives<
                     &l,
                     geometry_id,
                     vertex_buffer,
-                    uv_array,
+                    uv_array_input,
                     drawbuffer,
                     primitivbuffer,
                 )
             }
-            crate::geombuffer::GeomElement::Polygon(p) => {
+            crate::geombuffer::GeomElement::Polygon2D(p) => {
                 todo!();
-                // apply mv operation
-                vertex_buffer.apply_mv(
-                    transform_pack.get_node_transform(p.geom_ref.node_id),
-                    &transform_pack.view_matrix_2d,
-                    p.p_start,
-                    p.triangle_count + 2 + p.p_start,
-                );
-                poly_as_primitive(
-                    &p,
-                    geometry_id,
-                    vertex_buffer,
-                    uv_array,
-                    drawbuffer,
-                    primitivbuffer,
-                )
             }
             crate::geombuffer::GeomElement::Polygon3D(polygon) => {
                 // apply mv operation
@@ -185,7 +178,8 @@ pub fn build_primitives<
                     &polygon,
                     geometry_id,
                     vertex_buffer,
-                    uv_array,
+                    uv_array_input,
+                    uv_array_output,
                     drawbuffer,
                     primitivbuffer,
                 )
@@ -210,6 +204,7 @@ pub fn build_primitives_py(
         &mut vbpy.buffer,
         &trbuffer_py.data,
         &vbpy.uv_array,
+        &mut vbpy.uv_post_clipping,
         &dbpy.db,
         prim_content,
     );
@@ -229,7 +224,7 @@ pub fn apply_material_py(
         draw_buffer_content,
         &material_buffer.content,
         &texturebuffer.data,
-        &vertex_buffer.uv_array,
+        &vertex_buffer.uv_post_clipping,
         &primitivbuffer.content,
     );
 }

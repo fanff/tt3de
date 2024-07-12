@@ -91,7 +91,7 @@ class GLMTester(TT3DView):
 
 
         tri = Prefab3D.unitary_triangle()
-        tri.material_id = 4
+        tri.material_id = 7
         tri.local_transform = glm.translate(
             glm.vec3(0,3,0)
         )
@@ -105,13 +105,7 @@ class GLMTester(TT3DView):
         self.reftime = time()
 
     def update_step(self, timediff):
-        self.camera.recalc_fov_h(self.size.width, self.size.height)
-        self.rc.update_wh(self.size.width, self.size.height)
-        ts = self.reftime - time()
-
-        tsfactor = 2
-
-        rot = ts * tsfactor
+        pass
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")

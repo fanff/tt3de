@@ -1,3 +1,5 @@
+use nalgebra_glm::Vec4;
+
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
@@ -13,13 +15,6 @@ pub fn raster_triangl<const DEPTHCOUNT: usize>(
     pb: &PointInfo<f32>,
     pc: &PointInfo<f32>,
 ) {
-    if (pa.row == pb.row) && (pa.row == pc.row) {
-        return;
-    }
-    if (pa.col == pb.col) && (pa.col == pc.col) {
-        return;
-    }
-
     let min_col = min_3_int(pa.col, pb.col, pc.col); // min3int(axi, bxi, cxi);
     let mut max_col = max_3_int(pa.col, pb.col, pc.col); // min3int(ayi, byi, cyi);
 
@@ -37,12 +32,20 @@ pub fn raster_triangl<const DEPTHCOUNT: usize>(
     for curr_row in min_row..max_row {
         for curr_col in min_col..max_col {
             let (w0, w1, w2) = barycentric_coord(pa, pb, pc, curr_row, curr_col);
+            let depth = pa.p.z * w0 + pb.p.z * w1 + pc.p.z * w2;
+
+            //vec3_bary_coord(
+            //    &original_pa.xyz(),
+            //    &original_pb.xyz(),
+            //    &original_pc.xyz(),
+            //    curr_row,
+            //    curr_col,
+            //    depth,
+            //);
 
             if w0 >= 0.0 && w1 >= 0.0 && w2 >= 0.0 {
                 let (w0_alt, w1_alt, w2_alt) =
                     barycentric_coord_shift(pa, pb, pc, 0.49, curr_row, curr_col);
-
-                let depth = pa.depth * w0 + pb.depth * w1 + pc.depth * w2;
 
                 set_pixel_double_weights(
                     prim_ref,
@@ -57,6 +60,42 @@ pub fn raster_triangl<const DEPTHCOUNT: usize>(
                     w1_alt,
                     w2_alt,
                 )
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_raster_triangle {
+    use crate::{
+        drawbuffer::drawbuffer::DrawBuffer,
+        raster::primitivbuffer::{PointInfo, PrimitivReferences},
+    };
+
+    use super::raster_triangl;
+
+    // test raster all absolute zero side triangles
+    #[test]
+    fn zero_size_triange() {
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let prim_ref = PrimitivReferences {
+            geometry_id: 1,
+            material_id: 2,
+            node_id: 3,
+            primitive_id: 0,
+        };
+
+        for row in 0..8 {
+            for col in 0..10 {
+                let pa = PointInfo::new(row as f32, col as f32, 1.0);
+                let pb = PointInfo::new(row as f32, col as f32, 3.0);
+                let pc = PointInfo::new(row as f32, col as f32, 3.0);
+                raster_triangl(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
+
+                // get cell bellow the triangle
+                let content_at_location_layer0 =
+                    drawing_buffer.get_pix_buffer_content_at_row_col(row, col, 0);
+                let cell = drawing_buffer.get_depth_buffer_cell(row, col);
             }
         }
     }

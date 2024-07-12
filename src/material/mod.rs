@@ -1,5 +1,5 @@
 use crate::{
-    drawbuffer::drawbuffer::{CanvasCell, PixInfo},
+    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     utils::convert_tuple_rgba,
     vertexbuffer::{UVBuffer, VertexBuffer},
@@ -67,6 +67,30 @@ impl MaterialBuffer {
         self.current_size += 1;
         retur
     }
+
+    fn add_debug_weight(&mut self, glyph_idx: u8) -> usize {
+        let retur = self.current_size;
+        self.mats[self.current_size] = Material::DebugWeight(DebugWeight::new(glyph_idx));
+
+        self.current_size += 1;
+        retur
+    }
+
+    fn add_debug_depth(&mut self, glyph_idx: u8) -> usize {
+        let retur = self.current_size;
+        self.mats[self.current_size] = Material::DebugDepth(DebugDepth::new(glyph_idx));
+
+        self.current_size += 1;
+        retur
+    }
+
+    fn add_debug_uv(&mut self, glyph_idx: u8) -> usize {
+        let retur = self.current_size;
+        self.mats[self.current_size] = Material::DebugUV(DebugUV::new(glyph_idx));
+
+        self.current_size += 1;
+        retur
+    }
 }
 
 pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
@@ -83,68 +107,26 @@ pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
     }
 }
 
-pub fn apply_material<const SIZE: usize, const UVCOUNT: usize>(
+pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER: usize>(
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<SIZE>,
     uv_buffer: &UVBuffer<UVCOUNT, f32>,
-    primitive_buffer: &PrimitiveBuffer<f32>,
+    primitive_buffer: &PrimitiveBuffer,
+    depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
     pixinfo: &PixInfo<f32>,
     cell: &mut CanvasCell,
 ) {
     let mat = &material_buffer.mats[pixinfo.material_id];
 
-    let prim = &primitive_buffer.content[pixinfo.primitive_id];
-
-    match mat {
-        Material::DoNothing {} => {}
-        Material::Texture {
-            albedo_texture_idx,
-            glyph_idx,
-        } => {
-            cell.glyph = *glyph_idx;
-
-            let (uva, uvb, uvc) = uv_buffer.get_uv(prim.get_uv_idx());
-            let (ufront, vfront) =
-                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
-
-            let front_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, ufront, vfront);
-            cell.front_color.copy_from(&front_rgba);
-
-            let (uback, vback) =
-                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 1);
-
-            let back_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, uback, vback);
-            cell.front_color.copy_from(&back_rgba);
-        }
-        Material::StaticColor {
-            front_color,
-            back_color,
-            glyph_idx,
-        } => {
-            cell.glyph = *glyph_idx;
-            cell.front_color.copy_from(front_color);
-            cell.back_color.copy_from(back_color);
-        }
-        Material::Noise { noise, glyph_idx } => {
-            let (uva, uvb, uvc) = uv_buffer.get_uv(prim.get_uv_idx());
-            let (ufront, vfront) =
-                calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
-
-            let valuefront = apply_noise(noise, pixinfo, ufront, vfront);
-
-            cell.glyph = *glyph_idx;
-
-            let front_rgba = RGBA {
-                r: (valuefront * 255.0) as u8,
-                g: (valuefront * 255.0) as u8,
-                b: (valuefront * 255.0) as u8,
-                a: 255,
-            };
-            cell.front_color.copy_from(&front_rgba);
-            cell.back_color.copy_from(&front_rgba);
-        }
-        Material::DebugWeight(m) => m.render_mat(cell, pixinfo, prim, texture_buffer, uv_buffer),
-    }
+    let primitive_element = &primitive_buffer.content[pixinfo.primitive_id];
+    mat.render_mat(
+        cell,
+        depth_cell,
+        pixinfo,
+        primitive_element,
+        texture_buffer,
+        uv_buffer,
+    );
 }
 
 pub fn apply_noise<T: Number>(noise: &NoiseMaterial, pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
@@ -175,7 +157,7 @@ impl MaterialBufferPy {
         self.content.current_size
     }
 
-    fn add_textured(&mut self, py: Python, albedo_texture_idx: usize, glyph_idx: u8) -> usize {
+    fn add_textured(&mut self, _py: Python, albedo_texture_idx: usize, glyph_idx: u8) -> usize {
         self.content.add_textured(albedo_texture_idx, glyph_idx)
     }
 
@@ -189,5 +171,17 @@ impl MaterialBufferPy {
         let fr = convert_tuple_rgba(front_rgba).unwrap();
         let bg = convert_tuple_rgba(back_rgba).unwrap();
         self.content.add_static(fr, bg, glyph_idx)
+    }
+
+    fn add_debug_weight(&mut self, _py: Python, glyph_idx: u8) -> usize {
+        self.content.add_debug_weight(glyph_idx)
+    }
+
+    fn add_debug_depth(&mut self, _py: Python, glyph_idx: u8) -> usize {
+        self.content.add_debug_depth(glyph_idx)
+    }
+
+    fn add_debug_uv(&mut self, _py: Python, glyph_idx: u8) -> usize {
+        self.content.add_debug_uv(glyph_idx)
     }
 }

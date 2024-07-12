@@ -1,10 +1,11 @@
-use nalgebra_glm::{normalize, Number, Real, TVec3};
+use nalgebra_glm::{normalize, Number, Real, TVec3, Vec3};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
     drawbuffer::{drawbuffer::DrawBuffer, AbigDrawing},
     primitivbuffer::*,
+    vertexbuffer::{self, VertexBuffer, VertexBufferPy},
 };
 
 pub mod raster_line_row;
@@ -142,12 +143,12 @@ fn barycentric_coord(
     row: usize,
     col: usize,
 ) -> (f32, f32, f32) {
-    let x1 = pa.col as f32;
-    let y1 = pa.row as f32;
-    let x2 = pb.col as f32;
-    let y2 = pb.row as f32;
-    let x3 = pc.col as f32;
-    let y3 = pc.row as f32;
+    let x1 = pa.p.y;
+    let y1 = pa.p.x;
+    let x2 = pb.p.y;
+    let y2 = pb.p.x;
+    let x3 = pc.p.y;
+    let y3 = pc.p.x;
     let px = col as f32;
     let py = row as f32;
 
@@ -170,12 +171,12 @@ fn barycentric_coord_shift(
     row: usize,
     col: usize,
 ) -> (f32, f32, f32) {
-    let x1 = pa.col as f32;
-    let y1 = pa.row as f32;
-    let x2 = pb.col as f32;
-    let y2 = pb.row as f32;
-    let x3 = pc.col as f32;
-    let y3 = pc.row as f32;
+    let x1 = pa.p.y;
+    let y1 = pa.p.x;
+    let x2 = pb.p.y;
+    let y2 = pb.p.x;
+    let x3 = pc.p.y;
+    let y3 = pc.p.x;
     let px = col as f32;
     let py = (row as f32) + lower_shift;
 
@@ -185,12 +186,6 @@ fn barycentric_coord_shift(
     let w3 = 1.0 - w1 - w2;
 
     (w1, w2, w3)
-}
-fn orient2di<T: Number>(ax: T, ay: T, bx: T, by: T, cx: T, cy: T) -> T {
-    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-}
-fn orient2dr<T: Real>(ax: T, ay: T, bx: T, by: T, cx: T, cy: T) -> T {
-    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
 
 fn raster_point<const DEPTHCOUNT: usize>(
@@ -217,8 +212,9 @@ fn raster_point<const DEPTHCOUNT: usize>(
         0.0,
     )
 }
-pub fn raster_element<const DEPTHCOUNT: usize>(
+pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
     element: &PrimitiveElements<f32>,
+    vertexbuffer: &VertexBuffer<VertexCount>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
@@ -235,33 +231,44 @@ pub fn raster_element<const DEPTHCOUNT: usize>(
             raster_point(drawing_buffer, fds, *row, *col, *depth);
         }
         PrimitiveElements::Triangle {
-            fds,
+            primitive_reference: fds,
             pa,
             pb,
             pc,
             uv: _,
+            vertex_idx,
+            triangle_id,
         } => {
+            let originalpa = vertexbuffer.get_clip_space_vertex(*vertex_idx);
+            let originalpb = vertexbuffer.get_clip_space_vertex(*vertex_idx + triangle_id);
+            let originalpc = vertexbuffer.get_clip_space_vertex(*vertex_idx + triangle_id + 1);
             raster_triangl(drawing_buffer, fds, pa, pb, pc);
         }
         PrimitiveElements::Static { fds, index } => todo!(),
     }
 }
 
-pub fn raster_all<const DEPTHCOUNT: usize>(
-    primitivbuffer: &PrimitiveBuffer<f32>,
+pub fn raster_all<const DEPTHCOUNT: usize, const VertexCount: usize>(
+    primitivbuffer: &PrimitiveBuffer,
+    vertexbuffer: &VertexBuffer<VertexCount>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {
         let element = primitivbuffer.content[primitiv_idx];
 
-        raster_element(&element, drawing_buffer)
+        raster_element(&element, vertexbuffer, drawing_buffer)
     }
 }
 
 #[pyfunction]
-pub fn raster_all_py(py: Python, pb: &PrimitiveBufferPy, mut db: PyRefMut<'_, AbigDrawing>) {
+pub fn raster_all_py(
+    py: Python,
+    pb: &PrimitiveBufferPy,
+    vbuffpy: &VertexBufferPy,
+    mut db: PyRefMut<'_, AbigDrawing>,
+) {
     let primitivbuffer = &pb.content;
 
     let drawing_buffer = &mut db.db;
-    raster_all(primitivbuffer, drawing_buffer);
+    raster_all(primitivbuffer, &vbuffpy.buffer, drawing_buffer);
 }

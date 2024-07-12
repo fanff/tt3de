@@ -79,6 +79,9 @@ class Test_Rust_RasterLine(unittest.TestCase):
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
         raster_all_py(primitive_buffer, drawing_buffer)
+
+
+
     def test_raster_ManyLines(self):
         for pa_row in range(0, 10):
             for pa_col in range(0, 10):
@@ -357,4 +360,69 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
             elem = drawing_buffer.get_depth_buffer_cell(2, i, 0)
             self.assertEqual(elem["node_id"], 0)
             self.assertFalse(is_in_triangle(elem))
+    def test_raster_ManyTriangles(self):
+        for pa_row in range(0, 8):
+            for pa_col in range(0, 10):
+                for pb_row in range(0, 8):
+                    for pb_col in range(0, 10):
+                        for pc_row in range(0, 8):
+                            for pc_col in range(0, 10):
+                                self._test_raster_triangle(pa_row, pa_col, pb_row, pb_col, pc_row, pc_col)
+    def _test_raster_triangle(self,pa_row, pa_col, pb_row, pb_col, pc_row, pc_col):
+        drawing_buffer = AbigDrawing(8, 10)
+        drawing_buffer.hard_clear(10)
+
+        primitive_buffer = PrimitiveBufferPy(10)
+
+        node_id = 1
+        geom_id = 2
+        material_id = 3
         
+        
+        p_a_depth = 3.0
+        p_b_depth = 1.0
+        p_c_depth = 2.0
+
+
+
+        primitive_buffer.add_triangle(
+            node_id, geom_id, material_id,
+            pa_row,pa_col,p_a_depth,
+            pb_row,pb_col,p_b_depth,
+            pc_row,pc_col,p_c_depth,
+            uv=0
+        )
+
+
+        self.assertEqual(primitive_buffer.primitive_count(), 1)
+        raster_all_py(primitive_buffer, drawing_buffer)
+
+
+        # estimate the surface of the triangle 
+        surf = 0.5*abs(pa_row*(pb_col-pc_col)+pb_row*(pc_col-pa_col)+pc_row*(pa_col-pb_col))
+
+
+        # iterate over the whole canvas and count pixel that are blit by the line 
+        litpixcount = 0
+        for row in range(8):
+            for col in range(10):
+                elem = drawing_buffer.get_depth_buffer_cell(row, col,0)
+
+                if elem["node_id"]!=0:
+                    litpixcount+=1
+
+
+                    # check weights are always inside the triangle
+
+                    for weight_index in range(3):
+                        self.assertGreaterEqual(elem["w"][weight_index],0.0)
+                        self.assertLessEqual(elem["w"][weight_index],1.0)
+        
+        
+
+        if surf>2.0:
+            if surf<litpixcount:
+                pass
+            else:
+                pass
+

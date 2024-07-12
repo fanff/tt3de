@@ -1,8 +1,12 @@
 use std::borrow::BorrowMut;
 use std::cmp::min;
 
+use nalgebra_glm::clamp;
+use nalgebra_glm::clamp_vec;
 use nalgebra_glm::floor;
 use nalgebra_glm::max;
+use nalgebra_glm::round;
+use nalgebra_glm::vec2;
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec3;
@@ -30,7 +34,7 @@ use crate::vertexbuffer::UVBuffer;
 /// - `primitive_id`: An identifier for the primitive (e.g., a geometric primitive like a triangle or sphere).
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
 /// - `geometry_id`: An identifier for the geometry, which could refer to a specific geometric object or model.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct PixInfo<WeightAccuracy: nalgebra_glm::Number> {
     pub w: TVec3<WeightAccuracy>,
     pub w_1: TVec3<WeightAccuracy>,
@@ -64,6 +68,11 @@ impl Color {
     pub fn new_opaque_from_vec3(color_vec: &Vec3) -> Self {
         let w = max(&floor(&(color_vec * 256.0)), 0.0);
         Color::new(w.x as u8, w.y as u8, w.z as u8, 255)
+    }
+
+    pub fn new_opaque_from_vec2(color_vec: &Vec2) -> Self {
+        let w = max(&floor(&(color_vec * 256.0)), 0.0);
+        Color::new(w.x as u8, w.y as u8, 0, 255)
     }
 
     pub fn copy_from(&mut self, rgba: &RGBA) {
@@ -111,17 +120,19 @@ pub struct CanvasCell {
     pub glyph: u8,
 }
 
-impl<DepthAccuracy: Number, const LayerCount: usize> DepthBufferCell<DepthAccuracy, LayerCount> {
+impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
+    DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT>
+{
     fn new() -> Self {
         DepthBufferCell {
-            pixinfo: [0; LayerCount],
-            depth: [DepthAccuracy::zero(); LayerCount],
+            pixinfo: [0; DEPTHLAYERCOUNT],
+            depth: [DepthAccuracy::zero(); DEPTHLAYERCOUNT],
         }
     }
     fn new_set(value: DepthAccuracy) -> Self {
         DepthBufferCell {
-            pixinfo: [0; LayerCount],
-            depth: [value; LayerCount],
+            pixinfo: [0; DEPTHLAYERCOUNT],
+            depth: [value; DEPTHLAYERCOUNT],
         }
     }
     fn clear(&mut self, value: DepthAccuracy, idx: usize) {
@@ -137,7 +148,7 @@ impl<DepthAccuracy: Number, const LayerCount: usize> DepthBufferCell<DepthAccura
     }
 
     fn set_init_pix_ref(&mut self, idx: usize) {
-        for layer in 0..LayerCount {
+        for layer in 0..DEPTHLAYERCOUNT {
             let lol = &mut (self.pixinfo[layer]);
             *(lol) = idx + layer
         }
@@ -266,6 +277,27 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             min(sumoftwovec.x.round() as usize, self.col_count - 1),
         )
     }
+
+    /// Converts a normalized device coordinate (NDC) to a screen coordinate.
+    /// This does NOT apply clamping to the screen boundaries.
+    pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
+        let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
+        // vectorial summ and multiplication; component wise
+        sumoftwovec.component_mul_assign(&self.half_size);
+        sumoftwovec
+    }
+    /// Converts a normalized device coordinate (NDC) to a screen coordinate.
+    /// This does apply clamping to the screen boundaries.
+    pub fn ndc_to_screen_floating_with_clamp(&self, v: &Vec2) -> Vec2 {
+        let as_screen = self.ndc_to_screen_floating(v);
+        let clamped = clamp_vec(
+            &round(&as_screen),
+            &Vec2::zeros(),
+            &vec2(self.col_count as f32 - 1.0, self.row_count as f32 - 1.0),
+        );
+        clamped.yx()
+    }
+
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
         let d = x.depth[l];
@@ -327,10 +359,10 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         stuff.glyph = glyph;
     }
 
-    // The set_depth_content function is responsible for setting a new depth value into a
-    // layered depth buffer while ensuring that the existing values are correctly shifted to
-    // maintain the order.
-    // This function updates both the depth buffer and the associated pixel information.
+    /// The set_depth_content function is responsible for setting a new depth value into a
+    /// layered depth buffer while ensuring that the existing values are correctly shifted to
+    /// maintain the order.
+    /// This function updates both the depth buffer and the associated pixel information.
     pub fn set_depth_content(
         &mut self,
         row: usize,
@@ -417,7 +449,7 @@ pub fn apply_material_on<
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
     uv_buffer: &UVBuffer<UVCOUNT, f32>,
-    primitive_buffer: &PrimitiveBuffer<f32>,
+    primitive_buffer: &PrimitiveBuffer,
 ) {
     for (depth_cell, canvascell) in draw_buffer
         .depthbuffer
@@ -432,6 +464,7 @@ pub fn apply_material_on<
                 texture_buffer,
                 &uv_buffer,
                 &primitive_buffer,
+                depth_cell,
                 &pix_info,
                 canvascell,
             );

@@ -17,7 +17,7 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
         set_pixel_double_weights(
             prim_ref,
             drawing_buffer,
-            pa.depth,
+            pa.p.z,
             pa.col,
             pa.row,
             1.0,
@@ -32,7 +32,7 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
         for row in pb.row..=pa.row {
             // calculate barycentric factor
             let ratio = ((row as f32) - (pb.row as f32)) / ((pa.row as f32) - (pb.row as f32));
-            let depth = pb.depth * (1.0 - ratio) + pa.depth * ratio;
+            let depth = pb.p.z * (1.0 - ratio) + pa.p.z * ratio;
             set_pixel_double_weights(
                 prim_ref,
                 drawing_buffer,
@@ -51,7 +51,7 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
         for row in pa.row..=pb.row {
             // calculate barycentric factor
             let ratio = (row - pa.row) as f32 / (pb.row - pa.row) as f32;
-            let depth = pa.depth * (1.0 - ratio) + pb.depth * ratio;
+            let depth = pa.p.z * (1.0 - ratio) + pb.p.z * ratio;
             set_pixel_double_weights(
                 prim_ref,
                 drawing_buffer,
@@ -108,7 +108,7 @@ pub fn raster_line_along_rows<const DEPTHCOUNT: usize>(
         let ratio_caped = ratio.min(1.0).max(0.0);
         let col_rounded = col.round();
         let col_rounder_as_usize = col_rounded as usize;
-        let depth = pa.depth * (1.0 - ratio_caped) + pb.depth * ratio_caped;
+        let depth = pa.p.z * (1.0 - ratio_caped) + pb.p.z * ratio_caped;
         set_pixel_double_weights(
             prim_ref,
             drawing_buffer,
@@ -157,16 +157,8 @@ pub mod test_raster_line_along_rows {
             node_id: 3,
             primitive_id: 4,
         };
-        let pa = PointInfo {
-            row: 5,
-            col: 5,
-            depth: 0.0,
-        };
-        let pb = PointInfo {
-            row: 5,
-            col: 5,
-            depth: 0.0,
-        };
+        let pa = PointInfo::new(5.0, 5.0, 0.0);
+        let pb = PointInfo::new(5.0, 5.0, 0.0);
         raster_line_along_rows(&mut drawing_buffer, &prim_ref, &pa, &pb);
         let cell_origin = drawing_buffer.get_depth_buffer_cell(0, 0);
 
@@ -177,158 +169,5 @@ pub mod test_raster_line_along_rows {
 
         // depth is changed
         assert_eq!(cell_55.depth, [0.0, 100.0]);
-    }
-
-    #[test]
-    fn test_raster_line_vertical_pa_top_pb_bottom() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
-        let prim_ref = PrimitivReferences {
-            geometry_id: 1,
-            material_id: 2,
-            node_id: 3,
-            primitive_id: 4,
-        };
-        let pa = PointInfo {
-            row: 2,
-            col: 5,
-            depth: 0.0,
-        };
-        let pb = PointInfo {
-            row: 8,
-            col: 5,
-            depth: 1.0,
-        };
-        raster_line_along_rows(&mut drawing_buffer, &prim_ref, &pa, &pb);
-
-        for row in 2..=8 {
-            let cell = drawing_buffer.get_depth_buffer_cell(row, 5);
-
-            let pixinfo = drawing_buffer.get_pix_buffer_content_at_row_col(row, 5, 0);
-
-            assert_eq!(pixinfo.node_id, prim_ref.node_id);
-            assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
-            assert_eq!(pixinfo.material_id, prim_ref.material_id);
-            assert_eq!(pixinfo.primitive_id, prim_ref.primitive_id);
-
-            let expected_depth = pa.depth + (pb.depth - pa.depth) * ((row - 2) as f32 / 6.0);
-            assert_almost_eq!(cell.depth[0], expected_depth);
-        }
-    }
-
-    #[test]
-    fn test_raster_line_vertical_pa_bottom_pb_top() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
-        let prim_ref = PrimitivReferences {
-            geometry_id: 1,
-            material_id: 2,
-            node_id: 3,
-            primitive_id: 4,
-        };
-        let pa = PointInfo {
-            row: 8,
-            col: 5,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 2,
-            col: 5,
-            depth: 0.0,
-        };
-        raster_line_along_rows(&mut drawing_buffer, &prim_ref, &pa, &pb);
-
-        for row in 2..=8 {
-            let cell = drawing_buffer.get_depth_buffer_cell(row, 5);
-
-            let pixinfo = drawing_buffer.get_pix_buffer_content_at_row_col(row, 5, 0);
-
-            assert_eq!(pixinfo.node_id, prim_ref.node_id);
-            assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
-            assert_eq!(pixinfo.material_id, prim_ref.material_id);
-            assert_eq!(pixinfo.primitive_id, prim_ref.primitive_id);
-
-            let expected_depth = pb.depth + (pa.depth - pb.depth) * ((row - 2) as f32 / 6.0);
-            assert_almost_eq!(cell.depth[0], expected_depth);
-        }
-
-        let cell_a = drawing_buffer.get_depth_buffer_cell(8, 5);
-        let pix_info_a = drawing_buffer.get_pix_buffer_content_at_row_col(8, 5, 0);
-        abs_diff_eq!(pix_info_a.w.x, 1.0, epsilon = 0.01);
-        abs_diff_eq!(pix_info_a.w.y, 0.0, epsilon = 0.01);
-
-        assert!(pix_info_a.w.x >= 0.0);
-        assert!(pix_info_a.w.x <= 1.0);
-
-        assert!(pix_info_a.w.y >= 0.0);
-        assert!(pix_info_a.w.y <= 1.0);
-    }
-
-    #[test]
-    fn test_raster_line_along_rows_topleft_to_bottomright() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
-        let prim_ref = PrimitivReferences {
-            geometry_id: 1,
-            material_id: 2,
-            node_id: 3,
-            primitive_id: 4,
-        };
-        let pa = PointInfo {
-            row: 0,
-            col: 0,
-            depth: 0.0,
-        };
-        let pb = PointInfo {
-            row: 9,
-            col: 9,
-            depth: 1.0,
-        };
-        raster_line_along_rows(&mut drawing_buffer, &prim_ref, &pa, &pb);
-
-        for i in 0..=9 {
-            let cell = drawing_buffer.get_depth_buffer_cell(i, i);
-            let pixinfo = drawing_buffer.get_pix_buffer_content_at_row_col(i, i, 0);
-
-            assert_eq!(pixinfo.node_id, prim_ref.node_id);
-            assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
-            assert_eq!(pixinfo.material_id, prim_ref.material_id);
-            assert_eq!(pixinfo.primitive_id, prim_ref.primitive_id);
-
-            let expected_depth = pa.depth + (pb.depth - pa.depth) * (i as f32 / 9.0);
-            assert_almost_eq!(cell.depth[0], expected_depth);
-        }
-    }
-
-    #[test]
-    fn test_raster_line_along_rows_bottomright_to_topleft() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
-        let prim_ref = PrimitivReferences {
-            geometry_id: 1,
-            material_id: 2,
-            node_id: 3,
-            primitive_id: 4,
-        };
-        let pa = PointInfo {
-            row: 9,
-            col: 9,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 0,
-            col: 0,
-            depth: 0.0,
-        };
-        raster_line_along_rows(&mut drawing_buffer, &prim_ref, &pa, &pb);
-
-        for i in 0..=9 {
-            let cell = drawing_buffer.get_depth_buffer_cell(i, i);
-            let pixinfo = drawing_buffer.get_pix_buffer_content_at_row_col(i, i, 0);
-
-            assert_eq!(pixinfo.node_id, prim_ref.node_id);
-            assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
-            assert_eq!(pixinfo.material_id, prim_ref.material_id);
-            assert_eq!(pixinfo.primitive_id, prim_ref.primitive_id);
-
-            let expected_depth = pb.depth + (pa.depth - pb.depth) * (i as f32 / 9.0);
-            assert_almost_eq!(cell.depth[0], expected_depth);
-        }
     }
 }

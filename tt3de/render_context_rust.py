@@ -69,7 +69,7 @@ class RustRenderContext():
                             self.transform_buffer,
                             self.drawing_buffer,
                             self.primitive_buffer)
-        raster_all_py(self.primitive_buffer, self.drawing_buffer)
+        raster_all_py(self.primitive_buffer, self.vertex_buffer,self.drawing_buffer)
 
         apply_material_py(self.material_buffer,
                           self.texture_buffer,

@@ -32,7 +32,7 @@ pub struct Polygon {
 pub enum GeomElement {
     Point3D(Point),
     Line3D(Line),
-    Polygon(Polygon),
+    Polygon2D(Polygon),
     Polygon3D(Polygon),
 }
 
@@ -104,7 +104,7 @@ impl GeometryBuffer {
             return self.current_size;
         }
 
-        let elem = GeomElement::Polygon(Polygon {
+        let elem = GeomElement::Polygon2D(Polygon {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
@@ -169,8 +169,10 @@ impl GeometryBufferPy {
             max_size
         ];
 
-        let geom_elements: Vec<GeomElement> =
-            polygon_init.into_iter().map(GeomElement::Polygon).collect();
+        let geom_elements: Vec<GeomElement> = polygon_init
+            .into_iter()
+            .map(GeomElement::Polygon2D)
+            .collect();
         // Step 3: Box the Vec<GeomElement>
         let content = geom_elements.into_boxed_slice();
         GeometryBufferPy {
@@ -247,7 +249,7 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
                 .unwrap();
         }
         GeomElement::Line3D(l) => todo!(),
-        GeomElement::Polygon(p) => {
+        GeomElement::Polygon2D(p) => {
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();

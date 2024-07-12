@@ -68,7 +68,7 @@ class TT3DView(Container):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
         self.camera = GLMCamera(glm.vec3(0, 0, -5), 90, 90)
-        self.rc = RustRenderContext(self.size.width, self.size.height)
+        self.rc = RustRenderContext(90, 90)
         self.initialize()
         ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
         self.last_frame_time = time()-1.0
@@ -88,7 +88,7 @@ class TT3DView(Container):
                 p = math.radians(
                     (((event.y - offset.y) / self.size.height) - 0.5) * 160
                 )
-                self.camera.set_yaw_pitch(self.camera.yaw, p)
+                self.camera.set_yaw_pitch(self.camera.yaw,-  p)
 
         elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True
@@ -108,15 +108,23 @@ class TT3DView(Container):
                 case "s":
                     self.camera.move_forward(-0.3)
                 case "q":
-                    self.camera.move_side(0.3)
-                case "d":
                     self.camera.move_side(-0.3)
+                case "d":
+                    self.camera.move_side(0.3)
                 case "p":
                     self.update_timer.pause()
                 case "P":
                     self.update_timer.resume()
                 case "escape":
                     self.mouse_fps_camera_mode = False
+        elif isinstance(event, events.Resize):
+            event.virtual_size
+            event.size
+
+            w = max(self.size.width, 3)
+            h = max(self.size.height, 3)
+            self.rc.update_wh(w,h)
+            self.camera.recalc_fov_h(w,h)
         else:
             await super().on_event(event)
 

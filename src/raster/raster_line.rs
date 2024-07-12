@@ -37,16 +37,9 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 0,
-            col: 1,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 8,
-            col: 9,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(0.0, 1.0, 1.0);
+        let pb = PointInfo::new(8.0, 9.0, 3.0);
+
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // Assert that raster_line_along_columns is called
@@ -61,16 +54,8 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 0,
-            col: 0,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 0,
-            col: 1,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(0.0, 0.0, 1.0);
+        let pb = PointInfo::new(0.0, 1.0, 3.0);
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // assert the line is rastered
@@ -97,16 +82,8 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 0,
-            col: 0,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 1,
-            col: 0,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(0.0, 0.0, 1.0);
+        let pb = PointInfo::new(1.0, 0.0, 3.0);
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // assert the line is rastered
@@ -134,16 +111,8 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 0,
-            col: 1,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 5,
-            col: 7,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(0.0, 1.0, 1.0);
+        let pb = PointInfo::new(5.0, 7.0, 3.0);
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // assert the line is rastered
@@ -182,16 +151,8 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 1,
-            col: 0,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 7,
-            col: 5,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(1.0, 0.0, 1.0);
+        let pb = PointInfo::new(7.0, 5.0, 3.0);
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // assert the line is rastered
@@ -204,10 +165,10 @@ mod tests {
         abs_diff_eq!(pixinfo_a.w.x, 1.0, epsilon = 0.01);
         abs_diff_eq!(pixinfo_a.w.y, 0.0, epsilon = 0.01);
 
-        let cell_a = drawing_buffer.get_depth_buffer_cell(1, 0,);
+        let cell_a = drawing_buffer.get_depth_buffer_cell(1, 0);
         assert_eq!(cell_a.depth[0], 1.0);
 
-        let pixinfo_b = drawing_buffer.get_pix_buffer_content_at_row_col(7,5 ,0);
+        let pixinfo_b = drawing_buffer.get_pix_buffer_content_at_row_col(7, 5, 0);
         assert_eq!(pixinfo_b.node_id, prim_ref.node_id);
         assert_eq!(pixinfo_b.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_b.material_id, prim_ref.material_id);
@@ -215,7 +176,7 @@ mod tests {
         abs_diff_eq!(pixinfo_b.w.x, 0.0, epsilon = 0.01);
         abs_diff_eq!(pixinfo_b.w.y, 1.0, epsilon = 0.01);
 
-        let cell_b = drawing_buffer.get_depth_buffer_cell(7,5);
+        let cell_b = drawing_buffer.get_depth_buffer_cell(7, 5);
         abs_diff_eq!(cell_b.depth[0], 3.0, epsilon = 0.01);
     }
 
@@ -229,16 +190,8 @@ mod tests {
             node_id: 3,
             primitive_id: 0,
         };
-        let pa = PointInfo {
-            row: 1,
-            col: 0,
-            depth: 1.0,
-        };
-        let pb = PointInfo {
-            row: 0,
-            col: 0,
-            depth: 3.0,
-        };
+        let pa = PointInfo::new(1.0, 0.0, 1.0);
+        let pb = PointInfo::new(0.0, 0.0, 1.0);
         raster_line(&mut drawing_buffer, &prim_ref, &pa, &pb);
 
         // assert the line is rastered

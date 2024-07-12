@@ -70,7 +70,7 @@ pub fn line_as_primitive<
     vertex_buffer: &VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
-    primitivbuffer: &mut PrimitiveBuffer<f32>,
+    primitivbuffer: &mut PrimitiveBuffer,
 ) {
     // coordinates of the two points of the line
     // in clip space coordinates (x, y, z, w) (homogeneous coordinates)

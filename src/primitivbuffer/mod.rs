@@ -4,7 +4,7 @@ use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 
 #[pyclass]
 pub struct PrimitiveBufferPy {
-    pub content: PrimitiveBuffer<f32>,
+    pub content: PrimitiveBuffer,
 }
 
 #[pymethods]
@@ -68,16 +68,18 @@ impl PrimitiveBufferPy {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: usize,
-        p_a_col: usize,
+        p_a_row: f32,
+        p_a_col: f32,
         p_a_depth: f32,
-        p_b_row: usize,
-        p_b_col: usize,
+        p_b_row: f32,
+        p_b_col: f32,
         p_b_depth: f32,
-        p_c_row: usize,
-        p_c_col: usize,
+        p_c_row: f32,
+        p_c_col: f32,
         p_c_depth: f32,
         uv: usize,
+        vertex_idx: usize,
+        triangle_idx: usize,
     ) -> usize {
         self.content.add_triangle(
             node_id,
@@ -93,6 +95,8 @@ impl PrimitiveBufferPy {
             p_c_col,
             p_c_depth,
             uv,
+            vertex_idx,
+            triangle_idx,
         )
     }
     fn add_static(&mut self) {
@@ -109,11 +113,13 @@ fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
 
     match primitive {
         &PrimitiveElements::Triangle {
-            fds,
+            primitive_reference: fds,
             uv,
             pa,
             pb,
             pc,
+            vertex_idx,
+            triangle_id,
         } => {
             into_dict(py, &fds, &dict);
 
@@ -121,6 +127,11 @@ fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
             dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
             dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
             dict.set_item("pc", point_info_into_dict(py, &pc)).unwrap();
+
+            dict.set_item("uv_idx", uv).unwrap();
+
+            dict.set_item("vertex_idx", vertex_idx).unwrap();
+            dict.set_item("triangle_idx", triangle_id).unwrap();
         }
         &PrimitiveElements::Point {
             fds,
@@ -165,6 +176,6 @@ fn point_info_into_dict(py: Python, pi: &PointInfo<f32>) -> Py<PyDict> {
     let dict = PyDict::new_bound(py);
     dict.set_item("row", pi.row).unwrap();
     dict.set_item("col", pi.col).unwrap();
-    dict.set_item("depth", pi.depth).unwrap();
+    dict.set_item("depth", pi.p.z).unwrap();
     dict.into()
 }

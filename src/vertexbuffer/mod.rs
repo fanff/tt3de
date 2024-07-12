@@ -25,6 +25,7 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
 
     // set the given vertex at the given location
     pub fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
+        /// = [uva, uvb, uvc];
         let x = self.uv_array.linear_index(self.uv_size, 0);
         self.set_uv(uva, x);
 
@@ -46,14 +47,19 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
             &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 2)],
         )
     }
+
+    pub fn clear(&mut self) {
+        self.uv_size = 0;
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct VertexBuffer<const C: usize> {
     pub v4content: ArrayStorage<Vec4, 1, C>,
 
-    // v4 into mv_calc after the mv calculation
-    pub mv_calc: ArrayStorage<Vec4, 1, C>,
+    // v4 into mvp_calculated after the mvp calculation
+    pub mvp_calculated: ArrayStorage<Vec4, 1, C>,
+
     pub current_size: usize,
 }
 impl<const C: usize> VertexBuffer<C> {
@@ -63,11 +69,12 @@ impl<const C: usize> VertexBuffer<C> {
         let v4content = ArrayStorage([[v4]; C]);
         let vb = VertexBuffer {
             v4content,
-            mv_calc: ArrayStorage([[v4]; C]),
+            mvp_calculated: ArrayStorage([[v4]; C]),
             current_size: 0,
         };
         vb
     }
+
     fn add_vertex(&mut self, vert: &Vec4) -> usize {
         self.v4content.as_mut_slice()[self.current_size] = *vert;
         self.current_size += 1;
@@ -77,7 +84,7 @@ impl<const C: usize> VertexBuffer<C> {
         &self.v4content.as_slice()[idx]
     }
     pub fn get_clip_space_vertex(&self, idx: usize) -> &Vec4 {
-        &self.mv_calc.as_slice()[idx]
+        &self.mvp_calculated.as_slice()[idx]
     }
     pub fn get_vertex_count(&self) -> usize {
         self.current_size
@@ -90,7 +97,7 @@ impl<const C: usize> VertexBuffer<C> {
     pub fn apply_mv(&mut self, model_matrix: &Mat4, view_matrix: &Mat4, start: usize, end: usize) {
         let m4 = model_matrix * view_matrix;
         let v4_slice = self.v4content.as_mut_slice();
-        let mv_calc = self.mv_calc.as_mut_slice();
+        let mv_calc = self.mvp_calculated.as_mut_slice();
         for i in start..end {
             let avec = &v4_slice[i];
 
@@ -109,7 +116,7 @@ impl<const C: usize> VertexBuffer<C> {
     ) {
         let m4 = projection_matrix * view_matrix * model_matrix;
         let v4_slice = self.v4content.as_mut_slice();
-        let mv_calc = self.mv_calc.as_mut_slice();
+        let mv_calc = self.mvp_calculated.as_mut_slice();
         for i in start..end {
             let avec = &v4_slice[i];
 
@@ -127,6 +134,7 @@ const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 4;
 pub struct VertexBufferPy {
     pub buffer: VertexBuffer<MAX_VERTEX_CONTENT>,
     pub uv_array: UVBuffer<MAX_UV_CONTENT, f32>,
+    pub uv_post_clipping: UVBuffer<MAX_UV_CONTENT, f32>,
 }
 
 #[pymethods]
@@ -136,6 +144,7 @@ impl VertexBufferPy {
         VertexBufferPy {
             buffer: VertexBuffer::new(),
             uv_array: UVBuffer::new(),
+            uv_post_clipping: UVBuffer::new(),
         }
     }
 
