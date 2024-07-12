@@ -26,7 +26,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell: &mut CanvasCell,
         _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
         pixinfo: &PixInfo<f32>,
-        _primitive_element: &PrimitiveElements<f32>,
+        _primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         _uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {
@@ -54,7 +54,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell: &mut CanvasCell,
         depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
         _pixinfo: &PixInfo<f32>,
-        _primitive_element: &PrimitiveElements<f32>,
+        _primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         _uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {
@@ -84,7 +84,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell: &mut CanvasCell,
         _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
         _pixinfo: &PixInfo<f32>,
-        primitive_element: &PrimitiveElements<f32>,
+        primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {

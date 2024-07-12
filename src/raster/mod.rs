@@ -191,19 +191,17 @@ fn barycentric_coord_shift(
 fn raster_point<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
     prim_ref: &PrimitivReferences,
-    row: usize,
-    col: usize,
-    depth: f32,
+    point: &PointInfo<f32>,
 ) {
-    if row >= drawing_buffer.row_count || col >= drawing_buffer.col_count {
+    if point.row >= drawing_buffer.row_count || point.col >= drawing_buffer.col_count {
         return;
     }
     set_pixel_double_weights(
         prim_ref,
         drawing_buffer,
-        depth,
-        col,
-        row,
+        point.depth(),
+        point.col,
+        point.row,
         1.0,
         0.0,
         0.0,
@@ -213,7 +211,7 @@ fn raster_point<const DEPTHCOUNT: usize>(
     )
 }
 pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
-    element: &PrimitiveElements<f32>,
+    element: &PrimitiveElements,
     vertexbuffer: &VertexBuffer<VertexCount>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
@@ -221,14 +219,8 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
         PrimitiveElements::Line { fds, pa, pb, uv } => {
             raster_line(drawing_buffer, fds, pa, pb);
         }
-        PrimitiveElements::Point {
-            fds,
-            row,
-            col,
-            depth,
-            uv: _,
-        } => {
-            raster_point(drawing_buffer, fds, *row, *col, *depth);
+        PrimitiveElements::Point { fds, point, uv: _ } => {
+            raster_point(drawing_buffer, fds, point);
         }
         PrimitiveElements::Triangle {
             primitive_reference: fds,
@@ -239,18 +231,15 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
             vertex_idx,
             triangle_id,
         } => {
-            let originalpa = vertexbuffer.get_clip_space_vertex(*vertex_idx);
-            let originalpb = vertexbuffer.get_clip_space_vertex(*vertex_idx + triangle_id);
-            let originalpc = vertexbuffer.get_clip_space_vertex(*vertex_idx + triangle_id + 1);
-            raster_triangl(drawing_buffer, fds, pa, pb, pc);
+            raster_triangle(drawing_buffer, fds, pa, pb, pc);
         }
         PrimitiveElements::Static { fds, index } => todo!(),
     }
 }
 
-pub fn raster_all<const DEPTHCOUNT: usize, const VertexCount: usize>(
+pub fn raster_all<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
     primitivbuffer: &PrimitiveBuffer,
-    vertexbuffer: &VertexBuffer<VertexCount>,
+    vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {

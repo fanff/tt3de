@@ -40,7 +40,7 @@ pub trait RenderMatTrait<
         cell: &mut CanvasCell,
         depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
         pixinfo: &PixInfo<f32>,
-        primitive_element: &PrimitiveElements<f32>,
+        primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         uv_buffer: &UVBuffer<UVCOUNT, f32>,
     );
@@ -54,7 +54,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell: &mut CanvasCell,
         depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
         pixinfo: &PixInfo<f32>,
-        primitive_element: &PrimitiveElements<f32>,
+        primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {

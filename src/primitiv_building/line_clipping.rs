@@ -22,8 +22,8 @@ pub fn clip_line_to_clip_space(pa: &Vec4, pb: &Vec4) -> Option<(Vec4, Vec4)> {
         Vec4::new(1.0, 0.0, 0.0, 1.0),  // Right
         Vec4::new(0.0, -1.0, 0.0, 1.0), // Bottom
         Vec4::new(0.0, 1.0, 0.0, 1.0),  // Top
-        Vec4::new(0.0, 0.0, 1.0, 0.0), // Near
-        Vec4::new(0.0, 0.0, -1.0, 1.0),  // Far
+        Vec4::new(0.0, 0.0, 1.0, 0.0),  // Near
+        Vec4::new(0.0, 0.0, -1.0, 1.0), // Far
     ];
     let mut pa_clipped = *pa;
     let mut pb_clipped = *pb;
@@ -88,17 +88,17 @@ pub fn line_as_primitive<
             let pdiva = perspective_divide_v4_v4(&a_clip);
             let pdivb = perspective_divide_v4_v4(&bclip);
 
-            let point_a = drawbuffer.ndc_to_screen_row_col(&pdiva.xy());
-            let point_b = drawbuffer.ndc_to_screen_row_col(&pdivb.xy());
+            let point_a = drawbuffer.ndc_to_screen_floating_with_clamp(&pdiva.xy());
+            let point_b = drawbuffer.ndc_to_screen_floating_with_clamp(&pdivb.xy());
             primitivbuffer.add_line(
                 line.geom_ref.node_id,
                 geometry_id,
                 line.geom_ref.material_id,
-                point_a.0,
-                point_a.1,
+                point_a.y,
+                point_a.x,
                 pdiva.z,
-                point_b.0,
-                point_b.1,
+                point_b.y,
+                point_b.x,
                 pdivb.z,
                 0,
             );

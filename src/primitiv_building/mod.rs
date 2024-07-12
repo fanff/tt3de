@@ -72,23 +72,23 @@ fn poly_as_primitive<
             let (vadiv, vbdiv, vcdiv) = pdiv;
 
             // convert from ndc to screen space
-            let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy()).yx();
-            let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy()).yx();
-            let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy()).yx();
+            let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
+            let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
+            let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
 
             let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
             primitivbuffer.add_triangle(
                 polygon.geom_ref.node_id,
                 geometry_id,
                 polygon.geom_ref.material_id,
-                point_a.x,
                 point_a.y,
+                point_a.x,
                 vadiv.z,
-                point_b.x,
                 point_b.y,
+                point_b.x,
                 vbdiv.z,
-                point_c.x,
                 point_c.y,
+                point_c.x,
                 vcdiv.z,
                 output_uv_index,
                 polygon.p_start,
@@ -132,13 +132,13 @@ pub fn build_primitives<
                     // perform the perspective division
                     let v = perspective_divide(point_clip_space);
                     // convert from clip to screen space
-                    let (row, col) = drawbuffer.ndc_to_screen_row_col(&v.xy());
+                    let screen_ccord = drawbuffer.ndc_to_screen_floating_with_clamp(&v.xy());
                     let _ = primitivbuffer.add_point(
                         p.geom_ref.node_id,
                         geometry_id,
                         p.geom_ref.material_id,
-                        row,
-                        col,
+                        screen_ccord.y,
+                        screen_ccord.x,
                         v.z,
                         0,
                     );

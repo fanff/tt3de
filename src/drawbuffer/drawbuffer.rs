@@ -267,18 +267,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         }
     }
 
-    pub fn ndc_to_screen_row_col(&self, v: &Vec2) -> (usize, usize) {
-        let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
-        // vectorial summ and multiplication; component wise
-        sumoftwovec.component_mul_assign(&self.half_size);
-        // round to the nearest integer
-        (
-            min(sumoftwovec.y.round() as usize, self.row_count - 1),
-            min(sumoftwovec.x.round() as usize, self.col_count - 1),
-        )
-    }
-
-    /// Converts a normalized device coordinate (NDC) to a screen coordinate.
+    /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does NOT apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
         let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
@@ -286,7 +275,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         sumoftwovec.component_mul_assign(&self.half_size);
         sumoftwovec
     }
-    /// Converts a normalized device coordinate (NDC) to a screen coordinate.
+    /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating_with_clamp(&self, v: &Vec2) -> Vec2 {
         let as_screen = self.ndc_to_screen_floating(v);
@@ -295,7 +284,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             &Vec2::zeros(),
             &vec2(self.col_count as f32 - 1.0, self.row_count as f32 - 1.0),
         );
-        clamped.yx()
+        clamped
     }
 
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {

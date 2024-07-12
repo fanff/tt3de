@@ -34,8 +34,10 @@ class RustRenderContext():
         self.transform_buffer = TransformPackPy(64)
         self.drawing_buffer = AbigDrawing(max_row=self.height,  max_col=self.width)
 
-        self.drawing_buffer.set_bit_size_front(8,8,8)
-        self.drawing_buffer.set_bit_size_back(8,8,8)
+
+        global_bit_size = 6
+        self.drawing_buffer.set_bit_size_front(global_bit_size,global_bit_size,global_bit_size)
+        self.drawing_buffer.set_bit_size_back(global_bit_size,global_bit_size,global_bit_size)
         self.drawing_buffer.hard_clear(100.0)    
     def update_wh(self, w, h):
         if w!= self.width or h!= self.height:

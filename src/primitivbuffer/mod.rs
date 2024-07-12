@@ -28,8 +28,8 @@ impl PrimitiveBufferPy {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        row: usize,
-        col: usize,
+        row: f32,
+        col: f32,
         depth: f32,
         uv: usize,
     ) -> usize {
@@ -41,11 +41,11 @@ impl PrimitiveBufferPy {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: usize,
-        p_a_col: usize,
+        p_a_row: f32,
+        p_a_col: f32,
         p_a_depth: f32,
-        p_b_row: usize,
-        p_b_col: usize,
+        p_b_row: f32,
+        p_b_col: f32,
         p_b_depth: f32,
         uv: usize,
     ) -> usize {
@@ -108,7 +108,7 @@ impl PrimitiveBufferPy {
     }
 }
 
-fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
+fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
     let dict = PyDict::new_bound(py);
 
     match primitive {
@@ -133,18 +133,12 @@ fn to_dict(py: Python, primitive: &PrimitiveElements<f32>) -> Py<PyDict> {
             dict.set_item("vertex_idx", vertex_idx).unwrap();
             dict.set_item("triangle_idx", triangle_id).unwrap();
         }
-        &PrimitiveElements::Point {
-            fds,
-            uv,
-            row,
-            col,
-            depth,
-        } => {
+        &PrimitiveElements::Point { fds, uv, point } => {
             into_dict(py, &fds, &dict);
             // Assuming DepthBufferCell has some fields `field1` and `field2`
-            dict.set_item("row", row).unwrap();
-            dict.set_item("col", col).unwrap();
-            dict.set_item("depth", depth).unwrap();
+            dict.set_item("row", point.row).unwrap();
+            dict.set_item("col", point.col).unwrap();
+            dict.set_item("depth", point.depth()).unwrap();
         }
         &PrimitiveElements::Line { fds, pa, pb, uv } => {
             into_dict(py, &fds, &dict);

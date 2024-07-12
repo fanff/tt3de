@@ -18,7 +18,7 @@ pub const GLYPH_STATIC_STR: [&'static str; 256] = [
     "♚", "♛", "♜", "♝", "♞", "♟", //cards set
     "♠", "♣", "♥", "♦", //
 ];
-
+//⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿
 pub const HALF_UPPER_BLOCK: usize = 95;
 pub const HALF_LOWER_BLOCK: usize = 99;
 

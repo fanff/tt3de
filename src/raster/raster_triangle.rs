@@ -8,7 +8,7 @@ use super::{
     set_pixel_double_weights,
 };
 
-pub fn raster_triangl<const DEPTHCOUNT: usize>(
+pub fn raster_triangle<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
     prim_ref: &PrimitivReferences,
     pa: &PointInfo<f32>,
@@ -72,7 +72,7 @@ mod test_raster_triangle {
         raster::primitivbuffer::{PointInfo, PrimitivReferences},
     };
 
-    use super::raster_triangl;
+    use super::raster_triangle;
 
     // test raster all absolute zero side triangles
     #[test]
@@ -90,7 +90,7 @@ mod test_raster_triangle {
                 let pa = PointInfo::new(row as f32, col as f32, 1.0);
                 let pb = PointInfo::new(row as f32, col as f32, 3.0);
                 let pc = PointInfo::new(row as f32, col as f32, 3.0);
-                raster_triangl(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
+                raster_triangle(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
 
                 // get cell bellow the triangle
                 let content_at_location_layer0 =

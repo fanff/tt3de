@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
-use pyo3::{Py, PyAny};
+use pyo3::{
+    intern,
+    types::{PyAnyMethods, PyDict},
+    Bound, Py, PyAny, Python,
+};
 
-use super::Color;
+use super::{Color, GLYPH_STATIC_STR};
 
 pub struct SegmentCache {
     data: HashMap<u64, Py<PyAny>>,
@@ -83,4 +87,40 @@ impl SegmentCache {
 
         front_combinations * back_combinations * 256 // 256 possible glyph values (u8)
     }
+}
+pub fn create_textual_segment(
+    py: Python,
+    reduced_hash: [u8; 7],
+    color_triplet_class: &Bound<PyAny>,
+    color_class: &Bound<PyAny>,
+    segment_class: &Bound<PyAny>,
+    style_class: &Bound<PyAny>,
+) -> Py<PyAny> {
+    let dict = PyDict::new_bound(py);
+    let f_triplet = color_triplet_class
+        .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
+        .unwrap();
+    let b_triplet = color_triplet_class
+        .call1((reduced_hash[3], reduced_hash[4], reduced_hash[5]))
+        .unwrap();
+    dict.set_item(
+        intern!(py, "color"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (f_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
+
+    dict.set_item(
+        intern!(py, "bgcolor"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (b_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
+    let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
+    let anewseg = segment_class
+        .call1((theglyph, &style_class.call((), Some(&dict)).unwrap()))
+        .unwrap();
+    anewseg.into()
 }

@@ -1,5 +1,7 @@
 use nalgebra_glm::{floor, vec2, vec3, Number, Real, TVec2, TVec3, Vec2};
 
+use crate::geombuffer::Point;
+
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Real> {
     pub row: usize,
@@ -65,12 +67,10 @@ pub struct PrimitivReferences {
 }
 
 #[derive(Clone, Copy)]
-pub enum PrimitiveElements<DEPTHACC: Number> {
+pub enum PrimitiveElements {
     Point {
         fds: PrimitivReferences,
-        row: usize,
-        col: usize,
-        depth: DEPTHACC,
+        point: PointInfo<f32>,
         uv: usize,
     },
     Line {
@@ -95,14 +95,12 @@ pub enum PrimitiveElements<DEPTHACC: Number> {
     },
 }
 
-impl<DEPTHACC: Number> PrimitiveElements<DEPTHACC> {
+impl PrimitiveElements {
     pub fn get_uv_idx(&self) -> usize {
         match self {
             PrimitiveElements::Point {
                 fds: _,
-                row: _,
-                col: _,
-                depth: _,
+                point: _,
                 uv,
             } => *uv,
             PrimitiveElements::Line {
@@ -128,12 +126,12 @@ impl<DEPTHACC: Number> PrimitiveElements<DEPTHACC> {
 pub struct PrimitiveBuffer {
     pub max_size: usize,
     pub current_size: usize,
-    pub content: Box<[PrimitiveElements<f32>]>,
+    pub content: Box<[PrimitiveElements]>,
 }
 
 impl PrimitiveBuffer {
     pub fn new(max_size: usize) -> Self {
-        let init_array: Vec<PrimitiveElements<f32>> = vec![
+        let init_array: Vec<PrimitiveElements> = vec![
             PrimitiveElements::Triangle {
                 primitive_reference: PrimitivReferences {
                     node_id: 0,
@@ -166,8 +164,8 @@ impl PrimitiveBuffer {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        row: usize,
-        col: usize,
+        row: f32,
+        col: f32,
         depth: f32,
         uv: usize,
     ) -> usize {
@@ -183,9 +181,7 @@ impl PrimitiveBuffer {
 
         let apoint = PrimitiveElements::Point {
             fds: pr,
-            row: row,
-            col: col,
-            depth: depth,
+            point: PointInfo::new(row, col, depth),
             uv: uv,
         };
         self.content[self.current_size] = apoint;
@@ -199,15 +195,15 @@ impl PrimitiveBuffer {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: usize,
-        p_a_col: usize,
+        p_a_row: f32,
+        p_a_col: f32,
         p_a_depth: f32,
-        p_b_row: usize,
-        p_b_col: usize,
+        p_b_row: f32,
+        p_b_col: f32,
         p_b_depth: f32,
         uv: usize,
     ) -> usize {
-        let pa = PointInfo::new(p_a_row as f32, p_a_col as f32, p_a_depth);
+        let pa = PointInfo::new(p_a_row, p_a_col, p_a_depth);
 
         let elem = PrimitiveElements::Line {
             fds: PrimitivReferences {
@@ -218,7 +214,7 @@ impl PrimitiveBuffer {
             },
             pa: pa,
             uv: uv,
-            pb: PointInfo::new(p_b_row as f32, p_b_col as f32, p_b_depth),
+            pb: PointInfo::new(p_b_row, p_b_col, p_b_depth),
         };
         self.content[self.current_size] = elem;
 
