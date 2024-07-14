@@ -218,10 +218,14 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(vertex_buffer.add_vertex(0.0,0.0,0.5),0)
         self.assertEqual(vertex_buffer.add_vertex(0.0,0.5,0.5),1)
         self.assertEqual(vertex_buffer.add_vertex(0.5,0.5,0.5),2)
-
         self.assertEqual(vertex_buffer.add_vertex(0.5,0.0,0.5),3)
 
 
+        # add some uv coordinates 0 , 1 for nothing
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,0.0),glm.vec2(0.0,0.0))
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,0.0),glm.vec2(0.0,0.0))
+        # this one is used
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,1.0),glm.vec2(1.0,1.0))
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
@@ -229,7 +233,8 @@ class Test_PrimitivBuilding(unittest.TestCase):
             
         node_id = 2
         material_id = 1
-        self.assertEqual(geometry_buffer.add_polygon3d(0, 1, node_id, material_id,0),1)
+        uv_index = 2
+        self.assertEqual(geometry_buffer.add_polygon3d(0, 1, node_id, material_id,uv_index),1)
 
         # create a buffer of primitives
         primitive_buffer = PrimitiveBufferPy(256)
@@ -243,15 +248,26 @@ class Test_PrimitivBuilding(unittest.TestCase):
         
         self.assertEqual(primitive_buffer.primitive_count(), 1)
 
-        self.assertEqual(prim0,{
+        self.assertDictEqual(prim0,{
+            '_type': 'triangle',
             "primitive_id":0,
             "geometry_id":1,
+            "uv_idx":0,
             "node_id":node_id,
             "material_id":material_id,
             'pa': { 'col': 256, 'row': 256, 'depth': 0.5},
             'pb': { 'col': 256, 'row': 384, 'depth': 0.5},
             'pc': { 'col': 384, 'row': 384, 'depth': 0.5},
         })
+
+
+        v = vertex_buffer.get_post_clip_uv(0)
+
+        self.assertEqual(v[0], (0.0,0.0))
+        self.assertEqual(v[1], (0.0,1.0))
+        self.assertEqual(v[2], (1.0,1.0))
+
+
 
 
     def test_simple_two_triangle(self):
@@ -265,6 +281,15 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(vertex_buffer.add_vertex(1.0,1.0,1.0),2)
         self.assertEqual(vertex_buffer.add_vertex(1.0,0.0,1.0),3)
 
+        # add some uv coordinates 0 , 1 for nothing
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,0.0),glm.vec2(0.0,0.0))
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,0.0),glm.vec2(0.0,0.0))
+        
+        # this one is used by the first triangles
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(0.0,1.0),glm.vec2(1.0,1.0))
+        # this one is used by the second triangles
+        vertex_buffer.add_uv(glm.vec2(0.0,0.0),glm.vec2(1.0,1.0),glm.vec2(1.0,0.0))
+
 
 
         geometry_buffer = GeometryBufferPy(256)
@@ -275,7 +300,9 @@ class Test_PrimitivBuilding(unittest.TestCase):
             
         node_id = 3
         material_id = 2
-        self.assertEqual(geometry_buffer.add_polygon3d(0, 2, node_id, material_id,0),1)
+        #adding two triangles ; with uv ccorrdinate 2
+        self.assertEqual( geometry_buffer.add_polygon3d(0, 2, node_id, material_id,2),
+                            1)
 
         # create a buffer of primitives
         primitive_buffer = PrimitiveBufferPy(256)
@@ -284,8 +311,11 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         # build the primitives
         build_primitives_py(geometry_buffer,vertex_buffer,transform_pack,drawing_buffer, primitive_buffer)
+        #the two triangles gets out
         self.assertEqual(primitive_buffer.primitive_count(), 2)
 
+
+        # the first triangles 
         prim0 = primitive_buffer.get_primitive(0)
 
 
@@ -294,6 +324,8 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(prim0,{
             "primitive_id":0,
             "geometry_id":1,
+            "_type":"triangle",
+            "uv_idx":0,
             "node_id":node_id,
             "material_id":material_id,
             'pa': { 'col': 256, 'row': 256, 'depth': 1.0},
@@ -301,10 +333,19 @@ class Test_PrimitivBuilding(unittest.TestCase):
             'pc': { 'col': 512, 'row': 512, 'depth': 1.0},
         })
 
+        v = vertex_buffer.get_post_clip_uv(0)
+
+        self.assertEqual(v[0], (0.0,0.0))
+        self.assertEqual(v[1], (0.0,1.0))
+        self.assertEqual(v[2], (1.0,1.0))
+
+
 
         prim1 = primitive_buffer.get_primitive(1)
 
         self.assertEqual(prim1,{
+            "_type":"triangle",
+            "uv_idx":1, # because its a second triangle right 
             "primitive_id":1,
             "geometry_id":1,
             "node_id":node_id,
@@ -313,6 +354,12 @@ class Test_PrimitivBuilding(unittest.TestCase):
             'pb': { 'col': 512, 'row': 512, 'depth': 1.0},
             'pc': { 'col': 512, 'row': 256, 'depth': 1.0},
         })
+        v1 = vertex_buffer.get_post_clip_uv(1)
+
+        self.assertEqual(v1[0], (0.0,0.0))
+        self.assertEqual(v1[1], (1.0,1.0))
+        self.assertEqual(v1[2], (1.0,0.0))
+
 
     def test_one_point_inside_raw_config(self):
         drawing_buffer = AbigDrawing(512, 512)

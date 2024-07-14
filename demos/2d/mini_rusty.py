@@ -50,8 +50,7 @@ class GLMTester(TT3DView):
     def initialize(self):
         
         # prepare a bunch of material
-        self.rc.texture_array, self.rc.material_buffer = MaterialPerfab.rust_set_0()
-
+        self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
         # create a root 3D node 
         self.root3Dnode = TT3DNode()
 
@@ -91,11 +90,49 @@ class GLMTester(TT3DView):
 
 
         tri = Prefab3D.unitary_triangle()
-        tri.material_id = 7
+        tri.material_id = 5
         tri.local_transform = glm.translate(
-            glm.vec3(0,3,0)
+            glm.vec3(-1.1,1,0)
         )
         self.root3Dnode.add_child(tri)
+
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 6
+        tri.local_transform = glm.translate(
+            glm.vec3(0,1,0)
+        )
+        self.root3Dnode.add_child(tri)
+
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 7
+        tri.local_transform = glm.translate(
+            glm.vec3(1.1,1,0)
+        )
+        self.root3Dnode.add_child(tri)
+
+
+
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 8
+        tri.local_transform = glm.translate(
+            glm.vec3(0,2,0)
+        )
+        self.root3Dnode.add_child(tri)
+
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 9
+        tri.local_transform = glm.translate(
+            glm.vec3(1.1,2,0)
+        )
+        self.root3Dnode.add_child(tri)
+        tri = Prefab3D.unitary_triangle()
+        tri.material_id = 10
+        tri.local_transform = glm.translate(
+            glm.vec3(-1.1,2,0)
+        )
+        self.root3Dnode.add_child(tri)
+
+
 
 
         # final append

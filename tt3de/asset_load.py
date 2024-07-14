@@ -1,7 +1,7 @@
 import struct
 from typing import List, Tuple
 
-from tt3de.tt3de import Point3D
+from tt3de.tt3de import Point2D, Point3D
 
 
 def read_file(obj_file):
@@ -121,7 +121,7 @@ def load_obj(cls, obj_bytes):
         elif parts[0] == "vt":
             # Texture coordinate definition
             u, v = map(float, parts[1:3])
-            texture_coords[0].append(TextureCoordinate(u, v))
+            texture_coords[0].append(Point2D(u, v))
         elif parts[0] == "vn":
             # Normal vector definition
             x, y, z = map(float, parts[1:4])

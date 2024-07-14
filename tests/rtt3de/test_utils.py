@@ -17,3 +17,12 @@ def assertLine3DPrimitiveKeyEqual(prim0,prim1):
         assert prim0[key] == prim1[key]
 
 
+
+
+def assertPolygon3DEqual(poly0,poly1):
+    assert len(poly0) == len(poly1)
+
+    for key in poly0.keys():
+        assert poly0[key] == poly1[key]
+
+    

@@ -91,8 +91,6 @@ fn poly_as_primitive<
                 point_c.x,
                 vcdiv.z,
                 output_uv_index,
-                polygon.p_start,
-                triangle_id,
             );
         }
     }
@@ -218,10 +216,8 @@ pub fn apply_material_py(
     primitivbuffer: &PrimitiveBufferPy,
     mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
 ) {
-    let draw_buffer_content: &mut DrawBuffer<2, f32> = &mut draw_buffer_py.db;
-
     apply_material_on(
-        draw_buffer_content,
+        &mut draw_buffer_py.db,
         &material_buffer.content,
         &texturebuffer.data,
         &vertex_buffer.uv_post_clipping,

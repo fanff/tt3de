@@ -19,34 +19,6 @@ from tt3de.glm_camera import GLMCamera
 
 
 
-def yvalue_from_adjoint_unprotected(adj_matrix: glm.mat3, side, x):
-    a, b, c = glm.row(adj_matrix, side)
-    alpha = -a / b
-    intercept = -c / b
-    return alpha * x + intercept
-
-
-def line_equation_from_adjoint(adj_matrix: glm.mat3, side, x):
-    a, b, c = glm.row(adj_matrix, side)
-
-    CONST = 0.001
-    if abs(b) > CONST:  # Vertical line case
-        alpha = -a / b
-        intercept = -c / b
-        return alpha * x + intercept
-
-
-def glm_triangle_vertex_pixels(
-    tri: GLMTriangle, screen_width, screen_height
-) -> Iterable[tuple[int, int]]:
-    for i in range(3):
-        point2f = glm.column(tri, i).xy
-        xi = round(point2f.x)
-        yi = round(point2f.y)
-        if xi >= 0 and xi < screen_width and yi >= 0 and yi < screen_height:
-            yield xi, yi
-
-
 def glmtriangle_as_square(
     tri: glm.mat3, screen_width, screen_height
 ) -> Iterable[tuple[int, int]]:

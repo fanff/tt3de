@@ -111,10 +111,6 @@ class TT3DView(Container):
                     self.camera.move_side(-0.3)
                 case "d":
                     self.camera.move_side(0.3)
-                case "p":
-                    self.update_timer.pause()
-                case "P":
-                    self.update_timer.resume()
                 case "escape":
                     self.mouse_fps_camera_mode = False
         elif isinstance(event, events.Resize):
@@ -130,7 +126,7 @@ class TT3DView(Container):
 
 
     def render_lines(self, crop: Region) -> list[Strip]:
-        """Render the widget in to lines.
+        """Render the widget into lines.
 
         Args:
             crop: Region within visible area to render.

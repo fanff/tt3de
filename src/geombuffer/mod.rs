@@ -28,6 +28,22 @@ pub struct Polygon {
     pub triangle_count: usize,
 }
 
+impl Polygon {
+    pub fn new(
+        geom_ref: GeomReferences,
+        p_start: usize,
+        uv_start: usize,
+        triangle_count: usize,
+    ) -> Self {
+        Self {
+            geom_ref,
+            p_start,
+            uv_start,
+            triangle_count,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum GeomElement {
     Point3D(Point),
@@ -248,13 +264,25 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
                 .unwrap();
         }
-        GeomElement::Line3D(l) => todo!(),
+        GeomElement::Line3D(l) => {
+            dict.set_item("_type", "Line3D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &l.geom_ref))
+                .unwrap();
+            dict.set_item("p_start", l.p_start).unwrap();
+            dict.set_item("uv_start", l.uv_start).unwrap();
+        }
         GeomElement::Polygon2D(p) => {
+            dict.set_item("_type", "Polygon2D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))
+                .unwrap();
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();
         }
         GeomElement::Polygon3D(p) => {
+            dict.set_item("_type", "Polygon3D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))
+                .unwrap();
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();

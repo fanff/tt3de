@@ -38,8 +38,8 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
     prim_ref: &PrimitivReferences,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, DEPTHACC>,
     depth: DEPTHACC,
-    px: usize,
-    py: usize,
+    col: usize,
+    row: usize,
     w0: DEPTHACC,
     w1: DEPTHACC,
     w2: DEPTHACC,
@@ -50,11 +50,11 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
     let w = TVec3::new(w0, w1, w2);
     let w_alt = TVec3::new(w0_alt, w1_alt, w2_alt);
     drawing_buffer.set_depth_content(
-        py,
-        px,
+        row,
+        col,
         depth,
-        normalize(&w),
-        normalize(&w_alt),
+        (w),
+        (w_alt),
         prim_ref.node_id,
         prim_ref.geometry_id,
         prim_ref.material_id,
@@ -143,23 +143,23 @@ fn barycentric_coord(
     row: usize,
     col: usize,
 ) -> (f32, f32, f32) {
-    let x1 = pa.p.y;
-    let y1 = pa.p.x;
-    let x2 = pb.p.y;
-    let y2 = pb.p.x;
+    let pa_col = pa.p.y;
+    let pa_row = pa.p.x;
+    let pb_col = pb.p.y;
+    let pb_row = pb.p.x;
     let x3 = pc.p.y;
     let y3 = pc.p.x;
-    let px = col as f32;
-    let py = row as f32;
+    let p_col = col as f32;
+    let p_row = row as f32;
 
     // calculate the bar
-    let denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
-    let w1 = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denom;
-    let w2 = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denom;
-    //let w3 = 1.0 - w1 - w2;
+    let denom = (pb_row - y3) * (pa_col - x3) + (x3 - pb_col) * (pa_row - y3);
+    let w1 = ((pb_row - y3) * (p_col - x3) + (x3 - pb_col) * (p_row - y3)) / denom;
+    let w2 = ((y3 - pa_row) * (p_col - x3) + (pa_col - x3) * (p_row - y3)) / denom;
 
-    // possible aleterative way of doing the calculation that might be more stable on the edges
-    let w3 = ((y1 - y2) * (px - x1) + (x2 - x1) * (py - y1)) / denom;
+    // that way of doing the calculation might be more stable on the edges
+    let w3 = 1.0 - w1 - w2;
+    //let w3 = ((pa_row - pb_row) * (p_col - pa_col) + (pb_col - pa_col) * (p_row - pa_row)) / denom;
 
     (w1, w2, w3)
 }
@@ -222,16 +222,8 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
         PrimitiveElements::Point { fds, point, uv: _ } => {
             raster_point(drawing_buffer, fds, point);
         }
-        PrimitiveElements::Triangle {
-            primitive_reference: fds,
-            pa,
-            pb,
-            pc,
-            uv: _,
-            vertex_idx,
-            triangle_id,
-        } => {
-            raster_triangle(drawing_buffer, fds, pa, pb, pc);
+        PrimitiveElements::Triangle(t) => {
+            raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
         }
         PrimitiveElements::Static { fds, index } => todo!(),
     }

@@ -44,15 +44,34 @@ pub struct PixInfo<WeightAccuracy: nalgebra_glm::Number> {
     pub geometry_id: usize,
 }
 
-#[derive(Clone, Copy)]
-pub struct DepthBufferCell<A: Scalar, const L: usize> {
-    pub pixinfo: [usize; L], // referencing pixel info per index
-    pub depth: [A; L],
-    // alternativelly, an array of tuple ? !
-    //content: [(usize, A); L],
+impl<T: nalgebra_glm::Number> PixInfo<T> {
+    pub fn new() -> Self {
+        PixInfo {
+            w: TVec3::zeros(),
+            w_1: TVec3::zeros(),
+            material_id: 0,
+            primitive_id: 0,
+            node_id: 0,
+            geometry_id: 0,
+        }
+    }
+    fn clear(&mut self) {
+        self.material_id = 0;
+        self.primitive_id = 0;
+        self.node_id = 0;
+        self.geometry_id = 0;
+    }
+
+    pub fn set_w(&mut self, w: TVec3<T>) {
+        self.w = w;
+    }
+
+    pub fn set_w_1(&mut self, w_1: TVec3<T>) {
+        self.w_1 = w_1;
+    }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -120,19 +139,63 @@ pub struct CanvasCell {
     pub glyph: u8,
 }
 
+impl CanvasCell {
+    pub fn new(front_color: Color, back_color: Color, glyph: u8) -> Self {
+        Self {
+            front_color,
+            back_color,
+            glyph,
+        }
+    }
+    pub fn default() -> Self {
+        Self {
+            front_color: Color::new(0, 0, 0, 0),
+            back_color: Color::new(0, 0, 0, 0),
+            glyph: 0,
+        }
+    }
+    pub fn set_front(&mut self, color: Color) {
+        self.front_color = color;
+    }
+    pub fn set_back(&mut self, color: Color) {
+        self.back_color = color;
+    }
+    pub fn set_glyph(&mut self, glyph: u8) {
+        self.glyph = glyph;
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct DepthBufferCell<A: Number, const L: usize> {
+    pub pixinfo: [usize; L], // referencing pixel info per index
+    pub depth: [A; L],
+    // alternativelly, an array of tuple ? !
+    //content: [(usize, A); L],
+    pub row: usize,
+    pub col: usize,
+}
 impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
     DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT>
 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [DepthAccuracy::zero(); DEPTHLAYERCOUNT],
+            row: 0,
+            col: 0,
         }
     }
+
+    pub fn get_depth(&self, layer: usize) -> DepthAccuracy {
+        self.depth[layer]
+    }
+
     fn new_set(value: DepthAccuracy) -> Self {
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [value; DEPTHLAYERCOUNT],
+            row: 0,
+            col: 0,
         }
     }
     fn clear(&mut self, value: DepthAccuracy, idx: usize) {
@@ -147,35 +210,15 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         }
     }
 
-    fn set_init_pix_ref(&mut self, idx: usize) {
+    fn set_init_pix_ref(&mut self, idx: usize, row: usize, col: usize) {
         for layer in 0..DEPTHLAYERCOUNT {
             let lol = &mut (self.pixinfo[layer]);
             *(lol) = idx + layer
         }
-    }
-}
 
-impl<T: nalgebra_glm::Number> PixInfo<T> {
-    fn new() -> Self {
-        PixInfo {
-            w: TVec3::zeros(),
-            w_1: TVec3::zeros(),
-            material_id: 0,
-            primitive_id: 0,
-            node_id: 0,
-            geometry_id: 0,
-        }
+        self.row = row;
+        self.col = col;
     }
-    fn clear(&mut self) {
-        self.material_id = 0;
-        self.primitive_id = 0;
-        self.node_id = 0;
-        self.geometry_id = 0;
-    }
-
-    // A is the "accuracy of the detph buffer, expect a f32 here"
-    // could be a u8 for simple rendering engine; with flat 2D and layers
-    // L is the layer count ; more layer means more potential material stacking effects
 }
 
 // Function to create an initialized PixInfo instance
@@ -239,7 +282,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             for col in 0..col_count {
                 let idx = row * col_count + col;
 
-                (&mut depthbuffer[idx]).set_init_pix_ref(idx * L);
+                (&mut depthbuffer[idx]).set_init_pix_ref(idx * L, row, col);
             }
         }
 
@@ -446,15 +489,16 @@ pub fn apply_material_on<
         .zip(draw_buffer.canvas.iter_mut())
     {
         for depth_layer in (0..DEPTHLAYER).rev() {
-            let pix_info = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
+            let pixinfo = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
 
             apply_material(
+                pixinfo,
                 material_buffer,
                 texture_buffer,
                 &uv_buffer,
                 &primitive_buffer,
                 depth_cell,
-                &pix_info,
+                depth_layer,
                 canvascell,
             );
         }

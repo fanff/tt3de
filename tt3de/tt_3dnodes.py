@@ -17,7 +17,7 @@ class TT3DNode:
         self.local_transform:glm.mat4 = transform if transform is not None else glm.mat4(1.0)
         self.node_id = None
 
-    def add_child(self, child: "TT2DNode"):
+    def add_child(self, child: "TT3DNode"):
         """Adds a child element to the list of elements.
 
         Args:
@@ -26,9 +26,6 @@ class TT3DNode:
         self.elements.append(child)
 
     def insert_in(self, rc:"RustRenderContext", parent_transform:Optional[glm.mat4]):
-
-        
-        #self.node_id = rc.transform_buffer.add_node_transform(self.local_transform)
         if parent_transform:
             fff = parent_transform*self.local_transform
         else:

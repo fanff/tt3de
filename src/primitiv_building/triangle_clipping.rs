@@ -31,10 +31,6 @@ impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
         self.uvs[self.count] = [uva.clone(), uvb.clone(), uvc.clone()];
         self.count += 1;
     }
-    fn push_no_uv(&mut self, a: Vec4, b: Vec4, c: Vec4) {
-        self.content[self.count] = [a, b, c];
-        self.count += 1;
-    }
 
     pub fn clear(&mut self) {
         self.count = 0;
@@ -302,6 +298,16 @@ mod tests_clip_triangle_to_space {
             };
         };
     }
+
+    /// Defining a macro to simplify comparison of vec3
+    macro_rules! assert_eq_vec3 {
+        ($a:expr, $b:expr, $eps:expr) => {
+            let eps = $eps;
+            if ($a - $b).norm() > eps {
+                panic!("assertion failed: {:?} != {:?}", $a, $b);
+            };
+        };
+    }
     const UVACCURACY_TEST: f32 = 0.001;
     use super::*;
 
@@ -440,11 +446,11 @@ mod tests_clip_triangle_to_space {
     #[test]
     fn test_clip_triangle_in_1() {
         // pa is inside,
-        // pb is outside on the right,
-        // pc is outside on the right
+        // pb is outside on the far,
+        // pc is outside on the far
         let pa = Vec4::new(0.0, 0.0, 0.0, 1.0);
-        let pb = Vec4::new(1.5, 0.0, 0.0, 1.0);
-        let pc = Vec4::new(1.5, 1.0, 0.0, 1.0);
+        let pb = Vec4::new(0.0, 0.0, 2.0, 1.0);
+        let pc = Vec4::new(0.1, 0.1, 2.0, 1.0);
 
         let mut output_buffer = TriangleBuffer::new();
         let uvs = (
@@ -459,17 +465,23 @@ mod tests_clip_triangle_to_space {
 
         let clipped_triangle = output_buffer.content[0];
         assert_eq!(clipped_triangle[0], pa);
-        assert_eq!(clipped_triangle[1], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert!((clipped_triangle[2] - Vec4::new(1.0, 0.6666, 0.0, 1.0)).norm() < 0.0001);
+        assert_eq!(clipped_triangle[1], Vec4::new(0.0, 0.0, 1.0, 1.0));
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.0, 0.0, 1.0, 1.0), 0.1);
+
+        // test the uv coordinates
+        let clipped_uvs = output_buffer.uvs[0];
+        assert_eq_vec2!(clipped_uvs[0], *uvs.0, 0.001);
+        assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.5, 0.0), 0.1);
+        assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.0, 0.5), 0.1);
     }
     #[test]
     fn test_clip_triangle_in_2() {
         // pa is inside,
-        // pb is outside on the right,
-        // pc is outside on the right and on the top
-        let pa = Vec4::new(0.0, 0.0, 0.0, 1.0);
-        let pb = Vec4::new(1.5, 0.0, 0.0, 1.0);
-        let pc = Vec4::new(1.5, 2.0, 0.0, 1.0);
+        // pb is inside,
+        // pc is outside on the far
+        let pa = Vec4::new(0.1, 0.0, 0.0, 1.0);
+        let pb = Vec4::new(-0.1, 0.0, 0.0, 1.0);
+        let pc = Vec4::new(0.0, 0.0, 2.0, 1.0);
 
         let mut output_buffer = TriangleBuffer::new();
         let uvs = (
@@ -484,13 +496,13 @@ mod tests_clip_triangle_to_space {
 
         let clipped_triangle = output_buffer.content[0];
         assert_eq!(clipped_triangle[0], pa);
-        assert_eq!(clipped_triangle[1], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(0.75, 1.0, 0.0, 1.0));
+        assert_eq!(clipped_triangle[1], pb);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.0, 0.0, 1.0, 1.0), 0.1);
 
         let clipped_triangle = output_buffer.content[1];
-        assert_eq!(clipped_triangle[0], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[1], Vec4::new(0.75, 1.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(1.0, 1.0, 0.0, 1.0));
+        assert_eq!(clipped_triangle[0], pb);
+        assert_eq_vec3!(clipped_triangle[1], Vec4::new(0.0, 0.0, 1.0, 1.0), 0.1);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.0, 0.0, 1.0, 1.0), 0.1);
     }
 }
 #[cfg(test)]

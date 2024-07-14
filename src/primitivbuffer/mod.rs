@@ -2,6 +2,9 @@ pub mod primitivbuffer;
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 
+pub mod primitiv_triangle;
+use primitiv_triangle::*;
+
 #[pyclass]
 pub struct PrimitiveBufferPy {
     pub content: PrimitiveBuffer,
@@ -78,8 +81,6 @@ impl PrimitiveBufferPy {
         p_c_col: f32,
         p_c_depth: f32,
         uv: usize,
-        vertex_idx: usize,
-        triangle_idx: usize,
     ) -> usize {
         self.content.add_triangle(
             node_id,
@@ -95,8 +96,6 @@ impl PrimitiveBufferPy {
             p_c_col,
             p_c_depth,
             uv,
-            vertex_idx,
-            triangle_idx,
         )
     }
     fn add_static(&mut self) {
@@ -112,26 +111,18 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
     let dict = PyDict::new_bound(py);
 
     match primitive {
-        &PrimitiveElements::Triangle {
-            primitive_reference: fds,
-            uv,
-            pa,
-            pb,
-            pc,
-            vertex_idx,
-            triangle_id,
-        } => {
-            into_dict(py, &fds, &dict);
-
+        &PrimitiveElements::Triangle(t) => {
+            into_dict(py, &t.primitive_reference, &dict);
+            dict.set_item("_type", "triangle").unwrap();
             // Assuming DepthBufferCell has some fields `field1` and `field2`
-            dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
-            dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
-            dict.set_item("pc", point_info_into_dict(py, &pc)).unwrap();
+            dict.set_item("pa", point_info_into_dict(py, &t.pa))
+                .unwrap();
+            dict.set_item("pb", point_info_into_dict(py, &t.pb))
+                .unwrap();
+            dict.set_item("pc", point_info_into_dict(py, &t.pc))
+                .unwrap();
 
-            dict.set_item("uv_idx", uv).unwrap();
-
-            dict.set_item("vertex_idx", vertex_idx).unwrap();
-            dict.set_item("triangle_idx", triangle_id).unwrap();
+            dict.set_item("uv_idx", t.uv).unwrap();
         }
         &PrimitiveElements::Point { fds, uv, point } => {
             into_dict(py, &fds, &dict);

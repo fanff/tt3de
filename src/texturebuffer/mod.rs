@@ -53,23 +53,23 @@ impl<const SIZE: usize> Texture<SIZE> {
         }
     }
     pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
-        let u = if self.repeat_x {
+        let u_val = if self.repeat_x {
             u % 1.0
         } else {
             u.clamp(0.0, 1.0)
         };
-        let v = if self.repeat_y {
+        let v_val = if self.repeat_y {
             v % 1.0
         } else {
             v.clamp(0.0, 1.0)
         };
 
         // Convert u, v to texture coordinates
-        let x = (u * SIZE as f32) as usize;
-        let y = (v * SIZE as f32) as usize;
+        let x = (u_val * ((SIZE - 1) as f32)) as usize;
+        let y = (v_val * ((SIZE - 1) as f32)) as usize;
 
         // Return the color at the computed coordinates
-        self.data[y * SIZE + x]
+        self.data[x * SIZE + y]
     }
 }
 
@@ -109,22 +109,22 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
     }
 
     pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
-        let u = if self.repeat_x {
+        let u_val = if self.repeat_x {
             u % 1.0
         } else {
             u.clamp(0.0, 1.0)
         };
-        let v = if self.repeat_y {
+        let v_val = if self.repeat_y {
             v % 1.0
         } else {
             v.clamp(0.0, 1.0)
         };
 
         // Convert u, v to texture coordinates
-        let x = (u * self.width as f32) as usize;
-        let y = (v * self.height as f32) as usize;
+        let x = (u_val * self.width as f32) as usize;
+        let y = (v_val * self.height as f32) as usize;
 
-        self.texture.data[y * SIZE + x]
+        self.texture.data[y * self.width + x]
     }
 }
 
@@ -205,10 +205,13 @@ impl TextureBufferPy {
         width: usize,
         height: usize,
         pixels: Py<PyList>,
+        repeat_width: bool,
+        repeat_height: bool,
     ) -> usize {
         let texture_iter = TextureIterator::new(py, &pixels.as_ref(py));
 
-        self.data.add_texture_from_iter(width, height, texture_iter)
+        self.data
+            .add_texture_from_iter(width, height, texture_iter, repeat_width, repeat_height)
     }
     fn add_noise_texture(&mut self, seed: i32, int_config: i32) -> usize {
         self.data.add_noise_texture(seed, int_config)

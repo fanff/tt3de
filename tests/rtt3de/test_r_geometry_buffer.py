@@ -7,6 +7,8 @@ import unittest
 
 from rtt3de import GeometryBufferPy
 
+from tests.rtt3de.test_utils import assertPolygon3DEqual
+
 class Test_GeometryBuffer(unittest.TestCase):
     def test_empty(self):
         geom_buffer = GeometryBufferPy(32)
@@ -45,7 +47,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
-    def test_add_triangle(self):
+    def test_add_polygon3D(self):
         """Test adding a triangle and verify its addition to the buffer."""
         geom_buffer = GeometryBufferPy(10)
 
@@ -55,17 +57,23 @@ class Test_GeometryBuffer(unittest.TestCase):
         
         node_id = 102
         material_id = 202
+        uv_idx=3
         geom_buffer.add_polygon3d(
-            0,1,  node_id, material_id, 0
+            0,1,  node_id, material_id, uv_idx,
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
 
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
+        elem0 = geom_buffer.get_element(0)
+        assertPolygon3DEqual(elem0,{'_type': 'Polygon3D', 
+                                    'geom_ref': {'material_id': 202, 'node_id': 102},
+                                    'p_start': 0, 
+                                    'triangle_count': 1,
+                                      'uv_start': 3})
 
-
-    def test_add_polygon(self):
+    def test_add_polygon2D(self):
         """Test adding a triangle and verify its addition to the buffer."""
         geom_buffer = GeometryBufferPy(10)
         geom_buffer.clear()
@@ -74,13 +82,17 @@ class Test_GeometryBuffer(unittest.TestCase):
         node_id = 102
         material_id = 202
 
-        geom_buffer.add_polygon(
+        geom_buffer.add_polygon2d(
             2,23, node_id, material_id, 32
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
         elem0 = geom_buffer.get_element(0)
-        self.assertEqual(elem0,{'p_start': 2, 'triangle_count': 23, 'uv_start': 32} )
+        self.assertEqual(elem0,{'_type': 'Polygon2D',
+                                'geom_ref': {'material_id': 202, 'node_id': 102},
+                                'p_start': 2,
+                                  'triangle_count': 23,
+                                    'uv_start': 32} )
 
 #
         geom_buffer.clear()

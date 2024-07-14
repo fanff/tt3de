@@ -1,5 +1,5 @@
 use crate::{
-    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
+    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, DrawBuffer, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     utils::convert_tuple_rgba,
     vertexbuffer::{UVBuffer, VertexBuffer},
@@ -8,13 +8,14 @@ use crate::{
 use super::texturebuffer::texture_buffer::TextureBuffer;
 use super::texturebuffer::RGBA;
 
-use nalgebra_glm::{Number, TVec3, Vec3};
+use nalgebra_glm::{Number, TVec3, Vec2, Vec3};
 pub mod debug_mat;
 use debug_mat::*;
 
 mod materials;
 use materials::*;
-
+mod textured;
+use textured::*;
 mod noise_mat;
 use noise_mat::*;
 
@@ -50,14 +51,11 @@ impl MaterialBuffer {
         retur
     }
     fn add_textured(&mut self, albedo_texture_idx: usize, glyph_idx: u8) -> usize {
-        let retur = self.current_size;
-        self.mats[self.current_size] = Material::Texture {
-            albedo_texture_idx: albedo_texture_idx,
-            glyph_idx: glyph_idx,
-        };
+        self.mats[self.current_size] =
+            Material::Texture(Texture::new(albedo_texture_idx, glyph_idx));
 
         self.current_size += 1;
-        retur
+        self.current_size - 1
     }
 
     fn add_noop(&mut self) -> usize {
@@ -93,36 +91,39 @@ impl MaterialBuffer {
     }
 }
 
-pub fn calc_uv_coord<DEPTHACC: nalgebra_glm::Number>(
-    pixinfo: &PixInfo<DEPTHACC>,
-    (ua, va, ub, vb, uc, vc): (DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC, DEPTHACC),
+pub fn calc_2d_uv_coord(
+    pixinfo: &PixInfo<f32>,
+    uv_triplet: (&Vec2, &Vec2, &Vec2),
     weight_idx: usize,
-) -> (DEPTHACC, DEPTHACC) {
-    let uvec: TVec3<DEPTHACC> = TVec3::new(ua, ub, uc);
-    let vvec: TVec3<DEPTHACC> = TVec3::new(va, vb, vc);
+) -> Vec2 {
+    let uvec: TVec3<f32> = TVec3::new(uv_triplet.0.x, uv_triplet.1.x, uv_triplet.2.x);
+    let vvec: TVec3<f32> = TVec3::new(uv_triplet.0.y, uv_triplet.1.y, uv_triplet.2.y);
 
     match weight_idx {
-        1 => (pixinfo.w_1.dot(&uvec), pixinfo.w_1.dot(&vvec)),
-        _ => (pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec)),
+        1 => Vec2::new(pixinfo.w_1.dot(&uvec), pixinfo.w_1.dot(&vvec)),
+        _ => Vec2::new(pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec)),
     }
 }
 
 pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER: usize>(
+    pixinfo: PixInfo<f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<SIZE>,
     uv_buffer: &UVBuffer<UVCOUNT, f32>,
     primitive_buffer: &PrimitiveBuffer,
     depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
-    pixinfo: &PixInfo<f32>,
+    depth_layer: usize,
     cell: &mut CanvasCell,
 ) {
-    let mat = &material_buffer.mats[pixinfo.material_id];
+    
 
     let primitive_element = &primitive_buffer.content[pixinfo.primitive_id];
+    let mat = &material_buffer.mats[pixinfo.material_id];
     mat.render_mat(
         cell,
         depth_cell,
-        pixinfo,
+        depth_layer,
+        &pixinfo,
         primitive_element,
         texture_buffer,
         uv_buffer,

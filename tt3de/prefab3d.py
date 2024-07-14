@@ -14,8 +14,8 @@ class Prefab3D:
         ]
         texture_coords = [
             Point2D(0.0, 0),
-            Point2D(1, 0),
-            Point2D(1, 1),
+            Point2D(1.0,0.0 ),
+            Point2D(1.0, 1.0),
         ]
 
         m = TT3DPolygon()

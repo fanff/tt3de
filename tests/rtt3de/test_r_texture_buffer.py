@@ -17,6 +17,8 @@ class Test_TextureArray(unittest.TestCase):
         self.assertEqual(texture_array.size(), 2)
         texture_array.add_texture(img.image_width ,img.image_height ,data)
         self.assertEqual(texture_array.size(), 3)
+
+        
     def test_create256(self):
         texture_array = TextureBufferPy(12)
         self.assertEqual(texture_array.size(), 0)

@@ -2,6 +2,8 @@ use nalgebra_glm::{floor, vec2, vec3, Number, Real, TVec2, TVec3, Vec2};
 
 use crate::geombuffer::Point;
 
+use super::PTriangle;
+
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Real> {
     pub row: usize,
@@ -66,6 +68,22 @@ pub struct PrimitivReferences {
     pub primitive_id: usize,
 }
 
+impl PrimitivReferences {
+    pub fn new(
+        node_id: usize,
+        material_id: usize,
+        geometry_id: usize,
+        primitive_id: usize,
+    ) -> Self {
+        Self {
+            node_id,
+            material_id,
+            geometry_id,
+            primitive_id,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum PrimitiveElements {
     Point {
@@ -79,16 +97,7 @@ pub enum PrimitiveElements {
         pb: PointInfo<f32>,
         uv: usize,
     },
-    Triangle {
-        primitive_reference: PrimitivReferences,
-        pa: PointInfo<f32>,
-        pb: PointInfo<f32>,
-        pc: PointInfo<f32>,
-        uv: usize,
-        // store the original triangle definition before clipping
-        vertex_idx: usize,
-        triangle_id: usize,
-    },
+    Triangle(PTriangle),
     Static {
         fds: PrimitivReferences,
         index: usize,
@@ -109,16 +118,9 @@ impl PrimitiveElements {
                 pb: _,
                 uv,
             } => *uv,
-            PrimitiveElements::Triangle {
-                primitive_reference: _,
-                pa: _,
-                pb: _,
-                pc: _,
-                uv,
-                vertex_idx: _,
-                triangle_id: _,
-            } => *uv,
+
             PrimitiveElements::Static { fds: _, index: _ } => 0,
+            PrimitiveElements::Triangle(t) => t.uv,
         }
     }
 }
@@ -131,23 +133,8 @@ pub struct PrimitiveBuffer {
 
 impl PrimitiveBuffer {
     pub fn new(max_size: usize) -> Self {
-        let init_array: Vec<PrimitiveElements> = vec![
-            PrimitiveElements::Triangle {
-                primitive_reference: PrimitivReferences {
-                    node_id: 0,
-                    material_id: 0,
-                    geometry_id: 0,
-                    primitive_id: 0,
-                },
-                uv: 0,
-                pa: PointInfo::zero(),
-                pb: PointInfo::zero(),
-                pc: PointInfo::zero(),
-                vertex_idx: 0,
-                triangle_id: 0
-            };
-            max_size
-        ];
+        let init_array: Vec<PrimitiveElements> =
+            vec![PrimitiveElements::Triangle(PTriangle::zero()); max_size];
 
         let content = init_array.into_boxed_slice();
 
@@ -237,8 +224,6 @@ impl PrimitiveBuffer {
         p_c_col: f32,
         p_c_depth: f32,
         uv_idx: usize,
-        vertex_idx: usize,
-        triangle_idx: usize,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
@@ -250,15 +235,14 @@ impl PrimitiveBuffer {
             node_id: node_id,
             primitive_id: self.current_size,
         };
-        self.content[self.current_size] = PrimitiveElements::Triangle {
-            primitive_reference: pr,
-            pa: PointInfo::new(p_a_row, p_a_col, p_a_depth),
-            pb: PointInfo::new(p_b_row, p_b_col, p_b_depth),
-            pc: PointInfo::new(p_c_row, p_c_col, p_c_depth),
-            uv: uv_idx,
-            vertex_idx: vertex_idx,
-            triangle_id: triangle_idx,
-        };
+
+        self.content[self.current_size] = PrimitiveElements::Triangle(PTriangle::new(
+            pr,
+            PointInfo::new(p_a_row, p_a_col, p_a_depth),
+            PointInfo::new(p_b_row, p_b_col, p_b_depth),
+            PointInfo::new(p_c_row, p_c_col, p_c_depth),
+            uv_idx,
+        ));
 
         self.current_size += 1;
 

@@ -1,19 +1,21 @@
-use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
+use nalgebra_glm::Vec2;
+
+use crate::drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo};
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
+
 use crate::vertexbuffer::UVBuffer;
 
 use super::super::texturebuffer::RGBA;
 
-use super::{apply_noise, calc_uv_coord, noise_mat::*, DebugDepth, DebugUV, DebugWeight};
+use super::{
+    apply_noise, calc_2d_uv_coord, noise_mat::*, DebugDepth, DebugUV, DebugWeight, Texture,
+};
 
 #[derive(Clone)]
 pub enum Material {
     DoNothing {},
-    Texture {
-        albedo_texture_idx: usize,
-        glyph_idx: u8,
-    },
+    Texture(Texture),
     StaticColor {
         front_color: RGBA,
         back_color: RGBA,
@@ -39,6 +41,7 @@ pub trait RenderMatTrait<
         &self,
         cell: &mut CanvasCell,
         depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        depth_layer: usize,
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
@@ -53,6 +56,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         &self,
         cell: &mut CanvasCell,
         depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        depth_layer: usize,
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
@@ -60,25 +64,15 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
     ) {
         match self {
             Material::DoNothing {} => {}
-            Material::Texture {
-                albedo_texture_idx,
-                glyph_idx,
-            } => {
-                cell.glyph = *glyph_idx;
-
-                let (uva, uvb, uvc) = uv_buffer.get_uv(primitive_element.get_uv_idx());
-                let (ufront, vfront) =
-                    calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
-
-                let front_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, ufront, vfront);
-                cell.front_color.copy_from(&front_rgba);
-
-                let (uback, vback) =
-                    calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 1);
-
-                let back_rgba = texture_buffer.get_rgba_at(*albedo_texture_idx, uback, vback);
-                cell.front_color.copy_from(&back_rgba);
-            }
+            Material::Texture(t) => t.render_mat(
+                cell,
+                depth_cell,
+                depth_layer,
+                pixinfo,
+                primitive_element,
+                texture_buffer,
+                uv_buffer,
+            ),
             Material::StaticColor {
                 front_color,
                 back_color,
@@ -89,11 +83,10 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
                 cell.back_color.copy_from(back_color);
             }
             Material::Noise { noise, glyph_idx } => {
-                let (uva, uvb, uvc) = uv_buffer.get_uv(primitive_element.get_uv_idx());
-                let (ufront, vfront) =
-                    calc_uv_coord(pixinfo, (uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y), 0);
+                let uvs = uv_buffer.get_uv(primitive_element.get_uv_idx());
+                let uv = calc_2d_uv_coord(pixinfo, uvs, 0);
 
-                let valuefront = apply_noise(noise, pixinfo, ufront, vfront);
+                let valuefront = apply_noise(noise, pixinfo, uv.x, uv.y);
 
                 cell.glyph = *glyph_idx;
 
@@ -109,6 +102,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
             Material::DebugWeight(m) => m.render_mat(
                 cell,
                 depth_cell,
+                depth_layer,
                 pixinfo,
                 primitive_element,
                 texture_buffer,
@@ -117,6 +111,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
             Material::DebugDepth(m) => m.render_mat(
                 cell,
                 depth_cell,
+                depth_layer,
                 pixinfo,
                 primitive_element,
                 texture_buffer,
@@ -125,6 +120,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
             Material::DebugUV(m) => m.render_mat(
                 cell,
                 depth_cell,
+                depth_layer,
                 pixinfo,
                 primitive_element,
                 texture_buffer,

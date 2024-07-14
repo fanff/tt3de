@@ -17,11 +17,7 @@ from textual.strip import Strip
 
 
 class TextureAscii():
-    def render_point(self, *args) -> int:
-        pass
-
-    def cache_output(self, segmap: "Segmap"):
-        pass
+    pass
 
 
 class ImageTexture(TextureAscii):

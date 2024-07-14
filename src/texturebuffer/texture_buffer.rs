@@ -1,3 +1,5 @@
+use nalgebra_glm::Vec2;
+
 use super::{NoiseTexture, Texture, TextureAtlas, TextureCustom, TextureType, RGBA};
 
 pub struct TextureBuffer<const SIZE: usize> {
@@ -31,6 +33,14 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
 
         color
     }
+
+    pub fn get_rgba_at_v(&self, idx: usize, uv: &Vec2) -> RGBA {
+        let atexture = &self.textures[idx];
+        let color = atexture.uv_map(uv.x, uv.y);
+
+        color
+    }
+
     pub fn get_wh_of(&self, idx: usize) -> (usize, usize) {
         let atext = &self.textures[idx];
 
@@ -46,15 +56,27 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
         width: usize,
         height: usize,
         input: I,
+        repeat_width: bool,
+        repeat_height: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             panic!("Texture buffer is full");
         }
 
         let texture_type = if width == SIZE && height == SIZE {
-            TextureType::Fixed(Texture::<SIZE>::from_iter(input, true, true))
+            TextureType::Fixed(Texture::<SIZE>::from_iter(
+                input,
+                repeat_width,
+                repeat_height,
+            ))
         } else {
-            TextureType::Custom(TextureCustom::<SIZE>::new(input, width, height, true, true))
+            TextureType::Custom(TextureCustom::<SIZE>::new(
+                input,
+                width,
+                height,
+                repeat_width,
+                repeat_height,
+            ))
         };
 
         self.textures[self.current_size] = texture_type;

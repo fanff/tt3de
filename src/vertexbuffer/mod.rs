@@ -9,7 +9,7 @@ pub struct UVBuffer<const UVCOUNT: usize, UVACC: Number> {
 }
 
 impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
-    fn new() -> UVBuffer<UVCOUNT, UVACC> {
+    pub fn new() -> UVBuffer<UVCOUNT, UVACC> {
         let d: TVec2<UVACC> = TVec2::zeros();
         let arraystore = ArrayStorage([[d; UVCOUNT]; 3]);
         let uvb = UVBuffer {
@@ -200,6 +200,18 @@ impl VertexBufferPy {
         let result = self.buffer.get_clip_space_vertex(idx);
         let t = PyTuple::new_bound(py, [result.x, result.y, result.z, result.w]);
         t.into()
+    }
+
+    fn get_post_clip_uv(&self, py: Python, idx: usize) -> Py<PyTuple> {
+        let (ra, rb, rc) = self.uv_post_clipping.get_uv(idx);
+
+        let ta = PyTuple::new_bound(py, [ra.x, ra.y]);
+        let tb = PyTuple::new_bound(py, [rb.x, rb.y]);
+        let tc = PyTuple::new_bound(py, [rc.x, rc.y]);
+
+        let tt = PyTuple::new_bound(py, [ta, tb, tc]);
+
+        tt.into()
     }
 
     fn apply_mv(

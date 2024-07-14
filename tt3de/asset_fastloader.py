@@ -30,11 +30,18 @@ class MaterialPerfab:
     def rust_set_0() -> Tuple[TextureBufferPy, MaterialBufferPy]:
         texture_buffer = TextureBufferPy(32)
 
-        fast_load("models/cubetest32.bmp").img_data
-        fast_load("models/test_screen32.bmp").img_data
-        fast_load("models/test_screen256.bmp").img_data
+        img: ImageTexture = fast_load("models/test_screen256.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   True,True
+)
 
-        fast_load("models/sky1.bmp").img_data
+        img: ImageTexture = fast_load("models/test_screen256.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   False,False)
+
+        img: ImageTexture = fast_load("models/sky1.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   True,True)
 
 
         material_buffer = MaterialBufferPy()
@@ -47,6 +54,12 @@ class MaterialPerfab:
         material_buffer.add_debug_weight(1) # 
         material_buffer.add_debug_depth(1) # 
         material_buffer.add_debug_uv(1) # 
+
+
+        material_buffer.add_textured(0,60) # idx = 8
+        material_buffer.add_textured(1,61) # idx = 9
+        material_buffer.add_textured(2,62) # idx = 10
+
         
         return texture_buffer,material_buffer
 
