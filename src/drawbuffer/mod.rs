@@ -67,7 +67,8 @@ impl AbigDrawing {
         let style_class = rich_style_module.getattr("Style").unwrap();
         let color_class = rich_color_module.getattr("Color").unwrap();
         let color_triplet_class = rich_color_triplet_module.getattr("ColorTriplet").unwrap();
-        let mut segment_cache = SegmentCache::new([3, 3, 3], [3, 3, 3]);
+
+        let mut segment_cache = SegmentCache::new_iso(4);
         let aseg0 = create_textual_segment(
             py,
             [0, 0, 0, 0, 0, 0, 0],
@@ -78,7 +79,7 @@ impl AbigDrawing {
         );
         let default_segment = create_textual_segment(
             py,
-            [255, 0, 0, 30, 30, 30, 1],
+            [0, 0, 0, 0, 0, 0, 1],
             &color_triplet_class,
             &color_class,
             &segment_class,
@@ -282,12 +283,12 @@ impl AbigDrawing {
 
                         // calculate the reduced pixel values
                         let reduced_hash = self.seg_cache.get_reduced(
-                            cell.front_color,
-                            cell.back_color,
+                            &cell.front_color,
+                            &cell.back_color,
                             cell.glyph as u8,
                         );
                         // calculate the hash
-                        let hash_value = self.seg_cache.hash_tuple_to_int(reduced_hash);
+                        let hash_value = self.seg_cache.reduced_tuple_to_int(reduced_hash);
 
                         // find in the cache the Segment
                         match self.seg_cache.get_with_hash(hash_value) {
@@ -296,14 +297,16 @@ impl AbigDrawing {
                                 append_method.call1((&value.clone_ref(py),)).unwrap();
                             }
                             None => {
+                                let (front_col, back_col, glyph) =
+                                    self.seg_cache.reduced_to_triplet(reduced_hash);
                                 // we don't have a segment, we should create it.
                                 let f_triplet = self
                                     .color_triplet_class
-                                    .call1(py, (reduced_hash[0], reduced_hash[1], reduced_hash[2]))
+                                    .call1(py, (front_col[0], front_col[1], front_col[2]))
                                     .unwrap();
                                 let b_triplet = self
                                     .color_triplet_class
-                                    .call1(py, (reduced_hash[3], reduced_hash[4], reduced_hash[5]))
+                                    .call1(py, (back_col[0], back_col[1], back_col[2]))
                                     .unwrap();
                                 dict.set_item(
                                     intern!(py, "color"),
@@ -321,7 +324,7 @@ impl AbigDrawing {
                                 )
                                 .unwrap();
 
-                                let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
+                                let theglyph = GLYPH_STATIC_STR[glyph as usize];
 
                                 let anewseg = self
                                     .segment_class

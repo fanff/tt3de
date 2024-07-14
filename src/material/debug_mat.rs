@@ -34,7 +34,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell.glyph = self.glyph_idx;
 
         cell.front_color = Color::new_opaque_from_vec3(&pixinfo.w);
-        cell.back_color = Color::new_opaque_from_vec3(&pixinfo.w);
+        cell.back_color = Color::new_opaque_from_vec3(&pixinfo.w_1);
     }
 }
 
@@ -96,13 +96,11 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         cell.glyph = self.glyph_idx;
 
         let uv_vectors = uv_buffer.get_uv(primitive_element.get_uv_idx());
-        let uv_point_a = uv_vectors.0;
-        let uv_point_b = uv_vectors.1;
-        let uv_point_c = uv_vectors.2;
 
-        let uv = calc_2d_uv_coord(_pixinfo, (&uv_point_a, &uv_point_b, &uv_point_c), 0);
+        let uv = calc_2d_uv_coord(_pixinfo, uv_vectors, 0);
+        let uv1 = calc_2d_uv_coord(_pixinfo, uv_vectors, 1);
 
         cell.front_color = Color::new_opaque_from_vec2(&uv);
-        cell.back_color = Color::new_opaque_from_vec2(&uv);
+        cell.back_color = Color::new_opaque_from_vec2(&uv1);
     }
 }
