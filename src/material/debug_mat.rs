@@ -95,12 +95,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
     ) {
         cell.glyph = self.glyph_idx;
 
-        let uv_vectors = uv_buffer.get_uv(primitive_element.get_uv_idx());
-
-        let uv = calc_2d_uv_coord(_pixinfo, uv_vectors, 0);
-        let uv1 = calc_2d_uv_coord(_pixinfo, uv_vectors, 1);
-
-        cell.front_color = Color::new_opaque_from_vec2(&uv);
-        cell.back_color = Color::new_opaque_from_vec2(&uv1);
+        cell.front_color = Color::new_opaque_from_vec2(&_pixinfo.w.xy());
+        cell.back_color = Color::new_opaque_from_vec2(&_pixinfo.w.xy());
     }
 }

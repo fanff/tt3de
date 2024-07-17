@@ -1,4 +1,4 @@
-use nalgebra_glm::{vec4, Number, Real, Vec2, Vec3, Vec4};
+use nalgebra_glm::{vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -10,6 +10,7 @@ use crate::{
     geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
     material::MaterialBufferPy,
     primitivbuffer::*,
+    raster::raster_triangle_tomato::Vertex,
     texturebuffer::TextureBufferPy,
     vertexbuffer::{TransformPack, TransformPackPy, UVBuffer, VertexBuffer, VertexBufferPy},
 };
@@ -31,11 +32,14 @@ fn perspective_divide_v4_v4(v: &Vec4) -> Vec4 {
     Vec4::new(v.x / v.w, v.y / v.w, v.z / v.w, 1.0)
 }
 
-fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec3, Vec3, Vec3) {
+fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec4, Vec4, Vec4) {
+    let wa_inv = 1.0 / va.w;
+    let wb_inv = 1.0 / vb.w;
+    let wc_inv = 1.0 / vc.w;
     (
-        perspective_divide(va),
-        perspective_divide(vb),
-        perspective_divide(vc),
+        Vec4::new(va.x * wa_inv, va.y * wa_inv, va.z * wa_inv, wa_inv),
+        Vec4::new(vb.x * wb_inv, vb.y * wb_inv, vb.z * wb_inv, wb_inv),
+        Vec4::new(vc.x * wc_inv, vc.y * wc_inv, vc.z * wc_inv, wc_inv),
     )
 }
 
@@ -68,8 +72,7 @@ fn poly_as_primitive<
 
         for (t, uvs) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
-            let pdiv = perspective_divide_triplet(&t[0], &t[1], &t[2]);
-            let (vadiv, vbdiv, vcdiv) = pdiv;
+            let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
 
             // convert from ndc to screen space
             let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
@@ -77,19 +80,41 @@ fn poly_as_primitive<
             let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
 
             let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
-            primitivbuffer.add_triangle(
+            //primitivbuffer.add_triangle(
+            //    polygon.geom_ref.node_id,
+            //    geometry_id,
+            //    polygon.geom_ref.material_id,
+            //    point_a.y,
+            //    point_a.x,
+            //    vadiv.z,
+            //    point_b.y,
+            //    point_b.x,
+            //    vbdiv.z,
+            //    point_c.y,
+            //    point_c.x,
+            //    vcdiv.z,
+            //    output_uv_index,
+            //);
+            primitivbuffer.add_triangle3d(
                 polygon.geom_ref.node_id,
                 geometry_id,
                 polygon.geom_ref.material_id,
-                point_a.y,
-                point_a.x,
-                vadiv.z,
-                point_b.y,
-                point_b.x,
-                vbdiv.z,
-                point_c.y,
-                point_c.x,
-                vcdiv.z,
+                // Keep the w value for the perspective correction
+                Vertex::new(
+                    vec4(point_a.x, point_a.y, vadiv.z, vadiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[0] * vadiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_b.x, point_b.y, vbdiv.z, vbdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[1] * vbdiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_c.x, point_c.y, vcdiv.z, vcdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[2] * vcdiv.w,
+                ),
                 output_uv_index,
             );
         }

@@ -1,5 +1,6 @@
 
 
+import math
 from tt3de.tt3de import Point2D, Point3D
 from tt3de.tt_3dnodes import TT3DPoint, TT3DPolygon
 
@@ -23,6 +24,57 @@ class Prefab3D:
         m.uvmap = [texture_coords]
         return m
     
+    @staticmethod
+    def unitary_square() -> TT3DPolygon:
+        vertices = [
+            Point3D(0, 0, 1.0),
+            Point3D(1.0, 0.0, 1.0),
+            Point3D(1.0, 1.0, 1.0),
+            Point3D(0, 1.0, 1.0),
+        ]
+        texture_coords = [[
+            Point2D(0.0, 0),
+            Point2D(1.0,0.0 ),
+            Point2D(1.0, 1.0),
+           
+        ],
+        [
+            Point2D(0.0, 0),
+            Point2D(1.0, 1.0),
+            Point2D(0.0, 1.0),]
+        ]
+
+
+        m = TT3DPolygon()
+        m.vertex_list = vertices
+        m.uvmap = texture_coords
+        return m
+    @staticmethod
+    def unitary_circle(point_count=3) -> TT3DPolygon:
+        vertices = [Point3D(0.0,0.0, 1.0)]
+        texture_coords = []
+        for i in range(point_count+1):
+            angle = i * 2 * math.pi / point_count
+            next_angle = (i+1) * 2 * math.pi / point_count
+            
+            x = math.cos(angle)
+            y = math.sin(angle)
+
+            next_x = math.cos(next_angle)
+            next_y = math.sin(next_angle)
+
+            vertices.append(Point3D(x*.5, y*.5, 1.0))
+            texture_coords.append([
+                Point2D(0.5, 0.5),
+                Point2D(0.5+x/2, 0.5+y/2),
+                Point2D(0.5+next_x/2, 0.5+next_y/2),]
+            )
+
+        m = TT3DPolygon()
+        m.vertex_list = vertices
+        m.uvmap = texture_coords
+        return m
+
     @staticmethod
     def unitary_Point() -> TT3DPoint:
         vertices = [

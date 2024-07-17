@@ -41,9 +41,8 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         //let depth = depth_cell.get_depth(depth_layer);
         //let point = vec3(depth_cell.col as f32, depth_cell.row as f32, depth);
 
-        let uvs = uv_buffer.get_uv(primitive_element.get_uv_idx());
-        let uv = calc_2d_uv_coord(pixinfo, uvs, 0);
-        let uv1 = calc_2d_uv_coord(pixinfo, uvs, 1);
+        let uv = pixinfo.w.xy();
+        let uv1 = pixinfo.w.xy();
         let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
         let texture_color1 = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv1);
         cell.front_color.copy_from(&texture_color1);
@@ -100,8 +99,8 @@ mod tests {
                 RGBA::new(40, 0, 0, 255),
             ]
             .into_iter(),
-            true,
-            true,
+            false,
+            false,
         );
 
         // Create the Texture instance
@@ -125,37 +124,42 @@ mod tests {
         assert_eq!(canvas_cell.back_color, Color::new(10, 0, 0, 255));
 
         // close to point b
-        pixinfo.set_w(vec3(0.1, 0.8, 0.1));
 
+        let mut pixinfob = PixInfo::new();
+        pixinfob.set_w(vec3(0.01, 0.98, 0.01));
+        pixinfob.set_w_1(vec3(0.01, 0.98, 0.01));
+        let mut canvas_cell_b = CanvasCell::default();
         texture_material.render_mat(
-            &mut canvas_cell,
-            &depth_cell,
+            &mut canvas_cell_b,
+            &DepthBufferCell::<f32, 2>::new(),
             0,
-            &pixinfo,
+            &pixinfob,
             &primitive_element,
             &texture_buffer,
             &uv_buffer,
         );
 
-        assert_eq!(canvas_cell.glyph, glyph_idx);
-        assert_eq!(canvas_cell.front_color, Color::new(20, 0, 0, 255));
-        assert_eq!(canvas_cell.back_color, Color::new(20, 0, 0, 255));
+        assert_eq!(canvas_cell_b.glyph, glyph_idx);
+        assert_eq!(canvas_cell_b.front_color, Color::new(20, 0, 0, 255));
+        assert_eq!(canvas_cell_b.back_color, Color::new(20, 0, 0, 255));
 
         // close to point c
-        pixinfo.set_w(vec3(0.1, 0.1, 0.8));
-
+        let mut pixinfo_c = PixInfo::new();
+        pixinfo_c.set_w(vec3(0.01, 0.01, 0.98));
+        pixinfo_c.set_w_1(vec3(0.01, 0.01, 0.98));
+        let mut canvas_cell_c = CanvasCell::default();
         texture_material.render_mat(
-            &mut canvas_cell,
+            &mut canvas_cell_c,
             &depth_cell,
             0,
-            &pixinfo,
+            &pixinfo_c,
             &primitive_element,
             &texture_buffer,
             &uv_buffer,
         );
 
-        assert_eq!(canvas_cell.glyph, glyph_idx);
-        assert_eq!(canvas_cell.front_color, Color::new(40, 0, 0, 255));
-        assert_eq!(canvas_cell.back_color, Color::new(40, 0, 0, 255));
+        assert_eq!(canvas_cell_c.glyph, glyph_idx);
+        assert_eq!(canvas_cell_c.front_color, Color::new(40, 0, 0, 255));
+        assert_eq!(canvas_cell_c.back_color, Color::new(40, 0, 0, 255));
     }
 }

@@ -18,6 +18,9 @@ use raster_line::*;
 pub mod raster_triangle;
 use raster_triangle::*;
 
+pub mod raster_triangle_tomato;
+use raster_triangle_tomato::*;
+
 //  calculating min/max of multiple values;
 fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
     std::cmp::min(std::cmp::min(a, b), c)
@@ -225,6 +228,11 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
         PrimitiveElements::Triangle(t) => {
             raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
         }
+        PrimitiveElements::Triangle3D(t) => {
+            // raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
+            tomato_draw_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc)
+        }
+
         PrimitiveElements::Static { fds, index } => todo!(),
     }
 }

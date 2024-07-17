@@ -142,6 +142,11 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
             // Assuming DepthBufferCell has some fields `field1` and `field2`
             dict.set_item("index", index).unwrap();
         }
+        PrimitiveElements::Point { fds, point, uv } => todo!(),
+        PrimitiveElements::Line { fds, pa, pb, uv } => todo!(),
+        PrimitiveElements::Triangle(_) => todo!(),
+        PrimitiveElements::Triangle3D(_) => todo!(),
+        PrimitiveElements::Static { fds, index } => todo!(),
     }
 
     dict.into()

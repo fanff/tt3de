@@ -34,15 +34,6 @@ pub fn raster_triangle<const DEPTHCOUNT: usize>(
             let (w0, w1, w2) = barycentric_coord(pa, pb, pc, curr_row, curr_col);
             let depth = pa.p.z * w0 + pb.p.z * w1 + pc.p.z * w2;
 
-            //vec3_bary_coord(
-            //    &original_pa.xyz(),
-            //    &original_pb.xyz(),
-            //    &original_pc.xyz(),
-            //    curr_row,
-            //    curr_col,
-            //    depth,
-            //);
-
             if w0 >= 0.0 && w1 >= 0.0 && w2 >= 0.0 {
                 let (w0_alt, w1_alt, w2_alt) =
                     barycentric_coord_shift(pa, pb, pc, 0.49, curr_row, curr_col);

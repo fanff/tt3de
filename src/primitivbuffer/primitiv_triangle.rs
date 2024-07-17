@@ -1,3 +1,5 @@
+use crate::raster::raster_triangle_tomato::Vertex;
+
 use super::primitivbuffer::{PointInfo, PrimitivReferences};
 
 #[derive(Clone, Copy)]
@@ -42,6 +44,33 @@ impl PTriangle {
             pb: PointInfo::new(0.0, 0.0, 0.0),
             pc: PointInfo::new(0.0, 0.0, 0.0),
             uv: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct PTriangle3D {
+    pub primitive_reference: PrimitivReferences,
+    pub pa: Vertex,
+    pub pb: Vertex,
+    pub pc: Vertex,
+    pub uv_idx: usize,
+}
+
+impl PTriangle3D {
+    pub fn new(
+        primitive_reference: PrimitivReferences,
+        pa: Vertex,
+        pb: Vertex,
+        pc: Vertex,
+        uv_idx: usize,
+    ) -> Self {
+        Self {
+            primitive_reference,
+            pa,
+            pb,
+            pc,
+            uv_idx,
         }
     }
 }

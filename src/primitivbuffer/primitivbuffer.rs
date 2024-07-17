@@ -1,8 +1,10 @@
+use std::ops::{AddAssign, Div, Mul, Sub};
+
 use nalgebra_glm::{floor, vec2, vec3, Number, Real, TVec2, TVec3, Vec2};
 
-use crate::geombuffer::Point;
+use crate::{geombuffer::Point, raster::raster_triangle_tomato::Vertex};
 
-use super::PTriangle;
+use super::{PTriangle, PTriangle3D};
 
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Real> {
@@ -27,6 +29,21 @@ impl PointInfo<f32> {
             p: vec3(row_f, col_f, depth),
         }
     }
+    pub fn new_from_interpolate(
+        pa: &PointInfo<f32>,
+        pb: &PointInfo<f32>,
+        t: f32,
+    ) -> PointInfo<f32> {
+        let vout = pa.p + (pb.p - pa.p) * t;
+        PointInfo::new(vout.x, vout.y, vout.z)
+    }
+    pub fn f32_row(&self) -> f32 {
+        self.p.x
+    }
+    pub fn f32_col(&self) -> f32 {
+        self.p.y
+    }
+
     pub fn as_f32_row_col(&self) -> (f32, f32) {
         (self.p.x, self.p.y)
     }
@@ -36,6 +53,38 @@ impl PointInfo<f32> {
 
     pub fn depth(&self) -> f32 {
         self.p.z
+    }
+
+    pub fn divide_in_place_by(&mut self, divisor: f32) -> Self {
+        self.p /= divisor;
+        *self
+    }
+}
+impl Sub for PointInfo<f32> {
+    type Output = PointInfo<f32>;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let v = self.p - rhs.p;
+        PointInfo::new(v.y, v.x, v.z)
+    }
+}
+
+impl Mul<f32> for PointInfo<f32> {
+    type Output = PointInfo<f32>;
+    fn mul(self, rhs: f32) -> Self::Output {
+        let v = self.p * rhs;
+        PointInfo::new(v.y, v.x, v.z)
+    }
+}
+impl Div<f32> for PointInfo<f32> {
+    type Output = PointInfo<f32>;
+    fn div(self, rhs: f32) -> Self::Output {
+        let v = self.p / rhs;
+        PointInfo::new(v.y, v.x, v.z)
+    }
+}
+impl AddAssign for PointInfo<f32> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.p += rhs.p;
     }
 }
 
@@ -98,6 +147,7 @@ pub enum PrimitiveElements {
         uv: usize,
     },
     Triangle(PTriangle),
+    Triangle3D(PTriangle3D),
     Static {
         fds: PrimitivReferences,
         index: usize,
@@ -121,6 +171,7 @@ impl PrimitiveElements {
 
             PrimitiveElements::Static { fds: _, index: _ } => 0,
             PrimitiveElements::Triangle(t) => t.uv,
+            PrimitiveElements::Triangle3D(t) => t.uv_idx,
         }
     }
 }
@@ -144,6 +195,35 @@ impl PrimitiveBuffer {
             current_size,
             content,
         }
+    }
+
+    pub fn add_triangle3d(
+        &mut self,
+        node_id: usize,
+        geometry_id: usize,
+        material_id: usize,
+        pa: Vertex,
+        pb: Vertex,
+        pc: Vertex,
+        uv_idx: usize,
+    ) -> usize {
+        if self.current_size == self.max_size {
+            return self.current_size;
+        }
+
+        let pr = PrimitivReferences {
+            geometry_id: geometry_id,
+            material_id: material_id,
+            node_id: node_id,
+            primitive_id: self.current_size,
+        };
+
+        self.content[self.current_size] =
+            PrimitiveElements::Triangle3D(PTriangle3D::new(pr, pa, pb, pc, uv_idx));
+
+        self.current_size += 1;
+
+        self.current_size - 1
     }
 
     pub fn add_point(
