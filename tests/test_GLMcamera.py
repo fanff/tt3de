@@ -3,7 +3,8 @@ import random
 import unittest
 
 import random
-from tt3de.glm.pyglmtexture import GLMCamera
+
+from tt3de.glm_camera import GLMCamera
 from tt3de.tt3de import  Point3D
 
 import glm

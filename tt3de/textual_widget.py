@@ -14,7 +14,7 @@ from textual.widgets import (
     Static,
 )
 from abc import  abstractmethod
-from tt3de.glm.pyglmtexture import GLMCamera
+from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
 from textual.strip import Strip
 from textual.geometry import Region

@@ -31,10 +31,7 @@ from textual.widgets import (
 from textual.message import Message
 from textual.layouts import horizontal
 
-from tt3de.textual_widget import TT3DView, TimingRegistry
-from tt3de.tt3de import (
-    Point3D,
-)
+from tt3de.textual_widget import  TimingRegistry
 
 
 class FloatSelector(Widget, can_focus=False):

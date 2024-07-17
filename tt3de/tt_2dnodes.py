@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 import glm
 from typing_extensions import Self
 import itertools
-from tt3de.glm.pyglmtexture import GLMCamera
+from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
 from tt3de.tt3de import Point2D, Point3D
 from tt3de.utils import (
