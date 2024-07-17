@@ -77,10 +77,17 @@ class GLMTester(TT3DView):
         self.root3Dnode.add_child(poly)
 
 
-        poly = Prefab3D.unitary_circle(50)
+        poly = Prefab3D.unitary_circle(24)
         poly.material_id = 8
         poly.local_transform = glm.translate(
             glm.vec3(1.1,2.1,0)
+        )
+        self.root3Dnode.add_child(poly)
+
+        poly = Prefab3D.unitary_cube()
+        poly.material_id = 8
+        poly.local_transform = glm.translate(
+            glm.vec3(-4.1,0,0)
         )
         self.root3Dnode.add_child(poly)
 

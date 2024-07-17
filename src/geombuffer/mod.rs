@@ -49,6 +49,7 @@ pub enum GeomElement {
     Point3D(Point),
     Line3D(Line),
     Polygon2D(Polygon),
+    PolygonFan3D(Polygon),
     Polygon3D(Polygon),
 }
 
@@ -134,7 +135,34 @@ impl GeometryBuffer {
         self.current_size += 1;
         self.current_size - 1
     }
-    fn add_polygon3d(
+    fn add_polygon_fan_3d(
+        &mut self,
+        p_start: usize,
+        triangle_count: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+
+        let elem = GeomElement::PolygonFan3D(Polygon {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            p_start,
+            uv_start,
+            triangle_count,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
+
+    fn add_polygon_3d(
         &mut self,
         p_start: usize,
         triangle_count: usize,
@@ -232,7 +260,7 @@ impl GeometryBufferPy {
         self.buffer
             .add_polygon2d(p_start, triangle_count, node_id, material_id, uv_start)
     }
-    fn add_polygon3d(
+    fn add_polygon_fan_3d(
         &mut self,
         p_start: usize,
         triangle_count: usize,
@@ -241,8 +269,20 @@ impl GeometryBufferPy {
         uv_start: usize,
     ) -> usize {
         self.buffer
-            .add_polygon3d(p_start, triangle_count, node_id, material_id, uv_start)
+            .add_polygon_fan_3d(p_start, triangle_count, node_id, material_id, uv_start)
     }
+    fn add_polygon_3d(
+        &mut self,
+        p_start: usize,
+        triangle_count: usize,
+        node_id: usize,
+        material_id: usize,
+        uv_start: usize,
+    ) -> usize {
+        self.buffer
+            .add_polygon_3d(p_start, triangle_count, node_id, material_id, uv_start)
+    }
+
     fn add_line3d(
         &mut self,
         p_start: usize,
@@ -273,6 +313,14 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
         }
         GeomElement::Polygon2D(p) => {
             dict.set_item("_type", "Polygon2D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))
+                .unwrap();
+            dict.set_item("p_start", p.p_start).unwrap();
+            dict.set_item("triangle_count", p.triangle_count).unwrap();
+            dict.set_item("uv_start", p.uv_start).unwrap();
+        }
+        GeomElement::PolygonFan3D(p) => {
+            dict.set_item("_type", "PolygonFan3D").unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))
                 .unwrap();
             dict.set_item("p_start", p.p_start).unwrap();

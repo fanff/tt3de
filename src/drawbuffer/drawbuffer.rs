@@ -416,9 +416,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
             let depth_at_layer = the_cell.depth[the_layer];
 
-            if pix_info_at_layer.geometry_id == geom_id {
-                return; // We do not want to change anything if our own geometry has already set something at this location.
-            } else if depth < depth_at_layer {
+            if depth < depth_at_layer {
                 // we are closer to this level of depth. So we can locate the new
                 // value here.
                 // the existing value need to be pushed "down the layers";

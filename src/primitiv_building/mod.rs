@@ -43,7 +43,7 @@ fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec4, Vec4, V
     )
 }
 
-fn poly_as_primitive<
+fn polygon_fan_as_primitive<
     const C: usize,
     const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
@@ -61,6 +61,83 @@ fn poly_as_primitive<
 
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + triangle_id;
+        let vb = vertex_buffer.get_clip_space_vertex(p_start + 1);
+        let vc = vertex_buffer.get_clip_space_vertex(p_start + 2);
+
+        // get the uv coordinates
+        let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
+        // clip the first triangle
+        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
+
+        for (t, uvs) in output_buffer.iter() {
+            // perform the perspective division to get in the ndc space
+            let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
+
+            // convert from ndc to screen space
+            let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
+            let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
+            let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
+
+            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
+            //primitivbuffer.add_triangle(
+            //    polygon.geom_ref.node_id,
+            //    geometry_id,
+            //    polygon.geom_ref.material_id,
+            //    point_a.y,
+            //    point_a.x,
+            //    vadiv.z,
+            //    point_b.y,
+            //    point_b.x,
+            //    vbdiv.z,
+            //    point_c.y,
+            //    point_c.x,
+            //    vcdiv.z,
+            //    output_uv_index,
+            //);
+            primitivbuffer.add_triangle3d(
+                polygon.geom_ref.node_id,
+                geometry_id,
+                polygon.geom_ref.material_id,
+                // Keep the w value for the perspective correction
+                Vertex::new(
+                    vec4(point_a.x, point_a.y, vadiv.z, vadiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[0] * vadiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_b.x, point_b.y, vbdiv.z, vbdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[1] * vbdiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_c.x, point_c.y, vcdiv.z, vcdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[2] * vcdiv.w,
+                ),
+                output_uv_index,
+            );
+        }
+    }
+}
+
+fn polygon_as_primitive<
+    const C: usize,
+    const MAX_UV_CONTENT: usize,
+    const PIXCOUNT: usize,
+    DEPTHACC: Number,
+>(
+    polygon: &Polygon,
+    geometry_id: usize,
+    vertex_buffer: &mut VertexBuffer<C>,
+    uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
+    drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
+    primitivbuffer: &mut PrimitiveBuffer,
+) {
+    for triangle_id in 0..polygon.triangle_count {
+        let p_start = polygon.p_start + (triangle_id * 3);
+        let va = vertex_buffer.get_clip_space_vertex(p_start);
         let vb = vertex_buffer.get_clip_space_vertex(p_start + 1);
         let vc = vertex_buffer.get_clip_space_vertex(p_start + 2);
 
@@ -188,7 +265,7 @@ pub fn build_primitives<
             crate::geombuffer::GeomElement::Polygon2D(p) => {
                 todo!();
             }
-            crate::geombuffer::GeomElement::Polygon3D(polygon) => {
+            crate::geombuffer::GeomElement::PolygonFan3D(polygon) => {
                 // apply mv operation
                 vertex_buffer.apply_mvp(
                     transform_pack.get_node_transform(polygon.geom_ref.node_id),
@@ -197,7 +274,26 @@ pub fn build_primitives<
                     polygon.p_start,
                     polygon.triangle_count + 2 + polygon.p_start,
                 );
-                poly_as_primitive(
+                polygon_fan_as_primitive(
+                    &polygon,
+                    geometry_id,
+                    vertex_buffer,
+                    uv_array_input,
+                    uv_array_output,
+                    drawbuffer,
+                    primitivbuffer,
+                )
+            }
+            crate::geombuffer::GeomElement::Polygon3D(polygon) => {
+                // apply mv operation
+                vertex_buffer.apply_mvp(
+                    transform_pack.get_node_transform(polygon.geom_ref.node_id),
+                    &transform_pack.view_matrix_3d,
+                    &transform_pack.projection_matrix_3d,
+                    polygon.p_start,
+                    (polygon.triangle_count * 3) + polygon.p_start,
+                );
+                polygon_as_primitive(
                     &polygon,
                     geometry_id,
                     vertex_buffer,

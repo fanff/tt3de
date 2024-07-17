@@ -2,12 +2,12 @@
 
 import math
 from tt3de.tt3de import Point2D, Point3D
-from tt3de.tt_3dnodes import TT3DPoint, TT3DPolygon
+from tt3de.tt_3dnodes import TT3DPoint, TT3DPolygon, TT3DPolygonFan
 
 
 class Prefab3D:
     @staticmethod
-    def unitary_triangle() -> TT3DPolygon:
+    def unitary_triangle() -> TT3DPolygonFan:
         vertices = [
             Point3D(0, 0, 1.0),
             Point3D(1.0, 0.0, 1.0),
@@ -19,13 +19,13 @@ class Prefab3D:
             Point2D(1.0, 1.0),
         ]
 
-        m = TT3DPolygon()
+        m = TT3DPolygonFan()
         m.vertex_list = vertices
         m.uvmap = [texture_coords]
         return m
     
     @staticmethod
-    def unitary_square() -> TT3DPolygon:
+    def unitary_square() -> TT3DPolygonFan:
         vertices = [
             Point3D(0, 0, 1.0),
             Point3D(1.0, 0.0, 1.0),
@@ -45,12 +45,66 @@ class Prefab3D:
         ]
 
 
+        m = TT3DPolygonFan()
+        m.vertex_list = vertices
+        m.uvmap = texture_coords
+        return m
+    
+    @staticmethod
+    def unitary_cube() -> TT3DPolygon:
+        vertices = [
+            # backface
+            Point3D(0, 0, 1.0),
+            Point3D(1.0, 0.0, 1.0),
+            Point3D(1.0, 1.0, 1.0),
+
+            Point3D(0, 0, 1.0),
+            Point3D(1.0, 1.0, 1.0),
+            Point3D(0, 1.0, 1.0),
+
+            # front face
+            Point3D(0, 0, 0.0),
+            Point3D(1.0, 0.0, 0.0),
+            Point3D(1.0, 1.0, 0.0),
+
+            Point3D(0, 0, 0.0),
+            Point3D(1.0, 1.0, 0.0),
+            Point3D(0, 1.0, 0.0),
+
+
+
+        ]
+        texture_coords = [
+            
+            # backface
+            [
+            Point2D(0.0, 0),
+            Point2D(1, 0),
+            Point2D(1, 1),
+            ],[
+            Point2D(0.0, 0),
+            Point2D(1, 1),
+            Point2D(0, 1),
+            ],
+
+            # front face
+            [Point2D(0.0, 0),
+            Point2D(1, 0),
+            Point2D(1, 1),
+            ],[
+            Point2D(0.0, 0),
+            Point2D(1, 1),
+            Point2D(0, 1),
+            ],
+        
+        ]
         m = TT3DPolygon()
         m.vertex_list = vertices
         m.uvmap = texture_coords
         return m
+
     @staticmethod
-    def unitary_circle(point_count=3) -> TT3DPolygon:
+    def unitary_circle(point_count=3) -> TT3DPolygonFan:
         vertices = [Point3D(0.0,0.0, 1.0)]
         texture_coords = []
         for i in range(point_count+1):
@@ -70,10 +124,12 @@ class Prefab3D:
                 Point2D(0.5+next_x/2, 0.5+next_y/2),]
             )
 
-        m = TT3DPolygon()
+        m = TT3DPolygonFan()
         m.vertex_list = vertices
         m.uvmap = texture_coords
         return m
+   
+
 
     @staticmethod
     def unitary_Point() -> TT3DPoint:
