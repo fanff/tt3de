@@ -1,4 +1,4 @@
-use nalgebra_glm::{dot, lerp, Vec2, Vec3, Vec4};
+use nalgebra_glm::{dot, lerp, Vec2, Vec4};
 
 fn interpolate(p1: &Vec4, p2: &Vec4, t: f32) -> Vec4 {
     //p1 + t * (p2 - p1)
@@ -17,6 +17,12 @@ pub struct TriangleBuffer<const INNER_SIZE: usize> {
     pub count: usize,
 }
 
+impl<const INNER_SIZE: usize> Default for TriangleBuffer<INNER_SIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
     pub fn new() -> Self {
         Self {
@@ -28,7 +34,7 @@ impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
 
     pub fn push_vec4(&mut self, a: Vec4, b: Vec4, c: Vec4, (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2)) {
         self.content[self.count] = [a, b, c];
-        self.uvs[self.count] = [uva.clone(), uvb.clone(), uvc.clone()];
+        self.uvs[self.count] = [*uva, *uvb, *uvc];
         self.count += 1;
     }
 
@@ -77,9 +83,9 @@ pub fn clip_triangle_to_plane<const INNER_SIZE: usize>(
     uv_triplet: (&Vec2, &Vec2, &Vec2),
     output_buffer: &mut TriangleBuffer<INNER_SIZE>,
 ) {
-    let pa_dist = dot(&plane, pa);
-    let pb_dist = dot(&plane, pb);
-    let pc_dist = dot(&plane, pc);
+    let pa_dist = dot(plane, pa);
+    let pb_dist = dot(plane, pb);
+    let pc_dist = dot(plane, pc);
 
     let inside_pa = pa_dist >= 0.0;
     let inside_pb = pb_dist >= 0.0;
@@ -261,7 +267,7 @@ pub fn clip_triangle_to_clip_space(
                         &tri[0],
                         &tri[1],
                         &tri[2],
-                        &plane,
+                        plane,
                         (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
                         output_buffer_temp,
                     );
@@ -366,8 +372,8 @@ mod tests_clip_triangle_to_space {
         // testing the uv calculation of  sub triangle
         let clipped_uvs = output_buffer.uvs[0];
         assert_eq_vec2!(clipped_uvs[0], *uvs.0, 0.001);
-        assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.66666667, 0.0), UVACCURACY_TEST);
-        assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.0, 0.66666667), UVACCURACY_TEST);
+        assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.666_666_7, 0.0), UVACCURACY_TEST);
+        assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.0, 0.666_666_7), UVACCURACY_TEST);
 
         // triangle 1
         let clipped_triangle = output_buffer.content[1];
@@ -508,7 +514,7 @@ mod tests_clip_triangle_to_space {
 #[cfg(test)]
 mod tests_clip_triangle_to_plane {
     use super::*;
-    use nalgebra_glm::{vec2, vec4, Vec4};
+    use nalgebra_glm::{vec2, vec4};
 
     #[test]
     fn test_all_vertices_inside() {

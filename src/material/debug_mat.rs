@@ -1,9 +1,9 @@
-use nalgebra_glm::{clamp, floor, max, pi, Vec1, Vec2, Vec3};
+use nalgebra_glm::{clamp, Vec1};
 
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
-    texturebuffer::{texture_buffer::TextureBuffer, RGBA},
+    texturebuffer::{texture_buffer::TextureBuffer},
     vertexbuffer::UVBuffer,
 };
 
@@ -35,7 +35,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
 
         let d = depth_cell.get_depth(depth_layer);
 
-        let dd = (clamp(&Vec1::new(d), 0.001, 1.0) * 255.0);
+        let dd = clamp(&Vec1::new(d), 0.001, 1.0) * 255.0;
         let shade = dd.x as u8;
         cell.front_color = Color::new(shade, 0, 0, 255);
         cell.back_color = Color::new(shade, 0, 0, 255);

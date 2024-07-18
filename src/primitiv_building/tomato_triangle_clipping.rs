@@ -71,18 +71,18 @@ pub fn tomato_clip_triangle_to_clip_space(
         // a is behind the near plane
         if pb.z < 0.0 {
             clip2(pa, pb, pc, (uva, uvb, uvc), output_buffer); //
-        } else if (pc.z < 0.0) {
+        } else if pc.z < 0.0 {
             clip2(pa, pc, pb, (uva, uvc, uvb), output_buffer); //
         } else {
             clip1(pa, pb, pc, (uva, uvb, uvc), output_buffer) //
         }
-    } else if (pb.z < 0.0) {
+    } else if pb.z < 0.0 {
         if pc.z < 0.0 {
             clip2(pb, pc, pa, (uvb, uvc, uva), output_buffer) //
         } else {
             clip1(pb, pa, pc, (uvb, uva, uvc), output_buffer) //
         }
-    } else if (pc.z < 0.0) {
+    } else if pc.z < 0.0 {
         clip1(pc, pa, pb, (uvc, uva, uvb), output_buffer) //
     } else {
         output_buffer.push_vec4(*pa, *pb, *pc, (uva, uvb, uvc));

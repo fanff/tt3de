@@ -25,7 +25,6 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
             1.0,
             0.0,
         );
-        return;
     } else if pa.row > pb.row {
         for row in pb.row..=pa.row {
             // calculate barycentric factor
@@ -119,7 +118,7 @@ pub fn raster_line_along_rows<const DEPTHCOUNT: usize>(
 
 #[cfg(test)]
 pub mod test_raster_line_along_rows {
-    use approx::abs_diff_eq;
+    
 
     use crate::{
         drawbuffer::drawbuffer::DrawBuffer,

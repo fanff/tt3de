@@ -1,14 +1,14 @@
 use crate::{
-    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, DrawBuffer, PixInfo},
+    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     utils::convert_tuple_rgba,
-    vertexbuffer::{UVBuffer, VertexBuffer},
+    vertexbuffer::{UVBuffer},
 };
 
 use super::texturebuffer::texture_buffer::TextureBuffer;
 use super::texturebuffer::RGBA;
 
-use nalgebra_glm::{Number, TVec3, Vec2, Vec3};
+use nalgebra_glm::{Number};
 pub mod debug_mat;
 use debug_mat::*;
 
@@ -31,9 +31,9 @@ impl MaterialBuffer {
     fn new(max_size: usize) -> Self {
         let mats = vec![Material::DoNothing {}; max_size].into_boxed_slice();
         MaterialBuffer {
-            max_size: max_size,
+            max_size,
             current_size: 0,
-            mats: mats,
+            mats,
         }
     }
     fn clear(&mut self) {
@@ -42,9 +42,9 @@ impl MaterialBuffer {
     fn add_static(&mut self, front_color: RGBA, back_color: RGBA, glyph_idx: u8) -> usize {
         let retur = self.current_size;
         self.mats[self.current_size] = Material::StaticColor {
-            front_color: front_color,
-            back_color: back_color,
-            glyph_idx: glyph_idx,
+            front_color,
+            back_color,
+            glyph_idx,
         };
 
         self.current_size += 1;
@@ -109,8 +109,8 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER:
 pub fn apply_noise<T: Number>(noise: &NoiseMaterial, pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
     let noise = noise.make_instance();
     let noise_val = noise.get_noise_2d(u, v);
-    let noise_val = (noise_val + 1.0) / 2.0;
-    noise_val
+    
+    (noise_val + 1.0) / 2.0
 }
 
 #[pyclass]

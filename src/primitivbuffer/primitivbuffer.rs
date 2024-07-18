@@ -1,8 +1,8 @@
 use std::ops::{AddAssign, Div, Mul, Sub};
 
-use nalgebra_glm::{floor, vec2, vec3, Number, Real, TVec2, TVec3, Vec2};
+use nalgebra_glm::{vec3, Real, TVec3, Vec2};
 
-use crate::{geombuffer::Point, raster::raster_triangle_tomato::Vertex};
+use crate::{raster::raster_triangle_tomato::Vertex};
 
 use super::{PTriangle, PTriangle3D};
 
@@ -171,7 +171,7 @@ impl PrimitiveElements {
 
             PrimitiveElements::Static { fds: _, index: _ } => 0,
             PrimitiveElements::Triangle(t) => t.uv,
-            PrimitiveElements::Triangle3D(t) => t.uv_idx,
+            PrimitiveElements::Triangle3D(_t) => 0,
         }
     }
 }
@@ -205,21 +205,20 @@ impl PrimitiveBuffer {
         pa: Vertex,
         pb: Vertex,
         pc: Vertex,
-        uv_idx: usize,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
         }
 
         let pr = PrimitivReferences {
-            geometry_id: geometry_id,
-            material_id: material_id,
-            node_id: node_id,
+            geometry_id,
+            material_id,
+            node_id,
             primitive_id: self.current_size,
         };
 
         self.content[self.current_size] =
-            PrimitiveElements::Triangle3D(PTriangle3D::new(pr, pa, pb, pc, uv_idx));
+            PrimitiveElements::Triangle3D(PTriangle3D::new(pr, pa, pb, pc));
 
         self.current_size += 1;
 
@@ -240,16 +239,16 @@ impl PrimitiveBuffer {
             return self.current_size;
         }
         let pr = PrimitivReferences {
-            geometry_id: geometry_id,
-            material_id: material_id,
-            node_id: node_id,
+            geometry_id,
+            material_id,
+            node_id,
             primitive_id: self.current_size,
         };
 
         let apoint = PrimitiveElements::Point {
             fds: pr,
             point: PointInfo::new(row, col, depth),
-            uv: uv,
+            uv,
         };
         self.content[self.current_size] = apoint;
 
@@ -274,13 +273,13 @@ impl PrimitiveBuffer {
 
         let elem = PrimitiveElements::Line {
             fds: PrimitivReferences {
-                geometry_id: geometry_id,
-                material_id: material_id,
-                node_id: node_id,
+                geometry_id,
+                material_id,
+                node_id,
                 primitive_id: self.current_size,
             },
-            pa: pa,
-            uv: uv,
+            pa,
+            uv,
             pb: PointInfo::new(p_b_row, p_b_col, p_b_depth),
         };
         self.content[self.current_size] = elem;
@@ -310,9 +309,9 @@ impl PrimitiveBuffer {
         }
 
         let pr = PrimitivReferences {
-            geometry_id: geometry_id,
-            material_id: material_id,
-            node_id: node_id,
+            geometry_id,
+            material_id,
+            node_id,
             primitive_id: self.current_size,
         };
 

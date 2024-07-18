@@ -1,7 +1,7 @@
 use nalgebra_glm::{Mat4, Vec2, Vec3};
 use pyo3::{
     types::{PyAnyMethods, PyList, PyTuple, PyTupleMethods},
-    Bound, Py, PyAny, Python, ToPyObject,
+    Bound, Py, PyAny, Python,
 };
 
 use super::texturebuffer::RGBA;
@@ -68,7 +68,7 @@ pub fn convert_tuple_texture_rgba(py: Python, tuple: Py<PyAny>) -> Option<RGBA> 
 }
 
 pub fn convert_tuple_rgba(tuple: &Bound<PyTuple>) -> Option<RGBA> {
-    let size = tuple.len() as usize;
+    let size = tuple.len();
     match size {
         3 => {
             let (a, b, c): (u8, u8, u8) = tuple.extract().unwrap();

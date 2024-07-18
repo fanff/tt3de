@@ -41,7 +41,7 @@ impl NoiseTexture {
         Self {
             seed,
             int_config,
-            noise: noise,
+            noise,
         }
     }
     pub fn uv_map(&self, u: f32, v: f32) -> RGBA {

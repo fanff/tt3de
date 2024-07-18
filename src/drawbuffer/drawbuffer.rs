@@ -1,16 +1,12 @@
 use std::borrow::BorrowMut;
-use std::cmp::min;
 
-use nalgebra_glm::clamp;
 use nalgebra_glm::clamp_vec;
 use nalgebra_glm::floor;
 use nalgebra_glm::max;
 use nalgebra_glm::round;
 use nalgebra_glm::vec2;
 use nalgebra_glm::Number;
-use nalgebra_glm::Scalar;
 use nalgebra_glm::TVec2;
-use nalgebra_glm::TVec3;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
 
@@ -43,6 +39,12 @@ pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub primitive_id: usize,
     pub node_id: usize,
     pub geometry_id: usize,
+}
+
+impl<T: nalgebra_glm::Number> Default for PixInfo<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T: nalgebra_glm::Number> PixInfo<T> {
@@ -173,6 +175,12 @@ pub struct DepthBufferCell<A: Number, const L: usize> {
     pub row: usize,
     pub col: usize,
 }
+impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize> Default for DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
     DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT>
 {
@@ -269,7 +277,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             for col in 0..col_count {
                 let idx = row * col_count + col;
 
-                (&mut depthbuffer[idx]).set_init_pix_ref(idx * L, row, col);
+                depthbuffer[idx].set_init_pix_ref(idx * L, row, col);
             }
         }
 
@@ -309,24 +317,24 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// This does apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating_with_clamp(&self, v: &Vec2) -> Vec2 {
         let as_screen = self.ndc_to_screen_floating(v);
-        let clamped = clamp_vec(
+        
+        clamp_vec(
             &round(&as_screen),
             &Vec2::zeros(),
             &vec2(self.col_count as f32 - 1.0, self.row_count as f32 - 1.0),
-        );
-        clamped
+        )
     }
 
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
-        let d = x.depth[l];
-        d
+        
+        x.depth[l]
     }
 
     pub fn get_depth_buffer_cell(&self, row: usize, col: usize) -> DepthBufferCell<DEPTHACC, L> {
-        let x = self.depthbuffer[row * self.col_count + col];
+        
 
-        x
+        self.depthbuffer[row * self.col_count + col]
     }
 
     pub fn get_pix_buffer_content_at_row_col(
@@ -336,13 +344,13 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         layer_idx: usize,
     ) -> &PixInfo<f32> {
         let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
-        let the_element_at_0 = &self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]];
+        
 
-        the_element_at_0
+        (&self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]]) as _
     }
     pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
-        let x = self.canvas[r * self.col_count + c];
-        x
+        
+        self.canvas[r * self.col_count + c]
     }
 
     pub fn get_min_max_depth(&self, layer: usize) -> (DEPTHACC, DEPTHACC) {
@@ -480,8 +488,8 @@ pub fn apply_material_on<
                 pixinfo,
                 material_buffer,
                 texture_buffer,
-                &uv_buffer,
-                &primitive_buffer,
+                uv_buffer,
+                primitive_buffer,
                 depth_cell,
                 depth_layer,
                 canvascell,

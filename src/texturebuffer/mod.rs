@@ -1,5 +1,4 @@
 use crate::utils::convert_tuple_texture_rgba;
-use fastnoise_lite::{FastNoiseLite, NoiseType};
 use pyo3::{pyclass, pymethods, types::PyList, Py, PyAny, Python};
 
 pub mod noise_texture;
@@ -208,7 +207,7 @@ impl TextureBufferPy {
         repeat_width: bool,
         repeat_height: bool,
     ) -> usize {
-        let texture_iter = TextureIterator::new(py, &pixels.as_ref(py));
+        let texture_iter = TextureIterator::new(py, pixels.as_ref(py));
 
         self.data
             .add_texture_from_iter(width, height, texture_iter, repeat_width, repeat_height)

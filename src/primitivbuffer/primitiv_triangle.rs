@@ -54,7 +54,6 @@ pub struct PTriangle3D {
     pub pa: Vertex,
     pub pb: Vertex,
     pub pc: Vertex,
-    pub uv_idx: usize,
 }
 
 impl PTriangle3D {
@@ -63,14 +62,12 @@ impl PTriangle3D {
         pa: Vertex,
         pb: Vertex,
         pc: Vertex,
-        uv_idx: usize,
     ) -> Self {
         Self {
             primitive_reference,
             pa,
             pb,
             pc,
-            uv_idx,
         }
     }
 }

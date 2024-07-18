@@ -1,6 +1,6 @@
 use crate::utils::{convert_glm_vec2, convert_pymat4, mat4_to_slicelist};
 use nalgebra::{ArrayStorage, RawStorage};
-use nalgebra_glm::{Mat4, Number, TVec2, TVec3, TVec4, Vec2, Vec3, Vec4};
+use nalgebra_glm::{Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
 
 #[derive(Debug)]
 pub struct UVBuffer<const UVCOUNT: usize, UVACC: Number> {
@@ -8,15 +8,21 @@ pub struct UVBuffer<const UVCOUNT: usize, UVACC: Number> {
     pub uv_size: usize,
 }
 
+impl<const UVCOUNT: usize, UVACC: Number> Default for UVBuffer<UVCOUNT, UVACC> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
     pub fn new() -> UVBuffer<UVCOUNT, UVACC> {
         let d: TVec2<UVACC> = TVec2::zeros();
         let arraystore = ArrayStorage([[d; UVCOUNT]; 3]);
-        let uvb = UVBuffer {
+        
+        UVBuffer {
             uv_array: arraystore,
             uv_size: 0,
-        };
-        uvb
+        }
     }
     // set the given vertex at the given location
     pub fn set_uv(&mut self, uv: &TVec2<UVACC>, idx: usize) {
@@ -62,17 +68,23 @@ pub struct VertexBuffer<const C: usize> {
 
     pub current_size: usize,
 }
+impl<const C: usize> Default for VertexBuffer<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const C: usize> VertexBuffer<C> {
     pub fn new() -> Self {
         let v4: TVec4<f32> = TVec4::zeros(); // = Vec4::zeros();
 
         let v4content = ArrayStorage([[v4]; C]);
-        let vb = VertexBuffer {
+        
+        VertexBuffer {
             v4content,
             mvp_calculated: ArrayStorage([[v4]; C]),
             current_size: 0,
-        };
-        vb
+        }
     }
 
     fn add_vertex(&mut self, vert: &Vec4) -> usize {
@@ -229,7 +241,7 @@ impl VertexBufferPy {
         let inner_data: &TransformPack = &thething.borrow().data;
 
         self.buffer.apply_mv(
-            &inner_data.get_node_transform(node_id),
+            inner_data.get_node_transform(node_id),
             &inner_data.view_matrix_2d,
             start,
             end,
@@ -246,7 +258,7 @@ impl VertexBufferPy {
     ) {
         let thething: &Bound<TransformPackPy> = t.bind(py);
         let inner_data: &TransformPack = &thething.borrow().data;
-        let model_matrix: &Mat4 = &inner_data.get_node_transform(node_id);
+        let model_matrix: &Mat4 = inner_data.get_node_transform(node_id);
         let view_matrix: &Mat4 = &inner_data.view_matrix_3d;
         let projection_matrix: &Mat4 = &inner_data.projection_matrix_3d;
         self.buffer
@@ -270,7 +282,8 @@ impl TransformPack {
         let v3 = Vec3::zeros();
         let mmmm = Mat4::identity();
         let node_tr = vec![mmmm; max_node].into_boxed_slice();
-        let vb = TransformPack {
+        
+        TransformPack {
             model_transforms: node_tr,
             view_matrix_2d: mmmm,
             view_matrix_3d: mmmm,
@@ -278,8 +291,7 @@ impl TransformPack {
             environment_light: v3,
             max_node_count: max_node,
             current_count: 0,
-        };
-        vb
+        }
     }
 
     fn clear(&mut self) {

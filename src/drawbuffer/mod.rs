@@ -1,4 +1,4 @@
-use nalgebra_glm::{Vec2, Vec3};
+use nalgebra_glm::{Vec2};
 use pyo3::{
     intern,
     prelude::*,
@@ -7,11 +7,11 @@ use pyo3::{
 pub mod drawbuffer;
 use drawbuffer::*;
 use pyo3::types::PyDict;
-use std::{borrow::BorrowMut, collections::HashMap};
+use std::{borrow::BorrowMut};
 pub mod glyphset;
 use glyphset::*;
 pub mod segment_cache;
-use crate::utils::{convert_glm_vec2, convert_glm_vec3};
+use crate::utils::{convert_glm_vec2};
 use segment_cache::*;
 
 #[pyclass]
@@ -88,19 +88,19 @@ impl AbigDrawing {
         segment_cache.insert_with_hash(0, aseg0);
         AbigDrawing {
             db: DrawBuffer::new(max_row, max_col, 10.0),
-            max_row: max_row,
-            max_col: max_col,
+            max_row,
+            max_col,
             layer_count: 2,
             segment_class: segment_class.into(),
             style_class: style_class.into(),
             color_class: color_class.into(),
             color_triplet_class: color_triplet_class.into(),
             seg_cache: segment_cache,
-            default_segment: default_segment,
+            default_segment,
         }
     }
     pub fn layer_count(&self) -> usize {
-        return self.layer_count;
+        self.layer_count
     }
 
     pub fn get_row_count(&self) -> usize {
@@ -192,10 +192,9 @@ impl AbigDrawing {
         dict.set_item("depth", cell.depth[layer]).unwrap();
         dict.set_item("pix_info", cell.pixinfo[layer]).unwrap();
 
-        let wslice = pix_info_element.uv.as_slice();
-        let w_1_slice = pix_info_element.uv_1.as_slice();
-        dict.set_item("w", wslice).unwrap();
-        dict.set_item("w_1", w_1_slice).unwrap();
+        dict.set_item("uv", pix_info_element.uv.as_slice()).unwrap();
+        dict.set_item("uv_1", pix_info_element.uv_1.as_slice())
+            .unwrap();
 
         dict.set_item("material_id", pix_info_element.material_id)
             .unwrap();
@@ -285,7 +284,7 @@ impl AbigDrawing {
                         let reduced_hash = self.seg_cache.get_reduced(
                             &cell.front_color,
                             &cell.back_color,
-                            cell.glyph as u8,
+                            cell.glyph,
                         );
                         // calculate the hash
                         let hash_value = self.seg_cache.reduced_tuple_to_int(reduced_hash);

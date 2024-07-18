@@ -3,8 +3,7 @@ use nalgebra_glm::Vec2;
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
-    primitivbuffer::{PointInfo, PrimitivReferences},
-    raster_line_along_rows, raster_vertical_line, set_pixel_double_weights,
+    primitivbuffer::{PointInfo, PrimitivReferences}, raster_vertical_line, set_pixel_double_weights,
 };
 
 pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
@@ -25,7 +24,6 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
             1.0,
             0.0,
         );
-        return;
     } else if pa.col > pb.col {
         for col in pb.col..=pa.col {
             // calculate barycentric factor

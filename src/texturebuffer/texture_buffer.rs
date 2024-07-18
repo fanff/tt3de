@@ -29,16 +29,16 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
 
     pub fn get_rgba_at(&self, idx: usize, u: f32, v: f32) -> RGBA {
         let atexture = &self.textures[idx];
-        let color = atexture.uv_map(u, v);
+        
 
-        color
+        atexture.uv_map(u, v)
     }
 
     pub fn get_rgba_at_v(&self, idx: usize, uv: &Vec2) -> RGBA {
         let atexture = &self.textures[idx];
-        let color = atexture.uv_map(uv.x, uv.y);
+        
 
-        color
+        atexture.uv_map(uv.x, uv.y)
     }
 
     pub fn get_wh_of(&self, idx: usize) -> (usize, usize) {

@@ -5,8 +5,7 @@ use nalgebra_glm::{Vec2, Vec3, Vec4};
 use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::set_pixel_double_weights};
 
 use super::{
-    max_2_int,
-    primitivbuffer::{PointInfo, PrimitivReferences},
+    primitivbuffer::{PrimitivReferences},
 };
 
 /// Vertex struct
@@ -96,7 +95,7 @@ impl std::fmt::Debug for Vertex {
 
 #[cfg(test)]
 mod test_vertext {
-    use std::fmt::Debug;
+    
 
     use nalgebra_glm::{Vec2, Vec3, Vec4};
 
@@ -147,7 +146,7 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
     let dit1 = (*pc - *pa) / (delta_row);
 
     // right edge interpolant
-    let mut itEdge1 = pa.clone();
+    let mut itEdge1 = *pa;
 
     draw_flat_triangle(
         drawing_buffer,
@@ -174,7 +173,7 @@ pub fn draw_flat_top_triangle<const DEPTHCOUNT: usize>(
     let dit1 = (*pc - *pb) / (delta_row);
 
     // right edge interpolant
-    let mut itEdge1 = pb.clone();
+    let mut itEdge1 = *pb;
 
     draw_flat_triangle(
         drawing_buffer,
@@ -228,7 +227,7 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
         }
 
         // create scanline interpolant
-        let mut i_line = itEdge0.clone();
+        let mut i_line = itEdge0;
 
         // calculate delta scaline interpolant / d col
         let delta_col = itEdge1.pos.x - itEdge0.pos.x;
@@ -356,7 +355,7 @@ mod test_raster_duo_triangle {
 
     use crate::{
         drawbuffer::drawbuffer::DrawBuffer,
-        raster::primitivbuffer::{PointInfo, PrimitivReferences},
+        raster::primitivbuffer::{PrimitivReferences},
     };
 
     use super::{tomato_draw_triangle, Vertex};
@@ -482,7 +481,7 @@ mod test_raster_mono_triangle {
 
     use crate::{
         drawbuffer::drawbuffer::DrawBuffer,
-        raster::primitivbuffer::{PointInfo, PrimitivReferences},
+        raster::primitivbuffer::{PrimitivReferences},
     };
 
     use super::{tomato_draw_triangle, Vertex};

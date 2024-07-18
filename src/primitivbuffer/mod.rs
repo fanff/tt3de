@@ -1,9 +1,12 @@
 pub mod primitivbuffer;
+use nalgebra_glm::{vec2, vec3, vec4};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 
 pub mod primitiv_triangle;
 use primitiv_triangle::*;
+
+use crate::raster::raster_triangle_tomato::Vertex;
 
 #[pyclass]
 pub struct PrimitiveBufferPy {
@@ -17,7 +20,7 @@ impl PrimitiveBufferPy {
     fn new(max_size: usize) -> Self {
         // Step 3: Box the Vec<GeomElement>
         let content = PrimitiveBuffer::new(max_size);
-        PrimitiveBufferPy { content: content }
+        PrimitiveBufferPy { content }
     }
     fn clear(&mut self) {
         self.content.clear();
@@ -80,23 +83,25 @@ impl PrimitiveBufferPy {
         p_c_row: f32,
         p_c_col: f32,
         p_c_depth: f32,
-        uv: usize,
     ) -> usize {
-        self.content.add_triangle(
-            node_id,
-            geometry_id,
-            material_id,
-            p_a_row,
-            p_a_col,
-            p_a_depth,
-            p_b_row,
-            p_b_col,
-            p_b_depth,
-            p_c_row,
-            p_c_col,
-            p_c_depth,
-            uv,
-        )
+        let va = Vertex::new(
+            vec4(p_a_col, p_a_row, p_a_depth, 1.0),
+            vec3(1.0, 0.0, 0.0),
+            vec2(0.0, 0.0),
+        );
+        let vb = Vertex::new(
+            vec4(p_b_col, p_b_row, p_b_depth, 1.0),
+            vec3(0.0, 1.0, 0.0),
+            vec2(1.0, 0.0),
+        );
+        let vc = Vertex::new(
+            vec4(p_c_col, p_c_row, p_c_depth, 1.0),
+            vec3(0.0, 0.0, 1.0),
+            vec2(1.0, 1.0),
+        );
+
+        self.content
+            .add_triangle3d(node_id, geometry_id, material_id, va, vb, vc)
     }
     fn add_static(&mut self) {
         todo!()

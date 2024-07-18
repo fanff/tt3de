@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 
 use pyo3::{
     intern,
@@ -131,6 +131,43 @@ impl SegmentCache {
     }
 }
 
+pub fn create_textual_segment(
+    py: Python,
+    reduced_hash: [u8; 7],
+    color_triplet_class: &Bound<PyAny>,
+    color_class: &Bound<PyAny>,
+    segment_class: &Bound<PyAny>,
+    style_class: &Bound<PyAny>,
+) -> Py<PyAny> {
+    let dict = PyDict::new_bound(py);
+    let f_triplet = color_triplet_class
+        .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
+        .unwrap();
+    let b_triplet = color_triplet_class
+        .call1((reduced_hash[3], reduced_hash[4], reduced_hash[5]))
+        .unwrap();
+    dict.set_item(
+        intern!(py, "color"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (f_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
+
+    dict.set_item(
+        intern!(py, "bgcolor"),
+        color_class
+            .call_method1(intern!(py, "from_triplet"), (b_triplet,))
+            .unwrap(),
+    )
+    .unwrap();
+    let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
+    let anewseg = segment_class
+        .call1((theglyph, &style_class.call((), Some(&dict)).unwrap()))
+        .unwrap();
+    anewseg.into()
+}
+
 // test module for reduce_value function
 #[cfg(test)]
 mod tests {
@@ -180,41 +217,4 @@ mod tests {
 
         assert_eq!(max_combinations, (8 * 8 * 8) * (8 * 8 * 8) * 256); // 67 Million combinations (2^26)
     }
-}
-
-pub fn create_textual_segment(
-    py: Python,
-    reduced_hash: [u8; 7],
-    color_triplet_class: &Bound<PyAny>,
-    color_class: &Bound<PyAny>,
-    segment_class: &Bound<PyAny>,
-    style_class: &Bound<PyAny>,
-) -> Py<PyAny> {
-    let dict = PyDict::new_bound(py);
-    let f_triplet = color_triplet_class
-        .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
-        .unwrap();
-    let b_triplet = color_triplet_class
-        .call1((reduced_hash[3], reduced_hash[4], reduced_hash[5]))
-        .unwrap();
-    dict.set_item(
-        intern!(py, "color"),
-        color_class
-            .call_method1(intern!(py, "from_triplet"), (f_triplet,))
-            .unwrap(),
-    )
-    .unwrap();
-
-    dict.set_item(
-        intern!(py, "bgcolor"),
-        color_class
-            .call_method1(intern!(py, "from_triplet"), (b_triplet,))
-            .unwrap(),
-    )
-    .unwrap();
-    let theglyph = GLYPH_STATIC_STR[reduced_hash[6] as usize];
-    let anewseg = segment_class
-        .call1((theglyph, &style_class.call((), Some(&dict)).unwrap()))
-        .unwrap();
-    anewseg.into()
 }

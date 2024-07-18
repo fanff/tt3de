@@ -1,7 +1,5 @@
 use fastnoise_lite::*;
-use nalgebra_glm::Number;
 
-use crate::drawbuffer::drawbuffer::PixInfo;
 
 #[derive(Clone, Debug)]
 pub struct NoiseMaterial {

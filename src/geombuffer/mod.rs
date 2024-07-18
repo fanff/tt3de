@@ -100,8 +100,8 @@ impl GeometryBuffer {
                 node_id,
                 material_id,
             },
-            p_start: p_start,
-            uv_start: uv_start,
+            p_start,
+            uv_start,
         });
 
         self.content[self.current_size] = elem;
@@ -221,7 +221,7 @@ impl GeometryBufferPy {
         let content = geom_elements.into_boxed_slice();
         GeometryBufferPy {
             buffer: GeometryBuffer {
-                max_size: max_size,
+                max_size,
                 content,
                 current_size: 0,
             },

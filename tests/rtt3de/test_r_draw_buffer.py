@@ -36,8 +36,8 @@ class Test_DrawBuffer(unittest.TestCase):
         v =gb.get_depth_buffer_cell(0,0,layer)
         self.assertEqual(v,{"depth":10.0,
                             "pix_info":  layer,
-                            "w":   [0.0,0.0,0.0],
-                            "w_1": [0.0,0.0,0.0],
+                            "uv":   [0.0,0.0],
+                            "uv_1": [0.0,0.0],
                             "material_id":0,
                             "geometry_id":0,
                             "node_id":0,
@@ -47,8 +47,8 @@ class Test_DrawBuffer(unittest.TestCase):
         v =gb.get_depth_buffer_cell(0,0,layer)
         self.assertEqual(v,{"depth":10.0,
                             "pix_info":  layer,
-                            "w":   [0.0,0.0,0.0],
-                            "w_1": [0.0,0.0,0.0],
+                            "uv":   [0.0,0.0],
+                            "uv_1": [0.0,0.0],
                             "material_id":0,
                             "geometry_id":0,
                             "node_id":0,
@@ -58,8 +58,8 @@ class Test_DrawBuffer(unittest.TestCase):
             self.assertEqual(
                 gb.get_pix_info_element(pix_idx),
                 {
-                    "w":   [0.0,0.0,0.0],
-                    "w_1": [0.0,0.0,0.0],
+                    "uv":   [0.0,0.0],
+                    "uv_1": [0.0,0.0],
                     "primitive_id": 0,
                     "geometry_id": 0,
                     "node_id": 0,

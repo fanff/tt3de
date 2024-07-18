@@ -1,6 +1,5 @@
-use nalgebra_glm::Vec2;
 
-use crate::drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo};
+use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
 

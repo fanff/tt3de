@@ -8,10 +8,10 @@ from rtt3de import PrimitiveBufferPy
 from rtt3de import AbigDrawing
 
 from rtt3de import raster_all_py
+from rtt3de import VertexBufferPy
 
-
-def rust_version(primitive_buffer, drawing_buffer):
-    raster_all_py(primitive_buffer, drawing_buffer)
+def rust_version(primitive_buffer,vertex_buffer, drawing_buffer):
+    raster_all_py(primitive_buffer,vertex_buffer, drawing_buffer)
 
 sizes = [32, 64,128, 256, 512, 2048, 4096]
 
@@ -23,7 +23,7 @@ def test_bench_rust_triangle_raster(benchmark, size):
     drawing_buffer.hard_clear(1000)
 
     primitive_buffer = PrimitiveBufferPy(2000)
-    
+    vertex_buffer = VertexBufferPy()
     # create a geometry buffer to hold the initial elemnts
     for i in range(1000):
 
@@ -47,7 +47,7 @@ def test_bench_rust_triangle_raster(benchmark, size):
             0
         )
 
-    benchmark(rust_version, primitive_buffer, drawing_buffer)
+    benchmark(rust_version, primitive_buffer, vertex_buffer,drawing_buffer)
 
 
 

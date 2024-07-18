@@ -1,9 +1,7 @@
-use nalgebra_glm::{vec3, Vec2};
-
 use crate::{
-    drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
+    drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
-    texturebuffer::{texture_buffer::TextureBuffer, RGBA},
+    texturebuffer::texture_buffer::TextureBuffer,
     vertexbuffer::UVBuffer,
 };
 
@@ -53,13 +51,14 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
 
 #[cfg(test)]
 mod tests {
-    use nalgebra_glm::{vec2, vec3};
+    use nalgebra_glm::vec2;
 
     use super::*;
-    use crate::drawbuffer::drawbuffer::CanvasCell;
+    use crate::drawbuffer::drawbuffer::{CanvasCell, Color};
     use crate::primitivbuffer::primitiv_triangle::PTriangle;
     use crate::primitivbuffer::primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveElements};
     use crate::texturebuffer::texture_buffer::TextureBuffer;
+    use crate::texturebuffer::RGBA;
     use crate::vertexbuffer::UVBuffer;
 
     #[test]
@@ -97,8 +96,7 @@ mod tests {
                 RGBA::new(20, 0, 0, 255),
                 RGBA::new(30, 0, 0, 255),
                 RGBA::new(40, 0, 0, 255),
-            ]
-            .into_iter(),
+            ],
             false,
             false,
         );

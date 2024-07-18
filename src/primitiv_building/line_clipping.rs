@@ -7,8 +7,8 @@ use crate::{
 };
 
 use super::{
-    perspective_divide, perspective_divide_v4_v4,
-    primitivbuffer::{PrimitivReferences, PrimitiveBuffer},
+    perspective_divide_v4_v4,
+    primitivbuffer::{PrimitiveBuffer},
 };
 
 /// Clip a line to the view frustum.

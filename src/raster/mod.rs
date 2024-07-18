@@ -1,11 +1,11 @@
-use nalgebra_glm::{normalize, Number, Real, TVec2, TVec3, Vec3};
+use nalgebra_glm::{Real, TVec2};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
     drawbuffer::{drawbuffer::DrawBuffer, AbigDrawing},
     primitivbuffer::*,
-    vertexbuffer::{self, VertexBuffer, VertexBufferPy},
+    vertexbuffer::{VertexBuffer, VertexBufferPy},
 };
 
 pub mod raster_line_row;

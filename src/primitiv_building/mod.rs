@@ -1,6 +1,6 @@
-use nalgebra_glm::{cross, dot, vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
+use nalgebra_glm::{dot, vec3, vec4, Number, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
-use pyo3::{pyfunction, PyRefMut, Python};
+use pyo3::{pyfunction, PyRefMut};
 
 use crate::{
     drawbuffer::{
@@ -56,7 +56,6 @@ fn polygon_fan_as_primitive<
     transform_pack: &TransformPack,
     vertex_buffer: &mut VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
-    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -77,7 +76,7 @@ fn polygon_fan_as_primitive<
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the first triangle
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        tomato_clip_triangle_to_clip_space(&va, &vb, &vc, uvs, &mut output_buffer);
+        tomato_clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
@@ -87,8 +86,6 @@ fn polygon_fan_as_primitive<
             let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
             let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
             let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
-
-            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
 
             primitivbuffer.add_triangle3d(
                 polygon.geom_ref.node_id,
@@ -110,7 +107,6 @@ fn polygon_fan_as_primitive<
                     vec3(0.0, 0.0, 0.0),
                     uvs[2] * vcdiv.w,
                 ),
-                output_uv_index,
             );
         }
     }
@@ -127,7 +123,6 @@ fn polygon_as_primitive<
     transform_pack: &TransformPack,
     vertex_buffer: &mut VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
-    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -141,13 +136,13 @@ fn polygon_as_primitive<
         // get the uv coordinates
         let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
         // cull backfacing triangles with cross product (%) shenanigans
-        if (dot(&normal_vec, &(va - eyepos).xyz()) > 0.0) {
+        if dot(&normal_vec, &(va - eyepos).xyz()) > 0.0 {
             continue;
         }
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the triangle
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        tomato_clip_triangle_to_clip_space(&va, &vb, &vc, uvs, &mut output_buffer);
+        tomato_clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
 
         //clip_triangle_to_clip_space(&vadiv, &vbdiv, &vcdiv, uvs, &mut output_buffer);
 
@@ -158,8 +153,6 @@ fn polygon_as_primitive<
             let point_a = drawbuffer.ndc_to_screen_floating(&vacdiv.xy());
             let point_b = drawbuffer.ndc_to_screen_floating(&vbcdiv.xy());
             let point_c = drawbuffer.ndc_to_screen_floating(&vccdiv.xy());
-
-            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
 
             primitivbuffer.add_triangle3d(
                 polygon.geom_ref.node_id,
@@ -181,7 +174,6 @@ fn polygon_as_primitive<
                     normal_vec,
                     uvs[2] * vccdiv.w,
                 ),
-                output_uv_index,
             );
         }
     }
@@ -196,11 +188,9 @@ pub fn build_primitives<
     vertex_buffer: &mut VertexBuffer<MAX_VERTEX_CONTENT>,
     transform_pack: &TransformPack,
     uv_array_input: &UVBuffer<MAX_UV_CONTENT, f32>,
-    uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
-    uv_array_output.clear();
     for geometry_id in 1..geombuffer.current_size {
         let geom_element = geombuffer.content.get(geometry_id).unwrap();
         match geom_element {
@@ -243,7 +233,7 @@ pub fn build_primitives<
                 );
 
                 line_as_primitive(
-                    &l,
+                    l,
                     geometry_id,
                     vertex_buffer,
                     uv_array_input,
@@ -264,12 +254,11 @@ pub fn build_primitives<
                     polygon.triangle_count + 2 + polygon.p_start,
                 );
                 polygon_fan_as_primitive(
-                    &polygon,
+                    polygon,
                     geometry_id,
                     transform_pack,
                     vertex_buffer,
                     uv_array_input,
-                    uv_array_output,
                     drawbuffer,
                     primitivbuffer,
                 )
@@ -284,12 +273,11 @@ pub fn build_primitives<
                     (polygon.triangle_count * 3) + polygon.p_start,
                 );
                 polygon_as_primitive(
-                    &polygon,
+                    polygon,
                     geometry_id,
                     transform_pack,
                     vertex_buffer,
                     uv_array_input,
-                    uv_array_output,
                     drawbuffer,
                     primitivbuffer,
                 )
@@ -314,7 +302,6 @@ pub fn build_primitives_py(
         &mut vbpy.buffer,
         &trbuffer_py.data,
         &vbpy.uv_array,
-        &mut vbpy.uv_post_clipping,
         &dbpy.db,
         prim_content,
     );
