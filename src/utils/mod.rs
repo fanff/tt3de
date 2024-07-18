@@ -1,4 +1,4 @@
-use nalgebra_glm::{Mat4, Vec2, Vec3};
+use nalgebra_glm::{Mat4, Vec2, Vec3, Vec4};
 use pyo3::{
     types::{PyAnyMethods, PyList, PyTuple, PyTupleMethods},
     Bound, Py, PyAny, Python,
@@ -28,6 +28,20 @@ pub fn mat4_to_slicelist(py: Python, mat4: Mat4) -> Py<PyAny> {
     let list = PyList::new_bound(py, s);
     list.into()
 }
+
+pub fn vec2_as_pylist(py: Python, vec2: Vec2) -> Py<PyAny> {
+    let list = PyList::new_bound(py, vec2.as_slice());
+    list.into()
+}
+pub fn vec3_as_pylist(py: Python, vec3: Vec3) -> Py<PyAny> {
+    let list = PyList::new_bound(py, vec3.as_slice());
+    list.into()
+}
+pub fn vec4_as_pylist(py: Python, vec4: Vec4) -> Py<PyAny> {
+    let list = PyList::new_bound(py, vec4.as_slice());
+    list.into()
+}
+
 
 pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {
     let r = values.call_method0(py, "to_tuple").unwrap();

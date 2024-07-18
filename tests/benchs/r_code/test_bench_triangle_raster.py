@@ -44,7 +44,6 @@ def test_bench_rust_triangle_raster(benchmark, size):
             size, # left 
             1.0,
 
-            0
         )
 
     benchmark(rust_version, primitive_buffer, vertex_buffer,drawing_buffer)

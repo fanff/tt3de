@@ -1,10 +1,5 @@
 use nalgebra_glm::{dot, lerp, Vec2, Vec4};
 
-fn interpolate(p1: &Vec4, p2: &Vec4, t: f32) -> Vec4 {
-    //p1 + t * (p2 - p1)
-    lerp(p1, p2, t)
-}
-
 fn interpolate_with_uv(p1: &Vec4, p2: &Vec4, uv1: &Vec2, uv2: &Vec2, t: f32) -> (Vec4, Vec2) {
     //p1 + t * (p2 - p1)
     (lerp(p1, p2, t), lerp(uv1, uv2, t))

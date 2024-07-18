@@ -31,7 +31,7 @@ fn perspective_divide(v: &Vec4) -> Vec3 {
 }
 
 fn perspective_divide_v4_v4(v: &Vec4) -> Vec4 {
-    Vec4::new(v.x / v.w, v.y / v.w, v.z / v.w, 1.0)
+    Vec4::new(v.x / v.w, v.y / v.w, v.z / v.w, 1.0 / v.w)
 }
 
 fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec4, Vec4, Vec4) {
@@ -241,7 +241,7 @@ pub fn build_primitives<
                     primitivbuffer,
                 )
             }
-            crate::geombuffer::GeomElement::Polygon2D(p) => {
+            crate::geombuffer::GeomElement::Polygon2D(_p) => {
                 todo!();
             }
             crate::geombuffer::GeomElement::PolygonFan3D(polygon) => {

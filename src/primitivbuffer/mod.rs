@@ -6,7 +6,10 @@ use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 pub mod primitiv_triangle;
 use primitiv_triangle::*;
 
-use crate::raster::raster_triangle_tomato::Vertex;
+use crate::{
+    raster::raster_triangle_tomato::Vertex,
+    utils::{vec2_as_pylist, vec3_as_pylist, vec4_as_pylist},
+};
 
 #[pyclass]
 pub struct PrimitiveBufferPy {
@@ -149,8 +152,14 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
             dict.set_item("_type", "static").unwrap();
         }
 
-        PrimitiveElements::Triangle3D(_) => todo!(),
-        PrimitiveElements::Static { fds, index } => todo!(),
+        &PrimitiveElements::Triangle3D(t) => {
+            into_dict(py, &t.primitive_reference, &dict);
+            dict.set_item("_type", "triangle").unwrap();
+            // Assuming DepthBufferCell has some fields `field1` and `field2`
+            dict.set_item("pa", vertex_into_dict(py, &t.pa)).unwrap();
+            dict.set_item("pb", vertex_into_dict(py, &t.pb)).unwrap();
+            dict.set_item("pc", vertex_into_dict(py, &t.pc)).unwrap();
+        }
     }
 
     dict.into()
@@ -171,5 +180,15 @@ fn point_info_into_dict(py: Python, pi: &PointInfo<f32>) -> Py<PyDict> {
     dict.set_item("row", pi.row).unwrap();
     dict.set_item("col", pi.col).unwrap();
     dict.set_item("depth", pi.p.z).unwrap();
+    dict.into()
+}
+
+fn vertex_into_dict(py: Python, pi: &Vertex) -> Py<PyDict> {
+    let dict = PyDict::new_bound(py);
+    dict.set_item("pos", vec4_as_pylist(py, pi.pos)).unwrap();
+    dict.set_item("normal", vec3_as_pylist(py, pi.normal))
+        .unwrap();
+    dict.set_item("uv", vec2_as_pylist(py, pi.uv)).unwrap();
+
     dict.into()
 }

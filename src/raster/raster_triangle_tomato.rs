@@ -4,18 +4,16 @@ use nalgebra_glm::{Vec2, Vec3, Vec4};
 
 use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::set_pixel_double_weights};
 
-use super::{
-    primitivbuffer::{PrimitivReferences},
-};
+use super::primitivbuffer::PrimitivReferences;
 
 /// Vertex struct
 ///
 /// This struct is used to store the vertex information of a triangle with its attributes
 #[derive(Clone, Copy)]
 pub struct Vertex {
-    pos: Vec4,
-    normal: Vec3,
-    uv: Vec2,
+    pub pos: Vec4,
+    pub normal: Vec3,
+    pub uv: Vec2,
 }
 
 impl Vertex {
@@ -95,7 +93,6 @@ impl std::fmt::Debug for Vertex {
 
 #[cfg(test)]
 mod test_vertext {
-    
 
     use nalgebra_glm::{Vec2, Vec3, Vec4};
 
@@ -353,10 +350,7 @@ mod test_raster_duo_triangle {
     use approx::assert_abs_diff_eq;
     use nalgebra_glm::{Vec2, Vec3, Vec4};
 
-    use crate::{
-        drawbuffer::drawbuffer::DrawBuffer,
-        raster::primitivbuffer::{PrimitivReferences},
-    };
+    use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::primitivbuffer::PrimitivReferences};
 
     use super::{tomato_draw_triangle, Vertex};
 
@@ -479,10 +473,7 @@ mod test_raster_duo_triangle {
 mod test_raster_mono_triangle {
     use nalgebra_glm::{Vec2, Vec3, Vec4};
 
-    use crate::{
-        drawbuffer::drawbuffer::DrawBuffer,
-        raster::primitivbuffer::{PrimitivReferences},
-    };
+    use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::primitivbuffer::PrimitivReferences};
 
     use super::{tomato_draw_triangle, Vertex};
 
