@@ -101,11 +101,20 @@ def load_palette(filename):
     return extract_palette(load_bmp(filename))
 
 
-def load_obj(cls, obj_bytes):
+class Triangle3D:
+    def __init__(self, v1: Point3D, v2: Point3D, v3: Point3D, normal: Point3D):
+        self.v1 = v1
+        self.v2 = v2
+        self.v3 = v3
+        self.normal = normal
+        self.uvmap:List[tuple[Point2D,Point2D,Point2D]] = None
+
+
+def load_obj( obj_bytes):
     vertices = []
     texture_coords = [[] for _ in range(8)]
     normals = []
-    triangles = []
+    triangles:List[Triangle3D] = []
     triangles_vindex = []
     lines = obj_bytes.decode("utf-8").split("\n")
 
@@ -201,10 +210,8 @@ def load_obj(cls, obj_bytes):
                     t.uvmap = uv_vectors
                     triangles.append(t)
 
-    s = cls()
-    s.vertices = vertices
-    s.texture_coords = texture_coords
-    s.normals = normals
-    s.triangles = triangles
-    s.triangles_vindex = triangles_vindex
-    return s
+    return (vertices,
+    texture_coords,
+    normals,
+    triangles,
+    triangles_vindex,)

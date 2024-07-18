@@ -50,58 +50,7 @@ class Prefab3D:
         m.uvmap = texture_coords
         return m
     
-    @staticmethod
-    def unitary_cube() -> TT3DPolygon:
-        vertices = [
-            # backface
-            Point3D(0, 0, 1.0),
-            Point3D(1.0, 0.0, 1.0),
-            Point3D(1.0, 1.0, 1.0),
-
-            Point3D(0, 0, 1.0),
-            Point3D(1.0, 1.0, 1.0),
-            Point3D(0, 1.0, 1.0),
-
-            # front face
-            Point3D(0, 0, 0.0),
-            Point3D(1.0, 0.0, 0.0),
-            Point3D(1.0, 1.0, 0.0),
-
-            Point3D(0, 0, 0.0),
-            Point3D(1.0, 1.0, 0.0),
-            Point3D(0, 1.0, 0.0),
-
-
-
-        ]
-        texture_coords = [
-            
-            # backface
-            [
-            Point2D(0.0, 0),
-            Point2D(1, 0),
-            Point2D(1, 1),
-            ],[
-            Point2D(0.0, 0),
-            Point2D(1, 1),
-            Point2D(0, 1),
-            ],
-
-            # front face
-            [Point2D(0.0, 0),
-            Point2D(1, 0),
-            Point2D(1, 1),
-            ],[
-            Point2D(0.0, 0),
-            Point2D(1, 1),
-            Point2D(0, 1),
-            ],
-        
-        ]
-        m = TT3DPolygon()
-        m.vertex_list = vertices
-        m.uvmap = texture_coords
-        return m
+    
 
     @staticmethod
     def unitary_circle(point_count=3) -> TT3DPolygonFan:

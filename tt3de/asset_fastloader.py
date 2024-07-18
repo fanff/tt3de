@@ -4,12 +4,28 @@ from tt3de.asset_load import load_bmp, load_obj, read_file
 from tt3de.richtexture import ImageTexture
 from tt3de.tt3de import Point2D, Point3D
 from tt3de.tt_2dnodes import TT2Polygon
-from tt3de.utils import TT3DEMaterialMode, TT3DEMaterialTextureMappingOptions
+from tt3de.tt_3dnodes import TT3DPolygon
 
 
 def fast_load(obj_file: str, cls=None):
     if obj_file.endswith(".obj"):
-        return load_obj(cls, read_file(obj_file))
+        (vertices,
+        texture_coords,
+        normals,
+        triangles,
+        triangles_vindex,) =load_obj(read_file(obj_file))
+
+        p = TT3DPolygon()
+
+        for triangle in triangles:
+            p.vertex_list.append(triangle.v1)
+            p.vertex_list.append(triangle.v2)
+            p.vertex_list.append(triangle.v3)
+
+            uvs = [Point2D(p.x,1.0-p.y) for p in triangle.uvmap[0]]
+            p.uvmap.append(uvs)
+        return p
+
     elif obj_file.endswith(".bmp"):
         with open(obj_file, "rb") as fin:
             imgdata = load_bmp(fin)
@@ -23,7 +39,6 @@ def fast_load(obj_file: str, cls=None):
 
 from rtt3de import MaterialBufferPy
 from rtt3de import TextureBufferPy
-from rtt3de import VertexBufferPy,TransformPackPy
 
 class MaterialPerfab:
     @staticmethod
@@ -40,6 +55,18 @@ class MaterialPerfab:
                                    False,False)
 
         img: ImageTexture = fast_load("models/sky1.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   True,True)
+        
+        img: ImageTexture = fast_load("models/sky1.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   True,True)
+        
+        img: ImageTexture = fast_load("models/cubetest2.bmp")
+        texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
+                                   True,True)
+        
+        img: ImageTexture = fast_load("models/car/car5_taxi.bmp")
         texture_buffer.add_texture(img.image_width ,img.image_height ,img.chained_data(),
                                    True,True)
 
@@ -59,6 +86,9 @@ class MaterialPerfab:
         material_buffer.add_textured(0,99) # idx = 8
         material_buffer.add_textured(1,99) # idx = 9
         material_buffer.add_textured(2,99) # idx = 10
+
+        material_buffer.add_textured(4,99) # idx = 11
+        material_buffer.add_textured(5,99) # idx = 12
 
         
         return texture_buffer,material_buffer

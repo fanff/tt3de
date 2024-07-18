@@ -13,13 +13,12 @@ def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
 class TestLoad(unittest.TestCase):
 
     def test_simplecube(self):
-        Mesh3D = None
-        amesh = fast_load("models/cube.obj", Mesh3D)
+        polygon3d = fast_load("models/cube.obj")
 
-        self.assertEqual(len(amesh.triangles), 12)
+        self.assertEqual(len(polygon3d.vertex_list), 12*3)
+        self.assertEqual(len(polygon3d.uvmap), 12)
 
-        for t in amesh.triangles:
-            print(t)
+        
 
     def test_simpleimg(self):
         with open("models/cube_texture.bmp", "rb") as fin:

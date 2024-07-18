@@ -127,8 +127,8 @@ impl<const C: usize> VertexBuffer<C> {
 }
 
 use pyo3::{prelude::*, types::PyTuple};
-const MAX_VERTEX_CONTENT: usize = 128;
-const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 4;
+const MAX_VERTEX_CONTENT: usize = 2048;
+const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 2;
 
 #[pyclass]
 pub struct VertexBufferPy {

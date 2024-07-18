@@ -88,7 +88,7 @@ class TT3DView(Container):
                 p = math.radians(
                     (((event.y - offset.y) / self.size.height) - 0.5) * 160
                 )
-                self.camera.set_yaw_pitch(self.camera.yaw,-  p)
+                self.camera.set_yaw_pitch(self.camera.yaw,  p)
 
         elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True

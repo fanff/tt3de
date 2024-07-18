@@ -221,7 +221,7 @@ pub fn clip_triangle_to_clip_space(
     // defining the plane of the clipping
     let planes = [
         (Vec4::new(0.0, 0.0, 1.0, 0.0), 0),  // near
-        (Vec4::new(0.0, 0.0, -1.0, 1.0), 0), // far  // will use the full clipping method, generating more triangle potentially
+        (Vec4::new(0.0, 0.0, -1.0, 1.0), 1), // far  // will use the full clipping method, generating more triangle potentially
         (Vec4::new(-1.0, 0.0, 0.0, 1.0), 1), //
         (Vec4::new(1.0, 0.0, 0.0, 1.0), 1),  //
         (Vec4::new(0.0, -1.0, 0.0, 1.0), 1), //

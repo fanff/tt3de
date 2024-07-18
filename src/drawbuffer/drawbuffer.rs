@@ -313,7 +313,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does NOT apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
-        let mut sumoftwovec: Vec2 = v + Vec2::new(1.0, 1.0);
+        let mut sumoftwovec: Vec2 = v.component_mul(&vec2(1.0, -1.0)) + vec2(1.0, 1.0);
         // vectorial summ and multiplication; component wise
         sumoftwovec.component_mul_assign(&self.half_size);
         sumoftwovec

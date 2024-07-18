@@ -23,7 +23,7 @@ from textual.widgets import (
 )
 from textual.validation import Function, Number, ValidationResult, Validator
 
-from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
+from tt3de.asset_fastloader import MaterialPerfab, Prefab2D, fast_load
 
 
 from tt3de.prefab3d import Prefab3D
@@ -84,12 +84,22 @@ class GLMTester(TT3DView):
         )
         self.root3Dnode.add_child(poly)
 
-        poly = Prefab3D.unitary_cube()
-        poly.material_id = 8
-        poly.local_transform = glm.translate(
+        
+        
+        polygon3d = fast_load("models/cube.obj")
+        polygon3d.material_id = 11
+        polygon3d.local_transform = glm.translate(
             glm.vec3(-4.1,0,0)
         )
-        self.root3Dnode.add_child(poly)
+        self.root3Dnode.add_child(polygon3d)
+
+        polygon3d = fast_load("models/car/Car5_Taxi.obj")
+        polygon3d.material_id = 12
+        polygon3d.local_transform = glm.translate(
+            glm.vec3(0,0,0)
+        )
+        self.root3Dnode.add_child(polygon3d)
+
 
 
         # final append

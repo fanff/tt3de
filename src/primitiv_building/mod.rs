@@ -1,4 +1,4 @@
-use nalgebra_glm::{vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
+use nalgebra_glm::{cross, vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -135,6 +135,7 @@ fn polygon_as_primitive<
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
+    let eyepos = vec4(0.0, 0.0, 0.0, 1.0);
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + (triangle_id * 3);
         let va = vertex_buffer.get_clip_space_vertex(p_start);
@@ -151,49 +152,39 @@ fn polygon_as_primitive<
             // perform the perspective division to get in the ndc space
             let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
 
-            // convert from ndc to screen space
-            let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
-            let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
-            let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
+            // cull backfacing triangles with cross product (%) shenanigans
+            let normal_vec = (vbdiv.xyz() - vadiv.xyz()).cross(&(vcdiv.xyz() - vadiv.xyz()));
+            if (normal_vec.z <= 0.0) {
+                // convert from ndc to screen space
+                let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
+                let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
+                let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
 
-            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
-            //primitivbuffer.add_triangle(
-            //    polygon.geom_ref.node_id,
-            //    geometry_id,
-            //    polygon.geom_ref.material_id,
-            //    point_a.y,
-            //    point_a.x,
-            //    vadiv.z,
-            //    point_b.y,
-            //    point_b.x,
-            //    vbdiv.z,
-            //    point_c.y,
-            //    point_c.x,
-            //    vcdiv.z,
-            //    output_uv_index,
-            //);
-            primitivbuffer.add_triangle3d(
-                polygon.geom_ref.node_id,
-                geometry_id,
-                polygon.geom_ref.material_id,
-                // Keep the w value for the perspective correction
-                Vertex::new(
-                    vec4(point_a.x, point_a.y, vadiv.z, vadiv.w),
-                    vec3(0.0, 0.0, 0.0),
-                    uvs[0] * vadiv.w,
-                ),
-                Vertex::new(
-                    vec4(point_b.x, point_b.y, vbdiv.z, vbdiv.w),
-                    vec3(0.0, 0.0, 0.0),
-                    uvs[1] * vbdiv.w,
-                ),
-                Vertex::new(
-                    vec4(point_c.x, point_c.y, vcdiv.z, vcdiv.w),
-                    vec3(0.0, 0.0, 0.0),
-                    uvs[2] * vcdiv.w,
-                ),
-                output_uv_index,
-            );
+                let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
+
+                primitivbuffer.add_triangle3d(
+                    polygon.geom_ref.node_id,
+                    geometry_id,
+                    polygon.geom_ref.material_id,
+                    // Keep the w value for the perspective correction
+                    Vertex::new(
+                        vec4(point_a.x, point_a.y, vadiv.z, vadiv.w),
+                        vec3(0.0, 0.0, 0.0),
+                        uvs[0] * vadiv.w,
+                    ),
+                    Vertex::new(
+                        vec4(point_b.x, point_b.y, vbdiv.z, vbdiv.w),
+                        vec3(0.0, 0.0, 0.0),
+                        uvs[1] * vbdiv.w,
+                    ),
+                    Vertex::new(
+                        vec4(point_c.x, point_c.y, vcdiv.z, vcdiv.w),
+                        vec3(0.0, 0.0, 0.0),
+                        uvs[2] * vcdiv.w,
+                    ),
+                    output_uv_index,
+                );
+            }
         }
     }
 }

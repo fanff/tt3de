@@ -30,7 +30,7 @@ class RustRenderContext():
         self.vertex_buffer = VertexBufferPy()
         self.geometry_buffer = GeometryBufferPy(256)
         self.geometry_buffer.add_point(0,0,  node_id=0, material_id=0)
-        self.primitive_buffer = PrimitiveBufferPy(256)
+        self.primitive_buffer = PrimitiveBufferPy(512)
         self.transform_buffer = TransformPackPy(64)
         self.drawing_buffer = AbigDrawing(max_row=self.height,  max_col=self.width)
 
