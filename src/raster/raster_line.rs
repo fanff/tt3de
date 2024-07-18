@@ -65,8 +65,8 @@ mod tests {
         assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo.material_id, prim_ref.material_id);
 
-        assert_eq!(pixinfo.w.x, 1.0);
-        assert_eq!(pixinfo.w.y, 0.0);
+        assert_eq!(pixinfo.uv.x, 1.0);
+        assert_eq!(pixinfo.uv.y, 0.0);
 
         let cell = drawing_buffer.get_depth_buffer_cell(0, 0);
         assert_eq!(cell.depth[0], 1.0);
@@ -93,8 +93,8 @@ mod tests {
         assert_eq!(pixinfo.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo.material_id, prim_ref.material_id);
 
-        assert_eq!(pixinfo.w.x, 1.0);
-        assert_eq!(pixinfo.w.y, 0.0);
+        assert_eq!(pixinfo.uv.x, 1.0);
+        assert_eq!(pixinfo.uv.y, 0.0);
 
         let cell = drawing_buffer.get_depth_buffer_cell(0, 0);
         assert_eq!(cell.depth[0], 1.0);
@@ -122,8 +122,8 @@ mod tests {
         assert_eq!(pixinfo_a.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_a.material_id, prim_ref.material_id);
 
-        assert_eq!(pixinfo_a.w.x, 1.0);
-        assert_eq!(pixinfo_a.w.y, 0.0);
+        assert_eq!(pixinfo_a.uv.x, 1.0);
+        assert_eq!(pixinfo_a.uv.y, 0.0);
 
         let cell_a = drawing_buffer.get_depth_buffer_cell(0, 1);
         assert_eq!(cell_a.depth[0], 1.0);
@@ -133,8 +133,8 @@ mod tests {
         assert_eq!(pixinfo_b.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_b.material_id, prim_ref.material_id);
 
-        abs_diff_eq!(pixinfo_b.w.x, 0.0, epsilon = 0.01);
-        abs_diff_eq!(pixinfo_b.w.y, 1.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.x, 0.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.y, 1.0, epsilon = 0.01);
 
         let cell_b = drawing_buffer.get_depth_buffer_cell(5, 7);
         abs_diff_eq!(cell_b.depth[0], 3.0, epsilon = 0.01);
@@ -162,8 +162,8 @@ mod tests {
         assert_eq!(pixinfo_a.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_a.material_id, prim_ref.material_id);
 
-        abs_diff_eq!(pixinfo_a.w.x, 1.0, epsilon = 0.01);
-        abs_diff_eq!(pixinfo_a.w.y, 0.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_a.uv.x, 1.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_a.uv.y, 0.0, epsilon = 0.01);
 
         let cell_a = drawing_buffer.get_depth_buffer_cell(1, 0);
         assert_eq!(cell_a.depth[0], 1.0);
@@ -173,8 +173,8 @@ mod tests {
         assert_eq!(pixinfo_b.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_b.material_id, prim_ref.material_id);
 
-        abs_diff_eq!(pixinfo_b.w.x, 0.0, epsilon = 0.01);
-        abs_diff_eq!(pixinfo_b.w.y, 1.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.x, 0.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.y, 1.0, epsilon = 0.01);
 
         let cell_b = drawing_buffer.get_depth_buffer_cell(7, 5);
         abs_diff_eq!(cell_b.depth[0], 3.0, epsilon = 0.01);
@@ -201,8 +201,8 @@ mod tests {
         assert_eq!(pixinfo_a.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_a.material_id, prim_ref.material_id);
 
-        assert_eq!(pixinfo_a.w.x, 1.0);
-        assert_eq!(pixinfo_a.w.y, 0.0);
+        assert_eq!(pixinfo_a.uv.x, 1.0);
+        assert_eq!(pixinfo_a.uv.y, 0.0);
 
         let cell_a = drawing_buffer.get_depth_buffer_cell(1, 0);
         assert_eq!(cell_a.depth[0], 1.0);
@@ -213,8 +213,8 @@ mod tests {
         assert_eq!(pixinfo_b.geometry_id, prim_ref.geometry_id);
         assert_eq!(pixinfo_b.material_id, prim_ref.material_id);
 
-        abs_diff_eq!(pixinfo_b.w.x, 0.0, epsilon = 0.01);
-        abs_diff_eq!(pixinfo_b.w.y, 1.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.x, 0.0, epsilon = 0.01);
+        abs_diff_eq!(pixinfo_b.uv.y, 1.0, epsilon = 0.01);
 
         let cell_b = drawing_buffer.get_depth_buffer_cell(0, 0);
         abs_diff_eq!(cell_b.depth[0], 3.0, epsilon = 0.01);

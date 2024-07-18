@@ -8,9 +8,7 @@ use crate::vertexbuffer::UVBuffer;
 
 use super::super::texturebuffer::RGBA;
 
-use super::{
-    apply_noise, calc_2d_uv_coord, noise_mat::*, DebugDepth, DebugUV, DebugWeight, Texture,
-};
+use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Texture};
 
 #[derive(Clone)]
 pub enum Material {
@@ -26,7 +24,6 @@ pub enum Material {
         glyph_idx: u8,
     },
 
-    DebugWeight(DebugWeight),
     DebugDepth(DebugDepth),
     DebugUV(DebugUV),
 }
@@ -83,8 +80,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
                 cell.back_color.copy_from(back_color);
             }
             Material::Noise { noise, glyph_idx } => {
-                let uvs = uv_buffer.get_uv(primitive_element.get_uv_idx());
-                let uv = calc_2d_uv_coord(pixinfo, uvs, 0);
+                let uv = pixinfo.uv.xy();
 
                 let valuefront = apply_noise(noise, pixinfo, uv.x, uv.y);
 
@@ -99,15 +95,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
                 cell.front_color.copy_from(&front_rgba);
                 cell.back_color.copy_from(&front_rgba);
             }
-            Material::DebugWeight(m) => m.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            ),
+
             Material::DebugDepth(m) => m.render_mat(
                 cell,
                 depth_cell,

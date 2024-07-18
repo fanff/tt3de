@@ -1,4 +1,4 @@
-use nalgebra_glm::Vec3;
+use nalgebra_glm::{Vec2, Vec3};
 use pyo3::{
     intern,
     prelude::*,
@@ -11,7 +11,7 @@ use std::{borrow::BorrowMut, collections::HashMap};
 pub mod glyphset;
 use glyphset::*;
 pub mod segment_cache;
-use crate::utils::convert_glm_vec3;
+use crate::utils::{convert_glm_vec2, convert_glm_vec3};
 use segment_cache::*;
 
 #[pyclass]
@@ -134,22 +134,22 @@ impl AbigDrawing {
         row: usize,
         col: usize,
         depth: f32,
-        weight: Py<PyAny>,
-        weight_2: Py<PyAny>,
+        uv_py: Py<PyAny>,
+        uv_1_py: Py<PyAny>,
         node_id: usize,
         geom_id: usize,
         material_id: usize,
         primitive_id: usize,
     ) {
-        let w: Vec3 = convert_glm_vec3(py, weight);
-        let w_alt: Vec3 = convert_glm_vec3(py, weight_2);
+        let uv: Vec2 = convert_glm_vec2(py, uv_py);
+        let uv_1: Vec2 = convert_glm_vec2(py, uv_1_py);
 
         self.db.set_depth_content(
             row,
             col,
             depth,
-            w,
-            w_alt,
+            uv,
+            uv_1,
             node_id,
             geom_id,
             material_id,
@@ -161,8 +161,8 @@ impl AbigDrawing {
         let pix_info_element = self.db.pixbuffer[idx];
         let dict = PyDict::new_bound(py);
 
-        let wslice = pix_info_element.w.as_slice();
-        let w_1_slice = pix_info_element.w_1.as_slice();
+        let wslice = pix_info_element.uv.as_slice();
+        let w_1_slice = pix_info_element.uv_1.as_slice();
         dict.set_item("w", wslice).unwrap();
         dict.set_item("w_1", w_1_slice).unwrap();
 
@@ -192,8 +192,8 @@ impl AbigDrawing {
         dict.set_item("depth", cell.depth[layer]).unwrap();
         dict.set_item("pix_info", cell.pixinfo[layer]).unwrap();
 
-        let wslice = pix_info_element.w.as_slice();
-        let w_1_slice = pix_info_element.w_1.as_slice();
+        let wslice = pix_info_element.uv.as_slice();
+        let w_1_slice = pix_info_element.uv_1.as_slice();
         dict.set_item("w", wslice).unwrap();
         dict.set_item("w_1", w_1_slice).unwrap();
 

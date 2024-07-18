@@ -44,12 +44,10 @@ pub fn raster_triangle<const DEPTHCOUNT: usize>(
                     depth,
                     curr_col,
                     curr_row,
-                    w0,
-                    w1,
-                    w2,
-                    w0_alt,
-                    w1_alt,
-                    w2_alt,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                 )
             }
         }

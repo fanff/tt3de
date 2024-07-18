@@ -7,36 +7,7 @@ use crate::{
     vertexbuffer::UVBuffer,
 };
 
-use super::{calc_2d_uv_coord, RenderMatTrait};
-
-#[derive(Clone)]
-pub struct DebugWeight {
-    pub glyph_idx: u8,
-}
-impl DebugWeight {
-    pub fn new(glyph_idx: u8) -> Self {
-        Self { glyph_idx }
-    }
-}
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER, UVCOUNT> for DebugWeight
-{
-    fn render_mat(
-        &self,
-        cell: &mut CanvasCell,
-        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
-        depth_layer: usize,
-        pixinfo: &PixInfo<f32>,
-        _primitive_element: &PrimitiveElements,
-        _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
-    ) {
-        cell.glyph = self.glyph_idx;
-
-        cell.front_color = Color::new_opaque_from_vec3(&pixinfo.w);
-        cell.back_color = Color::new_opaque_from_vec3(&pixinfo.w_1);
-    }
-}
+use super::RenderMatTrait;
 
 #[derive(Clone)]
 pub struct DebugDepth {
@@ -95,7 +66,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
     ) {
         cell.glyph = self.glyph_idx;
 
-        cell.front_color = Color::new_opaque_from_vec2(&_pixinfo.w.xy());
-        cell.back_color = Color::new_opaque_from_vec2(&_pixinfo.w.xy());
+        cell.front_color = Color::new_opaque_from_vec2(&_pixinfo.uv);
+        cell.back_color = Color::new_opaque_from_vec2(&_pixinfo.uv_1);
     }
 }

@@ -7,7 +7,7 @@ use crate::{
     vertexbuffer::UVBuffer,
 };
 
-use super::{calc_2d_uv_coord, RenderMatTrait};
+use super::RenderMatTrait;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Texture {
@@ -41,8 +41,8 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         //let depth = depth_cell.get_depth(depth_layer);
         //let point = vec3(depth_cell.col as f32, depth_cell.row as f32, depth);
 
-        let uv = pixinfo.w.xy();
-        let uv1 = pixinfo.w.xy();
+        let uv = pixinfo.uv;
+        let uv1 = pixinfo.uv;
         let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
         let texture_color1 = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv1);
         cell.front_color.copy_from(&texture_color1);
@@ -108,7 +108,7 @@ mod tests {
 
         // close to point a
         // Call the render_mat function
-        pixinfo.set_w(vec3(0.8, 0.1, 0.1));
+        pixinfo.set_uv(vec2(0.0, 0.0));
         texture_material.render_mat(
             &mut canvas_cell,
             &depth_cell,
@@ -126,8 +126,8 @@ mod tests {
         // close to point b
 
         let mut pixinfob = PixInfo::new();
-        pixinfob.set_w(vec3(0.01, 0.98, 0.01));
-        pixinfob.set_w_1(vec3(0.01, 0.98, 0.01));
+        pixinfob.set_uv(vec2(1.0, 0.0));
+        pixinfob.set_uv_1(vec2(1.0, 0.0));
         let mut canvas_cell_b = CanvasCell::default();
         texture_material.render_mat(
             &mut canvas_cell_b,
@@ -145,8 +145,8 @@ mod tests {
 
         // close to point c
         let mut pixinfo_c = PixInfo::new();
-        pixinfo_c.set_w(vec3(0.01, 0.01, 0.98));
-        pixinfo_c.set_w_1(vec3(0.01, 0.01, 0.98));
+        pixinfo_c.set_uv(vec2(1.0, 1.0));
+        pixinfo_c.set_uv_1(vec2(1.0, 1.0));
         let mut canvas_cell_c = CanvasCell::default();
         texture_material.render_mat(
             &mut canvas_cell_c,

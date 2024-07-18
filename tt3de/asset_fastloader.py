@@ -78,10 +78,9 @@ class MaterialPerfab:
         material_buffer.add_static((10,200,0),(100,100,100),39) # G
         material_buffer.add_static((10,5,200),(100,100,100),34) # B
 
-        material_buffer.add_debug_weight(5) # 5
+        material_buffer.add_debug_uv(5) # 5
         material_buffer.add_debug_depth(6) # 6
         material_buffer.add_debug_uv(7) # 7
-
 
         material_buffer.add_textured(0,99) # idx = 8
         material_buffer.add_textured(1,99) # idx = 9

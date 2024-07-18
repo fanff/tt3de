@@ -22,9 +22,7 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
             pa.row,
             1.0,
             0.0,
-            0.0,
             1.0,
-            0.0,
             0.0,
         );
         return;
@@ -41,10 +39,8 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
                 pa.row,
                 ratio_to_a,
                 1.0 - ratio_to_a,
-                0.0,
                 ratio_to_a,
                 1.0 - ratio_to_a,
-                0.0,
             );
         }
     } else {
@@ -60,10 +56,8 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
                 pa.row,
                 1.0 - ratio,
                 ratio,
-                0.0,
                 1.0 - ratio,
                 ratio,
-                0.0,
             );
         }
     }
@@ -119,10 +113,8 @@ pub fn raster_line_along_columns<const DEPTHCOUNT: usize>(
             row_rounder_as_usize,
             1.0 - ratio_caped,
             ratio_caped,
-            0.0,
             1.0 - ratio_caped,
             ratio_caped,
-            0.0,
         );
     }
 }

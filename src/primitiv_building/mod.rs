@@ -53,24 +53,31 @@ fn polygon_fan_as_primitive<
 >(
     polygon: &Polygon,
     geometry_id: usize,
+    transform_pack: &TransformPack,
     vertex_buffer: &mut VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
     uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
-    let va = &vertex_buffer.get_clip_space_vertex(polygon.p_start);
-
+    let va = vertex_buffer.get_clip_space_vertex(polygon.p_start);
+    let eyepos: Vec4 = transform_pack.projection_matrix_3d * (&vec4(0.0, 0.0, 0.0, 1.0));
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + triangle_id;
         let vb = vertex_buffer.get_clip_space_vertex(p_start + 1);
         let vc = vertex_buffer.get_clip_space_vertex(p_start + 2);
 
+        let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
+        // cull backfacing triangles with cross product (%) shenanigans
+        if dot(&normal_vec, &(va - eyepos).xyz()) > 0.0 {
+            continue;
+        }
+
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the first triangle
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
+        tomato_clip_triangle_to_clip_space(&va, &vb, &vc, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
@@ -82,21 +89,7 @@ fn polygon_fan_as_primitive<
             let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
 
             let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
-            //primitivbuffer.add_triangle(
-            //    polygon.geom_ref.node_id,
-            //    geometry_id,
-            //    polygon.geom_ref.material_id,
-            //    point_a.y,
-            //    point_a.x,
-            //    vadiv.z,
-            //    point_b.y,
-            //    point_b.x,
-            //    vbdiv.z,
-            //    point_c.y,
-            //    point_c.x,
-            //    vcdiv.z,
-            //    output_uv_index,
-            //);
+
             primitivbuffer.add_triangle3d(
                 polygon.geom_ref.node_id,
                 geometry_id,
@@ -146,14 +139,12 @@ fn polygon_as_primitive<
         let vc = vertex_buffer.get_clip_space_vertex(p_start + 2);
 
         // get the uv coordinates
-        let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
-        //let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&va, &vb, &vc);
-        //let normal_vec: Vec3 = (vbdiv.xyz() - vadiv.xyz()).cross(&(vcdiv.xyz() - vadiv.xyz()));
         let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
         // cull backfacing triangles with cross product (%) shenanigans
         if (dot(&normal_vec, &(va - eyepos).xyz()) > 0.0) {
             continue;
         }
+        let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
         // clip the triangle
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
         tomato_clip_triangle_to_clip_space(&va, &vb, &vc, uvs, &mut output_buffer);
@@ -177,17 +168,17 @@ fn polygon_as_primitive<
                 // Keep the w value for the perspective correction
                 Vertex::new(
                     vec4(point_a.x, point_a.y, vacdiv.z, vacdiv.w),
-                    vec3(0.0, 0.0, 0.0),
+                    normal_vec,
                     uvs[0] * vacdiv.w,
                 ),
                 Vertex::new(
                     vec4(point_b.x, point_b.y, vbcdiv.z, vbcdiv.w),
-                    vec3(0.0, 0.0, 0.0),
+                    normal_vec,
                     uvs[1] * vbcdiv.w,
                 ),
                 Vertex::new(
                     vec4(point_c.x, point_c.y, vccdiv.z, vccdiv.w),
-                    vec3(0.0, 0.0, 0.0),
+                    normal_vec,
                     uvs[2] * vccdiv.w,
                 ),
                 output_uv_index,
@@ -275,6 +266,7 @@ pub fn build_primitives<
                 polygon_fan_as_primitive(
                     &polygon,
                     geometry_id,
+                    transform_pack,
                     vertex_buffer,
                     uv_array_input,
                     uv_array_output,

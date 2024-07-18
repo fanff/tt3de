@@ -1,4 +1,4 @@
-use nalgebra_glm::{normalize, Number, Real, TVec3, Vec3};
+use nalgebra_glm::{normalize, Number, Real, TVec2, TVec3, Vec3};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -17,6 +17,9 @@ use raster_line::*;
 
 pub mod raster_triangle;
 use raster_triangle::*;
+
+pub mod raster_point;
+use raster_point::*;
 
 pub mod raster_triangle_tomato;
 use raster_triangle_tomato::*;
@@ -43,80 +46,25 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
     depth: DEPTHACC,
     col: usize,
     row: usize,
-    w0: DEPTHACC,
-    w1: DEPTHACC,
-    w2: DEPTHACC,
-    w0_alt: DEPTHACC,
-    w1_alt: DEPTHACC,
-    w2_alt: DEPTHACC,
+    u0: f32,
+    v0: f32,
+    u1: f32,
+    v1: f32,
 ) {
-    let w = TVec3::new(w0, w1, w2);
-    let w_alt = TVec3::new(w0_alt, w1_alt, w2_alt);
+    let w = TVec2::new(u0, v0);
+    let w_alt = TVec2::new(u1, v1);
     drawing_buffer.set_depth_content(
         row,
         col,
         depth,
-        (w),
-        (w_alt),
+        w,
+        w_alt,
         prim_ref.node_id,
         prim_ref.geometry_id,
         prim_ref.material_id,
         prim_ref.primitive_id,
     );
 }
-#[cfg(test)]
-mod test_set_pixel {
-    use crate::{
-        drawbuffer::drawbuffer::DrawBuffer,
-        raster::{primitivbuffer::PrimitivReferences, set_pixel_double_weights},
-    };
-
-    #[test]
-    fn test_set_pixel_double_weights() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
-        let prim_ref = PrimitivReferences {
-            geometry_id: 1,
-            material_id: 2,
-            node_id: 3,
-            primitive_id: 4,
-        };
-        let w0 = 0.5;
-        let w1 = 0.5;
-        let w2 = 0.0;
-        let w0_alt = 0.5;
-        let w1_alt = 0.5;
-        let w2_alt = 0.0;
-        let depth = 0.0;
-        let px = 5;
-        let py = 5;
-        set_pixel_double_weights(
-            &prim_ref,
-            &mut drawing_buffer,
-            depth,
-            px,
-            py,
-            w0,
-            w1,
-            w2,
-            w0_alt,
-            w1_alt,
-            w2_alt,
-        );
-        let content_at_location_layer0 =
-            drawing_buffer.get_pix_buffer_content_at_row_col(py, px, 0);
-        let depth_cell = drawing_buffer.get_depth_buffer_cell(py, px);
-        assert_eq!(depth_cell.depth, [0.0, 100.0]);
-        //assert_eq!(content_at_location.w, [w0, w1, w2]);
-        assert_eq!(content_at_location_layer0.node_id, prim_ref.node_id);
-        assert_eq!(content_at_location_layer0.geometry_id, prim_ref.geometry_id);
-        assert_eq!(content_at_location_layer0.material_id, prim_ref.material_id);
-        assert_eq!(
-            content_at_location_layer0.primitive_id,
-            prim_ref.primitive_id
-        );
-    }
-}
-
 trait ToF32 {
     fn to_f32(&self) -> f32;
 }
@@ -191,28 +139,6 @@ fn barycentric_coord_shift(
     (w1, w2, w3)
 }
 
-fn raster_point<const DEPTHCOUNT: usize>(
-    drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
-    prim_ref: &PrimitivReferences,
-    point: &PointInfo<f32>,
-) {
-    if point.row >= drawing_buffer.row_count || point.col >= drawing_buffer.col_count {
-        return;
-    }
-    set_pixel_double_weights(
-        prim_ref,
-        drawing_buffer,
-        point.depth(),
-        point.col,
-        point.row,
-        1.0,
-        0.0,
-        0.0,
-        0.5,
-        0.5,
-        0.0,
-    )
-}
 pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
     element: &PrimitiveElements,
     vertexbuffer: &VertexBuffer<VertexCount>,
@@ -223,7 +149,7 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
             raster_line(drawing_buffer, fds, pa, pb);
         }
         PrimitiveElements::Point { fds, point, uv: _ } => {
-            raster_point(drawing_buffer, fds, point);
+            raster_point_info(drawing_buffer, fds, point);
         }
         PrimitiveElements::Triangle(t) => {
             raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);

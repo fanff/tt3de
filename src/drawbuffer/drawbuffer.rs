@@ -9,6 +9,7 @@ use nalgebra_glm::round;
 use nalgebra_glm::vec2;
 use nalgebra_glm::Number;
 use nalgebra_glm::Scalar;
+use nalgebra_glm::TVec2;
 use nalgebra_glm::TVec3;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
@@ -35,9 +36,9 @@ use crate::vertexbuffer::UVBuffer;
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
 /// - `geometry_id`: An identifier for the geometry, which could refer to a specific geometric object or model.
 #[derive(Clone, Copy, Debug)]
-pub struct PixInfo<WeightAccuracy: nalgebra_glm::Number> {
-    pub w: TVec3<WeightAccuracy>,
-    pub w_1: TVec3<WeightAccuracy>,
+pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
+    pub uv: TVec2<InfoAccuracy>,
+    pub uv_1: TVec2<InfoAccuracy>,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -47,8 +48,8 @@ pub struct PixInfo<WeightAccuracy: nalgebra_glm::Number> {
 impl<T: nalgebra_glm::Number> PixInfo<T> {
     pub fn new() -> Self {
         PixInfo {
-            w: TVec3::zeros(),
-            w_1: TVec3::zeros(),
+            uv: TVec2::zeros(),
+            uv_1: TVec2::zeros(),
             material_id: 0,
             primitive_id: 0,
             node_id: 0,
@@ -61,13 +62,11 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         self.node_id = 0;
         self.geometry_id = 0;
     }
-
-    pub fn set_w(&mut self, w: TVec3<T>) {
-        self.w = w;
+    pub fn set_uv(&mut self, uv: TVec2<T>) {
+        self.uv = uv;
     }
-
-    pub fn set_w_1(&mut self, w_1: TVec3<T>) {
-        self.w_1 = w_1;
+    pub fn set_uv_1(&mut self, uv: TVec2<T>) {
+        self.uv_1 = uv;
     }
 }
 
@@ -221,18 +220,6 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
     }
 }
 
-// Function to create an initialized PixInfo instance
-pub fn create_pixinfo_init_f32() -> PixInfo<f32> {
-    PixInfo {
-        w: TVec3::zeros(),
-        w_1: TVec3::zeros(),
-        material_id: 0,
-        primitive_id: 0,
-        node_id: 0,
-        geometry_id: 0,
-    }
-}
-
 pub const CANVAS_CELL_INIT: CanvasCell = CanvasCell {
     back_color: Color {
         r: 0,
@@ -250,10 +237,10 @@ pub const CANVAS_CELL_INIT: CanvasCell = CanvasCell {
 };
 /// Stores the depth buffer, canvas, and pixel information for a drawing buffer.
 /// Template parameters are used to specify the number of depth layers and the accuracy of the depth buffer.
-pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, A: Number> {
-    pub depthbuffer: Box<[DepthBufferCell<A, DEPTH_LAYER_COUNT>]>,
+pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, DepthBufferAccuracy: Number> {
+    pub depthbuffer: Box<[DepthBufferCell<DepthBufferAccuracy, DEPTH_LAYER_COUNT>]>,
     pub canvas: Box<[CanvasCell]>,
-    pub pixbuffer: Box<[PixInfo<A>]>,
+    pub pixbuffer: Box<[PixInfo<f32>]>,
     pub row_count: usize,
     pub col_count: usize,
 
@@ -271,7 +258,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         // array.
         // reason is that we will often do "compare and move/swap"; by using the index I guess the swap is just "swaping u8, instead of swapping the whole struc";
 
-        let inipix: PixInfo<DEPTHACC> = PixInfo::new();
+        let inipix: PixInfo<f32> = PixInfo::new();
         let pixbuffer = vec![inipix; row_count * col_count * L].into_boxed_slice();
 
         // we init the depth buffer with the pixel info.
@@ -347,7 +334,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         row: usize,
         col: usize,
         layer_idx: usize,
-    ) -> &PixInfo<DEPTHACC> {
+    ) -> &PixInfo<f32> {
         let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
         let the_element_at_0 = &self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]];
 
@@ -400,8 +387,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         row: usize,
         col: usize,
         depth: DEPTHACC,
-        w: nalgebra_glm::TVec3<DEPTHACC>,
-        w_alt: nalgebra_glm::TVec3<DEPTHACC>,
+        uv: Vec2,
+        uv_1: Vec2,
         node_id: usize,
         geom_id: usize,
         material_id: usize,
@@ -412,7 +399,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
         let the_cell = &mut self.depthbuffer[the_point];
         while the_layer < L {
-            let pix_info_at_layer = self.pixbuffer[the_cell.pixinfo[the_layer]];
+            let _pix_info_at_layer = self.pixbuffer[the_cell.pixinfo[the_layer]];
 
             let depth_at_layer = the_cell.depth[the_layer];
 
@@ -443,8 +430,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     pix_info_dest.material_id = material_id;
 
                     // Store the vectors
-                    pix_info_dest.w = w;
-                    pix_info_dest.w_1 = w_alt;
+                    pix_info_dest.uv = uv;
+                    pix_info_dest.uv_1 = uv_1;
 
                     return;
                 } else {
@@ -457,8 +444,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     pix_info_dest.material_id = material_id;
 
                     // Store the vectors
-                    pix_info_dest.w = w;
-                    pix_info_dest.w_1 = w_alt;
+                    pix_info_dest.uv = uv;
+                    pix_info_dest.uv_1 = uv_1;
 
                     return;
                 }

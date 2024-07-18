@@ -86,19 +86,11 @@ impl std::ops::SubAssign for Vertex {
 }
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // not displaying anything
         f.debug_struct("Vertex")
             .field("pos", &(&self.pos.x, &self.pos.y, &self.pos.z))
+            .field("normal", &(&self.normal.x, &self.normal.y, &self.normal.z))
+            .field("uv", &(&self.uv.x, &self.uv.y))
             .finish()
-
-        // example provided in https://doc.rust-lang.org/std/fmt/trait.Debug.html
-        // not displaying anything
-        //write!(f, "Vertex: {},{}", self.pos.x, self.pos.y)
-
-        // testing random bullshit not working as well
-        // write!(f, "Vertex: {:?}", self.pos.x)
-
-        // lol
     }
 }
 
@@ -261,9 +253,10 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 attr.uv.x,
                 attr.uv.y,
                 0.0,
-                attr.normal.x,
-                attr.normal.y,
-                attr.normal.z,
+                0.0,
+                //attr.normal.x,
+                //attr.normal.y,
+                //attr.normal.z,
             );
             // step scanline interpolant
             i_line += diLine;
@@ -382,7 +375,7 @@ mod test_raster_duo_triangle {
 
         let uva = drawing_buffer
             .get_pix_buffer_content_at_row_col(0, 6, 0)
-            .w
+            .uv
             .xy();
         assert_abs_diff_eq!(uva.x, pa.uv.x, epsilon = 0.15);
         assert_abs_diff_eq!(uva.y, pa.uv.y, epsilon = 0.15);
@@ -391,7 +384,7 @@ mod test_raster_duo_triangle {
         assert_eq!(drawing_buffer.get_depth_buffer_cell(3, 3).depth[0], 0.0);
         let uvb = drawing_buffer
             .get_pix_buffer_content_at_row_col(3, 3, 0)
-            .w
+            .uv
             .xy();
         assert_abs_diff_eq!(uvb.x, pb.uv.x, epsilon = 0.15);
         assert_abs_diff_eq!(uvb.y, pb.uv.y, epsilon = 0.25);
@@ -400,7 +393,7 @@ mod test_raster_duo_triangle {
         assert_eq!(drawing_buffer.get_depth_buffer_cell(6, 5).depth[0], 0.0); // blit near pc
         let uvc = drawing_buffer
             .get_pix_buffer_content_at_row_col(6, 5, 0)
-            .w
+            .uv
             .xy();
         assert_abs_diff_eq!(uvc.x, pc.uv.x, epsilon = 0.25);
         assert_abs_diff_eq!(uvc.y, pc.uv.y, epsilon = 0.25);
@@ -409,7 +402,7 @@ mod test_raster_duo_triangle {
         assert_eq!(drawing_buffer.get_depth_buffer_cell(3, 5).depth[0], 0.0); // blit in middle
         let uvd = drawing_buffer
             .get_pix_buffer_content_at_row_col(3, 5, 0)
-            .w
+            .uv
             .xy();
         assert_abs_diff_eq!(uvd.x, 0.5, epsilon = 0.25);
         assert_abs_diff_eq!(uvd.y, 0.5, epsilon = 0.25);

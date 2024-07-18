@@ -22,9 +22,7 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
             pa.row,
             1.0,
             0.0,
-            0.0,
             1.0,
-            0.0,
             0.0,
         );
         return;
@@ -41,10 +39,8 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
                 row,
                 ratio,
                 1.0 - ratio,
-                0.0,
                 ratio,
                 1.0 - ratio,
-                0.0,
             );
         }
     } else {
@@ -60,10 +56,8 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
                 row,
                 1.0 - ratio,
                 ratio,
-                0.0,
                 1.0 - ratio,
                 ratio,
-                0.0,
             );
         }
     }
@@ -117,10 +111,8 @@ pub fn raster_line_along_rows<const DEPTHCOUNT: usize>(
             row,
             1.0 - ratio_caped,
             ratio_caped,
-            0.0,
             1.0 - ratio_caped,
             ratio_caped,
-            0.0,
         );
     }
 }

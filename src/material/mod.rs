@@ -66,14 +66,6 @@ impl MaterialBuffer {
         retur
     }
 
-    fn add_debug_weight(&mut self, glyph_idx: u8) -> usize {
-        let retur = self.current_size;
-        self.mats[self.current_size] = Material::DebugWeight(DebugWeight::new(glyph_idx));
-
-        self.current_size += 1;
-        retur
-    }
-
     fn add_debug_depth(&mut self, glyph_idx: u8) -> usize {
         let retur = self.current_size;
         self.mats[self.current_size] = Material::DebugDepth(DebugDepth::new(glyph_idx));
@@ -91,20 +83,6 @@ impl MaterialBuffer {
     }
 }
 
-pub fn calc_2d_uv_coord(
-    pixinfo: &PixInfo<f32>,
-    uv_triplet: (&Vec2, &Vec2, &Vec2),
-    weight_idx: usize,
-) -> Vec2 {
-    let uvec: TVec3<f32> = TVec3::new(uv_triplet.0.x, uv_triplet.1.x, uv_triplet.2.x);
-    let vvec: TVec3<f32> = TVec3::new(uv_triplet.0.y, uv_triplet.1.y, uv_triplet.2.y);
-
-    match weight_idx {
-        1 => Vec2::new(pixinfo.w_1.dot(&uvec), pixinfo.w_1.dot(&vvec)),
-        _ => Vec2::new(pixinfo.w.dot(&uvec), pixinfo.w.dot(&vvec)),
-    }
-}
-
 pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER: usize>(
     pixinfo: PixInfo<f32>,
     material_buffer: &MaterialBuffer,
@@ -115,8 +93,6 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER:
     depth_layer: usize,
     cell: &mut CanvasCell,
 ) {
-    
-
     let primitive_element = &primitive_buffer.content[pixinfo.primitive_id];
     let mat = &material_buffer.mats[pixinfo.material_id];
     mat.render_mat(
@@ -172,10 +148,6 @@ impl MaterialBufferPy {
         let fr = convert_tuple_rgba(front_rgba).unwrap();
         let bg = convert_tuple_rgba(back_rgba).unwrap();
         self.content.add_static(fr, bg, glyph_idx)
-    }
-
-    fn add_debug_weight(&mut self, _py: Python, glyph_idx: u8) -> usize {
-        self.content.add_debug_weight(glyph_idx)
     }
 
     fn add_debug_depth(&mut self, _py: Python, glyph_idx: u8) -> usize {
