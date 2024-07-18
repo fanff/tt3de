@@ -1,4 +1,4 @@
-use nalgebra_glm::{cross, vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
+use nalgebra_glm::{cross, dot, vec3, vec4, Number, Real, Vec2, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -17,6 +17,8 @@ use crate::{
 
 pub mod triangle_clipping;
 use triangle_clipping::*;
+pub mod tomato_triangle_clipping;
+use tomato_triangle_clipping::*;
 
 pub mod point_clipping;
 use point_clipping::*;
@@ -129,13 +131,14 @@ fn polygon_as_primitive<
 >(
     polygon: &Polygon,
     geometry_id: usize,
+    transform_pack: &TransformPack,
     vertex_buffer: &mut VertexBuffer<C>,
     uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
     uv_array_output: &mut UVBuffer<MAX_UV_CONTENT, f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
-    let eyepos = vec4(0.0, 0.0, 0.0, 1.0);
+    let eyepos: Vec4 = transform_pack.projection_matrix_3d * (&vec4(0.0, 0.0, 0.0, 1.0));
     for triangle_id in 0..polygon.triangle_count {
         let p_start = polygon.p_start + (triangle_id * 3);
         let va = vertex_buffer.get_clip_space_vertex(p_start);
@@ -144,47 +147,51 @@ fn polygon_as_primitive<
 
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
-        // clip the first triangle
+        //let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&va, &vb, &vc);
+        //let normal_vec: Vec3 = (vbdiv.xyz() - vadiv.xyz()).cross(&(vcdiv.xyz() - vadiv.xyz()));
+        let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
+        // cull backfacing triangles with cross product (%) shenanigans
+        if (dot(&normal_vec, &(va - eyepos).xyz()) > 0.0) {
+            continue;
+        }
+        // clip the triangle
         let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
-        clip_triangle_to_clip_space(va, vb, vc, uvs, &mut output_buffer);
+        tomato_clip_triangle_to_clip_space(&va, &vb, &vc, uvs, &mut output_buffer);
+
+        //clip_triangle_to_clip_space(&vadiv, &vbdiv, &vcdiv, uvs, &mut output_buffer);
 
         for (t, uvs) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
-            let (vadiv, vbdiv, vcdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
+            let (vacdiv, vbcdiv, vccdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
+            // convert from ndc to screen space
+            let point_a = drawbuffer.ndc_to_screen_floating(&vacdiv.xy());
+            let point_b = drawbuffer.ndc_to_screen_floating(&vbcdiv.xy());
+            let point_c = drawbuffer.ndc_to_screen_floating(&vccdiv.xy());
 
-            // cull backfacing triangles with cross product (%) shenanigans
-            let normal_vec = (vbdiv.xyz() - vadiv.xyz()).cross(&(vcdiv.xyz() - vadiv.xyz()));
-            if (normal_vec.z <= 0.0) {
-                // convert from ndc to screen space
-                let point_a = drawbuffer.ndc_to_screen_floating(&vadiv.xy());
-                let point_b = drawbuffer.ndc_to_screen_floating(&vbdiv.xy());
-                let point_c = drawbuffer.ndc_to_screen_floating(&vcdiv.xy());
+            let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
 
-                let output_uv_index = uv_array_output.add_uv(&uvs[0], &uvs[1], &uvs[2]);
-
-                primitivbuffer.add_triangle3d(
-                    polygon.geom_ref.node_id,
-                    geometry_id,
-                    polygon.geom_ref.material_id,
-                    // Keep the w value for the perspective correction
-                    Vertex::new(
-                        vec4(point_a.x, point_a.y, vadiv.z, vadiv.w),
-                        vec3(0.0, 0.0, 0.0),
-                        uvs[0] * vadiv.w,
-                    ),
-                    Vertex::new(
-                        vec4(point_b.x, point_b.y, vbdiv.z, vbdiv.w),
-                        vec3(0.0, 0.0, 0.0),
-                        uvs[1] * vbdiv.w,
-                    ),
-                    Vertex::new(
-                        vec4(point_c.x, point_c.y, vcdiv.z, vcdiv.w),
-                        vec3(0.0, 0.0, 0.0),
-                        uvs[2] * vcdiv.w,
-                    ),
-                    output_uv_index,
-                );
-            }
+            primitivbuffer.add_triangle3d(
+                polygon.geom_ref.node_id,
+                geometry_id,
+                polygon.geom_ref.material_id,
+                // Keep the w value for the perspective correction
+                Vertex::new(
+                    vec4(point_a.x, point_a.y, vacdiv.z, vacdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[0] * vacdiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_b.x, point_b.y, vbcdiv.z, vbcdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[1] * vbcdiv.w,
+                ),
+                Vertex::new(
+                    vec4(point_c.x, point_c.y, vccdiv.z, vccdiv.w),
+                    vec3(0.0, 0.0, 0.0),
+                    uvs[2] * vccdiv.w,
+                ),
+                output_uv_index,
+            );
         }
     }
 }
@@ -287,6 +294,7 @@ pub fn build_primitives<
                 polygon_as_primitive(
                     &polygon,
                     geometry_id,
+                    transform_pack,
                     vertex_buffer,
                     uv_array_input,
                     uv_array_output,

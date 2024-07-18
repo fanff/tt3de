@@ -26,7 +26,7 @@ impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
         }
     }
 
-    fn push_vec4(&mut self, a: Vec4, b: Vec4, c: Vec4, (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2)) {
+    pub fn push_vec4(&mut self, a: Vec4, b: Vec4, c: Vec4, (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2)) {
         self.content[self.count] = [a, b, c];
         self.uvs[self.count] = [uva.clone(), uvb.clone(), uvc.clone()];
         self.count += 1;
@@ -220,12 +220,12 @@ pub fn clip_triangle_to_clip_space(
 ) {
     // defining the plane of the clipping
     let planes = [
-        (Vec4::new(0.0, 0.0, 1.0, 0.0), 0),  // near
-        (Vec4::new(0.0, 0.0, -1.0, 1.0), 1), // far  // will use the full clipping method, generating more triangle potentially
+        (Vec4::new(0.0, 0.0, -1.0, 1.0), 1), // far
         (Vec4::new(-1.0, 0.0, 0.0, 1.0), 1), //
         (Vec4::new(1.0, 0.0, 0.0, 1.0), 1),  //
         (Vec4::new(0.0, -1.0, 0.0, 1.0), 1), //
         (Vec4::new(0.0, 1.0, 0.0, 1.0), 1),  //
+        (Vec4::new(0.0, 0.0, 1.0, 0.0), 0), // near// will use the full clipping method, generating more triangle potentially
     ];
 
     output_buffer.clear();
