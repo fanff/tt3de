@@ -16,6 +16,15 @@ def assertLine3DPrimitiveKeyEqual(prim0,prim1):
     for key in ['primitive_id','geometry_id','node_id','material_id']:
         assert prim0[key] == prim1[key]
 
+def assertTriangle3DPrimitiveKeyEqual(prim0,prim1):
+    for key in ['primitive_id','geometry_id','node_id','material_id']:
+        assert prim0[key] == prim1[key]
+def assertPixInfoEqual(pix0,pix1,uv_tol=0.01):
+    for key in ['primitive_id','geometry_id','node_id','material_id']:
+        assert pix0[key] == pix1[key]
+    for key in ['uv','uv_1']:
+        assert math.isclose(pix0[key][0],pix1[key][0],abs_tol=uv_tol)
+        assert math.isclose(pix0[key][1],pix1[key][1],abs_tol=uv_tol)
 
 
 

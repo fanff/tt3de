@@ -1,7 +1,7 @@
 
 
 import math
-from tt3de.tt3de import Point2D, Point3D
+from tt3de.points import Point2D, Point3D
 from tt3de.tt_3dnodes import TT3DPoint, TT3DPolygon, TT3DPolygonFan
 
 

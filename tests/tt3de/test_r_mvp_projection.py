@@ -6,21 +6,21 @@ import unittest
 
 import glm
 
-from tests.rtt3de.test_utils import perspective_divide
+from tests.tt3de.test_utils import perspective_divide
 from tt3de.prefab3d import Prefab3D
-from rtt3de import GeometryBufferPy
-from rtt3de import AbigDrawing
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
-from rtt3de import VertexBufferPy,TransformPackPy
-from rtt3de import PrimitiveBufferPy
+from tt3de.tt3de import GeometryBufferPy
+from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy
+from tt3de.tt3de import VertexBufferPy,TransformPackPy
+from tt3de.tt3de import PrimitiveBufferPy
 
-from rtt3de import raster_all_py,build_primitives_py,apply_material_py
+from tt3de.tt3de import raster_all_py,build_primitives_py,apply_material_py
 
 import random
 
 from tt3de.glm_camera import GLMCamera
-from tt3de.tt3de import Point3D
+from tt3de.points import Point3D
 
 class TestMVP_Projection(unittest.TestCase):
 

@@ -2,8 +2,11 @@ import unittest
 import pytest
 from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture
+from tt3de import tt3de
 
-from rtt3de import TextureBufferPy
+
+
+from tt3de.tt3de import TextureBufferPy
 
 
 class Test_TextureArray(unittest.TestCase):
@@ -51,7 +54,11 @@ class Test_TextureArray(unittest.TestCase):
         self.assertEqual(texture_array.size(), 0)
         sky1: ImageTexture = fast_load("models/sky1.bmp")
 
-        texture_array.add_texture(sky1.image_width ,sky1.image_height ,sky1.chained_data())
+        texture_array.add_texture(sky1.image_width ,
+                                  sky1.image_height ,
+                                  sky1.chained_data(),
+                                  repeat_width=True,
+                                  repeat_height=True)
         self.assertEqual(texture_array.size(), 1)
         self.assertEqual(texture_array.get_wh_of(0), (256,114))
 

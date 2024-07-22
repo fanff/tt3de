@@ -16,7 +16,7 @@ from textual.strip import Strip
 from textual.geometry import Region
 
 from tt3de.glm_camera import GLMCamera
-from tt3de.tt3de import Drawable3D
+from tt3de.points import Drawable3D
 
 
 class RustRenderContext():

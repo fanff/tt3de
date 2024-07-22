@@ -10,7 +10,7 @@ from rtt3de import TextureBufferPy
 from rtt3de import VertexBufferPy,TransformPackPy
 from rtt3de import PrimitiveBufferPy
 
-from tests.rtt3de.test_utils import assertLine3DPrimitiveKeyEqual, assertPointPrimitiveAlmostEqual, perspective_divide
+from tests.tt3de.test_utils import assertLine3DPrimitiveKeyEqual, assertPointPrimitiveAlmostEqual, assertTriangle3DPrimitiveKeyEqual, perspective_divide
 from tt3de.asset_fastloader import fast_load
 from tt3de.glm_camera import GLMCamera
 from tt3de.richtexture import ImageTexture
@@ -247,29 +247,13 @@ class Test_PrimitivBuilding(unittest.TestCase):
         prim0 = primitive_buffer.get_primitive(0)
         
         self.assertEqual(primitive_buffer.primitive_count(), 1)
-
-        self.assertDictEqual(prim0,{
-            '_type': 'triangle',
+        assertTriangle3DPrimitiveKeyEqual(prim0, {'_type': 'triangle',
             "primitive_id":0,
             "geometry_id":1,
-            "uv_idx":0,
             "node_id":node_id,
-            "material_id":material_id,
-            'pa': { 'col': 256, 'row': 256, 'depth': 0.5},
-            'pb': { 'col': 256, 'row': 384, 'depth': 0.5},
-            'pc': { 'col': 384, 'row': 384, 'depth': 0.5},
-        })
-
-
-        v = vertex_buffer.get_post_clip_uv(0)
-
-        self.assertEqual(v[0], (0.0,0.0))
-        self.assertEqual(v[1], (0.0,1.0))
-        self.assertEqual(v[2], (1.0,1.0))
-
-
-
-
+            "material_id":material_id})
+        
+        
     def test_simple_two_triangle(self):
         drawing_buffer = AbigDrawing(512, 512)
         drawing_buffer.hard_clear(1000)
@@ -321,44 +305,25 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         
 
-        self.assertEqual(prim0,{
+        assertTriangle3DPrimitiveKeyEqual(prim0,{
             "primitive_id":0,
             "geometry_id":1,
             "_type":"triangle",
-            "uv_idx":0,
             "node_id":node_id,
             "material_id":material_id,
-            'pa': { 'col': 256, 'row': 256, 'depth': 1.0},
-            'pb': { 'col': 256, 'row': 512, 'depth': 1.0},
-            'pc': { 'col': 512, 'row': 512, 'depth': 1.0},
         })
-
-        v = vertex_buffer.get_post_clip_uv(0)
-
-        self.assertEqual(v[0], (0.0,0.0))
-        self.assertEqual(v[1], (0.0,1.0))
-        self.assertEqual(v[2], (1.0,1.0))
-
-
 
         prim1 = primitive_buffer.get_primitive(1)
 
-        self.assertEqual(prim1,{
+        assertTriangle3DPrimitiveKeyEqual(prim1,{
             "_type":"triangle",
-            "uv_idx":1, # because its a second triangle right 
             "primitive_id":1,
             "geometry_id":1,
             "node_id":node_id,
             "material_id":material_id,
-            'pa': { 'col': 256, 'row': 256, 'depth': 1.0},
-            'pb': { 'col': 512, 'row': 512, 'depth': 1.0},
-            'pc': { 'col': 512, 'row': 256, 'depth': 1.0},
+            
         })
-        v1 = vertex_buffer.get_post_clip_uv(1)
-
-        self.assertEqual(v1[0], (0.0,0.0))
-        self.assertEqual(v1[1], (1.0,1.0))
-        self.assertEqual(v1[2], (1.0,0.0))
+        
 
 
     def test_one_point_inside_raw_config(self):

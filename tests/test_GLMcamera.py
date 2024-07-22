@@ -5,7 +5,7 @@ import unittest
 import random
 
 from tt3de.glm_camera import GLMCamera
-from tt3de.tt3de import  Point3D
+from tt3de.points import  Point3D
 
 import glm
 

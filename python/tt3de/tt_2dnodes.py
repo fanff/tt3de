@@ -5,7 +5,7 @@ from typing_extensions import Self
 import itertools
 from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
-from tt3de.tt3de import Point2D, Point3D
+from tt3de.points import Point2D, Point3D
 from tt3de.utils import (
     p2d_tovec2,
     p2d_uv_tomatrix,

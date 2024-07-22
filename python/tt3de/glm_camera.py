@@ -3,7 +3,7 @@ import math
 
 import glm
 
-from tt3de.tt3de import Point3D
+from tt3de.points import Point3D
 
 
 class GLMCamera:

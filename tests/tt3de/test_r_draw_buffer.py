@@ -1,20 +1,22 @@
 
 
 import unittest
-from tt3de import AbigDrawing
 import pytest
-from tt3de import apply_material_py
-from tt3de import MaterialBufferPy,TextureBufferPy
+
+from tests.tt3de.test_utils import assertPixInfoEqual
+from tt3de.tt3de import Small16Drawing,AbigDrawing
+from tt3de.tt3de import apply_material_py
+from tt3de.tt3de import MaterialBufferPy,TextureBufferPy
 import glm 
-from tt3de import VertexBufferPy,TransformPackPy
-from tt3de import PrimitiveBufferPy
+from tt3de.tt3de import VertexBufferPy,TransformPackPy
+from tt3de.tt3de import PrimitiveBufferPy
 
 
 class Test_DrawBuffer(unittest.TestCase):
     
 
     def test_create16(self):
-        from rtt3de import Small16Drawing
+        
         gb = Small16Drawing()
 
         gb.hard_clear(1000.0)
@@ -28,7 +30,6 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(gb.get_at(1,1,1),10.0)
 
     def test_create_verybig(self):
-        from rtt3de import AbigDrawing
 
         gb = AbigDrawing(10,10)
 
@@ -235,8 +236,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         inpuut_tuple = [
             1.0,  # depth value
-            glm.vec3(2,3,4),
-            glm.vec3(5,6,7),
+            glm.vec2(2,3), # uv info
+            glm.vec2(5,6), # uv info
             node_id,
             geom_id,
             material_id,
@@ -249,11 +250,11 @@ class Test_DrawBuffer(unittest.TestCase):
         ### since we set depth at 0 0 ; the pixel idx 0 is moved to back
         ### therefore we "rolled" the buffer and put ourself in the index 1.
         pix_info1 = drawbuffer.get_pix_info_element(1)
-        self.assertEqual(
+        assertPixInfoEqual(
             pix_info1,
             {
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":   [2.0,3.0],
+                "uv_1": [5.0,6.0],
                 "primitive_id": primitiv_id,
                 "geometry_id": geom_id,
                 "node_id": node_id,
@@ -263,11 +264,11 @@ class Test_DrawBuffer(unittest.TestCase):
 
         # this one is actually the one that was before me :)
         pix_info0 = drawbuffer.get_pix_info_element(0)
-        self.assertEqual(
+        assertPixInfoEqual(
             pix_info0,
             {
-                "w":   [0.0,0.0,0.0],
-                "w_1": [0.0,0.0,0.0],
+                "uv":   [0.0,0.0],
+                "uv_1": [0.0,0.0],
                 "primitive_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
@@ -283,8 +284,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 1.0,
                 'pix_info': 1,
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":   [2.0,3.0],
+                "uv_1": [5.0,6.0],
                 "primitive_id": primitiv_id,
                 "geometry_id": geom_id,
                 "node_id": node_id,
@@ -300,8 +301,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 10.0,
                 'pix_info': 0,
-                "w":   [0.0,0.0,0.0],
-                "w_1": [0.0,0.0,0.0],
+                "uv":   [0.0,0.0],
+                "uv_1": [0.0,0.0],
                 "primitive_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
@@ -333,8 +334,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         inpuut_tuple_0 = [
             3.0,  # depth value
-            glm.vec3(2,3,4),
-            glm.vec3(5,6,7),
+            glm.vec2(2,3),
+            glm.vec2(5,6),
             _0_node_id,
             _0_geom_id,
             _0_material_id,
@@ -360,8 +361,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 3.0, 
                 "pix_info": 1, 
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":   [2.0,3.0],
+                "uv_1": [5.0,6.0],
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
@@ -379,8 +380,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         inpuut_tuple_1 = [
             1.0,  # depth value lower
-            glm.vec3(20,30,40),
-            glm.vec3(50,60,70),
+            glm.vec2(20,30),
+            glm.vec2(50,60),
             _1_node_id,
             _1_geom_id,
             _1_material_id,
@@ -407,8 +408,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 1.0, 
                 "pix_info": 0, 
-                "w":   [20.0,30.0,40.0],
-                "w_1": [50.0,60.0,70.0],
+                "uv":   [20.0,30.0],
+                "uv_1": [50.0,60.0],
                 "primitive_id": _1_primitiv_id,
                 "geometry_id": _1_geom_id,
                 "node_id": _1_node_id,
@@ -425,8 +426,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 3.0,
                 "pix_info": 1, 
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":   [2.0,3.0],
+                "uv_1": [5.0,6.0],
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
@@ -449,8 +450,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         inpuut_tuple_0 = [
             1.0,  # depth value # this one is in front
-            glm.vec3(2,3,4),
-            glm.vec3(5,6,7),
+            glm.vec2(2,3),
+            glm.vec2(5,6),
             _0_node_id,
             _0_geom_id,
             _0_material_id,
@@ -474,8 +475,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 1.0, 
                 "pix_info": 1, 
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":   [2.0,3.0],
+                "uv_1": [5.0,6.0],
                 "primitive_id": _0_primitiv_id,
                 "geometry_id":  _0_geom_id,
                 "node_id":      _0_node_id,
@@ -492,8 +493,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         inpuut_tuple_1 = [
             3.0,  #  THIS one it in the back
-            glm.vec3(20,30,40),
-            glm.vec3(50,60,70),
+            glm.vec2(20,30),
+            glm.vec2(50,60),
             _1_node_id,
             _1_geom_id,
             _1_material_id,
@@ -522,8 +523,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 1.0,
                 "pix_info": 1, 
-                "w":   [2.0,3.0,4.0],
-                "w_1": [5.0,6.0,7.0],
+                "uv":  [2.0,3.0],
+                "uv_1":[5.0,6.0],
                 "primitive_id": _0_primitiv_id,
                 "geometry_id":  _0_geom_id,
                 "node_id":      _0_node_id,
@@ -537,8 +538,8 @@ class Test_DrawBuffer(unittest.TestCase):
             {
                 "depth": 3.0,
                 "pix_info": 0, 
-                "w":   [20.0,30.0,40.0],
-                "w_1": [50.0,60.0,70.0],
+                "uv":   [20.0,30.0],
+                "uv_1": [50.0,60.0],
                 "primitive_id": _1_primitiv_id,
                 "geometry_id":     _1_geom_id,
                 "node_id":     _1_node_id,
@@ -550,7 +551,6 @@ class Test_DrawBuffer(unittest.TestCase):
 class Test_totextual(unittest.TestCase):
     
     def test_to_textual_2(self):
-        from rtt3de import AbigDrawing
         gb = AbigDrawing(max_row=10,max_col=20)
         gb.hard_clear(100.0)    
         gb.set_canvas_cell(0,0,(0,100,200,255),(200,100,0,255),1)
@@ -592,7 +592,6 @@ class Test_totextual(unittest.TestCase):
 
 
     def test_to_textual_2_out_bound_x(self):
-        from rtt3de import AbigDrawing
         gb = AbigDrawing(max_row=178,max_col=19)
         gb.hard_clear(100.0)    
         gb.set_bit_size_front(8,8,8)
@@ -620,7 +619,6 @@ class Test_totextual(unittest.TestCase):
 
 
     def test_to_textual_2_out_bound_y(self):
-        from rtt3de import AbigDrawing
         gb = AbigDrawing(10,10)
         gb.hard_clear(100.0)    
 

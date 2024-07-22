@@ -16,7 +16,6 @@ pub mod vertexbuffer;
 #[pymodule]
 fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<texturebuffer::TextureBufferPy>()?;
-
     m.add_class::<material::MaterialBufferPy>()?;
     m.add_class::<geombuffer::GeometryBufferPy>()?;
     m.add_class::<drawbuffer::Small16Drawing>()?;

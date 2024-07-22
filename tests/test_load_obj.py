@@ -3,7 +3,7 @@ import unittest
 
 from tt3de.asset_fastloader import fast_load
 from tt3de.asset_load import extract_palette, load_bmp, round_to_palette
-from tt3de.tt3de import Point3D
+from tt3de.points import Point3D
 
 
 def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):

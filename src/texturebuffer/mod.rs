@@ -198,6 +198,8 @@ impl TextureBufferPy {
     fn get_wh_of(&self, idx: usize) -> (usize, usize) {
         self.data.get_wh_of(idx)
     }
+
+    #[pyo3(signature = (width,height,pixels,repeat_width=true,repeat_height=true, ))]
     fn add_texture(
         &mut self,
         py: Python,

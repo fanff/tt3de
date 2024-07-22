@@ -5,9 +5,9 @@ import unittest
 
 
 
-from rtt3de import GeometryBufferPy
+from tt3de.tt3de import GeometryBufferPy
 
-from tests.rtt3de.test_utils import assertPolygon3DEqual
+from tests.tt3de.test_utils import assertPolygon3DEqual
 
 class Test_GeometryBuffer(unittest.TestCase):
     def test_empty(self):

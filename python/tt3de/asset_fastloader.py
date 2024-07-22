@@ -2,7 +2,7 @@ from typing import Tuple
 from tt3de.asset_load import load_bmp, load_obj, read_file
 
 from tt3de.richtexture import ImageTexture
-from tt3de.tt3de import Point2D, Point3D
+from tt3de.points import Point2D, Point3D
 from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.tt_3dnodes import TT3DPolygon
 

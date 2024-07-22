@@ -123,10 +123,9 @@ class Test_Rust_RasterLine(unittest.TestCase):
         self.assertEqual(point_a_cell["node_id"],node_id)
         self.assertEqual(point_a_cell["geometry_id"],geom_id)
         self.assertEqual(point_a_cell["material_id"],material_id)
-        # check the weights 
-        self.assertAlmostEqual(point_a_cell["w"][0],1.0,delta=0.001)
-        self.assertAlmostEqual(point_a_cell["w"][1],0.0,delta=0.001)
-        self.assertAlmostEqual(point_a_cell["w"][2],0.0)
+        # check the uv values
+        self.assertAlmostEqual(point_a_cell["uv"][0],1.0,delta=0.001)
+        self.assertAlmostEqual(point_a_cell["uv"][1],0.0,delta=0.001)
 
 
         if not (pa_row == pb_row and pa_col == pb_col):
@@ -135,10 +134,9 @@ class Test_Rust_RasterLine(unittest.TestCase):
             self.assertEqual(point_b_cell["node_id"],node_id)
             self.assertEqual(point_b_cell["geometry_id"],geom_id)
             self.assertEqual(point_b_cell["material_id"],material_id)
-            # check the weights
-            self.assertAlmostEqual(point_b_cell["w"][0],0.0,delta=0.001)
-            self.assertAlmostEqual(point_b_cell["w"][1],1.0,delta=0.001)
-            self.assertAlmostEqual(point_b_cell["w"][2],0.0)
+            # check the uv values
+            self.assertAlmostEqual(point_b_cell["uv"][0],0.0,delta=0.001)
+            self.assertAlmostEqual(point_b_cell["uv"][1],1.0,delta=0.001)
 
             ##self.assertGreaterEqual(point_b_cell["w"][0],0.0)
 
