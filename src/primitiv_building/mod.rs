@@ -319,7 +319,7 @@ pub fn apply_material_py(
         &mut draw_buffer_py.db,
         &material_buffer.content,
         &texturebuffer.data,
-        &vertex_buffer.uv_post_clipping,
+        &vertex_buffer.uv_array,
         &primitivbuffer.content,
     );
 }

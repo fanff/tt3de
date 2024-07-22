@@ -2,7 +2,7 @@
 
 # TinyTiny 3d Engine 
 
-A minimalistic 2D/3D engine implemented in Python/Cython, designed to render 3D objects using ASCII art.
+A minimalistic 2D/3D engine implemented in Rust & Binded to Python, designed to render 3D objects using ASCII art.
 
 # Features
 
@@ -16,15 +16,7 @@ A minimalistic 2D/3D engine implemented in Python/Cython, designed to render 3D 
 
 
 
-
-Magic command to build the cython code locally : 
-
-```bash 
-python setup.py build_ext --inplace
-```
-
-
-## testing *
+## testing
 
 ```bash 
 poetry run python demos\2d\texture_tests.py

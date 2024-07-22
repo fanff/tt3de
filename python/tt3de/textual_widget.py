@@ -68,7 +68,8 @@ class TT3DView(Container):
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
-        self.camera = GLMCamera(glm.vec3(0, 0, -5), 90, 90)
+        self.camera = GLMCamera(glm.vec3(0, 2, 7), 90, 90)
+        self.camera.set_yaw_pitch(math.radians(180), 0)
         self.rc = RustRenderContext(90, 90)
         self.initialize()
         ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)

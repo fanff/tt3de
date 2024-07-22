@@ -31,7 +31,7 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
 
     // set the given vertex at the given location
     pub fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
-        /// = [uva, uvb, uvc];
+
         let x = self.uv_array.linear_index(self.uv_size, 0);
         self.set_uv(uva, x);
 
@@ -146,7 +146,6 @@ const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 2;
 pub struct VertexBufferPy {
     pub buffer: VertexBuffer<MAX_VERTEX_CONTENT>,
     pub uv_array: UVBuffer<MAX_UV_CONTENT, f32>,
-    pub uv_post_clipping: UVBuffer<MAX_UV_CONTENT, f32>,
 }
 
 #[pymethods]
@@ -156,7 +155,6 @@ impl VertexBufferPy {
         VertexBufferPy {
             buffer: VertexBuffer::new(),
             uv_array: UVBuffer::new(),
-            uv_post_clipping: UVBuffer::new(),
         }
     }
 
@@ -212,18 +210,6 @@ impl VertexBufferPy {
         let result = self.buffer.get_clip_space_vertex(idx);
         let t = PyTuple::new_bound(py, [result.x, result.y, result.z, result.w]);
         t.into()
-    }
-
-    fn get_post_clip_uv(&self, py: Python, idx: usize) -> Py<PyTuple> {
-        let (ra, rb, rc) = self.uv_post_clipping.get_uv(idx);
-
-        let ta = PyTuple::new_bound(py, [ra.x, ra.y]);
-        let tb = PyTuple::new_bound(py, [rb.x, rb.y]);
-        let tc = PyTuple::new_bound(py, [rc.x, rc.y]);
-
-        let tt = PyTuple::new_bound(py, [ta, tb, tc]);
-
-        tt.into()
     }
 
     fn apply_mv(
