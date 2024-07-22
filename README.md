@@ -8,7 +8,7 @@ A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to
 * **ASCII Output**: Renders 3D scenes in a charming ASCII art style.
 * **Color Shading Support**: Renders with RGB colors and shading levels.
 * **Materials**: Supports 14 materials, including:
-    * **Texture Mapping**: Supports textures up to 256x256.
+    * **Texture Mapping**: Supports textures up to 256x256 pixels.
     * **Double Raster**: Allows the use of 2 colors per ASCII character (background and foreground).
     * **Perlin Noise**: Basic Perlin noise mapped texture.
 
