@@ -1,13 +1,13 @@
 
 
 import unittest
-from rtt3de import AbigDrawing
+from tt3de import AbigDrawing
 import pytest
-from rtt3de import apply_material_py
-from rtt3de import MaterialBufferPy,TextureBufferPy
+from tt3de import apply_material_py
+from tt3de import MaterialBufferPy,TextureBufferPy
 import glm 
-from rtt3de import VertexBufferPy,TransformPackPy
-from rtt3de import PrimitiveBufferPy
+from tt3de import VertexBufferPy,TransformPackPy
+from tt3de import PrimitiveBufferPy
 
 
 class Test_DrawBuffer(unittest.TestCase):

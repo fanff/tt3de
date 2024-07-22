@@ -14,7 +14,7 @@ pub mod vertexbuffer;
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
-fn rtt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<texturebuffer::TextureBufferPy>()?;
 
     m.add_class::<material::MaterialBufferPy>()?;
