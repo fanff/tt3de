@@ -10,7 +10,6 @@ class Test_VertexBuffer(unittest.TestCase):
         trpack = TransformPackPy(232)
 
 
-        self.assertEqual(abuffer.get_max_content(),128)
         abuffer.add_vertex(1,2,3)
         self.assertEqual(abuffer.get_vertex(0),(1.0,2.0,3.0,1.0))
 

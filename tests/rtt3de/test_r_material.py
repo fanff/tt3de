@@ -22,7 +22,7 @@ class Test_MaterialBufferPy(unittest.TestCase):
         texture_array = TextureBufferPy(12)
         img: ImageTexture = fast_load("models/test_screen32.bmp")
         data = img.chained_data()
-        texture_array.add_texture(img.image_width ,img.image_height ,data)
+        texture_array.add_texture(img.image_width ,img.image_height ,data,repeat_width=True,repeat_height=True)
         self.assertEqual(texture_array.size(), 1)
 
 

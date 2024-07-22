@@ -58,7 +58,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         node_id = 102
         material_id = 202
         uv_idx=3
-        geom_buffer.add_polygon3d(
+        geom_buffer.add_polygon_3d(
             0,1,  node_id, material_id, uv_idx,
         )
 

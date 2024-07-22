@@ -62,7 +62,7 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
     drawing_buffer.hard_clear(10000)
 
     primitive_buffer = PrimitiveBufferPy(tri_count+1)
-
+    vertex_buffer = VertexBufferPy()
 
     if mode=="STACK":
         # every triangle is "above the previous one"
@@ -84,7 +84,6 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
                 6, # bottom
                 size, # left 
                 depth,
-                0
             )
     elif mode=="SAME":
         #ALL triangles have rigourousely 
@@ -106,7 +105,7 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
 
                 6, # bottom
                 size, # left 
-                1.0,0
+                1.0
             )
     elif mode == "BELLOW":
         # every triangle is "bellow the previous one"
@@ -127,9 +126,9 @@ def test_bench_rust_triangle_raster_mode(benchmark,mode,tri_count):
 
                 6, # bottom
                 size, # left 
-                depth,0
+                depth
             )
     assert (primitive_buffer.primitive_count(), tri_count)
-    benchmark(rust_version, primitive_buffer, drawing_buffer)
+    benchmark(rust_version, primitive_buffer, vertex_buffer,drawing_buffer)
 
 

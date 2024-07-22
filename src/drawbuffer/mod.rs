@@ -163,8 +163,8 @@ impl AbigDrawing {
 
         let wslice = pix_info_element.uv.as_slice();
         let w_1_slice = pix_info_element.uv_1.as_slice();
-        dict.set_item("w", wslice).unwrap();
-        dict.set_item("w_1", w_1_slice).unwrap();
+        dict.set_item("uv", wslice).unwrap();
+        dict.set_item("uv_1", w_1_slice).unwrap();
 
         dict.set_item("material_id", pix_info_element.material_id)
             .unwrap();

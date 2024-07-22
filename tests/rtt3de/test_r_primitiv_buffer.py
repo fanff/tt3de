@@ -72,7 +72,6 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             1,
             3,
             1.0,
-            uv=1,
         )
 
         self.assertEqual(primitive_buffer.primitive_count(), 1)
