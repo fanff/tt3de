@@ -15,10 +15,8 @@ class TestLoad(unittest.TestCase):
     def test_simplecube(self):
         polygon3d = fast_load("models/cube.obj")
 
-        self.assertEqual(len(polygon3d.vertex_list), 12*3)
+        self.assertEqual(len(polygon3d.vertex_list), 12 * 3)
         self.assertEqual(len(polygon3d.uvmap), 12)
-
-        
 
     def test_simpleimg(self):
         with open("models/cube_texture.bmp", "rb") as fin:
@@ -41,5 +39,3 @@ class TestLoad(unittest.TestCase):
         roundedimg = round_to_palette(pxdata, palette)
 
         self.assertLessEqual(len(extract_palette(roundedimg)), 64)
-
-

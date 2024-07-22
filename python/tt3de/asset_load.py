@@ -9,7 +9,7 @@ def read_file(obj_file):
         return fin.read()
 
 
-def load_bmp(f)-> List[List[int]]:
+def load_bmp(f) -> List[List[int]]:
     def read_bytes(f, num):
         return struct.unpack("<" + "B" * num, f.read(num))
 
@@ -107,14 +107,14 @@ class Triangle3D:
         self.v2 = v2
         self.v3 = v3
         self.normal = normal
-        self.uvmap:List[tuple[Point2D,Point2D,Point2D]] = None
+        self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = None
 
 
-def load_obj( obj_bytes):
+def load_obj(obj_bytes):
     vertices = []
     texture_coords = [[] for _ in range(8)]
     normals = []
-    triangles:List[Triangle3D] = []
+    triangles: List[Triangle3D] = []
     triangles_vindex = []
     lines = obj_bytes.decode("utf-8").split("\n")
 
@@ -210,8 +210,10 @@ def load_obj( obj_bytes):
                     t.uvmap = uv_vectors
                     triangles.append(t)
 
-    return (vertices,
-    texture_coords,
-    normals,
-    triangles,
-    triangles_vindex,)
+    return (
+        vertices,
+        texture_coords,
+        normals,
+        triangles,
+        triangles_vindex,
+    )

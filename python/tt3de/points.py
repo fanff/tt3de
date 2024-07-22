@@ -127,6 +127,7 @@ def normalize(v: "Point3D"):
         norm = 1e-6
     return Point3D(v.x / norm, v.y / norm, v.z / norm)
 
+
 class Drawable3D:
     texture: "TextureTT3DE"
 
@@ -142,4 +143,3 @@ class Drawable3D:
 
     def render_point(self, pp: PPoint2D):
         raise NotImplemented("")
-

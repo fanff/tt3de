@@ -31,7 +31,7 @@ from textual.widgets import (
 from textual.message import Message
 from textual.layouts import horizontal
 
-from tt3de.textual_widget import  TimingRegistry
+from tt3de.textual_widget import TimingRegistry
 
 
 class FloatSelector(Widget, can_focus=False):
@@ -445,7 +445,8 @@ class CameraConfig(Widget):
         if no_events:
             self.query_one(f"#input_camera_yaw").current_value = yaw
             self.query_one(f"#input_camera_pitch").current_value = pitch
-    def refresh_camera_zoom(self,zoom:float,no_events=True):
+
+    def refresh_camera_zoom(self, zoom: float, no_events=True):
         if no_events:
             self.query_one(f"#input_camera_zoom").current_value = zoom
         else:
@@ -520,9 +521,11 @@ class RenderInfo(Widget, can_focus=False):
         l.update(f"Frame: {frame_count}")
 
 
-
 from textual.widgets import DataTable
-DEPTH_BUFFER_COLUMNS=["L#","depth","geom","node","mat","prim"]
+
+DEPTH_BUFFER_COLUMNS = ["L#", "depth", "geom", "node", "mat", "prim"]
+
+
 class DepthBufferInfo(Widget, can_focus=False):
     DEFAULT_CSS = """
 
@@ -532,25 +535,29 @@ class DepthBufferInfo(Widget, can_focus=False):
 
 
     """
+
     def compose(self) -> ComposeResult:
         yield Label(id="location")
         yield DataTable()
+
     def on_mount(self):
         table = self.query_one(DataTable)
         table.add_columns(*DEPTH_BUFFER_COLUMNS)
-        table.add_row(*([0]*len(DEPTH_BUFFER_COLUMNS)),key="0")
-        table.add_row(*([1]*len(DEPTH_BUFFER_COLUMNS)),key="1")
-    def update_depthinfo(self,updated_values:list,x:int=0,y:int=0):
-        label:Label = self.query_one(Label)
+        table.add_row(*([0] * len(DEPTH_BUFFER_COLUMNS)), key="0")
+        table.add_row(*([1] * len(DEPTH_BUFFER_COLUMNS)), key="1")
+
+    def update_depthinfo(self, updated_values: list, x: int = 0, y: int = 0):
+        label: Label = self.query_one(Label)
         label.update(f"at: {x} , {y}")
-        table:DataTable = self.query_one(DataTable)
+        table: DataTable = self.query_one(DataTable)
         for idx, content in enumerate(updated_values):
-            table.update_cell_at((idx,0),idx)
-            table.update_cell_at((idx,1),content["depth_value"])
-            table.update_cell_at((idx,2),content["geom_id"])
-            table.update_cell_at((idx,3),content["node_id"])
-            table.update_cell_at((idx,4),content["material_id"])
-            table.update_cell_at((idx,5),content["primitiv_id"])
+            table.update_cell_at((idx, 0), idx)
+            table.update_cell_at((idx, 1), content["depth_value"])
+            table.update_cell_at((idx, 2), content["geom_id"])
+            table.update_cell_at((idx, 3), content["node_id"])
+            table.update_cell_at((idx, 4), content["material_id"])
+            table.update_cell_at((idx, 5), content["primitiv_id"])
+
 
 class RustRenderContextInfo(Widget, can_focus=False):
     DEFAULT_CSS = """
@@ -561,17 +568,22 @@ class RustRenderContextInfo(Widget, can_focus=False):
 
 
     """
+
     def compose(self) -> ComposeResult:
         yield Label(id="location")
-        
+
     def on_mount(self):
         pass
-    def update_counts(self,updates:dict):
-            
-        label:Label = self.query_one(Label)
+
+    def update_counts(self, updates: dict):
+
+        label: Label = self.query_one(Label)
         label.update(str(updates))
-        
+
+
 from textual.widgets import Log
+
+
 class EngineLog(Widget):
     DEFAULT_CSS = """
 
@@ -583,7 +595,6 @@ class EngineLog(Widget):
     def compose(self) -> ComposeResult:
         yield Log()
 
-
-    def add_line(self,txt:str):
-        log:Log = self.query_one(Log)
+    def add_line(self, txt: str):
+        log: Log = self.query_one(Log)
         log.write_line(txt)

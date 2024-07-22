@@ -13,12 +13,13 @@ from textual.widget import Widget
 from textual.widgets import (
     Static,
 )
-from abc import  abstractmethod
+from abc import abstractmethod
 from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
 from textual.strip import Strip
 from textual.geometry import Region
 from textual.containers import Container
+
 
 class TimingRegistry:
 
@@ -40,12 +41,12 @@ class TT3DView(Container):
     write_debug_inside = False
     mouse_fps_camera_mode = False
 
-    frame_idx:int = reactive(0)
+    frame_idx: int = reactive(0)
     last_processed_frame = 0
 
     timing_registry = TimingRegistry()
 
-    camera :GLMCamera= None
+    camera: GLMCamera = None
     last_frame_time = 0.0
     cached_result = None
     cwr = None
@@ -71,12 +72,11 @@ class TT3DView(Container):
         self.rc = RustRenderContext(90, 90)
         self.initialize()
         ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
-        self.last_frame_time = time()-1.0
+        self.last_frame_time = time() - 1.0
 
     def on_mount(self):
-        self.auto_refresh = 1.0/20.0
+        self.auto_refresh = 1.0 / 20.0
 
-   
     async def on_event(self, event: events.Event):
         if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
             if event.delta_x != 0:
@@ -88,7 +88,7 @@ class TT3DView(Container):
                 p = math.radians(
                     (((event.y - offset.y) / self.size.height) - 0.5) * 160
                 )
-                self.camera.set_yaw_pitch(self.camera.yaw,  p)
+                self.camera.set_yaw_pitch(self.camera.yaw, p)
 
         elif isinstance(event, events.Click):
             self.mouse_fps_camera_mode = True
@@ -119,11 +119,10 @@ class TT3DView(Container):
 
             w = max(self.size.width, 3)
             h = max(self.size.height, 3)
-            self.rc.update_wh(w,h)
-            self.camera.recalc_fov_h(w,h)
+            self.rc.update_wh(w, h)
+            self.camera.recalc_fov_h(w, h)
         else:
             await super().on_event(event)
-
 
     def render_lines(self, crop: Region) -> list[Strip]:
         """Render the widget into lines.
@@ -138,10 +137,10 @@ class TT3DView(Container):
             return []
         if crop.width == 0:
             return [Strip([]) for h in crop.height]
-        
+
         ts = time()
-        if ts>self.last_frame_time+1.0/24.0:
-            self.frame_idx+=1
+        if ts > self.last_frame_time + 1.0 / 24.0:
+            self.frame_idx += 1
             self.render_step()
             self.timing_registry.set_duration("render_step", time() - ts)
 
@@ -169,14 +168,11 @@ class TT3DView(Container):
     def post_render_step(self):
         pass
 
-    #def render(self):
+    # def render(self):
     #    return "render called, should not happen actually :/"
 
     def render_step(self):
-        if (
-            self.size.width > 1
-            and self.size.height > 1
-        ):
+        if self.size.width > 1 and self.size.height > 1:
 
             ts = time()
             self.update_step(0.2)  # TODO fix the time of the update
