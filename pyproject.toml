@@ -17,10 +17,14 @@ black = "^24.4.2"
 pytest = "^8.2.1"
 pytest-benchmark = "^4.0.0"
 setuptools = "^70.0.0"
-cython = "^3.0.10"
 pillow = "^10.3.0"
 maturin = "^1.6.0"
 
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
+features = ["pyo3/extension-module"]
