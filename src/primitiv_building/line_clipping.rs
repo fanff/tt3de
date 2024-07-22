@@ -6,10 +6,7 @@ use crate::{
     vertexbuffer::{UVBuffer, VertexBuffer},
 };
 
-use super::{
-    perspective_divide_v4_v4,
-    primitivbuffer::{PrimitiveBuffer},
-};
+use super::{perspective_divide_v4_v4, primitivbuffer::PrimitiveBuffer};
 
 /// Clip a line to the view frustum.
 /// The line is defined by two points in clip space coordinates; in homogeneous coordinates (x, y, z, w).
@@ -78,7 +75,7 @@ pub fn line_as_primitive<
     let pb = vertex_buffer.get_clip_space_vertex(line.p_start + 1);
 
     // get the uv coordinates
-    let uv = uv_array.get_uv(line.uv_start);
+    let _uv = uv_array.get_uv(line.uv_start);
 
     // clip the line to the view frustum
     let clipped_line = clip_line_to_clip_space(pa, pb);

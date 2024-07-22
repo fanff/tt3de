@@ -118,7 +118,6 @@ pub fn raster_line_along_rows<const DEPTHCOUNT: usize>(
 
 #[cfg(test)]
 pub mod test_raster_line_along_rows {
-    
 
     use crate::{
         drawbuffer::drawbuffer::DrawBuffer,
@@ -127,17 +126,6 @@ pub mod test_raster_line_along_rows {
             raster_line_along_rows,
         },
     };
-
-    macro_rules! assert_almost_eq {
-        ($left:expr, $right:expr $(,)?) => {
-            assert!(
-                (($left - $right).abs() < 0.001),
-                "left: {}, right: {}",
-                $left,
-                $right
-            );
-        };
-    }
 
     #[test]
     fn test_raster_line_zero_len() {

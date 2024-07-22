@@ -241,7 +241,7 @@ impl GeometryBufferPy {
     }
     fn add_point(
         &mut self,
-        py: Python,
+        _py: Python,
         p_idx: usize,
         uv_idx: usize,
         node_id: usize,

@@ -26,12 +26,12 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
     fn render_mat(
         &self,
         cell: &mut CanvasCell,
-        depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
-        depth_layer: usize,
+        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        _depth_layer: usize,
         pixinfo: &PixInfo<f32>,
-        primitive_element: &PrimitiveElements,
+        _primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {
         cell.glyph = self.glyph_idx;
         //depth_cell.row;

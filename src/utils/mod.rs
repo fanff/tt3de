@@ -42,7 +42,6 @@ pub fn vec4_as_pylist(py: Python, vec4: Vec4) -> Py<PyAny> {
     list.into()
 }
 
-
 pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {
     let r = values.call_method0(py, "to_tuple").unwrap();
     let (a, b, c): (f32, f32, f32) = r.extract(py).unwrap();
@@ -57,7 +56,7 @@ pub fn convert_glm_vec2(py: Python, values: Py<PyAny>) -> Vec2 {
 }
 
 pub fn convert_tuple_texture_rgba(py: Python, tuple: Py<PyAny>) -> Option<RGBA> {
-    let tuple = tuple.as_ref(py).downcast::<PyTuple>().ok()?;
+    let tuple = tuple.bind(py).downcast::<PyTuple>().ok()?;
     match tuple.len() {
         3 => {
             let (a, b, c): (u8, u8, u8) = tuple.extract().unwrap();

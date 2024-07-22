@@ -3,7 +3,8 @@ use nalgebra_glm::Vec2;
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
-    primitivbuffer::{PointInfo, PrimitivReferences}, raster_vertical_line, set_pixel_double_weights,
+    primitivbuffer::{PointInfo, PrimitivReferences},
+    raster_vertical_line, set_pixel_double_weights,
 };
 
 pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
@@ -126,17 +127,6 @@ pub mod test_raster_line_along_columns {
             raster_line_along_columns,
         },
     };
-
-    macro_rules! assert_almost_eq {
-        ($left:expr, $right:expr $(,)?) => {
-            assert!(
-                (($left - $right).abs() < 0.001),
-                "left: {}, right: {}",
-                $left,
-                $right
-            );
-        };
-    }
 
     #[test]
     fn test_raster_line_zero_len() {

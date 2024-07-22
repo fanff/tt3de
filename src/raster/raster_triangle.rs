@@ -1,8 +1,7 @@
-
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
-    barycentric_coord, barycentric_coord_shift, max_3_int, min_2_int, min_3_int,
+    barycentric_coord, max_3_int, min_2_int, min_3_int,
     primitivbuffer::{PointInfo, PrimitivReferences},
     set_pixel_double_weights,
 };
@@ -34,8 +33,8 @@ pub fn raster_triangle<const DEPTHCOUNT: usize>(
             let depth = pa.p.z * w0 + pb.p.z * w1 + pc.p.z * w2;
 
             if w0 >= 0.0 && w1 >= 0.0 && w2 >= 0.0 {
-                let (w0_alt, w1_alt, w2_alt) =
-                    barycentric_coord_shift(pa, pb, pc, 0.49, curr_row, curr_col);
+                //let (w0_alt, w1_alt, w2_alt) =
+                //    barycentric_coord_shift(pa, pb, pc, 0.49, curr_row, curr_col);
 
                 set_pixel_double_weights(
                     prim_ref,
@@ -80,10 +79,10 @@ mod test_raster_triangle {
                 let pc = PointInfo::new(row as f32, col as f32, 3.0);
                 raster_triangle(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
 
-                // get cell bellow the triangle
-                let content_at_location_layer0 =
-                    drawing_buffer.get_pix_buffer_content_at_row_col(row, col, 0);
-                let cell = drawing_buffer.get_depth_buffer_cell(row, col);
+                // // get cell bellow the triangle
+                // let content_at_location_layer0 =
+                //     drawing_buffer.get_pix_buffer_content_at_row_col(row, col, 0);
+                // let cell = drawing_buffer.get_depth_buffer_cell(row, col);
             }
         }
     }

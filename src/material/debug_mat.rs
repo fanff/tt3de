@@ -3,7 +3,7 @@ use nalgebra_glm::{clamp, Vec1};
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
-    texturebuffer::{texture_buffer::TextureBuffer},
+    texturebuffer::texture_buffer::TextureBuffer,
     vertexbuffer::UVBuffer,
 };
 
@@ -58,11 +58,11 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         &self,
         cell: &mut CanvasCell,
         _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
-        depth_layer: usize,
+        _depth_layer: usize,
         _pixinfo: &PixInfo<f32>,
-        primitive_element: &PrimitiveElements,
+        _primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
     ) {
         cell.glyph = self.glyph_idx;
 

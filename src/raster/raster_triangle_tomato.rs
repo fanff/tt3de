@@ -143,7 +143,7 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
     let dit1 = (*pc - *pa) / (delta_row);
 
     // right edge interpolant
-    let mut itEdge1 = *pa;
+    let mut it_edge1 = *pa;
 
     draw_flat_triangle(
         drawing_buffer,
@@ -153,7 +153,7 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
         pc,
         dit0,
         dit1,
-        &mut itEdge1,
+        &mut it_edge1,
     );
 }
 
@@ -170,7 +170,7 @@ pub fn draw_flat_top_triangle<const DEPTHCOUNT: usize>(
     let dit1 = (*pc - *pb) / (delta_row);
 
     // right edge interpolant
-    let mut itEdge1 = *pb;
+    let mut it_edge1 = *pb;
 
     draw_flat_triangle(
         drawing_buffer,
@@ -180,7 +180,7 @@ pub fn draw_flat_top_triangle<const DEPTHCOUNT: usize>(
         pc,
         dit0,
         dit1,
-        &mut itEdge1,
+        &mut it_edge1,
     );
 }
 
@@ -188,14 +188,14 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
     prim_ref: &PrimitivReferences,
     pa: &Vertex,
-    pb: &Vertex,
+    _pb: &Vertex,
     pc: &Vertex,
     dit0: Vertex,
     dit1: Vertex,
-    itEdge1: &mut Vertex,
+    it_edge1: &mut Vertex,
 ) {
     // create edge interpolant for left edge (pa )
-    let mut itEdge0 = *pa;
+    let mut it_edge0 = *pa;
 
     // calculate start and end scanlines
     let row_start = (pa.pos.y - 0.5f32).ceil().max(0.0) as usize;
@@ -204,8 +204,8 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
         .min(drawing_buffer.row_count as f32) as usize;
 
     // do interpolant prestep
-    itEdge0 += dit0 * ((row_start as f32 + 0.5f32) - pa.pos.y);
-    *itEdge1 += dit1 * ((row_start as f32 + 0.5f32) - pa.pos.y);
+    it_edge0 += dit0 * ((row_start as f32 + 0.5f32) - pa.pos.y);
+    *it_edge1 += dit1 * ((row_start as f32 + 0.5f32) - pa.pos.y);
 
     #[cfg(test)]
     {
@@ -213,8 +213,8 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
     }
     for row in row_start..row_end {
         // calculate start and end columns
-        let col_start = (itEdge0.pos.x - 0.5f32).ceil().max(0.0) as usize;
-        let col_end = (itEdge1.pos.x - 0.5f32)
+        let col_start = (it_edge0.pos.x - 0.5f32).ceil().max(0.0) as usize;
+        let col_end = (it_edge1.pos.x - 0.5f32)
             .ceil()
             .min((drawing_buffer.col_count - 1) as f32) as usize;
 
@@ -224,14 +224,14 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
         }
 
         // create scanline interpolant
-        let mut i_line = itEdge0;
+        let mut i_line = it_edge0;
 
         // calculate delta scaline interpolant / d col
-        let delta_col = itEdge1.pos.x - itEdge0.pos.x;
-        let diLine = (*itEdge1 - i_line) / (delta_col);
+        let delta_col = it_edge1.pos.x - it_edge0.pos.x;
+        let di_line = (*it_edge1 - i_line) / (delta_col);
 
         // prestep scanline interpolant
-        i_line += diLine * (col_start as f32 + 0.5f32 - itEdge0.pos.x);
+        i_line += di_line * (col_start as f32 + 0.5f32 - it_edge0.pos.x);
 
         for col in col_start..col_end {
             //recover interpolated z for interpolated 1/z
@@ -255,10 +255,10 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 //attr.normal.z,
             );
             // step scanline interpolant
-            i_line += diLine;
+            i_line += di_line;
         }
-        itEdge0 += dit0;
-        *itEdge1 += dit1;
+        it_edge0 += dit0;
+        *it_edge1 += dit1;
     }
 }
 

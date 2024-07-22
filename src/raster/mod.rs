@@ -35,9 +35,6 @@ fn max_3_int<T: Ord>(a: T, b: T, c: T) -> T {
 fn min_2_int<T: Ord>(a: T, b: T) -> T {
     std::cmp::min(a, b)
 }
-fn max_2_int<T: Ord>(a: T, b: T) -> T {
-    std::cmp::max(a, b)
-}
 
 // function that "set stuff" in the drawing buffer; assuming its a double raster
 fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
@@ -64,27 +61,6 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
         prim_ref.material_id,
         prim_ref.primitive_id,
     );
-}
-trait ToF32 {
-    fn to_f32(&self) -> f32;
-}
-
-impl ToF32 for usize {
-    fn to_f32(&self) -> f32 {
-        *self as f32
-    }
-}
-
-impl ToF32 for u16 {
-    fn to_f32(&self) -> f32 {
-        *self as f32
-    }
-}
-
-impl ToF32 for u32 {
-    fn to_f32(&self) -> f32 {
-        *self as f32
-    }
 }
 
 fn barycentric_coord(
@@ -139,9 +115,9 @@ fn barycentric_coord_shift(
     (w1, w2, w3)
 }
 
-pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
+pub fn raster_element<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
     element: &PrimitiveElements,
-    vertexbuffer: &VertexBuffer<VertexCount>,
+    _vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
@@ -159,7 +135,7 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VertexCount: usize>(
             tomato_draw_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc)
         }
 
-        PrimitiveElements::Static { fds, index } => todo!(),
+        PrimitiveElements::Static { fds: _, index: _ } => todo!(),
     }
 }
 
@@ -177,7 +153,7 @@ pub fn raster_all<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
 
 #[pyfunction]
 pub fn raster_all_py(
-    py: Python,
+    _py: Python,
     pb: &PrimitiveBufferPy,
     vbuffpy: &VertexBufferPy,
     mut db: PyRefMut<'_, AbigDrawing>,

@@ -2,13 +2,13 @@ use crate::{
     drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     utils::convert_tuple_rgba,
-    vertexbuffer::{UVBuffer},
+    vertexbuffer::UVBuffer,
 };
 
 use super::texturebuffer::texture_buffer::TextureBuffer;
 use super::texturebuffer::RGBA;
 
-use nalgebra_glm::{Number};
+use nalgebra_glm::Number;
 pub mod debug_mat;
 use debug_mat::*;
 
@@ -109,7 +109,7 @@ pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER:
 pub fn apply_noise<T: Number>(noise: &NoiseMaterial, pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
     let noise = noise.make_instance();
     let noise_val = noise.get_noise_2d(u, v);
-    
+
     (noise_val + 1.0) / 2.0
 }
 
@@ -140,7 +140,7 @@ impl MaterialBufferPy {
 
     fn add_static(
         &mut self,
-        py: Python,
+        _py: Python,
         front_rgba: &Bound<PyTuple>,
         back_rgba: &Bound<PyTuple>,
         glyph_idx: u8,

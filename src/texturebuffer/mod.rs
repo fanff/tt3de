@@ -1,5 +1,9 @@
 use crate::utils::convert_tuple_texture_rgba;
-use pyo3::{pyclass, pymethods, types::PyList, Py, PyAny, Python};
+use pyo3::{
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyList},
+    Bound, Py, PyAny, Python, ToPyObject,
+};
 
 pub mod noise_texture;
 use noise_texture::*;
@@ -152,15 +156,15 @@ impl<const SIZE: usize> TextureType<SIZE> {
 ///
 pub struct TextureIterator<'a> {
     py: Python<'a>,
-    pixels: &'a PyList,
+    pix_list: &'a Bound<'a, PyList>,
     index: usize,
 }
 
 impl<'a> TextureIterator<'a> {
-    fn new(py: Python<'a>, pixels: &'a PyList) -> Self {
+    fn new(py: Python<'a>, pix_list: &'a Bound<'a, PyList>) -> Self {
         TextureIterator {
             py,
-            pixels,
+            pix_list,
             index: 0,
         }
     }
@@ -170,10 +174,10 @@ impl<'a> Iterator for TextureIterator<'a> {
     type Item = RGBA;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.pixels.len() {
-            let item: &PyAny = self.pixels.get_item(self.index).ok().unwrap();
+        if self.index < self.pix_list.len().ok().unwrap() {
+            let item: &Bound<PyAny> = &self.pix_list.get_item(self.index).ok().unwrap();
             self.index += 1;
-            convert_tuple_texture_rgba(self.py, item.into())
+            convert_tuple_texture_rgba(self.py, item.to_object(self.py))
         } else {
             None
         }
@@ -209,7 +213,8 @@ impl TextureBufferPy {
         repeat_width: bool,
         repeat_height: bool,
     ) -> usize {
-        let texture_iter = TextureIterator::new(py, pixels.as_ref(py));
+        let pixel_iter = pixels.bind(py).downcast::<PyList>().unwrap();
+        let texture_iter = TextureIterator::new(py, pixel_iter);
 
         self.data
             .add_texture_from_iter(width, height, texture_iter, repeat_width, repeat_height)
