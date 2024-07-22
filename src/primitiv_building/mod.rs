@@ -10,7 +10,7 @@ use crate::{
     geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
     material::MaterialBufferPy,
     primitivbuffer::*,
-    raster::raster_triangle_tomato::Vertex,
+    raster::vertex::Vertex,
     texturebuffer::TextureBufferPy,
     vertexbuffer::{TransformPack, TransformPackPy, UVBuffer, VertexBuffer, VertexBufferPy},
 };

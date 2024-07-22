@@ -24,6 +24,9 @@ use raster_point::*;
 pub mod raster_triangle_tomato;
 use raster_triangle_tomato::*;
 
+pub mod vertex;
+use vertex::*;
+
 //  calculating min/max of multiple values;
 fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
     std::cmp::min(std::cmp::min(a, b), c)

@@ -2,7 +2,8 @@ use std::ops::{AddAssign, Div, Mul, Sub};
 
 use nalgebra_glm::{vec3, Real, TVec3, Vec2};
 
-use crate::raster::raster_triangle_tomato::Vertex;
+use crate::raster;
+use raster::vertex::Vertex;
 
 use super::{PTriangle, PTriangle3D};
 

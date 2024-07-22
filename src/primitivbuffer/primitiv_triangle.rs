@@ -1,4 +1,5 @@
-use crate::raster::raster_triangle_tomato::Vertex;
+use crate::raster;
+use raster::vertex::Vertex;
 
 use super::primitivbuffer::{PointInfo, PrimitivReferences};
 

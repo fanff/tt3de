@@ -7,7 +7,7 @@ pub mod primitiv_triangle;
 use primitiv_triangle::*;
 
 use crate::{
-    raster::raster_triangle_tomato::Vertex,
+    raster::vertex::Vertex,
     utils::{vec2_as_pylist, vec3_as_pylist, vec4_as_pylist},
 };
 
@@ -138,12 +138,14 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
             dict.set_item("row", point.row).unwrap();
             dict.set_item("col", point.col).unwrap();
             dict.set_item("depth", point.depth()).unwrap();
+            dict.set_item("uv_idx", uv).unwrap();
         }
         &PrimitiveElements::Line { fds, pa, pb, uv } => {
             into_dict(py, &fds, &dict);
             // Assuming DepthBufferCell has some fields `field1` and `field2`
             dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
             dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
+            dict.set_item("uv_idx", uv).unwrap();
         }
         &PrimitiveElements::Static { fds, index } => {
             into_dict(py, &fds, &dict);
