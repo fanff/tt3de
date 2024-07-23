@@ -1,4 +1,6 @@
-use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::set_pixel_double_weights};
+use nalgebra_glm::TVec2;
+
+use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{primitivbuffer::PrimitivReferences, Vertex};
 
@@ -111,20 +113,16 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
 
             let attr = i_line * w;
 
-            // put_pixel
-            set_pixel_double_weights(
-                prim_ref,
-                drawing_buffer,
-                i_line.pos.z,
-                col,
+            drawing_buffer.set_depth_content(
                 row,
-                attr.uv.x,
-                attr.uv.y,
-                0.0,
-                0.0,
-                //attr.normal.x,
-                //attr.normal.y,
-                //attr.normal.z,
+                col,
+                i_line.pos.z,
+                attr.uv,
+                TVec2::new(0.0, 0.0),
+                prim_ref.node_id,
+                prim_ref.geometry_id,
+                prim_ref.material_id,
+                prim_ref.primitive_id,
             );
             // step scanline interpolant
             i_line += di_line;

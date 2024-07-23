@@ -19,7 +19,7 @@ from tt3de.render_context_rust import RustRenderContext
 from textual.strip import Strip
 from textual.geometry import Region
 from textual.containers import Container
-
+from textual.screen import Screen
 
 class TimingRegistry:
 
@@ -50,7 +50,7 @@ class TT3DView(Container):
     last_frame_time = 0.0
     cached_result = None
     cwr = None
-
+    target_fps = 10
     DEFAULT_CSS = """
     TT3DView {
         height: 100%;
@@ -72,11 +72,10 @@ class TT3DView(Container):
         self.camera.set_yaw_pitch(math.radians(180), 0)
         self.rc = RustRenderContext(90, 90)
         self.initialize()
-        ##self.update_timer = self.set_interval(1.0 / 24, self.calc_frame, pause=False)
         self.last_frame_time = time() - 1.0
 
     def on_mount(self):
-        self.auto_refresh = 1.0 / 20.0
+        self.auto_refresh = 1.0 / self.target_fps
 
     async def on_event(self, event: events.Event):
         if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
@@ -140,7 +139,7 @@ class TT3DView(Container):
             return [Strip([]) for h in crop.height]
 
         ts = time()
-        if ts > self.last_frame_time + 1.0 / 24.0:
+        if ts > self.last_frame_time + (1.0 / self.target_fps):
             self.frame_idx += 1
             self.render_step()
             self.timing_registry.set_duration("render_step", time() - ts)
@@ -150,7 +149,6 @@ class TT3DView(Container):
             self.timing_registry.set_duration("to_textual_", time() - ts)
 
             self.last_frame_time = time()
-            self.cached_result = result
             return result
         else:
             result = self.rc.to_textual_2(crop)
