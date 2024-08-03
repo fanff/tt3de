@@ -5,7 +5,7 @@ use nalgebra_glm::{vec3, Real, TVec3, Vec2};
 use crate::raster;
 use raster::vertex::Vertex;
 
-use super::{PTriangle, PTriangle3D};
+use super::{PRect, PTriangle, PTriangle3D};
 
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: Real> {
@@ -149,6 +149,9 @@ pub enum PrimitiveElements {
     },
     Triangle(PTriangle),
     Triangle3D(PTriangle3D),
+
+    Rect(PRect),
+
     Static {
         fds: PrimitivReferences,
         index: usize,
@@ -173,6 +176,7 @@ impl PrimitiveElements {
             PrimitiveElements::Static { fds: _, index: _ } => 0,
             PrimitiveElements::Triangle(t) => t.uv,
             PrimitiveElements::Triangle3D(_t) => 0,
+            PrimitiveElements::Rect(_r) => 0,
         }
     }
 }

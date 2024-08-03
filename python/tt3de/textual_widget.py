@@ -34,12 +34,17 @@ class TimingRegistry:
 
 
 class TT3DView(Container):
+    DEFAULT_CSS = """
+    TT3DView {
+        height: 100%;
+        width: 100%;
+    }
+    """
     can_focus = True
 
     use_native_python = True
 
-    write_debug_inside = False
-    mouse_fps_camera_mode = False
+    enableMouseFpsCamera = False
 
     frame_idx: int = reactive(0)
     last_processed_frame = 0
@@ -50,14 +55,8 @@ class TT3DView(Container):
     last_frame_time = 0.0
     cached_result = None
     cwr = None
-    target_fps = 10
-    DEFAULT_CSS = """
-    TT3DView {
-        height: 100%;
-        width: 100%;
-        
-    }
-    """
+    target_fps = 24
+    
 
     def __init__(
         self,
@@ -78,7 +77,7 @@ class TT3DView(Container):
         self.auto_refresh = 1.0 / self.target_fps
 
     async def on_event(self, event: events.Event):
-        if self.mouse_fps_camera_mode and isinstance(event, events.MouseMove):
+        if self.enableMouseFpsCamera and isinstance(event, events.MouseMove):
             if event.delta_x != 0:
                 self.camera.rotate_left_right(
                     math.radians(event.delta_x * (800.0 / self.size.width))
@@ -91,9 +90,12 @@ class TT3DView(Container):
                 self.camera.set_yaw_pitch(self.camera.yaw, p)
 
         elif isinstance(event, events.Click):
-            self.mouse_fps_camera_mode = True
+            self.enableMouseFpsCamera = True
 
         elif isinstance(event, events.Key):
+            # the event.key depends on the keyboard Layout
+
+            # here is the azerty layout
             match event.key:
                 case "j":
                     self.camera.move_forward(0.3)
@@ -112,7 +114,9 @@ class TT3DView(Container):
                 case "d":
                     self.camera.move_side(0.3)
                 case "escape":
-                    self.mouse_fps_camera_mode = False
+                    self.enableMouseFpsCamera = False
+
+            
         elif isinstance(event, events.Resize):
             event.virtual_size
             event.size
@@ -167,9 +171,6 @@ class TT3DView(Container):
     def post_render_step(self):
         pass
 
-    # def render(self):
-    #    return "render called, should not happen actually :/"
-
     def render_step(self):
         if self.size.width > 1 and self.size.height > 1:
 
@@ -184,15 +185,6 @@ class TT3DView(Container):
             ts = time()
             self.rc.render(self.camera)
             tsrender_dur = time() - ts
-
-            if self.write_debug_inside:
-                l = f"Frame:{self.frame_idx}: size: {self.size.width} x {self.size.height}"
-                self.rc.write_text(l, 5, 6)
-
-                self.rc.write_text(f"U:{self.update_dur*1000:.2f} ms", 1, 5)
-                self.rc.write_text(f"C:{self.render_clear_dur*1000:.2f} ms", 1, 4)
-                self.rc.write_text(f"R:{self.tsrender_dur*1000:.2f} ms;", 1, 3)
-                self.rc.write_text(f"s:{self.render_strips_dur*1000:.2f} ms;", 1, 2)
 
             self.timing_registry.set_duration("frame_idx", self.frame_idx)
             self.timing_registry.set_duration("update_dur", update_dur)

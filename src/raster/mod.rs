@@ -21,6 +21,8 @@ use raster_triangle::*;
 pub mod raster_point;
 use raster_point::*;
 
+pub mod raster_rect;
+use raster_rect::*;
 pub mod raster_triangle_tomato;
 use raster_triangle_tomato::*;
 
@@ -136,6 +138,9 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
         PrimitiveElements::Triangle3D(t) => {
             // raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
             tomato_draw_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc)
+        }
+        PrimitiveElements::Rect(rect) => {
+            raster_prect(drawing_buffer, &rect);
         }
 
         PrimitiveElements::Static { fds: _, index: _ } => todo!(),

@@ -1,4 +1,4 @@
-use nalgebra_glm::{Vec2};
+use nalgebra_glm::Vec2;
 use pyo3::{
     intern,
     prelude::*,
@@ -7,11 +7,11 @@ use pyo3::{
 pub mod drawbuffer;
 use drawbuffer::*;
 use pyo3::types::PyDict;
-use std::{borrow::BorrowMut};
+use std::borrow::BorrowMut;
 pub mod glyphset;
 use glyphset::*;
 pub mod segment_cache;
-use crate::utils::{convert_glm_vec2};
+use crate::utils::convert_glm_vec2;
 use segment_cache::*;
 
 #[pyclass]

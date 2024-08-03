@@ -6,6 +6,9 @@ use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 pub mod primitiv_triangle;
 use primitiv_triangle::*;
 
+pub mod rect;
+use rect::*;
+
 use crate::{
     raster::vertex::Vertex,
     utils::{vec2_as_pylist, vec3_as_pylist, vec4_as_pylist},
@@ -161,6 +164,13 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
             dict.set_item("pa", vertex_into_dict(py, &t.pa)).unwrap();
             dict.set_item("pb", vertex_into_dict(py, &t.pb)).unwrap();
             dict.set_item("pc", vertex_into_dict(py, &t.pc)).unwrap();
+        }
+        &PrimitiveElements::Rect(rect) => {
+            into_dict(py, &rect.primitive_reference, &dict);
+            dict.set_item("pa", vertex_into_dict(py, &rect.top_left))
+                .unwrap();
+            dict.set_item("pb", vertex_into_dict(py, &rect.bottom_right))
+                .unwrap();
         }
     }
 
