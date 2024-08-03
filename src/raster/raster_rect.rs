@@ -35,7 +35,7 @@ pub fn raster_prect<const DEPTHCOUNT: usize>(
     let col_start = (top_left.pos.x - 0.5f32).ceil().max(0.0) as usize;
     let col_end = (bottom_right.pos.x - 0.5f32)
         .ceil()
-        .min((drawing_buffer.col_count - 1) as f32) as usize;
+        .min((drawing_buffer.col_count) as f32) as usize;
     #[cfg(test)]
     {
         println!(
@@ -134,5 +134,62 @@ mod test_raster_rect {
         };
 
         raster_prect(&mut drawing_buffer, &rect);
+
+        for row in 0..4 {
+            for col in 0..3 {
+                let content_at_location_layer0 =
+                    drawing_buffer.get_pix_buffer_content_at_row_col(row, col, 0);
+                //let cell = drawing_buffer.get_depth_buffer_cell(row, col);
+                assert_eq!(content_at_location_layer0.node_id, 3);
+                assert_eq!(content_at_location_layer0.geometry_id, 1);
+                assert_eq!(content_at_location_layer0.material_id, 2);
+                assert_eq!(content_at_location_layer0.primitive_id, 4);
+                //assert_eq!(content_at_location_layer0.uv.x, 0.01);
+            }
+        }
+    }
+
+    #[test]
+    fn test_raster_outbound() {
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
+        let prim_ref = PrimitivReferences {
+            geometry_id: 1,
+            material_id: 2,
+            node_id: 3,
+            primitive_id: 4,
+        };
+
+        let top_left = Vertex {
+            pos: vec4(-5.0, -6.0, 1.0, 1.0),
+            normal: vec3(0.0, 0.0, 0.0),
+            uv: vec2(0.0, 0.0),
+        };
+
+        let bottom_right = Vertex {
+            pos: vec4(13.0, 14.0, 1.0, 1.0),
+            normal: vec3(0.0, 0.0, 0.0),
+            uv: vec2(1.0, 1.0),
+        };
+        let rect = super::PRect {
+            top_left,
+            bottom_right,
+            primitive_reference: prim_ref,
+        };
+
+        raster_prect(&mut drawing_buffer, &rect);
+
+        // test every pixel of the drawing_buffer
+        for row in 0..10 {
+            for col in 0..10 {
+                let content_at_location_layer0 =
+                    drawing_buffer.get_pix_buffer_content_at_row_col(row, col, 0);
+                //let cell = drawing_buffer.get_depth_buffer_cell(row, col);
+                assert_eq!(content_at_location_layer0.node_id, 3);
+                assert_eq!(content_at_location_layer0.geometry_id, 1);
+                assert_eq!(content_at_location_layer0.material_id, 2);
+                assert_eq!(content_at_location_layer0.primitive_id, 4);
+                //assert_eq!(content_at_location_layer0.uv.x, 0.01);
+            }
+        }
     }
 }
