@@ -26,9 +26,6 @@ class Test_VertexBuffer(unittest.TestCase):
         self.assertEqual(abuffer.get_vertex(2), (11.0, 21.0, 31.0, 1.0))
 
     def test_add_uv(self):
-        from rtt3de import VertexBufferPy
-        import glm
-
         abuffer = VertexBufferPy()
 
         self.assertEqual(abuffer.get_uv_size(), 0)
@@ -53,10 +50,7 @@ class Test_VertexBuffer(unittest.TestCase):
         #
         # )
 
-    def test_multmv(self):
-        from rtt3de import VertexBufferPy, TransformPackPy
-        import glm
-
+    def test_apply_mv(self):
         abuffer = VertexBufferPy()
         trpack = TransformPackPy(23)
 

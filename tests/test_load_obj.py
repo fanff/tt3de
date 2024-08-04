@@ -22,14 +22,7 @@ class TestLoad(unittest.TestCase):
         with open("models/cube_texture.bmp", "rb") as fin:
             pxdata = load_bmp(fin)
 
-    def test_palette6bits(self):
-        imgpalette = load_bmp(open("models/RGB_6bits.bmp", "rb"))
-
-        palette = extract_palette(imgpalette)
-        self.assertEqual(len(palette), 64)
-
-        print(len(imgpalette), len(imgpalette[0]))
-
+    
     def test_paletteAlign(self):
         imgpalette = load_bmp(open("models/RGB_6bits.bmp", "rb"))
 

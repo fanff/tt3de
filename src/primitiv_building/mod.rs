@@ -135,7 +135,7 @@ fn polygon_as_primitive<
 
         // get the uv coordinates
         let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
-        // cull backfacing triangles with cross product (%) shenanigans
+        // cull backfacing triangles 
         if dot(&normal_vec, &(va - eyepos).xyz()) > 0.0 {
             continue;
         }

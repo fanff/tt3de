@@ -84,23 +84,6 @@ class GLMTester(TT3DView):
         )
         self.root3Dnode.add_child(poly)
 
-        
-        
-        polygon3d = fast_load("models/cube.obj")
-        polygon3d.material_id = 11
-        polygon3d.local_transform = glm.translate(
-            glm.vec3(-4.1,0,0)
-        )
-        self.root3Dnode.add_child(polygon3d)
-
-        polygon3d = fast_load("models/car/Car5_Taxi.obj")
-        polygon3d.material_id = 12
-        polygon3d.local_transform = glm.translate(
-            glm.vec3(4,0,0)
-        )
-        self.root3Dnode.add_child(polygon3d)
-
-
 
         # final append
         self.rc.append(self.root3Dnode)

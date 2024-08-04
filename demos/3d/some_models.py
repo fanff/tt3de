@@ -54,36 +54,6 @@ class GLMTester(TT3DView):
         # create a root 3D node 
         self.root3Dnode = TT3DNode()
 
-
-        tri = Prefab3D.unitary_square()
-        tri.material_id = 8
-        tri.local_transform = glm.translate(
-            glm.vec3(-1.1,1,0)
-        )
-        self.root3Dnode.add_child(tri)
-
-        poly = Prefab3D.unitary_circle(5)
-        poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,0,0)
-        )
-        self.root3Dnode.add_child(poly)
-
-        poly = Prefab3D.unitary_circle(12)
-        poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,1.1,0)
-        )
-        self.root3Dnode.add_child(poly)
-
-
-        poly = Prefab3D.unitary_circle(24)
-        poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,2.1,0)
-        )
-        self.root3Dnode.add_child(poly)
-
         
         
         polygon3d = fast_load("models/cube.obj")
@@ -93,12 +63,12 @@ class GLMTester(TT3DView):
         )
         self.root3Dnode.add_child(polygon3d)
 
-        polygon3d = fast_load("models/car/Car5_Taxi.obj")
-        polygon3d.material_id = 12
-        polygon3d.local_transform = glm.translate(
-            glm.vec3(4,0,0)
-        )
-        self.root3Dnode.add_child(polygon3d)
+        #polygon3d = fast_load("models/car/Car5_Taxi.obj")
+        #polygon3d.material_id = 12
+        #polygon3d.local_transform = glm.translate(
+        #    glm.vec3(4,0,0)
+        #)
+        #self.root3Dnode.add_child(polygon3d)
 
 
 

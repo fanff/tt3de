@@ -18,7 +18,7 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
     pub fn new() -> UVBuffer<UVCOUNT, UVACC> {
         let d: TVec2<UVACC> = TVec2::zeros();
         let arraystore = ArrayStorage([[d; UVCOUNT]; 3]);
-        
+
         UVBuffer {
             uv_array: arraystore,
             uv_size: 0,
@@ -29,9 +29,8 @@ impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
         self.uv_array.as_mut_slice()[idx] = *uv;
     }
 
-    // set the given vertex at the given location
+    /// Add a UV triplet to the buffer
     pub fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
-
         let x = self.uv_array.linear_index(self.uv_size, 0);
         self.set_uv(uva, x);
 
@@ -79,7 +78,7 @@ impl<const C: usize> VertexBuffer<C> {
         let v4: TVec4<f32> = TVec4::zeros(); // = Vec4::zeros();
 
         let v4content = ArrayStorage([[v4]; C]);
-        
+
         VertexBuffer {
             v4content,
             mvp_calculated: ArrayStorage([[v4]; C]),
@@ -139,7 +138,7 @@ impl<const C: usize> VertexBuffer<C> {
 }
 
 use pyo3::{prelude::*, types::PyTuple};
-const MAX_VERTEX_CONTENT: usize = 2048;
+const MAX_VERTEX_CONTENT: usize = 1024;
 const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 2;
 
 #[pyclass]
@@ -268,7 +267,7 @@ impl TransformPack {
         let v3 = Vec3::zeros();
         let mmmm = Mat4::identity();
         let node_tr = vec![mmmm; max_node].into_boxed_slice();
-        
+
         TransformPack {
             model_transforms: node_tr,
             view_matrix_2d: mmmm,
