@@ -3,7 +3,7 @@ from typing import Dict
 import unittest
 
 import glm
-from rtt3de import VertexBufferPy, TransformPackPy
+from tt3de.tt3de import VertexBufferPy, TransformPackPy
 
 
 class Test_TransformationPack(unittest.TestCase):

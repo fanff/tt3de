@@ -38,8 +38,8 @@ def fast_load(obj_file: str, cls=None):
             return cls(imgdata)
 
 
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy
 
 
 class MaterialPerfab:

@@ -1,9 +1,9 @@
 import math
 import unittest
-from rtt3de import PrimitiveBufferPy
-from rtt3de import AbigDrawing
+from tt3de.tt3de import PrimitiveBufferPy
+from tt3de.tt3de import AbigDrawing
 
-from rtt3de import raster_all_py, VertexBufferPy
+from tt3de.tt3de import raster_all_py, VertexBufferPy
 
 
 class Test_Rust_RasterPoint(unittest.TestCase):

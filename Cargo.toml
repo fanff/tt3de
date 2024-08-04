@@ -18,12 +18,17 @@ crate-type = ["cdylib"]
 [dependencies]
 nalgebra = "0.33.0"
 nalgebra-glm = "0.3"
-criterion = "0.4.0"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 fastnoise-lite = "1.1.1"
+
+
+[dev-dependencies]
+criterion = "0.4.0"
 approx = "0.5.1"
 
 
 [profile.dev]
 debug = true
-# opt-level = 3
+
+[profile.release]
+opt-level = 3

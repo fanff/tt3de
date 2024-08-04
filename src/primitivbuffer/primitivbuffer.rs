@@ -201,6 +201,32 @@ impl PrimitiveBuffer {
             content,
         }
     }
+    pub fn add_rect(
+        &mut self,
+        node_id: usize,
+        geometry_id: usize,
+        material_id: usize,
+        top_left: Vertex,
+        bottom_right: Vertex,
+    ) -> usize {
+        if self.current_size == self.max_size {
+            return self.current_size;
+        }
+
+        let pr = PrimitivReferences {
+            geometry_id,
+            material_id,
+            node_id,
+            primitive_id: self.current_size,
+        };
+
+        self.content[self.current_size] =
+            PrimitiveElements::Rect(PRect::new(pr, top_left, bottom_right));
+
+        self.current_size += 1;
+
+        self.current_size - 1
+    }
 
     pub fn add_triangle3d(
         &mut self,

@@ -2,7 +2,7 @@ from typing import Dict
 import unittest
 
 import glm
-from rtt3de import VertexBufferPy, TransformPackPy
+from tt3de.tt3de import VertexBufferPy, TransformPackPy
 
 
 class Test_VertexBuffer(unittest.TestCase):
@@ -14,9 +14,6 @@ class Test_VertexBuffer(unittest.TestCase):
         self.assertEqual(abuffer.get_vertex(0), (1.0, 2.0, 3.0, 1.0))
 
     def test_add_vertex(self):
-        from rtt3de import VertexBufferPy
-        import glm
-
         abuffer = VertexBufferPy()
 
         self.assertEqual(abuffer.add_vertex(1, 2, 3), 0)

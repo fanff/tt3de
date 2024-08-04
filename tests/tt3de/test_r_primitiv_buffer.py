@@ -1,7 +1,7 @@
 import itertools
 import unittest
 
-from rtt3de import PrimitiveBufferPy
+from tt3de.tt3de import PrimitiveBufferPy
 
 
 class Test_PrimitivesBuffer(unittest.TestCase):

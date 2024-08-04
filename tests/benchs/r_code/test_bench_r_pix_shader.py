@@ -1,8 +1,8 @@
 import pytest
-from rtt3de import AbigDrawing
-from rtt3de import apply_material_py
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy, VertexBufferPy, PrimitiveBufferPy
+from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import apply_material_py
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy, VertexBufferPy, PrimitiveBufferPy
 
 
 def rversion(

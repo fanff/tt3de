@@ -1,6 +1,6 @@
 import unittest
 
-from rtt3de import MaterialBufferPy, TextureBufferPy
+from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 
 from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture

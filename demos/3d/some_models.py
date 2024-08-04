@@ -123,11 +123,12 @@ class GLMTester(TT3DView):
         cc.refresh_camera_zoom(self.camera.zoom_2D)
         self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 
-
         context_log:RustRenderContextInfo = self.parent.query_one(RustRenderContextInfo)
 
         context_log.update_counts({"geom":self.rc.geometry_buffer.geometry_count(),
                                    "prim":self.rc.primitive_buffer.primitive_count()})
+        
+        
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 

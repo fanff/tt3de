@@ -2,11 +2,11 @@ import math
 import pytest
 
 
-from rtt3de import PrimitiveBufferPy
-from rtt3de import AbigDrawing
+from tt3de.tt3de import PrimitiveBufferPy
+from tt3de.tt3de import AbigDrawing
 
-from rtt3de import raster_all_py
-from rtt3de import VertexBufferPy
+from tt3de.tt3de import raster_all_py
+from tt3de.tt3de import VertexBufferPy
 
 
 def rust_version(primitive_buffer, vertex_buffer, drawing_buffer):

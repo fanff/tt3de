@@ -1,14 +1,12 @@
 from typing import List
 import glm
-from rtt3de import GeometryBufferPy
-from rtt3de import AbigDrawing
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
-from rtt3de import VertexBufferPy, TransformPackPy
-from rtt3de import PrimitiveBufferPy
-
-
-from rtt3de import raster_all_py, build_primitives_py, apply_material_py
+from tt3de.tt3de import GeometryBufferPy
+from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy
+from tt3de.tt3de import VertexBufferPy, TransformPackPy
+from tt3de.tt3de import PrimitiveBufferPy
+from tt3de.tt3de import raster_all_py, build_primitives_py, apply_material_py
 
 
 from textual.strip import Strip
@@ -74,6 +72,10 @@ class RustRenderContext:
             self.drawing_buffer,
             self.primitive_buffer,
         )
+
+        self.primitive_buffer.add_rect(0,1,1,
+                                       1.0,1.0,1.0,
+                                         3.0,3.0,1.0,)
         raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
 
         apply_material_py(

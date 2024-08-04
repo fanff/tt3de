@@ -2,12 +2,12 @@ import math
 import random
 import unittest
 import glm
-from rtt3de import GeometryBufferPy
-from rtt3de import AbigDrawing
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
-from rtt3de import VertexBufferPy, TransformPackPy
-from rtt3de import PrimitiveBufferPy
+from tt3de.tt3de import GeometryBufferPy
+from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy
+from tt3de.tt3de import VertexBufferPy, TransformPackPy
+from tt3de.tt3de import PrimitiveBufferPy
 
 from tests.tt3de.test_utils import (
     assertLine3DPrimitiveKeyEqual,
@@ -19,7 +19,7 @@ from tt3de.asset_fastloader import fast_load
 from tt3de.glm_camera import GLMCamera
 from tt3de.richtexture import ImageTexture
 
-from rtt3de import raster_all_py, build_primitives_py, apply_material_py
+from tt3de.tt3de import raster_all_py, build_primitives_py, apply_material_py
 
 
 class Test_Stages(unittest.TestCase):

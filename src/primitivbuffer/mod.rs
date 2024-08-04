@@ -109,7 +109,41 @@ impl PrimitiveBufferPy {
         self.content
             .add_triangle3d(node_id, geometry_id, material_id, va, vb, vc)
     }
+
+    #[pyo3(signature = ( node_id, geometry_id, material_id, top, left, top_left_depth, bottom, right, bottom_right_depth, 
+        top_left_uv= (0.0, 0.0), bottom_right_uv= (1.0, 1.0) ))]
+    fn add_rect(
+        &mut self,
+        node_id: usize,
+        geometry_id: usize,
+        material_id: usize,
+        top: f32,
+        left: f32,
+        top_left_depth: f32,
+        bottom: f32,
+        right: f32,
+        bottom_right_depth: f32,
+        top_left_uv: (f32, f32),
+        bottom_right_uv: (f32, f32),
+    ) -> usize {
+        let top_left = Vertex::new(
+            vec4(left, top, top_left_depth, 1.0),
+            vec3(1.0, 0.0, 0.0),
+            vec2(top_left_uv.0, top_left_uv.1),
+        );
+        let bottom_right = Vertex::new(
+            vec4(right, bottom, bottom_right_depth, 1.0),
+            vec3(0.0, 1.0, 0.0),
+            vec2(bottom_right_uv.0, bottom_right_uv.1),
+        );
+        self.content
+            .add_rect(node_id, geometry_id, material_id, top_left, bottom_right)
+    }
     fn add_static(&mut self) {
+        todo!()
+    }
+
+    fn hello(&mut self) {
         todo!()
     }
 

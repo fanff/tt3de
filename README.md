@@ -14,9 +14,10 @@ A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to
 
 ## Recommended Terminals :
 
-For windows users both tabby and https://wezfurlong.org/ are good choice
+**For windows users**: both tabby and https://wezfurlong.org/ are good choice
 
-for macOS & linux users, kitty is by far the best.
+**For macOS & linux users**: kitty is by far the best.
+
 
 ## Setting Up the Development Version
 
