@@ -73,9 +73,6 @@ class RustRenderContext:
             self.primitive_buffer,
         )
 
-        self.primitive_buffer.add_rect(0,1,1,
-                                       1.0,1.0,1.0,
-                                         3.0,3.0,1.0,)
         raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
 
         apply_material_py(

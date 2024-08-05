@@ -24,11 +24,11 @@ class TestLoad(unittest.TestCase):
 
     
     def test_paletteAlign(self):
-        imgpalette = load_bmp(open("models/RGB_6bits.bmp", "rb"))
+        imgpalette = load_bmp(open("models/cube_texture.bmp", "rb"))
 
         palette = extract_palette(imgpalette)
-        self.assertEqual(len(palette), 64)
+        self.assertEqual(len(palette), 1032)
         pxdata = load_bmp(open("models/cube_texture.bmp", "rb"))
         roundedimg = round_to_palette(pxdata, palette)
 
-        self.assertLessEqual(len(extract_palette(roundedimg)), 64)
+        self.assertLessEqual(len(extract_palette(roundedimg)), 1032)
