@@ -24,7 +24,7 @@ class RustRenderContext:
 
         self.texture_buffer = TextureBufferPy(32)
         self.material_buffer = MaterialBufferPy()
-        self.vertex_buffer = VertexBufferPy()
+        self.vertex_buffer = VertexBufferPy(2048)
         self.geometry_buffer = GeometryBufferPy(256)
         self.geometry_buffer.add_point(0, 0, node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(512)

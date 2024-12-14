@@ -283,6 +283,14 @@ impl GeometryBufferPy {
             .add_polygon_3d(p_start, triangle_count, node_id, material_id, uv_start)
     }
 
+    /// Add a line to the geometry buffer
+    /// 
+    /// Args:
+    ///    p_start: The index of the first point in the line
+    ///    node_id: The node id of the line
+    ///    material_id: The material id of the line
+    ///    uv_start: The index of the first uv in the line
+    #[pyo3(signature = (p_start, node_id, material_id, uv_start))]
     fn add_line3d(
         &mut self,
         p_start: usize,

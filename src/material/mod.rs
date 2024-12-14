@@ -83,11 +83,11 @@ impl MaterialBuffer {
     }
 }
 
-pub fn apply_material<const SIZE: usize, const UVCOUNT: usize, const DEPTHLAYER: usize>(
+pub fn apply_material<const SIZE: usize,  const DEPTHLAYER: usize>(
     pixinfo: PixInfo<f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<SIZE>,
-    uv_buffer: &UVBuffer<UVCOUNT, f32>,
+    uv_buffer: &UVBuffer< f32>,
     primitive_buffer: &PrimitiveBuffer,
     depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
     depth_layer: usize,

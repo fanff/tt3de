@@ -10,7 +10,7 @@ class Test_Rust_RasterPoint(unittest.TestCase):
     def test_raster_Oneoint(self):
         drawing_buffer = AbigDrawing(32, 32)
         drawing_buffer.hard_clear(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(32)
         primitive_buffer = PrimitiveBufferPy(10)
 
         node_id = 1
@@ -46,7 +46,7 @@ class Test_Rust_RasterLine(unittest.TestCase):
     def test_raster_OneLine(self):
         drawing_buffer = AbigDrawing(32, 32)
         drawing_buffer.hard_clear(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(32)
         primitive_buffer = PrimitiveBufferPy(10)
 
         node_id = 1
@@ -88,7 +88,7 @@ class Test_Rust_RasterLine(unittest.TestCase):
     def _test_raster_line(self, pa_row, pa_col, pb_row, pb_col):
         drawing_buffer = AbigDrawing(10, 10)
         drawing_buffer.hard_clear(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(32)
         primitive_buffer = PrimitiveBufferPy(10)
 
         node_id = 1
@@ -163,7 +163,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
 
         drawing_buffer = AbigDrawing(32, 32)
         drawing_buffer.hard_clear(2)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(32)
         primitive_buffer = PrimitiveBufferPy(10)
 
         raster_all_py(primitive_buffer, vertex_buffer, drawing_buffer)
@@ -172,7 +172,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
 
         drawing_buffer = AbigDrawing(32, 32)
         drawing_buffer.hard_clear(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128)
         primitive_buffer = PrimitiveBufferPy(10)
 
         primitive_buffer.add_triangle(
@@ -231,7 +231,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
         drawing_buffer.hard_clear(2)
 
         primitive_buffer = PrimitiveBufferPy(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128)
         primitive_buffer.add_triangle(
             12,
             23,
@@ -276,7 +276,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
         #       \*/
         drawing_buffer = AbigDrawing(max_row=50, max_col=64)
         drawing_buffer.hard_clear(2)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128)
         primitive_buffer = PrimitiveBufferPy(10)
 
         primitive_buffer.add_triangle(
@@ -348,7 +348,7 @@ class Test_Rust_RasterTriangle(unittest.TestCase):
     def _test_raster_triangle(self, pa_row, pa_col, pb_row, pb_col, pc_row, pc_col):
         drawing_buffer = AbigDrawing(8, 10)
         drawing_buffer.hard_clear(10)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128)
         primitive_buffer = PrimitiveBufferPy(10)
 
         node_id = 1

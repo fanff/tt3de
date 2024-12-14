@@ -24,7 +24,7 @@ def test_bench_rust_triangle_raster(benchmark, size):
     drawing_buffer.hard_clear(1000)
 
     primitive_buffer = PrimitiveBufferPy(2000)
-    vertex_buffer = VertexBufferPy()
+    vertex_buffer = VertexBufferPy(32)
     # create a geometry buffer to hold the initial elemnts
     for i in range(1000):
 
@@ -59,7 +59,7 @@ def test_bench_rust_triangle_raster_mode(benchmark, mode, tri_count):
     drawing_buffer.hard_clear(10000)
 
     primitive_buffer = PrimitiveBufferPy(tri_count + 1)
-    vertex_buffer = VertexBufferPy()
+    vertex_buffer = VertexBufferPy(128)
 
     if mode == "STACK":
         # every triangle is "above the previous one"

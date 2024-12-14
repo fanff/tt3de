@@ -46,16 +46,14 @@ fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec4, Vec4, V
 }
 
 fn polygon_fan_as_primitive<
-    const C: usize,
-    const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
     DEPTHACC: Number,
 >(
     polygon: &Polygon,
     geometry_id: usize,
     transform_pack: &TransformPack,
-    vertex_buffer: &mut VertexBuffer<C>,
-    uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    vertex_buffer: &mut VertexBuffer,
+    uv_array: &UVBuffer<f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -113,16 +111,14 @@ fn polygon_fan_as_primitive<
 }
 
 fn polygon_as_primitive<
-    const C: usize,
-    const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
     DEPTHACC: Number,
 >(
     polygon: &Polygon,
     geometry_id: usize,
     transform_pack: &TransformPack,
-    vertex_buffer: &mut VertexBuffer<C>,
-    uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    vertex_buffer: &mut VertexBuffer,
+    uv_array: &UVBuffer< f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -179,15 +175,13 @@ fn polygon_as_primitive<
     }
 }
 pub fn build_primitives<
-    const MAX_VERTEX_CONTENT: usize,
-    const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
     DEPTHACC: Number,
 >(
     geombuffer: &GeometryBuffer,
-    vertex_buffer: &mut VertexBuffer<MAX_VERTEX_CONTENT>,
+    vertex_buffer: &mut VertexBuffer,
     transform_pack: &TransformPack,
-    uv_array_input: &UVBuffer<MAX_UV_CONTENT, f32>,
+    uv_array_input: &UVBuffer< f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {

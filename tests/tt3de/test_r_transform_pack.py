@@ -35,7 +35,7 @@ class Test_TransformationPack(unittest.TestCase):
 
     def test_apply_mv(self):
 
-        abuffer = VertexBufferPy()
+        abuffer = VertexBufferPy(32)
         trpack = TransformPackPy(12)
 
         trpack.set_view_matrix_glm(glm.translate(glm.vec3(1, 2, 3)))

@@ -120,9 +120,9 @@ fn barycentric_coord_shift(
     (w1, w2, w3)
 }
 
-pub fn raster_element<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
+pub fn raster_element<const DEPTHCOUNT: usize, >(
     element: &PrimitiveElements,
-    _vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
+    _vertexbuffer: &VertexBuffer,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
@@ -147,9 +147,9 @@ pub fn raster_element<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
     }
 }
 
-pub fn raster_all<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
+pub fn raster_all<const DEPTHCOUNT: usize>(
     primitivbuffer: &PrimitiveBuffer,
-    vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
+    vertexbuffer: &VertexBuffer,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {

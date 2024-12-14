@@ -1,119 +1,123 @@
 use crate::utils::{convert_glm_vec2, convert_pymat4, mat4_to_slicelist};
 use nalgebra::{ArrayStorage, RawStorage};
 use nalgebra_glm::{Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
-
 #[derive(Debug)]
-pub struct UVBuffer<const UVCOUNT: usize, UVACC: Number> {
-    pub uv_array: ArrayStorage<TVec2<UVACC>, UVCOUNT, 3>,
+pub struct UVBuffer<UVACC: Number> {
+    pub uv_array: Vec<TVec2<UVACC>>,
     pub uv_size: usize,
 }
 
-impl<const UVCOUNT: usize, UVACC: Number> Default for UVBuffer<UVCOUNT, UVACC> {
+impl Default for UVBuffer<f32> {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }
-
-impl<const UVCOUNT: usize, UVACC: Number> UVBuffer<UVCOUNT, UVACC> {
-    pub fn new() -> UVBuffer<UVCOUNT, UVACC> {
-        let d: TVec2<UVACC> = TVec2::zeros();
-        let arraystore = ArrayStorage([[d; UVCOUNT]; 3]);
-
+impl<UVACC: Number> UVBuffer<UVACC> {
+    /// Create a new UVBuffer with a given initial capacity
+    pub fn new(initial_capacity: usize) -> Self {
         UVBuffer {
-            uv_array: arraystore,
+            uv_array: Vec::with_capacity(initial_capacity * 3), // Each "UV" is a triplet
             uv_size: 0,
         }
     }
-    // set the given vertex at the given location
+
     pub fn set_uv(&mut self, uv: &TVec2<UVACC>, idx: usize) {
-        self.uv_array.as_mut_slice()[idx] = *uv;
+        if idx < self.uv_array.len() {
+            self.uv_array[idx] = *uv;
+        } else {
+            panic!("Index out of bounds");
+        }
     }
 
-    /// Add a UV triplet to the buffer
     pub fn add_uv(&mut self, uva: &TVec2<UVACC>, uvb: &TVec2<UVACC>, uvc: &TVec2<UVACC>) -> usize {
-        let x = self.uv_array.linear_index(self.uv_size, 0);
-        self.set_uv(uva, x);
+        if self.uv_array.len() < (self.uv_size + 1) * 3 {
+            self.uv_array.reserve(3); // Reserve additional space for three elements if needed
+        }
 
-        let x = self.uv_array.linear_index(self.uv_size, 1);
-        self.set_uv(uvb, x);
-        let x = self.uv_array.linear_index(self.uv_size, 2);
-        self.set_uv(uvc, x);
+        self.uv_array.push(*uva);
+        self.uv_array.push(*uvb);
+        self.uv_array.push(*uvc);
 
         let returned = self.uv_size;
         self.uv_size += 1;
-
         returned
     }
 
     pub fn get_uv(&self, idx: usize) -> (&TVec2<UVACC>, &TVec2<UVACC>, &TVec2<UVACC>) {
+        let base_idx = idx * 3;
         (
-            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 0)],
-            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 1)],
-            &self.uv_array.as_slice()[self.uv_array.linear_index(idx, 2)],
+            &self.uv_array[base_idx],
+            &self.uv_array[base_idx + 1],
+            &self.uv_array[base_idx + 2],
         )
     }
 
     pub fn clear(&mut self) {
         self.uv_size = 0;
+        self.uv_array.clear(); // Clear the Vec, maintaining its capacity
     }
 }
-
-#[derive(Debug, Copy, Clone)]
-pub struct VertexBuffer<const C: usize> {
-    pub v4content: ArrayStorage<Vec4, 1, C>,
-
-    // v4 into mvp_calculated after the mvp calculation
-    pub mvp_calculated: ArrayStorage<Vec4, 1, C>,
-
+#[derive(Debug)]
+pub struct VertexBuffer {
+    pub v4content: Vec<Vec4>,
+    pub mvp_calculated: Vec<Vec4>,
     pub current_size: usize,
 }
-impl<const C: usize> Default for VertexBuffer<C> {
+
+impl Default for VertexBuffer {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }
 
-impl<const C: usize> VertexBuffer<C> {
-    pub fn new() -> Self {
-        let v4: TVec4<f32> = TVec4::zeros(); // = Vec4::zeros();
-
-        let v4content = ArrayStorage([[v4]; C]);
-
+impl VertexBuffer {
+    /// Create a new VertexBuffer with a given initial capacity
+    pub fn new(initial_capacity: usize) -> Self {
         VertexBuffer {
-            v4content,
-            mvp_calculated: ArrayStorage([[v4]; C]),
+            v4content: Vec::with_capacity(initial_capacity),
+            mvp_calculated: Vec::with_capacity(initial_capacity),
             current_size: 0,
         }
     }
 
-    fn add_vertex(&mut self, vert: &Vec4) -> usize {
-        self.v4content.as_mut_slice()[self.current_size] = *vert;
+    pub fn add_vertex(&mut self, vert: &Vec4) -> usize {
+        if self.current_size >= self.v4content.capacity() {
+            self.v4content.reserve(1); // Reserve more space if needed
+            self.mvp_calculated.reserve(1);
+        }
+        
+        self.v4content.push(*vert);
+        self.mvp_calculated.push(Vec4::zeros());
         self.current_size += 1;
         self.current_size - 1
     }
+
     pub fn get_at(&self, idx: usize) -> &Vec4 {
-        &self.v4content.as_slice()[idx]
+        &self.v4content[idx]
     }
+
     pub fn get_clip_space_vertex(&self, idx: usize) -> &Vec4 {
-        &self.mvp_calculated.as_slice()[idx]
+        &self.mvp_calculated[idx]
     }
+
     pub fn get_vertex_count(&self) -> usize {
         self.current_size
     }
-    // set the given vertex at the given location
+
     fn set_vertex(&mut self, vert: &Vec4, idx: usize) {
-        self.v4content.as_mut_slice()[idx] = *vert;
+        if idx < self.v4content.len() {
+            self.v4content[idx] = *vert;
+        } else {
+            panic!("Index out of bounds");
+        }
     }
 
     pub fn apply_mv(&mut self, model_matrix: &Mat4, view_matrix: &Mat4, start: usize, end: usize) {
         let m4 = model_matrix * view_matrix;
-        let v4_slice = self.v4content.as_mut_slice();
-        let mv_calc = self.mvp_calculated.as_mut_slice();
         for i in start..end {
-            let avec = &v4_slice[i];
-
-            // Store the result in the content at the same index
-            mv_calc[i] = m4 * avec;
+            if i < self.v4content.len() {
+                self.mvp_calculated[i] = m4 * self.v4content[i];
+            }
         }
     }
 
@@ -126,34 +130,28 @@ impl<const C: usize> VertexBuffer<C> {
         end: usize,
     ) {
         let m4 = projection_matrix * view_matrix * model_matrix;
-        let v4_slice = self.v4content.as_mut_slice();
-        let mv_calc = self.mvp_calculated.as_mut_slice();
         for i in start..end {
-            let avec = &v4_slice[i];
-
-            // Store the result in the content at the same index
-            mv_calc[i] = m4 * avec;
+            self.mvp_calculated[i] = m4 * self.v4content[i];
         }
     }
 }
 
+
 use pyo3::{prelude::*, types::PyTuple};
-const MAX_VERTEX_CONTENT: usize = 1024;
-const MAX_UV_CONTENT: usize = MAX_VERTEX_CONTENT * 2;
 
 #[pyclass]
 pub struct VertexBufferPy {
-    pub buffer: VertexBuffer<MAX_VERTEX_CONTENT>,
-    pub uv_array: UVBuffer<MAX_UV_CONTENT, f32>,
+    pub buffer: VertexBuffer,
+    pub uv_array: UVBuffer<f32>,
 }
 
 #[pymethods]
 impl VertexBufferPy {
     #[new]
-    fn new() -> VertexBufferPy {
+    fn new(size: usize) -> VertexBufferPy {
         VertexBufferPy {
-            buffer: VertexBuffer::new(),
-            uv_array: UVBuffer::new(),
+            buffer: VertexBuffer::new(size),
+            uv_array: UVBuffer::new(size),
         }
     }
 
@@ -180,11 +178,11 @@ impl VertexBufferPy {
     }
 
     fn get_uv_max_content(&self, _py: Python) -> usize {
-        MAX_UV_CONTENT
+        self.uv_array.uv_array.capacity()
     }
 
     fn get_max_content(&self, _py: Python) -> usize {
-        MAX_VERTEX_CONTENT
+        self.buffer.v4content.capacity()
     }
 
     fn get_vertex_count(&self, _py: Python) -> usize {

@@ -27,7 +27,7 @@ def test_bench_full_pass(benchmark, n):
 
     drawing_buffer = AbigDrawing(n, n)
     drawing_buffer.hard_clear(100.0)
-    vertex_buffer = VertexBufferPy()
+    vertex_buffer = VertexBufferPy(32)
     primitive_buffer = PrimitiveBufferPy(3)
 
     benchmark(

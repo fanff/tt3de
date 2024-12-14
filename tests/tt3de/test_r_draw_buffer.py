@@ -90,7 +90,7 @@ class Test_DrawBuffer(unittest.TestCase):
         material_buffer = MaterialBufferPy()
         texture_buffer = TextureBufferPy(32)
 
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128)
         primitive_buffer = PrimitiveBufferPy(3)
         apply_material_py(
             material_buffer,

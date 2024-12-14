@@ -467,13 +467,12 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 // will apply the material for every pixel.
 pub fn apply_material_on<
     const TEXTURESIZE: usize,
-    const UVCOUNT: usize,
     const DEPTHLAYER: usize,
 >(
     draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
-    uv_buffer: &UVBuffer<UVCOUNT, f32>,
+    uv_buffer: &UVBuffer< f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
     for (depth_cell, canvascell) in draw_buffer

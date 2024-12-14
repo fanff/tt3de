@@ -29,9 +29,7 @@ pub enum Material {
 
 pub trait RenderMatTrait<
     const TEXTURE_BUFFER_SIZE: usize,
-    const DEPTHLAYER: usize,
-    const UVCOUNT: usize,
->
+    const DEPTHLAYER: usize>
 {
     fn render_mat(
         &self,
@@ -41,12 +39,12 @@ pub trait RenderMatTrait<
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        uv_buffer: &UVBuffer< f32>,
     );
 }
 
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER, UVCOUNT> for Material
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, >
+    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Material
 {
     fn render_mat(
         &self,
@@ -56,7 +54,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        uv_buffer: &UVBuffer< f32>,
     ) {
         match self {
             Material::DoNothing {} => {}

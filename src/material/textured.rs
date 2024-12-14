@@ -20,8 +20,8 @@ impl Texture {
         }
     }
 }
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER, UVCOUNT> for Texture
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Texture
 {
     fn render_mat(
         &self,
@@ -31,7 +31,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         pixinfo: &PixInfo<f32>,
         _primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        _uv_buffer: &UVBuffer< f32>,
     ) {
         cell.glyph = self.glyph_idx;
         //depth_cell.row;
@@ -84,7 +84,7 @@ mod tests {
             0,
         ));
         let mut texture_buffer: TextureBuffer<256> = TextureBuffer::new(10);
-        let mut uv_buffer: UVBuffer<128, f32> = UVBuffer::new();
+        let mut uv_buffer: UVBuffer<f32> = UVBuffer::new(128);
 
         uv_buffer.add_uv(&vec2(0.0, 0.0), &vec2(1.0, 0.0), &vec2(1.0, 1.0));
 

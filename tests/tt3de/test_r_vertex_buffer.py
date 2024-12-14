@@ -7,15 +7,15 @@ from tt3de.tt3de import VertexBufferPy, TransformPackPy
 
 class Test_VertexBuffer(unittest.TestCase):
     def test_create(self):
-        abuffer = VertexBufferPy()
+        abuffer = VertexBufferPy(323)
         trpack = TransformPackPy(232)
-
+        self.assertEqual(abuffer.get_vertex_count(), 0)
         abuffer.add_vertex(1, 2, 3)
         self.assertEqual(abuffer.get_vertex(0), (1.0, 2.0, 3.0, 1.0))
-
+        self.assertEqual(abuffer.get_vertex_count(), 1)
     def test_add_vertex(self):
-        abuffer = VertexBufferPy()
-
+        abuffer = VertexBufferPy(32)
+        self.assertEqual(abuffer.get_vertex_count(), 0)
         self.assertEqual(abuffer.add_vertex(1, 2, 3), 0)
         self.assertEqual(abuffer.add_vertex(12, 22, 32), 1)
         self.assertEqual(abuffer.add_vertex(11, 21, 31), 2)
@@ -26,7 +26,7 @@ class Test_VertexBuffer(unittest.TestCase):
         self.assertEqual(abuffer.get_vertex(2), (11.0, 21.0, 31.0, 1.0))
 
     def test_add_uv(self):
-        abuffer = VertexBufferPy()
+        abuffer = VertexBufferPy(32)
 
         self.assertEqual(abuffer.get_uv_size(), 0)
         retidex = abuffer.add_uv(
@@ -51,7 +51,7 @@ class Test_VertexBuffer(unittest.TestCase):
         # )
 
     def test_apply_mv(self):
-        abuffer = VertexBufferPy()
+        abuffer = VertexBufferPy(32)
         trpack = TransformPackPy(23)
 
         trpack.add_node_transform(glm.translate(glm.vec3(1, 2, 3)))

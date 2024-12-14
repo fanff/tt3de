@@ -57,15 +57,13 @@ pub fn clip_line_to_clip_space(pa: &Vec4, pb: &Vec4) -> Option<(Vec4, Vec4)> {
 /// Converts a line to a primitive and adds it to the drawbuffer.
 /// Clip the line to the bounbding box of the view frustum.
 pub fn line_as_primitive<
-    const C: usize,
-    const MAX_UV_CONTENT: usize,
     const PIXCOUNT: usize,
     DEPTHACC: Number,
 >(
     line: &Line,
     geometry_id: usize,
-    vertex_buffer: &VertexBuffer<C>,
-    uv_array: &UVBuffer<MAX_UV_CONTENT, f32>,
+    vertex_buffer: &VertexBuffer,
+    uv_array: &UVBuffer< f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
