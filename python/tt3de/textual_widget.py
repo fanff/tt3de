@@ -40,9 +40,7 @@ class TT3DView(Container):
         width: 100%;
     }
     """
-    can_focus = True
-
-    use_native_python = True
+    can_focus = True # see https://textual.textualize.io/guide/input/#focusable-widgets
 
     enableMouseFpsCamera = False
 

@@ -42,7 +42,6 @@ from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DView):
-    use_native_python = False
 
     def __init__(self):
         super().__init__()
@@ -128,11 +127,7 @@ class Demo3dView(App):
         width: 4fr;
     }
 
-    .someinfo {
-        height: 100%;
-        width: 1fr;
-        border: solid red;
-    }
+    
     
     """
     SCREENS = {"cscreen": ContentScreen()}

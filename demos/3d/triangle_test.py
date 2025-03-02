@@ -42,7 +42,6 @@ from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DView):
-    use_native_python = False
 
     def __init__(self):
         super().__init__()
@@ -54,39 +53,8 @@ class GLMTester(TT3DView):
         # create a root 3D node 
         self.root3Dnode = TT3DNode()
 
-        # center point
-        polygon3D = Prefab3D.unitary_Point()
-        polygon3D.local_transform = glm.translate(
-            glm.vec3(0,0,-1)
-        )
-        polygon3D.material_id = 1
-        self.root3Dnode.add_child(polygon3D)
-
-        
-        # center point (x)
-
-        polygon3D = Prefab3D.unitary_Point()
-        polygon3D.local_transform = glm.translate(
-            glm.vec3(1,0,-1)
-        )
-        polygon3D.material_id = 2
-        self.root3Dnode.add_child(polygon3D)
-
-        # top point (y)
-        polygon3D = Prefab3D.unitary_Point()
-        polygon3D.local_transform = glm.translate(
-            glm.vec3(0,1,-1)
-        )
-        polygon3D.material_id = 3
-        self.root3Dnode.add_child(polygon3D)
-
-        # front point (z)
-        polygon3D = Prefab3D.unitary_Point()
-        polygon3D.local_transform = glm.translate(
-            glm.vec3(0,0,0)
-        )
-        polygon3D.material_id = 4
-        self.root3Dnode.add_child(polygon3D)
+        for p in Prefab3D.gizmo_points():
+            self.root3Dnode.add_child(p)
 
 
         tri = Prefab3D.unitary_triangle()

@@ -78,3 +78,6 @@ In `settings.json`:
 }
 ```
 
+### Known Issues
+
+* Points does not seems to render with color.
