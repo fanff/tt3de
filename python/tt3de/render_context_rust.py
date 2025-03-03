@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tt3de.tt_3dnodes import TT3DNode
 from typing import List
 import glm
 from tt3de.tt3de import GeometryBufferPy
@@ -8,12 +13,10 @@ from tt3de.tt3de import VertexBufferPy, TransformPackPy
 from tt3de.tt3de import PrimitiveBufferPy
 from tt3de.tt3de import raster_all_py, build_primitives_py, apply_material_py
 
-
 from textual.strip import Strip
 from textual.geometry import Region
 
 from tt3de.glm_camera import GLMCamera
-from tt3de.points import Drawable3D
 
 
 class RustRenderContext:
@@ -94,5 +97,8 @@ class RustRenderContext:
 
         return [Strip(l) for l in res]
 
-    def append(self, elem: Drawable3D):
+    def append(self, elem: "TT3DNode"):
+        """Append a 3D node to the render context.
+        This will call the "insert_in" method on the object you are appending and recursively on all its children.
+        """
         elem.insert_in(self, None)

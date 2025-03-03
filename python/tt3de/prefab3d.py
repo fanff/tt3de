@@ -2,7 +2,7 @@ import math
 
 import glm
 from tt3de.points import Point2D, Point3D
-from tt3de.tt_3dnodes import TT3DPoint, TT3DPolygon, TT3DPolygonFan
+from tt3de.tt_3dnodes import TT3DNode, TT3DPoint, TT3DPolygon, TT3DPolygonFan
 
 
 class Prefab3D:
@@ -91,30 +91,36 @@ class Prefab3D:
         m.vertex_list = vertices
         m.uvmap = [texture_coords]
         return m
+    
     def gizmo_points():
+        gizmo_node = TT3DNode()
         # center point
         center_point = Prefab3D.unitary_Point()
         center_point.local_transform = glm.translate(
-            glm.vec3(0,0,-1)
+            glm.vec3(0,0,0)
         )
         center_point.material_id = 1
+        gizmo_node.add_child(center_point)
+
         point_x = Prefab3D.unitary_Point()
         point_x.local_transform = glm.translate(
-            glm.vec3(1,0,-1)
+            glm.vec3(1,0,0)
         )
         point_x.material_id = 2
+        gizmo_node.add_child(point_x)
 
         # top point (y)
         point_y = Prefab3D.unitary_Point()
         point_y.local_transform = glm.translate(
-            glm.vec3(0,1,-1)
+            glm.vec3(0,1,0)
         )
         point_y.material_id = 3
-
+        gizmo_node.add_child(point_y)
         # front point (z)
         point_z = Prefab3D.unitary_Point()
         point_z.local_transform = glm.translate(
-            glm.vec3(0,0,0)
+            glm.vec3(0,0,1)
         )
         point_z.material_id = 4
-        return center_point, point_x, point_y, point_z
+        gizmo_node.add_child(point_z)
+        return gizmo_node

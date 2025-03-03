@@ -53,8 +53,7 @@ class GLMTester(TT3DView):
         # create a root 3D node 
         self.root3Dnode = TT3DNode()
 
-        for p in Prefab3D.gizmo_points():
-            self.root3Dnode.add_child(p)
+        self.root3Dnode.add_child(Prefab3D.gizmo_points())
 
 
         tri = Prefab3D.unitary_triangle()

@@ -6,7 +6,6 @@ from typing import Iterable, List
 import glm
 from tt3de.asset_load import extract_palette
 from tt3de.points import (
-    Drawable3D,
     PPoint2D,
     Point3D,
 )

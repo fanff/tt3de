@@ -25,6 +25,8 @@ class TT3DNode:
         self.elements.append(child)
 
     def insert_in(self, rc: "RustRenderContext", parent_transform: Optional[glm.mat4]):
+        """Inserts the node in the render context.
+        Function called """
         if parent_transform:
             fff = parent_transform * self.local_transform
         else:
@@ -45,7 +47,7 @@ class TT3DPolygonFan(TT3DNode):
 
         self.node_id = None
 
-    def insert_in(self, rc: RustRenderContext, parent_transform: glm.mat4):
+    def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
         self.node_id = rc.transform_buffer.add_node_transform(
             parent_transform * self.local_transform
         )
@@ -87,7 +89,7 @@ class TT3DPolygon(TT3DNode):
 
         self.node_id = None
 
-    def insert_in(self, rc: RustRenderContext, parent_transform: glm.mat4):
+    def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
         self.node_id = rc.transform_buffer.add_node_transform(
             parent_transform * self.local_transform
         )
@@ -129,7 +131,7 @@ class TT3DPoint(TT3DNode):
 
         self.node_id = None
 
-    def insert_in(self, rc: RustRenderContext, parent_transform: glm.mat4):
+    def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
         self.node_id = rc.transform_buffer.add_node_transform(
             parent_transform * self.local_transform
         )
