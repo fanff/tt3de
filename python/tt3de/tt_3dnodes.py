@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 from typing import List, Optional
 
 import glm
 
-from tt3de.glm_camera import GLMCamera
 from tt3de.points import Point2D, Point3D
 from tt3de.render_context_rust import RustRenderContext
 from tt3de.utils import p2d_tovec2, random_node_id
@@ -18,7 +18,8 @@ class TT3DNode:
         self.node_id = None
 
     def add_child(self, child: "TT3DNode"):
-        """Adds a child element to the list of elements.
+        """
+        Adds a child element to the list of elements.
 
         Args:
             child: The child element to be added.
@@ -26,8 +27,11 @@ class TT3DNode:
         self.elements.append(child)
 
     def insert_in(self, rc: "RustRenderContext", parent_transform: Optional[glm.mat4]):
-        """Inserts the node in the render context.
-        Function called"""
+        """
+        Inserts the node in the render context.
+
+        Function called
+        """
         if parent_transform:
             fff = parent_transform * self.local_transform
         else:
@@ -87,10 +91,11 @@ class TT3DPolygon(TT3DNode):
         self.material_id = material_id
 
         self.node_id = None
-    def set_transform(self,rc, transform: glm.mat4):
+
+    def set_transform(self, rc, transform: glm.mat4):
         self.local_transform = transform
         rc.transform_buffer.set_node_transform(self.node_id, transform)
-        
+
     def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
         self.node_id = rc.transform_buffer.add_node_transform(
             parent_transform * self.local_transform

@@ -1,43 +1,18 @@
-import math
-from statistics import mean
-from textwrap import dedent
-from time import monotonic, time
-from typing import Sequence
-from textual.screen import Screen
+# -*- coding: utf-8 -*-
+from time import time
 import glm
 
-from textual import events
-from textual.app import App, ComposeResult, RenderResult
-from textual.containers import Container
+from textual.app import App, ComposeResult
 from textual.widgets import (
-    Button,
-    Collapsible,
-    DataTable,
-    Footer,
     Header,
-    Label,
-    Markdown,
-    Sparkline,
-    Static,
-    Input,
 )
-from textual.validation import Function, Number, ValidationResult, Validator
 
-from tt3de.asset_fastloader import MaterialPerfab, Prefab2D, fast_load
+from tt3de.asset_fastloader import MaterialPerfab
 
 
 from tt3de.prefab3d import Prefab3D
-from tt3de.textual.widgets import (
-    CameraConfig,
-    EngineLog,
-    FloatSelector,
-    RenderInfo,
-    RustRenderContextInfo,
-    Vector3Selector,
-)
 from tt3de.textual_widget import TT3DView
 
-from tt3de.tt_2dnodes import TT2DMesh, TT2DNode, TT2Polygon
 from tt3de.tt_3dnodes import TT3DNode
 
 
@@ -82,6 +57,7 @@ class GLMTester(TT3DView):
 
     def post_render_step(self):
         pass
+
 
 class Demo3dView(App):
     def compose(self) -> ComposeResult:
