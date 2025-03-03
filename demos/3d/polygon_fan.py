@@ -83,38 +83,10 @@ class GLMTester(TT3DView):
     def post_render_step(self):
         pass
 
-
-class ContentScreen(Static):
-    def compose(self) -> ComposeResult:
-        # with Container(classes="someinfo"):
-        #    yield Static("", classes="lastevent")
-        #    yield RenderInfo()
-        #    yield RustRenderContextInfo()
-        yield GLMTester()
-
-
 class Demo3dView(App):
-    DEFAULT_CSS = """
-    ContentScreen {
-        layout: horizontal;
-        height: 100%;
-    }
-    TT3DView {
-        height: 100%;
-        width: 4fr;
-    }
-    .someinfo {
-        height: 100%;
-        width: 1fr;
-        border: solid red;
-    }
-    
-    
-    """
-
     def compose(self) -> ComposeResult:
         yield Header()
-        yield ContentScreen()
+        yield GLMTester()
 
 
 if __name__ == "__main__":
