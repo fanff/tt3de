@@ -162,7 +162,7 @@ class FloatSelector(Widget, can_focus=False):
                 self.is_mouse_clicking = False
 
         if isinstance(event, events.Leave):
-            1 / 0  # traying to capture randomly
+            self.is_mouse_clicking = False # traying to capture randomly
 
         await super().on_event(event)
 

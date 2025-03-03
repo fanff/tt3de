@@ -24,7 +24,7 @@ from textual.widgets import (
 from textual.validation import Function, Number, ValidationResult, Validator
 
 from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
-
+from textual.css.query import NoMatches
 
 from tt3de.prefab3d import Prefab3D
 from tt3de.textual.widgets import (
@@ -167,9 +167,11 @@ class GLMTester(TT3DView):
             case events.MouseScrollUp:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 1.1)
             case _:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"{event.__class__}: \n{str(event)}")
-
+                try:
+                    info_box: Static = self.parent.query_one(".lastevent")
+                    info_box.update(f"{event.__class__}: \n{str(event)}")
+                except NoMatches:
+                    pass
 
 class Content(Static):
     def compose(self) -> ComposeResult:
