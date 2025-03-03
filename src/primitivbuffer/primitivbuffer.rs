@@ -1,6 +1,6 @@
 use std::ops::{AddAssign, Div, Mul, Sub};
 
-use nalgebra_glm::{vec3, Real, TVec3, Vec2};
+use nalgebra_glm::{vec3, RealNumber, TVec3, Vec2};
 
 use crate::raster;
 use raster::vertex::Vertex;
@@ -8,7 +8,7 @@ use raster::vertex::Vertex;
 use super::{PRect, PTriangle, PTriangle3D};
 
 #[derive(Clone, Copy)]
-pub struct PointInfo<DEPTHACC: Real> {
+pub struct PointInfo<DEPTHACC: RealNumber> {
     pub row: usize,
     pub col: usize,
     pub p: TVec3<DEPTHACC>,

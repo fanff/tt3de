@@ -1,4 +1,4 @@
-use nalgebra_glm::{Real, TVec2};
+use nalgebra_glm::{RealNumber, TVec2};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -42,7 +42,7 @@ fn min_2_int<T: Ord>(a: T, b: T) -> T {
 }
 
 // function that "set stuff" in the drawing buffer; assuming its a double raster
-fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
+fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     prim_ref: &PrimitivReferences,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, DEPTHACC>,
     depth: DEPTHACC,

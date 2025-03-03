@@ -16,8 +16,8 @@ name = "tt3de"
 crate-type = ["cdylib"]
 
 [dependencies]
-nalgebra = "0.33.0"
-nalgebra-glm = "0.3"
+nalgebra = "0.33.2"
+nalgebra-glm = "0.19"
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 fastnoise-lite = "1.1.1"
 
