@@ -1,22 +1,13 @@
+# -*- coding: utf-8 -*-
 import math
 from abc import abstractmethod
-from time import monotonic, time
-from typing import Iterable
+from time import time
 
 import glm
-from rich.color import Color
-from rich.style import Style
-from rich.text import Segment
 from textual import events
-from textual.app import App, ComposeResult, RenderResult
 from textual.containers import Container
-from textual.css.query import NoMatches
 from textual.geometry import Region
-from textual.reactive import reactive
-from textual.screen import Screen
 from textual.strip import Strip
-from textual.widget import Widget
-from textual.widgets import Static
 
 from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
@@ -44,23 +35,22 @@ class TT3DView(Container):
 
     enableMouseFpsCamera = False
 
-    frame_idx: int = reactive(0)
-    last_processed_frame = 0
+    frame_idx: int = 0
 
     timing_registry = TimingRegistry()
 
     camera: GLMCamera = None
     last_frame_time = 0.0
-    cached_result = None
-    cwr = None
-    target_fps = 24
 
     def __init__(
         self,
+        # parameters for the widget
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
+        # parameters for the engine
+        target_fps: int = 24,
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
@@ -69,9 +59,11 @@ class TT3DView(Container):
         self.rc = RustRenderContext(90, 90)
         self.initialize()
         self.last_frame_time = time() - 1.0
+        self.target_fps = target_fps
+        self.target_dt = 1.0 / target_fps
 
     def on_mount(self):
-        self.auto_refresh = 1.0 / self.target_fps
+        self.auto_refresh = self.target_dt
 
     async def on_event(self, event: events.Event):
         if self.enableMouseFpsCamera and isinstance(event, events.MouseMove):
@@ -125,7 +117,8 @@ class TT3DView(Container):
             await super().on_event(event)
 
     def render_lines(self, crop: Region) -> list[Strip]:
-        """Render the widget into lines.
+        """
+        Render the widget into lines.
 
         Args:
             crop: Region within visible area to render.
@@ -139,7 +132,7 @@ class TT3DView(Container):
             return [Strip([]) for h in crop.height]
 
         ts = time()
-        if ts > self.last_frame_time + (1.0 / self.target_fps):
+        if ts > self.last_frame_time + self.target_dt:
             self.frame_idx += 1
             self.render_step()
             self.timing_registry.set_duration("render_step", time() - ts)
