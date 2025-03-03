@@ -49,6 +49,11 @@ class GLMTester(TT3DView):
         self.car_taxi.local_transform = glm.translate(glm.vec3(4, 0, 0))
         self.root3Dnode.add_child(self.car_taxi)
 
+        self.car_taxi2 = fast_load("models/car/Car5_Taxi.obj")
+        self.car_taxi2.material_id = 12
+        self.car_taxi2.local_transform = glm.translate(glm.vec3(4, 2, 0))
+        self.root3Dnode.add_child(self.car_taxi2)
+
         # final append
         self.rc.append(self.root3Dnode)
 

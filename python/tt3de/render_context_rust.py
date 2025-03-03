@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -20,7 +21,7 @@ from tt3de.tt3de import (
     TextureBufferPy,
     TransformPackPy,
     VertexBufferPy,
-    apply_material_py,
+    apply_material_py_parallel,
     build_primitives_py,
     raster_all_py,
 )
@@ -84,7 +85,14 @@ class RustRenderContext:
 
         raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
 
-        apply_material_py(
+        # apply_material_py(
+        #     self.material_buffer,
+        #     self.texture_buffer,
+        #     self.vertex_buffer,
+        #     self.primitive_buffer,
+        #     self.drawing_buffer,
+        # )
+        apply_material_py_parallel(
             self.material_buffer,
             self.texture_buffer,
             self.vertex_buffer,
@@ -100,10 +108,13 @@ class RustRenderContext:
             max_y=region.y + region.height,
         )
 
-        return [Strip(l) for l in res]
+        return [Strip(line) for line in res]
 
     def append(self, elem: "TT3DNode"):
-        """Append a 3D node to the render context.
-        This will call the "insert_in" method on the object you are appending and recursively on all its children.
+        """
+        Append a 3D node to the render context.
+
+        This will call the "insert_in" method on the object you are appending and
+        recursively on all its children.
         """
         elem.insert_in(self, None)

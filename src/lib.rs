@@ -27,6 +27,7 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(raster::raster_all_py, m)?)?;
     m.add_function(wrap_pyfunction!(primitiv_building::build_primitives_py, m)?)?;
     m.add_function(wrap_pyfunction!(primitiv_building::apply_material_py, m)?)?;
+    m.add_function(wrap_pyfunction!(primitiv_building::apply_material_py_parallel, m)?)?;
 
     Ok(())
 }

@@ -317,7 +317,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// This does apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating_with_clamp(&self, v: &Vec2) -> Vec2 {
         let as_screen = self.ndc_to_screen_floating(v);
-        
+
         clamp_vec(
             &round(&as_screen),
             &Vec2::zeros(),
@@ -327,12 +327,12 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
-        
+
         x.depth[l]
     }
 
     pub fn get_depth_buffer_cell(&self, row: usize, col: usize) -> DepthBufferCell<DEPTHACC, L> {
-        
+
 
         self.depthbuffer[row * self.col_count + col]
     }
@@ -344,12 +344,12 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         layer_idx: usize,
     ) -> &PixInfo<f32> {
         let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
-        
+
 
         (&self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]]) as _
     }
     pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
-        
+
         self.canvas[r * self.col_count + c]
     }
 
@@ -495,4 +495,56 @@ pub fn apply_material_on<
             );
         }
     }
+}
+
+
+use rayon::prelude::*;
+use once_cell::sync::Lazy;
+
+// Create a global thread pool that is initialized only once.
+static GLOBAL_THREAD_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
+    // Set your desired fixed number of threads.
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8) // For example, use 4 threads.
+        .build()
+        .expect("Failed to build thread pool")
+});
+
+
+/// This function applies the material to every pixel in parallel.
+pub fn apply_material_on_parallel<
+    const TEXTURESIZE: usize,
+    const DEPTHLAYER: usize,
+>(
+    draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
+    material_buffer: &MaterialBuffer,
+    texture_buffer: &TextureBuffer<TEXTURESIZE>,
+    uv_buffer: &UVBuffer<f32>,
+    primitive_buffer: &PrimitiveBuffer,
+) {
+    // Use the global thread pool to run our work.
+    GLOBAL_THREAD_POOL.install(|| {
+        // `par_iter` and `par_iter_mut` split the work among threads.
+        draw_buffer.depthbuffer
+            .par_iter()
+            .zip(draw_buffer.canvas.par_iter_mut())
+            .for_each(|(depth_cell, canvas_cell)| {
+                for depth_layer in (0..DEPTHLAYER).rev() {
+                    // Access the pixel info; note that `pixbuffer` is assumed read-only.
+                    let pixinfo = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
+
+                    // Call the material application function.
+                    apply_material(
+                        pixinfo,
+                        material_buffer,
+                        texture_buffer,
+                        uv_buffer,
+                        primitive_buffer,
+                        depth_cell,
+                        depth_layer,
+                        canvas_cell,
+                    );
+                }
+            });
+    });
 }

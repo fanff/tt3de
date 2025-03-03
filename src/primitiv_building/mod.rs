@@ -4,7 +4,7 @@ use pyo3::{pyfunction, PyRefMut};
 
 use crate::{
     drawbuffer::{
-        drawbuffer::{apply_material_on, DrawBuffer},
+        drawbuffer::{apply_material_on, apply_material_on_parallel, DrawBuffer},
         AbigDrawing,
     },
     geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
@@ -131,7 +131,7 @@ fn polygon_as_primitive<
 
         // get the uv coordinates
         let normal_vec: Vec3 = (vb.xyz() - va.xyz()).cross(&(vc.xyz() - va.xyz()));
-        // cull backfacing triangles 
+        // cull backfacing triangles
         if dot(&normal_vec, &(va - eyepos).xyz()) > 0.0 {
             continue;
         }
@@ -310,6 +310,23 @@ pub fn apply_material_py(
     mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
 ) {
     apply_material_on(
+        &mut draw_buffer_py.db,
+        &material_buffer.content,
+        &texturebuffer.data,
+        &vertex_buffer.uv_array,
+        &primitivbuffer.content,
+    );
+}
+
+#[pyfunction]
+pub fn apply_material_py_parallel(
+    material_buffer: &MaterialBufferPy,
+    texturebuffer: &TextureBufferPy,
+    vertex_buffer: &VertexBufferPy,
+    primitivbuffer: &PrimitiveBufferPy,
+    mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
+) {
+    apply_material_on_parallel(
         &mut draw_buffer_py.db,
         &material_buffer.content,
         &texturebuffer.data,
