@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 import glm
+
 from tt3de.glm_camera import GLMCamera
-from tt3de.render_context_rust import RustRenderContext
 from tt3de.points import Point2D, Point3D
+from tt3de.render_context_rust import RustRenderContext
 from tt3de.utils import p2d_tovec2, random_node_id
 
 
@@ -26,7 +27,7 @@ class TT3DNode:
 
     def insert_in(self, rc: "RustRenderContext", parent_transform: Optional[glm.mat4]):
         """Inserts the node in the render context.
-        Function called """
+        Function called"""
         if parent_transform:
             fff = parent_transform * self.local_transform
         else:
@@ -36,7 +37,6 @@ class TT3DNode:
 
 
 class TT3DPolygonFan(TT3DNode):
-
     def __init__(
         self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
     ):
@@ -78,7 +78,6 @@ class TT3DPolygonFan(TT3DNode):
 
 
 class TT3DPolygon(TT3DNode):
-
     def __init__(
         self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
     ):
@@ -120,7 +119,6 @@ class TT3DPolygon(TT3DNode):
 
 
 class TT3DPoint(TT3DNode):
-
     def __init__(
         self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
     ):

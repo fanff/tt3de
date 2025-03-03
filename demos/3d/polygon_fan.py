@@ -42,47 +42,34 @@ from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DView):
-
     def __init__(self):
         super().__init__()
 
     def initialize(self):
-        
         # prepare a bunch of material
         self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
-        # create a root 3D node 
+        # create a root 3D node
         self.root3Dnode = TT3DNode()
-
 
         tri = Prefab3D.unitary_square()
         tri.material_id = 8
-        tri.local_transform = glm.translate(
-            glm.vec3(-1.1,1,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(-1.1, 1, 0))
         self.root3Dnode.add_child(tri)
 
         poly = Prefab3D.unitary_circle(5)
         poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,0,0)
-        )
+        poly.local_transform = glm.translate(glm.vec3(1.1, 0, 0))
         self.root3Dnode.add_child(poly)
 
         poly = Prefab3D.unitary_circle(12)
         poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,1.1,0)
-        )
+        poly.local_transform = glm.translate(glm.vec3(1.1, 1.1, 0))
         self.root3Dnode.add_child(poly)
-
 
         poly = Prefab3D.unitary_circle(24)
         poly.material_id = 8
-        poly.local_transform = glm.translate(
-            glm.vec3(1.1,2.1,0)
-        )
+        poly.local_transform = glm.translate(glm.vec3(1.1, 2.1, 0))
         self.root3Dnode.add_child(poly)
-
 
         # final append
         self.rc.append(self.root3Dnode)
@@ -97,14 +84,14 @@ class GLMTester(TT3DView):
         pass
 
 
-
 class ContentScreen(Static):
     def compose(self) -> ComposeResult:
-        #with Container(classes="someinfo"):
+        # with Container(classes="someinfo"):
         #    yield Static("", classes="lastevent")
         #    yield RenderInfo()
         #    yield RustRenderContextInfo()
         yield GLMTester()
+
 
 class Demo3dView(App):
     DEFAULT_CSS = """
@@ -124,13 +111,13 @@ class Demo3dView(App):
     
     
     """
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield ContentScreen()
 
 
 if __name__ == "__main__":
-
     app = Demo3dView()
     app._disable_tooltips = True
     app.run()

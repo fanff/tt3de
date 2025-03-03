@@ -1,8 +1,8 @@
 from typing import Tuple
-from tt3de.asset_load import load_bmp, load_obj, read_file
 
-from tt3de.richtexture import ImageTexture
+from tt3de.asset_load import load_bmp, load_obj, read_file
 from tt3de.points import Point2D, Point3D
+from tt3de.richtexture import ImageTexture
 from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.tt_3dnodes import TT3DPolygon
 
@@ -38,13 +38,41 @@ def fast_load(obj_file: str, cls=None):
             return cls(imgdata)
 
 
-from tt3de.tt3de import MaterialBufferPy
-from tt3de.tt3de import TextureBufferPy
+from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 
 
 class MaterialPerfab:
     @staticmethod
     def rust_set_0() -> Tuple[TextureBufferPy, MaterialBufferPy]:
+        """
+        Initializes texture and material buffers with pre-loaded images and defined materials.
+
+        Textures:
+            0: "models/test_screen256.bmp" (repeat_width=True, repeat_height=True)
+            1: "models/test_screen256.bmp" (repeat_width=False, repeat_height=False)
+            2: "models/sky1.bmp" (repeat_width=True, repeat_height=True)
+            3: "models/sky1.bmp" (repeat_width=True, repeat_height=True)
+            4: "models/cubetest2.bmp" (repeat_width=True, repeat_height=True)
+            5: "models/car/car5_taxi.bmp" (repeat_width=True, repeat_height=True)
+
+        Materials (glyph index):
+            0: Static material - diffuse: (200, 10, 10), specular: (50, 50, 50), glyph index: 0
+            1: Static white     - diffuse: (200, 200, 200), specular: (100, 100, 100), glyph index: 99
+            2: Static red       - diffuse: (200, 0, 0), specular: (100, 100, 100), glyph index: 50
+            3: Static green     - diffuse: (10, 200, 0), specular: (100, 100, 100), glyph index: 39
+            4: Static blue      - diffuse: (10, 5, 200), specular: (100, 100, 100), glyph index: 34
+            5: Debug UV         - glyph index: 5
+            6: Debug Depth      - glyph index: 6
+            7: Debug UV         - glyph index: 7
+            8: Textured (from static index 0) - glyph index: 99
+            9: Textured (from static index 1) - glyph index: 99
+            10: Textured (from static index 2) - glyph index: 99
+            11: Textured (from static index 4) - glyph index: 99
+            12: Textured (from static index 5) - glyph index: 99
+
+        Returns:
+            A tuple containing the configured texture buffer and material buffer.
+        """
         texture_buffer = TextureBufferPy(32)
 
         img: ImageTexture = fast_load("models/test_screen256.bmp")
@@ -99,7 +127,6 @@ class MaterialPerfab:
 
 
 class Prefab2D:
-
     @staticmethod
     def unitary_triangle(meshclass):
         vertices = [
@@ -180,16 +207,17 @@ class Prefab2D:
     def uv_coord_from_atlas(
         atlas_item_size: int = 32, idx_x: int = 0, idx_y: int = 0
     ) -> list:
-
         atlas_step = float(atlas_item_size) / 256
 
         ministep = 0.01 / 256
-        u_min, u_max = (idx_x * atlas_step) + ministep, (
-            (idx_x + 1) * atlas_step
-        ) - ministep
-        v_min, v_max = (idx_y * atlas_step) + ministep, (
-            (idx_y + 1) * atlas_step
-        ) - ministep
+        u_min, u_max = (
+            (idx_x * atlas_step) + ministep,
+            ((idx_x + 1) * atlas_step) - ministep,
+        )
+        v_min, v_max = (
+            (idx_y * atlas_step) + ministep,
+            ((idx_y + 1) * atlas_step) - ministep,
+        )
 
         return [
             [

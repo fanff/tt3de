@@ -1,26 +1,32 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from tt3de.tt_3dnodes import TT3DNode
-from typing import List
-import glm
-from tt3de.tt3de import GeometryBufferPy
-from tt3de.tt3de import AbigDrawing
-from tt3de.tt3de import MaterialBufferPy
-from tt3de.tt3de import TextureBufferPy
-from tt3de.tt3de import VertexBufferPy, TransformPackPy
-from tt3de.tt3de import PrimitiveBufferPy
-from tt3de.tt3de import raster_all_py, build_primitives_py, apply_material_py
 
-from textual.strip import Strip
+from typing import List
+
+import glm
 from textual.geometry import Region
+from textual.strip import Strip
 
 from tt3de.glm_camera import GLMCamera
+from tt3de.tt3de import (
+    AbigDrawing,
+    GeometryBufferPy,
+    MaterialBufferPy,
+    PrimitiveBufferPy,
+    TextureBufferPy,
+    TransformPackPy,
+    VertexBufferPy,
+    apply_material_py,
+    build_primitives_py,
+    raster_all_py,
+)
 
 
 class RustRenderContext:
-
     def __init__(self, screen_width, screen_height):
         self.width = screen_width
         self.height = screen_height
@@ -87,7 +93,6 @@ class RustRenderContext:
         )
 
     def to_textual_2(self, region: Region) -> List[Strip]:
-
         res = self.drawing_buffer.to_textual_2(
             min_x=region.x,
             max_x=region.x + region.width,

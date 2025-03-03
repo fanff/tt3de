@@ -19,6 +19,7 @@ pytest-benchmark = "^4.0.0"
 setuptools = "^70.0.0"
 pillow = "^10.3.0"
 maturin = "^1.6.0"
+ruff = "^0.9.9"
 
 
 [build-system]

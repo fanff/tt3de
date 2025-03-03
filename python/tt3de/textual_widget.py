@@ -1,28 +1,28 @@
 import math
+from abc import abstractmethod
 from time import monotonic, time
 from typing import Iterable
+
 import glm
 from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
+from textual.containers import Container
 from textual.css.query import NoMatches
+from textual.geometry import Region
 from textual.reactive import reactive
+from textual.screen import Screen
+from textual.strip import Strip
 from textual.widget import Widget
-from textual.widgets import (
-    Static,
-)
-from abc import abstractmethod
+from textual.widgets import Static
+
 from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
-from textual.strip import Strip
-from textual.geometry import Region
-from textual.containers import Container
-from textual.screen import Screen
+
 
 class TimingRegistry:
-
     def __init__(self):
         self.data = {}
 
@@ -40,7 +40,7 @@ class TT3DView(Container):
         width: 100%;
     }
     """
-    can_focus = True # see https://textual.textualize.io/guide/input/#focusable-widgets
+    can_focus = True  # see https://textual.textualize.io/guide/input/#focusable-widgets
 
     enableMouseFpsCamera = False
 
@@ -54,7 +54,6 @@ class TT3DView(Container):
     cached_result = None
     cwr = None
     target_fps = 24
-    
 
     def __init__(
         self,
@@ -114,7 +113,6 @@ class TT3DView(Container):
                 case "escape":
                     self.enableMouseFpsCamera = False
 
-            
         elif isinstance(event, events.Resize):
             event.virtual_size
             event.size
@@ -171,7 +169,6 @@ class TT3DView(Container):
 
     def render_step(self):
         if self.size.width > 1 and self.size.height > 1:
-
             ts = time()
             self.update_step(0.2)  # TODO fix the time of the update
             update_dur = time() - ts

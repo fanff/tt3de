@@ -126,4 +126,3 @@ def normalize(v: "Point3D"):
     if norm == 0:
         norm = 1e-6
     return Point3D(v.x / norm, v.y / norm, v.z / norm)
-

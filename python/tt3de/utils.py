@@ -1,6 +1,7 @@
 from enum import Enum
-from glm import ivec2, mat3, quat, vec2, vec3, vec4
+
 import glm
+from glm import ivec2, mat3, quat, vec2, vec3, vec4
 
 from tt3de.points import Point2D, Point3D
 

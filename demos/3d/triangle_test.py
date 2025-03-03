@@ -42,65 +42,45 @@ from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DView):
-
     def __init__(self):
         super().__init__()
 
     def initialize(self):
-        
         # prepare a bunch of material
         self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
-        # create a root 3D node 
+        # create a root 3D node
         self.root3Dnode = TT3DNode()
 
         self.root3Dnode.add_child(Prefab3D.gizmo_points())
 
-
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 5
-        tri.local_transform = glm.translate(
-            glm.vec3(-1.1,1,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(-1.1, 1, 0))
         self.root3Dnode.add_child(tri)
 
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 6
-        tri.local_transform = glm.translate(
-            glm.vec3(0,1,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(0, 1, 0))
         self.root3Dnode.add_child(tri)
 
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 7
-        tri.local_transform = glm.translate(
-            glm.vec3(1.1,1,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(1.1, 1, 0))
         self.root3Dnode.add_child(tri)
-
-
 
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 8
-        tri.local_transform = glm.translate(
-            glm.vec3(0,2,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(0, 2, 0))
         self.root3Dnode.add_child(tri)
 
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 9
-        tri.local_transform = glm.translate(
-            glm.vec3(1.1,2,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(1.1, 2, 0))
         self.root3Dnode.add_child(tri)
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 10
-        tri.local_transform = glm.translate(
-            glm.vec3(-1.1,2,0)
-        )
+        tri.local_transform = glm.translate(glm.vec3(-1.1, 2, 0))
         self.root3Dnode.add_child(tri)
-
-
-
 
         # final append
         self.rc.append(self.root3Dnode)
@@ -114,20 +94,24 @@ class GLMTester(TT3DView):
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
         v = self.camera.position_vector()
-        cc.refresh_camera_position(
-            (v.x, v.y, v.z)
-        )
+        cc.refresh_camera_position((v.x, v.y, v.z))
         cc.refresh_camera_rotation(
             (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
         )
         cc.refresh_camera_zoom(self.camera.zoom_2D)
         self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
 
+        context_log: RustRenderContextInfo = self.parent.query_one(
+            RustRenderContextInfo
+        )
 
-        context_log:RustRenderContextInfo = self.parent.query_one(RustRenderContextInfo)
+        context_log.update_counts(
+            {
+                "geom": self.rc.geometry_buffer.geometry_count(),
+                "prim": self.rc.primitive_buffer.primitive_count(),
+            }
+        )
 
-        context_log.update_counts({"geom":self.rc.geometry_buffer.geometry_count(),
-                                   "prim":self.rc.primitive_buffer.primitive_count()})
     async def on_event(self, event: events.Event):
         await super().on_event(event)
 
@@ -146,9 +130,10 @@ class GLMTester(TT3DView):
                 event: events.MouseDown = event
                 match event.button:
                     case 1:
-
-                        screen_click_position = glm.vec3(float(event.x), float(event.y), 0.0)
-                        # convert to screen to clip space 
+                        screen_click_position = glm.vec3(
+                            float(event.x), float(event.y), 0.0
+                        )
+                        # convert to screen to clip space
                         clip_click_position = glm.vec3(
                             screen_click_position.x / self.size.width * 2 - 1,
                             1 - screen_click_position.y / self.size.height * 2,
@@ -156,11 +141,16 @@ class GLMTester(TT3DView):
                         )
 
                         # convert to world space using the view matrix
-                        world_click_position = glm.inverse(self.camera.view_matrix_2D) * clip_click_position
+                        world_click_position = (
+                            glm.inverse(self.camera.view_matrix_2D)
+                            * clip_click_position
+                        )
 
                         self.camera.view_matrix_2D
                         # self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
-                        self.parent.query_one("EngineLog").add_line(f"click ! {str(world_click_position)}")
+                        self.parent.query_one("EngineLog").add_line(
+                            f"click ! {str(world_click_position)}"
+                        )
 
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
@@ -173,16 +163,15 @@ class GLMTester(TT3DView):
                 except NoMatches:
                     pass
 
+
 class Content(Static):
     def compose(self) -> ComposeResult:
-
         with Container(classes="someinfo"):
             yield Static("", classes="lastevent")
             yield EngineLog()
             yield CameraConfig()
             yield RenderInfo()
             yield RustRenderContextInfo()
-
 
         yield GLMTester()
 
@@ -219,13 +208,11 @@ class Demo3dView(App):
     """
 
     def compose(self) -> ComposeResult:
-
         yield Header()
         yield Content()
 
 
 if __name__ == "__main__":
-
     app = Demo3dView()
     app._disable_tooltips = True
     app.run()

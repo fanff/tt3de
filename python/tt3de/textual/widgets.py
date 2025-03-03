@@ -1,35 +1,30 @@
 from dataclasses import dataclass
 from statistics import mean
 from typing import Any, Coroutine, List
+
+from rich.color import Color
+from rich.style import Style
+from rich.text import Segment
 from textual import events
 from textual.app import App, ComposeResult, RenderResult
 from textual.containers import Container
+from textual.css.query import NoMatches
+from textual.layouts import horizontal
+from textual.message import Message
+from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import (
     Button,
     Collapsible,
     DataTable,
     Footer,
     Header,
+    Input,
     Label,
     Markdown,
     Sparkline,
     Static,
-    Input,
 )
-from rich.color import Color
-from rich.style import Style
-from rich.text import Segment
-from textual import events
-from textual.app import App, ComposeResult, RenderResult
-from textual.css.query import NoMatches
-from textual.reactive import reactive
-from textual.widget import Widget
-from textual.widgets import (
-    Static,
-)
-
-from textual.message import Message
-from textual.layouts import horizontal
 
 from tt3de.textual_widget import TimingRegistry
 
@@ -129,9 +124,8 @@ class FloatSelector(Widget, can_focus=False):
         self.button_factor = button_factor
 
     def compose(self):
-
         yield Button("-", classes="minus-1")
-        yield Input(f"{round(self.current_value,self.round_figures)}")
+        yield Input(f"{round(self.current_value, self.round_figures)}")
         yield Button("+", classes="plus-1")
 
     def on_button_pressed(self, event: Button.Pressed):
@@ -162,7 +156,7 @@ class FloatSelector(Widget, can_focus=False):
                 self.is_mouse_clicking = False
 
         if isinstance(event, events.Leave):
-            self.is_mouse_clicking = False # traying to capture randomly
+            self.is_mouse_clicking = False  # traying to capture randomly
 
         await super().on_event(event)
 
@@ -178,7 +172,7 @@ class FloatSelector(Widget, can_focus=False):
         myinp = None
         try:
             myinp = self.query_one(Input)
-            myinp.value = f"{round(value,self.round_figures)}"
+            myinp.value = f"{round(value, self.round_figures)}"
         except NoMatches:
             pass
 
@@ -207,7 +201,7 @@ class FloatSelector(Widget, can_focus=False):
             self.Changed(
                 self,
                 self.current_value,
-                f"{round(self.current_value,self.round_figures)}",
+                f"{round(self.current_value, self.round_figures)}",
             )
         )
 
@@ -476,7 +470,6 @@ class RenderInfo(Widget, can_focus=False):
         super().__init__(id=id, classes=classes, disabled=disabled, name=name)
 
     def compose(self) -> ComposeResult:
-
         keep_count = 50
         yield Label("Frame idx", id="frame_idx")
         yield Label("fps", id="timeinfo")
@@ -488,7 +481,6 @@ class RenderInfo(Widget, can_focus=False):
         yield Sparkline([0] * keep_count, summary_function=mean, id="to_tex_sl")
 
     def append_frame_duration(self, timing_registry: TimingRegistry):
-
         duration = timing_registry.get_duration("tsrender_dur")
 
         spark: Sparkline = self.query_one("#render_duration_sl")
@@ -502,7 +494,7 @@ class RenderInfo(Widget, can_focus=False):
             fps_render = 1.0 / mean_dur_sec
 
         l: Label = self.query_one("#timeinfo")
-        l.update(f"Render: {(1000*mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
+        l.update(f"Render: {(1000 * mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
 
         # update the frame count
         self.update_frame_count(timing_registry.get_duration("frame_idx"))
@@ -514,7 +506,7 @@ class RenderInfo(Widget, can_focus=False):
         mean_dur_sec = mean(spark.data)
 
         l: Label = self.query_one("#to_tex")
-        l.update(f"to_text: {(1000*mean_dur_sec):.2f} ms ")
+        l.update(f"to_text: {(1000 * mean_dur_sec):.2f} ms ")
 
     def update_frame_count(self, frame_count: int):
         l: Label = self.query_one("#frame_idx")
@@ -576,7 +568,6 @@ class RustRenderContextInfo(Widget, can_focus=False):
         pass
 
     def update_counts(self, updates: dict):
-
         label: Label = self.query_one(Label)
         label.update(str(updates))
 

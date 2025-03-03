@@ -88,7 +88,7 @@ def round_to_palette(
 
 
 def extract_palette(
-    pixel_data: List[List[Tuple[int, int, int]]]
+    pixel_data: List[List[Tuple[int, int, int]]],
 ) -> List[Tuple[int, int, int]]:
     unique_colors = set()
     for row in pixel_data:
@@ -166,7 +166,6 @@ def load_obj(obj_bytes):
                     face_normals.append(None)
 
             if len(face_vertices) == 3:
-
                 uv_vectors = [face_tex_coords[layer][0:3] for layer in range(8)]
                 t = Triangle3D(
                     face_vertices[0], face_vertices[1], face_vertices[2], None
@@ -180,7 +179,6 @@ def load_obj(obj_bytes):
                 # print(f"norml {FNnormals}")
                 triangles.append(t)
             else:
-
                 for i in range(1, len(face_vertices) - 1):
                     uv_vectors = [
                         [

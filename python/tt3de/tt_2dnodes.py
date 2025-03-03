@@ -1,11 +1,13 @@
+import itertools
 from types import TracebackType
 from typing import Any, List, Optional
+
 import glm
 from typing_extensions import Self
-import itertools
+
 from tt3de.glm_camera import GLMCamera
-from tt3de.render_context_rust import RustRenderContext
 from tt3de.points import Point2D, Point3D
+from tt3de.render_context_rust import RustRenderContext
 from tt3de.utils import (
     p2d_tovec2,
     p2d_uv_tomatrix,
@@ -46,7 +48,6 @@ class TT2DNode:
         self.elements.append(child)
 
     def insert_in(self, rc: "RustRenderContext", parent_transform: Optional[glm.mat4]):
-
         # self.node_id = rc.transform_buffer.add_node_transform(self.local_transform)
         if parent_transform:
             fff = parent_transform * self.local_transform
@@ -57,7 +58,6 @@ class TT2DNode:
 
 
 class TT2DMesh(TT2DNode):
-
     def __init__(
         self, name: str = None, transform: Optional[glm.mat3] = None, material_id=0
     ):
@@ -68,7 +68,6 @@ class TT2DMesh(TT2DNode):
         self.node_id = None
 
     def cache_output(self, segmap):
-
         self.glm_elements = [
             [p3d_tovec3(a), p3d_tovec3(b), p3d_tovec3(c)]
             for (a, b, c) in (self.elements)
@@ -109,12 +108,16 @@ class TT2DMesh(TT2DNode):
 
             face_uv = [uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y] + [0.0] * 42
             geometry_buffer.add_triangle_to_buffer(
-                a, b, c, face_uv, node_id, self.material_id  # uv list  # node_id
+                a,
+                b,
+                c,
+                face_uv,
+                node_id,
+                self.material_id,  # uv list  # node_id
             )
 
 
 class TT2Polygon(TT2DNode):
-
     def __init__(
         self, name: str = None, transform: Optional[glm.mat3] = None, material_id=0
     ):
@@ -153,7 +156,6 @@ class TT2Polygon(TT2DNode):
         )
 
     def cache_output(self, segmap):
-
         self.uvmap_prepared = [
             [pa.x, pa.y, pb.x, pb.y, pc.x, pc.y] * 8
             for face_idx, (pa, pb, pc) in enumerate(self.uvmap)

@@ -56,7 +56,6 @@ class GLMCamera:
         dist_max: float = None,
         character_factor: float = None,
     ):
-
         if fov_radians is not None:
             self.fov_radians = fov_radians
         if dist_min is not None:
@@ -70,7 +69,6 @@ class GLMCamera:
         self.update_2d_perspective()
 
     def update_perspective(self):
-
         w, h = self.screen_width, self.screen_height * self.character_factor
 
         self.perspective_matrix = glm.perspectiveFovLH_ZO(

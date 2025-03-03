@@ -4,15 +4,13 @@ from math import exp
 from typing import Iterable, List
 
 import glm
-from tt3de.asset_load import extract_palette
-from tt3de.points import (
-    PPoint2D,
-    Point3D,
-)
 from rich.color import Color
 from rich.style import Style
 from rich.text import Segment
 from textual.strip import Strip
+
+from tt3de.asset_load import extract_palette
+from tt3de.points import Point3D, PPoint2D
 
 
 class TextureAscii:
