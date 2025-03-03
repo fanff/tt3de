@@ -98,42 +98,36 @@ class GLMTester(TT3DView):
 
 
 
-
-class ContentScreen(Screen):
+class ContentScreen(Static):
     def compose(self) -> ComposeResult:
+        #with Container(classes="someinfo"):
+        #    yield Static("", classes="lastevent")
+        #    yield RenderInfo()
+        #    yield RustRenderContextInfo()
         yield GLMTester()
-
-    def on_camera_config_projection_changed(
-        self, event: CameraConfig.ProjectionChanged
-    ):
-        viewelem: GLMTester = self.query_one("GLMTester")
-
-        fov, dist_min, dist_max, charfactor = event.value
-        viewelem.camera.set_projectioninfo(
-            math.radians(fov), dist_min, dist_max, charfactor
-        )
-
 
 class Demo3dView(App):
     DEFAULT_CSS = """
-    Content {
+    ContentScreen {
         layout: horizontal;
         height: 100%;
-        
     }
     TT3DView {
-        
         height: 100%;
         width: 4fr;
     }
-
+    .someinfo {
+        height: 100%;
+        width: 1fr;
+        border: solid red;
+    }
     
     
     """
-    SCREENS = {"cscreen": ContentScreen()}
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield ContentScreen()
 
-    async def on_mount(self) -> None:
-        await self.push_screen("cscreen")
 
 if __name__ == "__main__":
 

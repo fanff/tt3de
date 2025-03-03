@@ -80,4 +80,3 @@ In `settings.json`:
 
 ### Known Issues
 
-* Polygon Fan test has camera issue; 
