@@ -1,7 +1,7 @@
 import math
 from time import time
 
-import glm
+from pyglm import glm
 
 from textual import events
 from textual.app import App, ComposeResult
@@ -42,10 +42,10 @@ class GLMTester(TT3DView):
         polygon3d.local_transform = glm.translate(glm.vec3(-4.1, 0, 0))
         self.root3Dnode.add_child(polygon3d)
 
-        polygon3d = fast_load("models/car/Car5_Taxi.obj")
-        polygon3d.material_id = 12
-        polygon3d.local_transform = glm.translate(glm.vec3(4, 0, 0))
-        self.root3Dnode.add_child(polygon3d)
+        self.car_taxi = fast_load("models/car/Car5_Taxi.obj")
+        self.car_taxi.material_id = 12
+        self.car_taxi.local_transform = glm.translate(glm.vec3(4, 0, 0))
+        self.root3Dnode.add_child(self.car_taxi)
 
         # final append
         self.rc.append(self.root3Dnode)
@@ -54,7 +54,9 @@ class GLMTester(TT3DView):
         self.reftime = time()
 
     def update_step(self, timediff):
-        pass
+        osc = math.sin(time() - self.reftime)
+        rc = self.rc
+        self.car_taxi.set_transform(rc,glm.rotate(osc,glm.vec3(1, 0, 1)))
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
@@ -122,8 +124,11 @@ class GLMTester(TT3DView):
             case events.MouseScrollUp:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 1.1)
             case _:
-                info_box: Static = self.parent.query_one(".lastevent")
-                info_box.update(f"{event.__class__}: \n{str(event)}")
+                try:
+                    info_box: Static = self.parent.query_one(".lastevent")
+                    info_box.update(f"{event.__class__}: \n{str(event)}")
+                except Exception as e:
+                    pass
 
 
 class Content(Static):

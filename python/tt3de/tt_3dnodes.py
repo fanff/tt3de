@@ -87,7 +87,10 @@ class TT3DPolygon(TT3DNode):
         self.material_id = material_id
 
         self.node_id = None
-
+    def set_transform(self,rc, transform: glm.mat4):
+        self.local_transform = transform
+        rc.transform_buffer.set_node_transform(self.node_id, transform)
+        
     def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
         self.node_id = rc.transform_buffer.add_node_transform(
             parent_transform * self.local_transform
