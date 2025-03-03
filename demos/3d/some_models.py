@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 from time import time
 
@@ -10,6 +11,7 @@ from textual.widgets import (
     Header,
     Static,
 )
+from textual.css.query import NoMatches
 
 from tt3de.asset_fastloader import MaterialPerfab, fast_load
 
@@ -54,9 +56,9 @@ class GLMTester(TT3DView):
         self.reftime = time()
 
     def update_step(self, timediff):
-        osc = math.sin(time() - self.reftime)
-        rc = self.rc
-        self.car_taxi.set_transform(rc,glm.rotate(osc,glm.vec3(1, 0, 1)))
+        self.car_taxi.set_transform(
+            self.rc, glm.rotate(time() - self.reftime, glm.vec3(0, 1, 0))
+        )
 
     def post_render_step(self):
         cc: CameraConfig = self.parent.query_one("CameraConfig")
@@ -127,7 +129,7 @@ class GLMTester(TT3DView):
                 try:
                     info_box: Static = self.parent.query_one(".lastevent")
                     info_box.update(f"{event.__class__}: \n{str(event)}")
-                except Exception as e:
+                except NoMatches:
                     pass
 
 
@@ -158,10 +160,10 @@ class Demo3dView(App):
     Content {
         layout: horizontal;
         height: 100%;
-        
+
     }
     TT3DView {
-        
+
         height: 100%;
         width: 4fr;
     }
@@ -171,7 +173,7 @@ class Demo3dView(App):
         width: 1fr;
         border: solid red;
     }
-    
+
     """
 
     def compose(self) -> ComposeResult:

@@ -1,43 +1,29 @@
+# -*- coding: utf-8 -*-
 import math
-from statistics import mean
-from textwrap import dedent
-from time import monotonic, time
-from typing import Sequence
+from time import time
 
-import glm
+from pyglm import glm
 
 from textual import events
-from textual.app import App, ComposeResult, RenderResult
+from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.widgets import (
-    Button,
-    Collapsible,
-    DataTable,
-    Footer,
     Header,
-    Label,
-    Markdown,
-    Sparkline,
     Static,
-    Input,
 )
-from textual.validation import Function, Number, ValidationResult, Validator
 
-from tt3de.asset_fastloader import MaterialPerfab, Prefab2D
+from tt3de.asset_fastloader import MaterialPerfab
 from textual.css.query import NoMatches
 
 from tt3de.prefab3d import Prefab3D
 from tt3de.textual.widgets import (
     CameraConfig,
     EngineLog,
-    FloatSelector,
     RenderInfo,
     RustRenderContextInfo,
-    Vector3Selector,
 )
 from tt3de.textual_widget import TT3DView
 
-from tt3de.tt_2dnodes import TT2DMesh, TT2DNode, TT2Polygon
 from tt3de.tt_3dnodes import TT3DNode
 
 
@@ -191,10 +177,10 @@ class Demo3dView(App):
     Content {
         layout: horizontal;
         height: 100%;
-        
+
     }
     TT3DView {
-        
+
         height: 100%;
         width: 4fr;
     }
@@ -204,7 +190,7 @@ class Demo3dView(App):
         width: 1fr;
         border: solid red;
     }
-    
+
     """
 
     def compose(self) -> ComposeResult:
