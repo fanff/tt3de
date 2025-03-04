@@ -9,7 +9,14 @@ from tt3de.tt_3dnodes import TT3DPolygon
 from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 
 
-def fast_load(obj_file: str, cls=None):
+def fast_load(
+    obj_file: str,
+    cls=None,
+    reverse_uv_u=False,
+    reverse_uv_v=False,
+    inverse_uv=False,
+    flip_triangles=False,
+):
     if obj_file.endswith(".obj"):
         (
             vertices,
@@ -19,16 +26,32 @@ def fast_load(obj_file: str, cls=None):
             triangles_vindex,
         ) = load_obj(read_file(obj_file))
 
-        p = TT3DPolygon()
+        polygon = TT3DPolygon()
 
         for triangle in triangles:
-            p.vertex_list.append(triangle.v1)
-            p.vertex_list.append(triangle.v2)
-            p.vertex_list.append(triangle.v3)
+            polygon.vertex_list.append(triangle.v1)
+            if flip_triangles:
+                polygon.vertex_list.append(triangle.v3)
+                polygon.vertex_list.append(triangle.v2)
+            else:
+                polygon.vertex_list.append(triangle.v2)
+                polygon.vertex_list.append(triangle.v3)
 
-            uvs = [Point2D(p.x, 1.0 - p.y) for p in triangle.uvmap[0]]
-            p.uvmap.append(uvs)
-        return p
+            uvs = []
+            for p in triangle.uvmap[0]:
+                uv_u = p.x if not reverse_uv_u else 1.0 - p.x
+                uv_v = p.y if not reverse_uv_v else 1.0 - p.y
+                uv_point = (
+                    Point2D(uv_u, uv_v) if not inverse_uv else Point2D(uv_v, uv_u)
+                )
+                uvs.append(uv_point)
+            uv1, uv2, uv3 = uvs
+            if flip_triangles:
+                polygon.uvmap.append([uv1, uv3, uv2])
+            else:
+                polygon.uvmap.append([uv1, uv2, uv3])
+
+        return polygon
 
     elif obj_file.endswith(".bmp"):
         with open(obj_file, "rb") as fin:

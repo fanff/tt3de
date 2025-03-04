@@ -43,7 +43,12 @@ class GLMTester(TT3DView):
         # create a root 3D node
         self.root3Dnode = TT3DNode()
 
-        self.city = fast_load("models/cities/Town_2.obj")
+        self.city = fast_load(
+            "models/cities/Town_2.obj",
+            reverse_uv_u=False,
+            reverse_uv_v=True,
+            inverse_uv=True,
+        )
         self.city.material_id = 1
         self.city.local_transform = glm.translate(glm.vec3(0, 0, 0))
         self.root3Dnode.add_child(self.city)

@@ -1,8 +1,7 @@
+# -*- coding: utf-8 -*-
 import math
 
 import glm
-
-from tt3de.points import Point3D
 
 
 class GLMCamera:
@@ -15,6 +14,7 @@ class GLMCamera:
         dist_min=1,
         dist_max=100,
         character_factor=1.8,
+        use_left_hand_perspective=True,
     ):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -35,11 +35,12 @@ class GLMCamera:
         self._rot = self.calculate_rotation_matrix()
 
         self.perspective_matrix: glm.mat4 = glm.mat4(1.0)
+        self.use_left_hand_perspective = use_left_hand_perspective
         self.update_perspective()
         self.update_2d_perspective()
 
     def view_matrix_3D(self):
-        """calculate the view matrix 3D from inner _pos and _rot"""
+        """Calculate the view matrix 3D from inner _pos and _rot."""
         return glm.inverse(self._rot) * glm.translate(-self._pos)
 
     def recalc_fov_h(self, w, h):
@@ -71,16 +72,21 @@ class GLMCamera:
     def update_perspective(self):
         w, h = self.screen_width, self.screen_height * self.character_factor
 
-        self.perspective_matrix = glm.perspectiveFovLH_ZO(
-            (self.fov_radians * h) / w, w, h, self.dist_min, self.dist_max
-        )
+        if self.use_left_hand_perspective:
+            self.perspective_matrix = glm.perspectiveFovLH_ZO(
+                (self.fov_radians * h) / w, w, h, self.dist_min, self.dist_max
+            )
+        else:
+            self.perspective_matrix = glm.perspectiveFovRH_ZO(
+                (self.fov_radians * h) / w, w, h, self.dist_min, self.dist_max
+            )
 
     def update_2d_perspective(self):
-        """ """
+        """"""
         # TODO depending on mode it can be different here.
 
         # currently we do adjuste to the minimum of the screen width and height
-        min_screen_ = min(self.screen_width, self.screen_height)
+        # min_screen_ = min(self.screen_width, self.screen_height)
 
         scale_x = self.character_factor * self.zoom_2D
         scale_y = self.zoom_2D

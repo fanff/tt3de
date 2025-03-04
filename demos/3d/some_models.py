@@ -39,17 +39,17 @@ class GLMTester(TT3DView):
         # create a root 3D node
         self.root3Dnode = TT3DNode()
 
-        cube = fast_load("models/cube.obj")
+        cube = fast_load("models/cube.obj", reverse_uv_v=True)
         cube.material_id = 11
         cube.local_transform = glm.translate(glm.vec3(-4.1, 0, 0))
         self.root3Dnode.add_child(cube)
 
-        self.car_taxi = fast_load("models/car/Car5_Taxi.obj")
+        self.car_taxi = fast_load("models/car/Car5_Taxi.obj", reverse_uv_v=True)
         self.car_taxi.material_id = 12
         self.car_taxi.local_transform = glm.translate(glm.vec3(4, 0, 0))
         self.root3Dnode.add_child(self.car_taxi)
 
-        self.car_taxi2 = fast_load("models/car/Car5_Taxi.obj")
+        self.car_taxi2 = fast_load("models/car/Car5_Taxi.obj", reverse_uv_v=True)
         self.car_taxi2.material_id = 12
         self.car_taxi2.local_transform = glm.translate(glm.vec3(4, 2, 0))
         self.root3Dnode.add_child(self.car_taxi2)
