@@ -1,17 +1,16 @@
+# -*- coding: utf-8 -*-
 import math
 
 import glm
 
 from tt3de.points import Point2D, Point3D
-from tt3de.tt_3dnodes import TT3DNode, TT3DPoint, TT3DPolygon, TT3DPolygonFan
+from tt3de.tt_3dnodes import TT3DNode, TT3DPoint, TT3DPolygonFan
 
 
 class Prefab3D:
     @staticmethod
     def unitary_triangle() -> TT3DPolygonFan:
-        """
-        Create a triangle with vertices at (0,0,1), (1,0,1), (1,1,1)
-        """
+        """Create a triangle with vertices at (0,0,1), (1,0,0), (1,1,0)"""
         vertices = [
             Point3D(0, 0, 0.0),
             Point3D(1.0, 0.0, 0.0),
@@ -103,9 +102,7 @@ class Prefab3D:
         return m
 
     def gizmo_points():
-        """
-        Add a gizmo to the scene made of 4 points.
-        """
+        """Add a gizmo to the scene made of 4 points."""
         gizmo_node = TT3DNode()
         # center point
         center_point = Prefab3D.unitary_Point()

@@ -178,7 +178,7 @@ class TT3DView(Container):
     def render_step(self):
         if self.size.width > 1 and self.size.height > 1:
             ts = time()
-            self.update_step(0.2)  # TODO fix the time of the update
+            self.update_step(ts - self.last_frame_time)  # time since last frame
             update_dur = time() - ts
 
             ts = time()
