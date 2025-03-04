@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from typing import Tuple
 
 from tt3de.asset_load import load_bmp, load_obj, read_file
@@ -5,6 +6,7 @@ from tt3de.points import Point2D, Point3D
 from tt3de.richtexture import ImageTexture
 from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.tt_3dnodes import TT3DPolygon
+from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 
 
 def fast_load(obj_file: str, cls=None):
@@ -38,14 +40,12 @@ def fast_load(obj_file: str, cls=None):
             return cls(imgdata)
 
 
-from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
-
-
 class MaterialPerfab:
     @staticmethod
     def rust_set_0() -> Tuple[TextureBufferPy, MaterialBufferPy]:
         """
-        Initializes texture and material buffers with pre-loaded images and defined materials.
+        Initializes texture and material buffers with pre-loaded images and defined
+        materials.
 
         Textures:
             0: "models/test_screen256.bmp" (repeat_width=True, repeat_height=True)

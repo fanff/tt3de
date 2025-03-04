@@ -28,17 +28,26 @@ from tt3de.tt3de import (
 
 
 class RustRenderContext:
-    def __init__(self, screen_width, screen_height):
+    def __init__(
+        self,
+        screen_width,
+        screen_height,
+        vertex_buffer_size=1024,
+        geometry_buffer_size=256,
+        primitive_buffer_size=2048,
+        transform_buffer_size=64,
+        texture_buffer_size=32,
+    ):
         self.width = screen_width
         self.height = screen_height
 
-        self.texture_buffer = TextureBufferPy(32)
+        self.texture_buffer = TextureBufferPy(texture_buffer_size)
         self.material_buffer = MaterialBufferPy()
-        self.vertex_buffer = VertexBufferPy(2048)
-        self.geometry_buffer = GeometryBufferPy(256)
+        self.vertex_buffer = VertexBufferPy(vertex_buffer_size)
+        self.geometry_buffer = GeometryBufferPy(geometry_buffer_size)
         self.geometry_buffer.add_point(0, 0, node_id=0, material_id=0)
-        self.primitive_buffer = PrimitiveBufferPy(512)
-        self.transform_buffer = TransformPackPy(64)
+        self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
+        self.transform_buffer = TransformPackPy(transform_buffer_size)
         self.drawing_buffer = AbigDrawing(max_row=self.height, max_col=self.width)
 
         self.global_bit_size = 4

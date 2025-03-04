@@ -51,12 +51,27 @@ class TT3DView(Container):
         disabled: bool = False,
         # parameters for the engine
         target_fps: int = 24,
+        # parameters for the render context
+        vertex_buffer_size=4096,
+        geometry_buffer_size=256,
+        primitive_buffer_size=4096,
+        transform_buffer_size=64,
+        texture_buffer_size=32,
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
         self.camera = GLMCamera(glm.vec3(0, 2, 7), 90, 90)
         self.camera.set_yaw_pitch(math.radians(180), 0)
-        self.rc = RustRenderContext(90, 90)
+        self.rc = RustRenderContext(
+            90,
+            90,
+            vertex_buffer_size=vertex_buffer_size,
+            geometry_buffer_size=geometry_buffer_size,
+            primitive_buffer_size=primitive_buffer_size,
+            transform_buffer_size=transform_buffer_size,
+            texture_buffer_size=texture_buffer_size,
+        )
+
         self.initialize()
         self.last_frame_time = time() - 1.0
         self.target_fps = target_fps
