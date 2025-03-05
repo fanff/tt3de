@@ -31,7 +31,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
         pixinfo: &PixInfo<f32>,
         _primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        _uv_buffer: &UVBuffer< f32>,
+        _uv_buffer: &UVBuffer<f32>,
     ) {
         cell.glyph = self.glyph_idx;
         //depth_cell.row;
@@ -40,12 +40,12 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
         //let point = vec3(depth_cell.col as f32, depth_cell.row as f32, depth);
 
         let uv = pixinfo.uv;
-        let uv1 = pixinfo.uv;
+        let uv1 = pixinfo.uv_1;
         let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
         let texture_color1 = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv1);
-        cell.front_color.copy_from(&texture_color1);
+        cell.front_color.copy_from(&texture_color);
 
-        cell.back_color.copy_from(&texture_color);
+        cell.back_color.copy_from(&texture_color1);
     }
 }
 

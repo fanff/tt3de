@@ -130,7 +130,7 @@ class MaterialPerfab:
 
         material_buffer = MaterialBufferPy()
         material_buffer.add_static((200, 10, 10), (50, 50, 50), 0)  # 0
-        material_buffer.add_static((200, 200, 200), (100, 100, 100), 99)  # white
+        material_buffer.add_static((200, 200, 200), (100, 100, 100), 95)  # white
         material_buffer.add_static((200, 0, 0), (100, 100, 100), 50)  # R
         material_buffer.add_static((10, 200, 0), (100, 100, 100), 39)  # G
         material_buffer.add_static((10, 5, 200), (100, 100, 100), 34)  # B
@@ -139,12 +139,12 @@ class MaterialPerfab:
         material_buffer.add_debug_depth(6)  # 6
         material_buffer.add_debug_uv(7)  # 7
 
-        material_buffer.add_textured(0, 99)  # idx = 8
-        material_buffer.add_textured(1, 99)  # idx = 9
-        material_buffer.add_textured(2, 99)  # idx = 10
+        material_buffer.add_textured(0, 95)  # idx = 8
+        material_buffer.add_textured(1, 95)  # idx = 9
+        material_buffer.add_textured(2, 95)  # idx = 10
 
-        material_buffer.add_textured(4, 99)  # idx = 11
-        material_buffer.add_textured(5, 99)  # idx = 12
+        material_buffer.add_textured(4, 95)  # idx = 11
+        material_buffer.add_textured(5, 95)  # idx = 12
 
         return texture_buffer, material_buffer
 

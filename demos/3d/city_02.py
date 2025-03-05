@@ -38,7 +38,7 @@ class GLMTester(TT3DView):
         )
 
         self.rc.material_buffer.add_static((200, 10, 10), (50, 50, 50), 0)  # 0
-        self.rc.material_buffer.add_textured(0, 99)  # idx = 1
+        self.rc.material_buffer.add_textured(0, 95)  # idx = 1
 
         # create a root 3D node
         self.root3Dnode = TT3DNode()
