@@ -14,28 +14,6 @@ pub mod segment_cache;
 use crate::utils::convert_glm_vec2;
 use segment_cache::*;
 
-#[pyclass]
-pub struct Small16Drawing {
-    db: DrawBuffer<2, f32>,
-}
-
-#[pymethods]
-impl Small16Drawing {
-    #[new]
-    fn new() -> Self {
-        Small16Drawing {
-            db: DrawBuffer::new(16, 16, 0.0),
-        }
-    }
-
-    fn hard_clear(&mut self, init_value: f32) {
-        (self.db.borrow_mut()).clear_depth(init_value)
-    }
-
-    fn get_at(&self, r: usize, c: usize, l: usize) -> f32 {
-        self.db.get_depth(r, c, l)
-    }
-}
 
 #[pyclass]
 pub struct AbigDrawing {

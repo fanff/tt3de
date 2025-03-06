@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import unittest
 import pytest
 
 from tests.tt3de.test_utils import assertPixInfoEqual
-from tt3de.tt3de import Small16Drawing, AbigDrawing
+from tt3de.tt3de import AbigDrawing
 from tt3de.tt3de import apply_material_py
 from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 import glm
@@ -11,20 +12,6 @@ from tt3de.tt3de import PrimitiveBufferPy
 
 
 class Test_DrawBuffer(unittest.TestCase):
-
-    def test_create16(self):
-
-        gb = Small16Drawing()
-
-        gb.hard_clear(1000.0)
-        #
-        self.assertEqual(gb.get_at(0, 0, 0), 1000.0)
-        self.assertEqual(gb.get_at(0, 0, 1), 1000.0)
-        #
-        gb.hard_clear(10.0)
-        #
-        self.assertEqual(gb.get_at(1, 1, 0), 10.0)
-        self.assertEqual(gb.get_at(1, 1, 1), 10.0)
 
     def test_create_verybig(self):
 
