@@ -55,24 +55,35 @@ impl<const SIZE: usize> Texture<SIZE> {
             repeat_y,
         }
     }
+    #[inline(always)]
     pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
-        let u_val = if self.repeat_x {
-            u % 1.0
+        // Compute the x coordinate
+        let x = if self.repeat_x {
+            // For repeating textures, use rem_euclid to get a positive remainder,
+            // then multiply by SIZE and wrap via bitwise AND.
+            let u = u.rem_euclid(1.0);
+            ((u * (SIZE as f32)) as usize) & (SIZE - 1)
         } else {
-            u.clamp(0.0, 1.0)
-        };
-        let v_val = if self.repeat_y {
-            v % 1.0
-        } else {
-            v.clamp(0.0, 1.0)
+            // For clamped textures, clamp u to [0,1] and ensure u==1 maps to SIZE-1.
+            let u = u.clamp(0.0, 1.0);
+            let idx = (u * (SIZE as f32)) as usize;
+            if idx >= SIZE { SIZE - 1 } else { idx }
         };
 
-        // Convert u, v to texture coordinates
-        let x = (u_val * ((SIZE - 1) as f32)) as usize;
-        let y = (v_val * ((SIZE - 1) as f32)) as usize;
+        // Compute the y coordinate similarly
+        let y = if self.repeat_y {
+            let v = v.rem_euclid(1.0);
+            ((v * (SIZE as f32)) as usize) & (SIZE - 1)
+        } else {
+            let v = v.clamp(0.0, 1.0);
+            let idx = (v * (SIZE as f32)) as usize;
+            if idx >= SIZE { SIZE - 1 } else { idx }
+        };
 
-        // Return the color at the computed coordinates
-        self.data[x * SIZE + y]
+        // Use bit-shift instead of multiplication because SIZE is a power of 2.
+        // Compute the number of bits to shift: log2(SIZE).
+        let shift = SIZE.trailing_zeros() as usize;
+        self.data[(x << shift) + y]
     }
 }
 
