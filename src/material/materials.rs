@@ -7,12 +7,12 @@ use crate::vertexbuffer::UVBuffer;
 
 use super::super::texturebuffer::RGBA;
 
-use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Texture};
+use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Textured};
 
 #[derive(Clone)]
 pub enum Material {
     DoNothing {},
-    Texture(Texture),
+    Texture(Textured),
     StaticColor {
         front_color: RGBA,
         back_color: RGBA,

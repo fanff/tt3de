@@ -57,10 +57,17 @@ class TT3DView(Container):
         primitive_buffer_size=4096,
         transform_buffer_size=64,
         texture_buffer_size=32,
+        # parameters for the camera
+        use_left_hand_perspective=True,
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
-        self.camera = GLMCamera(glm.vec3(0, 2, 7), 90, 90)
+        self.camera = GLMCamera(
+            glm.vec3(0, 2, 7),
+            90,
+            90,
+            use_left_hand_perspective=use_left_hand_perspective,
+        )
         self.camera.set_yaw_pitch(math.radians(180), 0)
         self.rc = RustRenderContext(
             90,

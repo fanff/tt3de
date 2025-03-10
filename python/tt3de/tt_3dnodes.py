@@ -115,8 +115,6 @@ class TT3DPolygon(TT3DNode):
             if start_uv is None:
                 start_uv = idx
 
-        # rc.geometry_buffer.add_line3d(start_idx, self.node_id, self.material_id, 0)
-        # rc.geometry_buffer.add_line3d(start_idx+1, self.node_id, self.material_id, 0)
         rc.geometry_buffer.add_polygon_3d(
             start_idx,
             len(self.vertex_list) // 3,

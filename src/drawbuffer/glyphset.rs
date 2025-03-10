@@ -22,13 +22,12 @@ pub const GLYPH_STATIC_STR: [&str; 256] = [
 pub const HALF_UPPER_BLOCK: usize = 95;
 pub const HALF_LOWER_BLOCK: usize = 99;
 
-fn find_glyph_indices(input: &str) -> Vec<Option<usize>> {
-    input
-        .chars()
-        .map(|ch| {
-            GLYPH_STATIC_STR
-                .iter()
-                .position(|&glyph| glyph == ch.to_string())
-        })
-        .collect()
+/// return the first index of the glyph in the GLYPH_STATIC_STR array
+pub fn find_glyph_index(glyph: char) -> i8 {
+    let glyph_str = glyph.to_string();
+    GLYPH_STATIC_STR
+        .iter()
+        .position(|&g| g == glyph_str)
+        .map(|index| index as i8)
+        .unwrap_or(-1)
 }

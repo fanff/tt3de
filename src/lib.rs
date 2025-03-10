@@ -1,3 +1,4 @@
+use drawbuffer::glyphset;
 use pyo3::prelude::*;
 
 pub mod drawbuffer;
@@ -26,7 +27,12 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(raster::raster_all_py, m)?)?;
     m.add_function(wrap_pyfunction!(primitiv_building::build_primitives_py, m)?)?;
     m.add_function(wrap_pyfunction!(primitiv_building::apply_material_py, m)?)?;
-    m.add_function(wrap_pyfunction!(primitiv_building::apply_material_py_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        primitiv_building::apply_material_py_parallel,
+        m
+    )?)?;
+
+    m.add_function(wrap_pyfunction!(drawbuffer::find_glyph_indices_py, m)?)?;
 
     Ok(())
 }

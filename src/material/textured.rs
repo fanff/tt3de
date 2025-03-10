@@ -8,11 +8,11 @@ use crate::{
 use super::RenderMatTrait;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Texture {
+pub struct Textured {
     pub albedo_texture_idx: usize,
     pub glyph_idx: u8,
 }
-impl Texture {
+impl Textured {
     pub fn new(albedo_texture_idx: usize, glyph_idx: u8) -> Self {
         Self {
             albedo_texture_idx,
@@ -21,7 +21,7 @@ impl Texture {
     }
 }
 impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Texture
+    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Textured
 {
     fn render_mat(
         &self,
@@ -102,7 +102,7 @@ mod tests {
         );
 
         // Create the Texture instance
-        let texture_material = Texture::new(0, glyph_idx);
+        let texture_material = Textured::new(0, glyph_idx);
 
         // close to point a
         // Call the render_mat function

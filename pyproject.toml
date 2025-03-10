@@ -16,6 +16,7 @@ version = "0.1.0"
 
 [tool.poetry.dependencies]
 pyglm = "^2.7.1"
+pypng = "^0.20220715.0"
 python = "^3.10"
 textual = "^1.0.0"
 

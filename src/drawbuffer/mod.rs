@@ -14,7 +14,6 @@ pub mod segment_cache;
 use crate::utils::convert_glm_vec2;
 use segment_cache::*;
 
-
 #[pyclass]
 pub struct AbigDrawing {
     pub db: DrawBuffer<2, f32>,
@@ -406,4 +405,18 @@ impl AbigDrawing {
 
         PyList::new_bound(py, rows).into()
     }
+}
+
+/// Finds the glyph index for the given character.
+///
+/// # Arguments
+///
+/// * `input` - A single character for which the glyph index is to be found.
+///
+/// # Returns
+///
+/// The glyph index as an `i8`.
+#[pyfunction(text_signature = "(input)")]
+pub fn find_glyph_indices_py(input: char) -> i8 {
+    find_glyph_index(input)
 }
