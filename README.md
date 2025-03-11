@@ -16,13 +16,13 @@ A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to
 
 | Terminal              | Windows                      | macOS                | Linux                |
 |-----------------------|------------------------------|----------------------|----------------------|
-| wez Terminal          | :star: :star: :star:          |                      |                      |
-| tabby                 | :star:                        |                      |                      |
-| default Windows Terminal | :x:                        |                      |                      |
-| VScode terminal       | :x: :x: :x:                 | :x:                    | :x:                   |
-| gostty                |                               | :star: :star: :star: | :star: :star: :star: |
-| kitty                 |                              | :star: :star:          | :star: :star:        |
-| iTerm/iTerm2          |                              | :x:                  | :x:                   |
+| [wez Terminal](https://wezterm.org/)          | :star: Fastest rendering accross all terms          |                      |                      |
+| [tabby](https://tabby.sh/) | :star: Runs ok, struggle at big resolutions |                      |                      |
+| default Windows Terminal | :x: Can't keep up with the rendering |                      |                      |
+| VScode terminal       | :x: Does not even works | :x: Can't keep up with rendering | :x:                   |
+| [gostty](https://ghostty.org/)                |                               | :star: Perfect! | :star: Perfect, assuming you have your graphics drivers installed |
+| [kitty](https://sw.kovidgoyal.net/kitty/)                 |                              | Almost perfect, start to slow down at HighRes | untested       |
+| iTerm/iTerm2          |                              | Won't keep up with high refresh rate (>10fps) |                   |
 
 
 ## Setting Up the Development Version
