@@ -7,7 +7,6 @@ use pyo3::{
 pub mod drawbuffer;
 use drawbuffer::*;
 use pyo3::types::PyDict;
-use std::borrow::BorrowMut;
 pub mod glyphset;
 use glyphset::*;
 pub mod segment_cache;
@@ -15,7 +14,7 @@ use crate::utils::convert_glm_vec2;
 use segment_cache::*;
 
 #[pyclass]
-pub struct AbigDrawing {
+pub struct DrawingBufferPy {
     pub db: DrawBuffer<2, f32>,
     max_row: usize,
     max_col: usize,
@@ -32,7 +31,7 @@ pub struct AbigDrawing {
 }
 
 #[pymethods]
-impl AbigDrawing {
+impl DrawingBufferPy {
     #[new]
     fn new(py: Python, max_row: usize, max_col: usize) -> Self {
         let rich_style_module = py.import_bound("rich.style").unwrap();
@@ -63,7 +62,7 @@ impl AbigDrawing {
             &style_class,
         );
         segment_cache.insert_with_hash(0, aseg0);
-        AbigDrawing {
+        DrawingBufferPy {
             db: DrawBuffer::new(max_row, max_col, 10.0),
             max_row,
             max_col,

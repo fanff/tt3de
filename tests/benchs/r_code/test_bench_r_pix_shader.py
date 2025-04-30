@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 import pytest
-from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import DrawingBufferPy
 from tt3de.tt3de import apply_material_py
 from tt3de.tt3de import MaterialBufferPy
 from tt3de.tt3de import TextureBufferPy, VertexBufferPy, PrimitiveBufferPy
@@ -25,7 +26,7 @@ def test_bench_full_pass(benchmark, n):
     material_buffer = MaterialBufferPy()
     material_buffer.add_static((255, 90, 90, 255), (5, 10, 20, 255), 0)
 
-    drawing_buffer = AbigDrawing(n, n)
+    drawing_buffer = DrawingBufferPy(n, n)
     drawing_buffer.hard_clear(100.0)
     vertex_buffer = VertexBufferPy(32)
     primitive_buffer = PrimitiveBufferPy(3)

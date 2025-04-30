@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import unittest
 
@@ -6,7 +7,7 @@ import glm
 from tests.tt3de.test_utils import perspective_divide
 from tt3de.prefab3d import Prefab3D
 from tt3de.tt3de import GeometryBufferPy
-from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import DrawingBufferPy
 from tt3de.tt3de import MaterialBufferPy
 from tt3de.tt3de import TextureBufferPy
 from tt3de.tt3de import VertexBufferPy, TransformPackPy

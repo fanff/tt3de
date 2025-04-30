@@ -170,12 +170,10 @@ impl CanvasCell {
 pub struct DepthBufferCell<A: Number, const L: usize> {
     pub pixinfo: [usize; L], // referencing pixel info per index
     pub depth: [A; L],
-    // alternativelly, an array of tuple ? !
-    //content: [(usize, A); L],
-    pub row: usize,
-    pub col: usize,
 }
-impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize> Default for DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT> {
+impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize> Default
+    for DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT>
+{
     fn default() -> Self {
         Self::new()
     }
@@ -188,8 +186,6 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [DepthAccuracy::zero(); DEPTHLAYERCOUNT],
-            row: 0,
-            col: 0,
         }
     }
 
@@ -201,8 +197,6 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [value; DEPTHLAYERCOUNT],
-            row: 0,
-            col: 0,
         }
     }
     fn clear(&mut self, value: DepthAccuracy, idx: usize) {
@@ -217,14 +211,11 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         }
     }
 
-    fn set_init_pix_ref(&mut self, idx: usize, row: usize, col: usize) {
+    fn set_init_pix_ref(&mut self, idx: usize) {
         for layer in 0..DEPTHLAYERCOUNT {
             let lol = &mut (self.pixinfo[layer]);
             *(lol) = idx + layer
         }
-
-        self.row = row;
-        self.col = col;
     }
 }
 
@@ -277,7 +268,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             for col in 0..col_count {
                 let idx = row * col_count + col;
 
-                depthbuffer[idx].set_init_pix_ref(idx * L, row, col);
+                depthbuffer[idx].set_init_pix_ref(idx * L);
             }
         }
 
@@ -332,8 +323,6 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     }
 
     pub fn get_depth_buffer_cell(&self, row: usize, col: usize) -> DepthBufferCell<DEPTHACC, L> {
-
-
         self.depthbuffer[row * self.col_count + col]
     }
 
@@ -345,11 +334,9 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     ) -> &PixInfo<f32> {
         let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
 
-
         (&self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]]) as _
     }
     pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
-
         self.canvas[r * self.col_count + c]
     }
 
@@ -465,14 +452,11 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 }
 
 // will apply the material for every pixel.
-pub fn apply_material_on<
-    const TEXTURESIZE: usize,
-    const DEPTHLAYER: usize,
->(
+pub fn apply_material_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
-    uv_buffer: &UVBuffer< f32>,
+    uv_buffer: &UVBuffer<f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
     for (depth_cell, canvascell) in draw_buffer
@@ -497,9 +481,8 @@ pub fn apply_material_on<
     }
 }
 
-
-use rayon::prelude::*;
 use once_cell::sync::Lazy;
+use rayon::prelude::*;
 
 // Create a global thread pool that is initialized only once.
 static GLOBAL_THREAD_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
@@ -510,12 +493,8 @@ static GLOBAL_THREAD_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
         .expect("Failed to build thread pool")
 });
 
-
 /// This function applies the material to every pixel in parallel.
-pub fn apply_material_on_parallel<
-    const TEXTURESIZE: usize,
-    const DEPTHLAYER: usize,
->(
+pub fn apply_material_on_parallel<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
@@ -525,7 +504,8 @@ pub fn apply_material_on_parallel<
     // Use the global thread pool to run our work.
     GLOBAL_THREAD_POOL.install(|| {
         // `par_iter` and `par_iter_mut` split the work among threads.
-        draw_buffer.depthbuffer
+        draw_buffer
+            .depthbuffer
             .par_iter()
             .zip(draw_buffer.canvas.par_iter_mut())
             .for_each(|(depth_cell, canvas_cell)| {

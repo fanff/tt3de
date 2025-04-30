@@ -110,12 +110,11 @@ class Demo3dView(App):
     Content {
         layout: horizontal;
         height: 100%;
-
     }
     TT3DView {
-
         height: 100%;
         width: 4fr;
+
     }
 
     .someinfo {

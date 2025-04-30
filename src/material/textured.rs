@@ -5,7 +5,7 @@ use crate::{
     vertexbuffer::UVBuffer,
 };
 
-use super::RenderMatTrait;
+use super::materials::RenderMaterial;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Textured {
@@ -21,7 +21,7 @@ impl Textured {
     }
 }
 impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Textured
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Textured
 {
     fn render_mat(
         &self,
@@ -33,18 +33,13 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         _uv_buffer: &UVBuffer<f32>,
     ) {
-        cell.glyph = self.glyph_idx;
-        //depth_cell.row;
-        //depth_cell.col;
-        //let depth = depth_cell.get_depth(depth_layer);
-        //let point = vec3(depth_cell.col as f32, depth_cell.row as f32, depth);
-
         let uv = pixinfo.uv;
         let uv1 = pixinfo.uv_1;
         let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
         let texture_color1 = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv1);
-        cell.front_color.copy_from(&texture_color);
 
+        cell.glyph = self.glyph_idx;
+        cell.front_color.copy_from(&texture_color);
         cell.back_color.copy_from(&texture_color1);
     }
 }

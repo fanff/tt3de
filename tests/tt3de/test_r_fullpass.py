@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import math
 import random
 import unittest
 import glm
 from tt3de.tt3de import GeometryBufferPy
-from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import DrawingBufferPy
 from tt3de.tt3de import MaterialBufferPy
 from tt3de.tt3de import TextureBufferPy
 from tt3de.tt3de import VertexBufferPy, TransformPackPy
@@ -41,7 +42,7 @@ class Test_Stages(unittest.TestCase):
         self.assertEqual(material_buffer.count(), 2)
 
         # create a drawing buffer
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         # create a geometry buffer to hold the initial elemnts
@@ -91,7 +92,7 @@ class Test_Stages(unittest.TestCase):
 class Test_PrimitivBuilding(unittest.TestCase):
 
     def test_empty_build(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         vertex_buffer = VertexBufferPy(128)
         geometry_buffer = GeometryBufferPy(256)
@@ -112,7 +113,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
     def test_one_default(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         vertex_buffer = VertexBufferPy(128)
         geometry_buffer = GeometryBufferPy(256)
@@ -137,7 +138,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
     def test_one_line3D_inside_frustrum(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
@@ -204,7 +205,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )  # pb is after pa; clearly
 
     def test_one_line3D_cutting_backplane(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
@@ -212,7 +213,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         # adding a point at 0,0,0
         self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 0.0), 0)
-        
+
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0),glm.vec2(0.0, 0.0))
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0),glm.vec2(0.0, 0.0))
 
@@ -279,7 +280,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )  # pb is the clipped point. at the back of the frustum
 
     def test_simple_one_triangle(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
@@ -336,7 +337,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
     def test_simple_two_triangle(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
@@ -412,7 +413,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
     def test_one_point_inside_raw_config(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
@@ -471,7 +472,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
     def test_points_with_camera_left_right(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         transform_buffer = TransformPackPy(64)
         primitive_buffer = PrimitiveBufferPy(256)
@@ -605,7 +606,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         ##})
 
     def test_points_with_camera_top_down(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         transform_buffer = TransformPackPy(64)
         primitive_buffer = PrimitiveBufferPy(256)
@@ -743,7 +744,7 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def setUp(self):
         # Setup the environment for the tests
-        self.drawing_buffer = AbigDrawing(512, 512)
+        self.drawing_buffer = DrawingBufferPy(512, 512)
         self.drawing_buffer.hard_clear(1000)
 
         self.transform_pack = TransformPackPy(64)
@@ -824,7 +825,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # setting up the second point of the line at the origin
         self.vertex_buffer.add_vertex(
             0.0, 0.0, 0.0)
-        
+
         # adding uv for the two points of the line
         self.vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
@@ -873,7 +874,7 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.vertex_buffer.add_vertex(
             0.0, 0.0, 0.0)
-        
+
         # adding uv for the two points of the line
         self.vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
@@ -926,9 +927,9 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.vertex_buffer.add_vertex(
             0.0, 0.0, 0.0)
-        
+
         self.vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
-        
+
         # now add the line
         material_id = 1
         self.assertEqual(
@@ -975,7 +976,7 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.vertex_buffer.add_vertex(
             0.0, 0.0, 0.0)
-        
+
         self.vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
         # now add the line
@@ -1027,7 +1028,7 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         self.vertex_buffer.add_vertex(
             0.0, 0.0, 0.0)
-        
+
         self.vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
 

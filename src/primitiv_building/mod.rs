@@ -5,7 +5,7 @@ use pyo3::{pyfunction, PyRefMut};
 use crate::{
     drawbuffer::{
         drawbuffer::{apply_material_on, apply_material_on_parallel, DrawBuffer},
-        AbigDrawing,
+        DrawingBufferPy,
     },
     geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
     material::MaterialBufferPy,
@@ -45,10 +45,7 @@ fn perspective_divide_triplet(va: &Vec4, vb: &Vec4, vc: &Vec4) -> (Vec4, Vec4, V
     )
 }
 
-fn polygon_fan_as_primitive<
-    const PIXCOUNT: usize,
-    DEPTHACC: Number,
->(
+fn polygon_fan_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
     polygon: &Polygon,
     geometry_id: usize,
     transform_pack: &TransformPack,
@@ -110,15 +107,12 @@ fn polygon_fan_as_primitive<
     }
 }
 
-fn polygon_as_primitive<
-    const PIXCOUNT: usize,
-    DEPTHACC: Number,
->(
+fn polygon_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
     polygon: &Polygon,
     geometry_id: usize,
     transform_pack: &TransformPack,
     vertex_buffer: &mut VertexBuffer,
-    uv_array: &UVBuffer< f32>,
+    uv_array: &UVBuffer<f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -174,14 +168,11 @@ fn polygon_as_primitive<
         }
     }
 }
-pub fn build_primitives<
-    const PIXCOUNT: usize,
-    DEPTHACC: Number,
->(
+pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
     geombuffer: &GeometryBuffer,
     vertex_buffer: &mut VertexBuffer,
     transform_pack: &TransformPack,
-    uv_array_input: &UVBuffer< f32>,
+    uv_array_input: &UVBuffer<f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
@@ -285,7 +276,7 @@ pub fn build_primitives_py(
     geometry_buffer: &GeometryBufferPy,
     vbpy: &mut VertexBufferPy,
     trbuffer_py: &TransformPackPy,
-    dbpy: &AbigDrawing,
+    dbpy: &DrawingBufferPy,
     primitivbuffer: &mut PrimitiveBufferPy,
 ) {
     let geom_content = &geometry_buffer.buffer;
@@ -307,7 +298,7 @@ pub fn apply_material_py(
     texturebuffer: &TextureBufferPy,
     vertex_buffer: &VertexBufferPy,
     primitivbuffer: &PrimitiveBufferPy,
-    mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
+    mut draw_buffer_py: PyRefMut<'_, DrawingBufferPy>,
 ) {
     apply_material_on(
         &mut draw_buffer_py.db,
@@ -324,7 +315,7 @@ pub fn apply_material_py_parallel(
     texturebuffer: &TextureBufferPy,
     vertex_buffer: &VertexBufferPy,
     primitivbuffer: &PrimitiveBufferPy,
-    mut draw_buffer_py: PyRefMut<'_, AbigDrawing>,
+    mut draw_buffer_py: PyRefMut<'_, DrawingBufferPy>,
 ) {
     apply_material_on_parallel(
         &mut draw_buffer_py.db,

@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import math
 import pytest
 
 
 from tt3de.tt3de import PrimitiveBufferPy
-from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import DrawingBufferPy
 
 from tt3de.tt3de import raster_all_py
 from tt3de.tt3de import VertexBufferPy
@@ -20,7 +21,7 @@ sizes = [32, 64, 128, 256, 512, 2048, 4096]
 @pytest.mark.benchmark(group="triangle_raster")
 def test_bench_rust_triangle_raster(benchmark, size):
 
-    drawing_buffer = AbigDrawing(256, 256)
+    drawing_buffer = DrawingBufferPy(256, 256)
     drawing_buffer.hard_clear(1000)
 
     primitive_buffer = PrimitiveBufferPy(2000)
@@ -55,7 +56,7 @@ TRI_COUT = [100, 1000, 10000]
 @pytest.mark.benchmark(group="triangle_rust_raster")
 def test_bench_rust_triangle_raster_mode(benchmark, mode, tri_count):
     size = 64
-    drawing_buffer = AbigDrawing(256, 256)
+    drawing_buffer = DrawingBufferPy(256, 256)
     drawing_buffer.hard_clear(10000)
 
     primitive_buffer = PrimitiveBufferPy(tri_count + 1)

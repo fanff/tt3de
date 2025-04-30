@@ -3,7 +3,7 @@ use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveEl
 use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
-    drawbuffer::{drawbuffer::DrawBuffer, AbigDrawing},
+    drawbuffer::{drawbuffer::DrawBuffer, DrawingBufferPy},
     primitivbuffer::*,
     vertexbuffer::{VertexBuffer, VertexBufferPy},
 };
@@ -120,7 +120,7 @@ fn barycentric_coord_shift(
     (w1, w2, w3)
 }
 
-pub fn raster_element<const DEPTHCOUNT: usize, >(
+pub fn raster_element<const DEPTHCOUNT: usize>(
     element: &PrimitiveElements,
     _vertexbuffer: &VertexBuffer,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
@@ -164,7 +164,7 @@ pub fn raster_all_py(
     _py: Python,
     pb: &PrimitiveBufferPy,
     vbuffpy: &VertexBufferPy,
-    mut db: PyRefMut<'_, AbigDrawing>,
+    mut db: PyRefMut<'_, DrawingBufferPy>,
 ) {
     let primitivbuffer = &pb.content;
 

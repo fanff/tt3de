@@ -1,4 +1,3 @@
-
 use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
@@ -10,13 +9,13 @@ use super::super::texturebuffer::RGBA;
 use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Textured};
 
 #[derive(Clone)]
-pub enum Material {
+pub enum Material<T = ()> {
     DoNothing {},
     Texture(Textured),
     StaticColor {
         front_color: RGBA,
         back_color: RGBA,
-        glyph_idx: u8,
+        glyph_idx: u8, // b'a'
     },
     Noise {
         noise: NoiseMaterial,
@@ -25,12 +24,10 @@ pub enum Material {
 
     DebugDepth(DebugDepth),
     DebugUV(DebugUV),
+    Custom(T),
 }
 
-pub trait RenderMatTrait<
-    const TEXTURE_BUFFER_SIZE: usize,
-    const DEPTHLAYER: usize>
-{
+pub trait RenderMaterial<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize> {
     fn render_mat(
         &self,
         cell: &mut CanvasCell,
@@ -39,12 +36,30 @@ pub trait RenderMatTrait<
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer< f32>,
+        uv_buffer: &UVBuffer<f32>,
     );
 }
 
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, >
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Material
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for ()
+{
+    fn render_mat(
+        &self,
+        _cell: &mut CanvasCell,
+        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        _depth_layer: usize,
+        _pixinfo: &PixInfo<f32>,
+        _primitive_element: &PrimitiveElements,
+        _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
+        _uv_buffer: &UVBuffer<f32>,
+    ) {
+    }
+}
+impl<
+        const TEXTURE_BUFFER_SIZE: usize,
+        const DEPTHLAYER: usize,
+        T: RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER>,
+    > RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for Material<T>
 {
     fn render_mat(
         &self,
@@ -54,7 +69,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, >
         pixinfo: &PixInfo<f32>,
         primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        uv_buffer: &UVBuffer< f32>,
+        uv_buffer: &UVBuffer<f32>,
     ) {
         match self {
             Material::DoNothing {} => {}
@@ -103,6 +118,15 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, >
                 uv_buffer,
             ),
             Material::DebugUV(m) => m.render_mat(
+                cell,
+                depth_cell,
+                depth_layer,
+                pixinfo,
+                primitive_element,
+                texture_buffer,
+                uv_buffer,
+            ),
+            Material::Custom(t) => t.render_mat(
                 cell,
                 depth_cell,
                 depth_layer,

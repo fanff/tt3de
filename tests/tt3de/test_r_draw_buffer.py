@@ -3,7 +3,7 @@ import unittest
 import pytest
 
 from tests.tt3de.test_utils import assertPixInfoEqual
-from tt3de.tt3de import AbigDrawing
+from tt3de.tt3de import DrawingBufferPy
 from tt3de.tt3de import apply_material_py
 from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
 import glm
@@ -15,7 +15,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_create_verybig(self):
 
-        gb = AbigDrawing(10, 10)
+        gb = DrawingBufferPy(10, 10)
 
         layer = 0
         v = gb.get_depth_buffer_cell(0, 0, layer)
@@ -71,7 +71,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_apply_material(self):
 
-        draw_buffer = AbigDrawing(10, 10)
+        draw_buffer = DrawingBufferPy(10, 10)
         draw_buffer.hard_clear(100.0)
 
         material_buffer = MaterialBufferPy()
@@ -88,12 +88,12 @@ class Test_DrawBuffer(unittest.TestCase):
         )
 
     def test_wh_canvas(self):
-        drawbuffer = AbigDrawing(max_row=23, max_col=178)
+        drawbuffer = DrawingBufferPy(max_row=23, max_col=178)
         self.assertEqual(drawbuffer.get_row_count(), 23)
         self.assertEqual(drawbuffer.get_col_count(), 178)
 
     def test_clear_canvas(self):
-        drawbuffer = AbigDrawing(512, 512)
+        drawbuffer = DrawingBufferPy(512, 512)
 
         drawbuffer.hard_clear(12.0)
 
@@ -154,7 +154,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_set_canvasX(self):
 
-        drawbuffer = AbigDrawing(32, 32)
+        drawbuffer = DrawingBufferPy(32, 32)
 
         drawbuffer.hard_clear(10)
         drawbuffer.set_canvas_cell(
@@ -180,7 +180,7 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(canvas_content, hyp)
 
     def test_set_canvasY(self):
-        drawbuffer = AbigDrawing(32, 32)
+        drawbuffer = DrawingBufferPy(32, 32)
 
         drawbuffer.hard_clear(10)
         drawbuffer.set_canvas_cell(
@@ -207,7 +207,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_set_depth(self):
         w, h = 32, 32
-        drawbuffer = AbigDrawing(w, h)
+        drawbuffer = DrawingBufferPy(w, h)
 
         # setting initial depth buffer to 10
         drawbuffer.hard_clear(10)
@@ -302,7 +302,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_set_depth_movelayer_diffent_depth(self):
         w, h = 32, 32
-        drawbuffer = AbigDrawing(w, h)
+        drawbuffer = DrawingBufferPy(w, h)
 
         # setting initial depth buffer to 10
         drawbuffer.hard_clear(10)
@@ -407,7 +407,7 @@ class Test_DrawBuffer(unittest.TestCase):
 
     def test_set_depth_different_depth(self):
         w, h = 32, 32
-        drawbuffer = AbigDrawing(w, h)
+        drawbuffer = DrawingBufferPy(w, h)
 
         # setting initial depth buffer to 10
         drawbuffer.hard_clear(10)
@@ -512,7 +512,7 @@ class Test_DrawBuffer(unittest.TestCase):
 class Test_totextual(unittest.TestCase):
 
     def test_to_textual_2(self):
-        gb = AbigDrawing(max_row=10, max_col=20)
+        gb = DrawingBufferPy(max_row=10, max_col=20)
         gb.hard_clear(100.0)
         gb.set_canvas_cell(0, 0, (0, 100, 200, 255), (200, 100, 0, 255), 1)
 
@@ -551,7 +551,7 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(len(res[0]), 10)
 
     def test_to_textual_2_out_bound_x(self):
-        gb = AbigDrawing(max_row=178, max_col=19)
+        gb = DrawingBufferPy(max_row=178, max_col=19)
         gb.hard_clear(100.0)
         gb.set_bit_size_front(8, 8, 8)
         gb.set_bit_size_back(8, 8, 8)
@@ -573,7 +573,7 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(len(res[0]), 20)
 
     def test_to_textual_2_out_bound_y(self):
-        gb = AbigDrawing(10, 10)
+        gb = DrawingBufferPy(10, 10)
         gb.hard_clear(100.0)
 
         res = gb.to_textual_2(0, 3, 1, 30)
@@ -586,7 +586,7 @@ class Test_totextual(unittest.TestCase):
 
     def test_to_textual_2_zero_init(self):
 
-        gb = AbigDrawing(max_row=0, max_col=0)
+        gb = DrawingBufferPy(max_row=0, max_col=0)
 
         gb.set_bit_size_front(8, 8, 8)
         gb.set_bit_size_back(8, 8, 8)

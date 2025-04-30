@@ -1,29 +1,20 @@
+# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 from statistics import mean
 from typing import Any, Coroutine, List
-
-from rich.color import Color
-from rich.style import Style
-from rich.text import Segment
+from textual.widgets import Log
 from textual import events
-from textual.app import App, ComposeResult, RenderResult
-from textual.containers import Container
+from textual.app import ComposeResult
 from textual.css.query import NoMatches
-from textual.layouts import horizontal
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
     Button,
-    Collapsible,
     DataTable,
-    Footer,
-    Header,
     Input,
     Label,
-    Markdown,
     Sparkline,
-    Static,
 )
 
 from tt3de.textual_widget import TimingRegistry
@@ -34,7 +25,7 @@ class FloatSelector(Widget, can_focus=False):
 
     FloatSelector{
         layout: horizontal;
-        
+
         height:auto;
     }
     FloatSelector > Button {
@@ -53,8 +44,8 @@ class FloatSelector(Widget, can_focus=False):
 
     FloatSelector > .minus-1{
         align-horizontal: left;
-        
-        
+
+
     }
     FloatSelector > .plus-1{
         align-horizontal: right;
@@ -80,7 +71,8 @@ class FloatSelector(Widget, can_focus=False):
 
     @dataclass
     class Changed(Message):
-        """Posted when the value changes.
+        """
+        Posted when the value changes.
 
         Can be handled using `on_float_selector_changed` in a subclass of `FloatSelector` or in a parent
         widget in the DOM.
@@ -216,7 +208,8 @@ class Vector3Selector(Widget):
 
     @dataclass
     class Changed(Message):
-        """Posted when the value changes.
+        """
+        Posted when the value changes.
 
         Can be handled using `on_vector_selector_changed` in a subclass of `Vector3Selector` or in a parent
         widget in the DOM.
@@ -286,7 +279,8 @@ class CameraConfig(Widget):
 
     @dataclass
     class PositionChanged(Message):
-        """Posted when the value changes.
+        """
+        Posted when the value changes.
 
         Can be handled using `on_camera_config_position_changed` in a subclass of `PositionChanged` or in a parent
         widget in the DOM.
@@ -437,14 +431,14 @@ class CameraConfig(Widget):
     def refresh_camera_rotation(self, attitude: tuple[float, float], no_events=True):
         yaw, pitch = attitude
         if no_events:
-            self.query_one(f"#input_camera_yaw").current_value = yaw
-            self.query_one(f"#input_camera_pitch").current_value = pitch
+            self.query_one("#input_camera_yaw").current_value = yaw
+            self.query_one("#input_camera_pitch").current_value = pitch
 
     def refresh_camera_zoom(self, zoom: float, no_events=True):
         if no_events:
-            self.query_one(f"#input_camera_zoom").current_value = zoom
+            self.query_one("#input_camera_zoom").current_value = zoom
         else:
-            self.query_one(f"#input_camera_zoom").current_buffer = zoom
+            self.query_one("#input_camera_zoom").current_buffer = zoom
 
 
 class RenderInfo(Widget, can_focus=False):
@@ -493,8 +487,8 @@ class RenderInfo(Widget, can_focus=False):
         else:
             fps_render = 1.0 / mean_dur_sec
 
-        l: Label = self.query_one("#timeinfo")
-        l.update(f"Render: {(1000 * mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
+        line: Label = self.query_one("#timeinfo")
+        line.update(f"Render: {(1000 * mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
 
         # update the frame count
         self.update_frame_count(timing_registry.get_duration("frame_idx"))
@@ -505,15 +499,13 @@ class RenderInfo(Widget, can_focus=False):
         spark.data = spark.data[1:] + [to_tt_duration]
         mean_dur_sec = mean(spark.data)
 
-        l: Label = self.query_one("#to_tex")
-        l.update(f"to_text: {(1000 * mean_dur_sec):.2f} ms ")
+        line: Label = self.query_one("#to_tex")
+        line.update(f"to_text: {(1000 * mean_dur_sec):.2f} ms ")
 
     def update_frame_count(self, frame_count: int):
-        l: Label = self.query_one("#frame_idx")
-        l.update(f"Frame: {frame_count}")
+        line: Label = self.query_one("#frame_idx")
+        line.update(f"Frame: {frame_count}")
 
-
-from textual.widgets import DataTable
 
 DEPTH_BUFFER_COLUMNS = ["L#", "depth", "geom", "node", "mat", "prim"]
 
@@ -570,9 +562,6 @@ class RustRenderContextInfo(Widget, can_focus=False):
     def update_counts(self, updates: dict):
         label: Label = self.query_one(Label)
         label.update(str(updates))
-
-
-from textual.widgets import Log
 
 
 class EngineLog(Widget):

@@ -14,7 +14,7 @@ from textual.strip import Strip
 
 from tt3de.glm_camera import GLMCamera
 from tt3de.tt3de import (
-    AbigDrawing,
+    DrawingBufferPy,
     GeometryBufferPy,
     MaterialBufferPy,
     PrimitiveBufferPy,
@@ -48,7 +48,7 @@ class RustRenderContext:
         self.geometry_buffer.add_point(0, 0, node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
         self.transform_buffer = TransformPackPy(transform_buffer_size)
-        self.drawing_buffer = AbigDrawing(max_row=self.height, max_col=self.width)
+        self.drawing_buffer = DrawingBufferPy(max_row=self.height, max_col=self.width)
 
         self.global_bit_size = 4
         # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
@@ -59,7 +59,9 @@ class RustRenderContext:
     def update_wh(self, w, h):
         if w != self.width or h != self.height:
             self.width, self.height = w, h
-            self.drawing_buffer = AbigDrawing(max_row=self.height, max_col=self.width)
+            self.drawing_buffer = DrawingBufferPy(
+                max_row=self.height, max_col=self.width
+            )
             # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             self.drawing_buffer.hard_clear(100.0)
