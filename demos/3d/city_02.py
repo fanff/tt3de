@@ -60,8 +60,10 @@ class GLMTester(TT3DView):
         self.reftime = time()
 
     def update_step(self, timediff):
+        time_since_start = time() - self.reftime
+
         self.city.set_transform(
-            self.rc, glm.rotate(time() - self.reftime, glm.vec3(0, 1, 0))
+            self.rc, glm.rotate(time_since_start / 2, glm.vec3(0, 1, 0))
         )
 
     def post_render_step(self):
