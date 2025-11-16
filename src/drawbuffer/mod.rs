@@ -1,4 +1,4 @@
-use nalgebra_glm::Vec2;
+use nalgebra_glm::{Vec2, Vec3};
 use pyo3::{
     intern,
     prelude::*,
@@ -10,7 +10,7 @@ use pyo3::types::PyDict;
 pub mod glyphset;
 use glyphset::*;
 pub mod segment_cache;
-use crate::utils::convert_glm_vec2;
+use crate::utils::{convert_glm_vec2, convert_glm_vec3};
 use segment_cache::*;
 
 #[pyclass]
@@ -34,10 +34,10 @@ pub struct DrawingBufferPy {
 impl DrawingBufferPy {
     #[new]
     fn new(py: Python, max_row: usize, max_col: usize) -> Self {
-        let rich_style_module = py.import_bound("rich.style").unwrap();
-        let rich_color_module = py.import_bound("rich.color").unwrap();
-        let rich_text_module = py.import_bound("rich.text").unwrap();
-        let rich_color_triplet_module = py.import_bound("rich.color_triplet").unwrap();
+        let rich_style_module = py.import("rich.style").unwrap();
+        let rich_color_module = py.import("rich.color").unwrap();
+        let rich_text_module = py.import("rich.text").unwrap();
+        let rich_color_triplet_module = py.import("rich.color_triplet").unwrap();
 
         let segment_class = rich_text_module.getattr("Segment").unwrap();
         let style_class = rich_style_module.getattr("Style").unwrap();
@@ -101,7 +101,8 @@ impl DrawingBufferPy {
 
     fn get_min_max_depth(&self, py: Python, layer: usize) -> Py<PyTuple> {
         let mima = self.db.get_min_max_depth(layer);
-        mima.into_py(py)
+        let tt = PyTuple::new(py, [mima.0, mima.1]).unwrap();
+        tt.into()
     }
 
     fn set_depth_content(
@@ -109,6 +110,7 @@ impl DrawingBufferPy {
         py: Python,
         row: usize,
         col: usize,
+        normal_py: Py<PyAny>,
         depth: f32,
         uv_py: Py<PyAny>,
         uv_1_py: Py<PyAny>,
@@ -120,10 +122,13 @@ impl DrawingBufferPy {
         let uv: Vec2 = convert_glm_vec2(py, uv_py);
         let uv_1: Vec2 = convert_glm_vec2(py, uv_1_py);
 
+        let normal: Vec3 = convert_glm_vec3(py, normal_py);
+
         self.db.set_depth_content(
             row,
             col,
             depth,
+            normal,
             uv,
             uv_1,
             node_id,
@@ -135,12 +140,14 @@ impl DrawingBufferPy {
 
     fn get_pix_info_element(&self, py: Python, idx: usize) -> Py<PyDict> {
         let pix_info_element = self.db.pixbuffer[idx];
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
 
         let wslice = pix_info_element.uv.as_slice();
         let w_1_slice = pix_info_element.uv_1.as_slice();
         dict.set_item("uv", wslice).unwrap();
         dict.set_item("uv_1", w_1_slice).unwrap();
+        dict.set_item("normal", pix_info_element.normal.as_slice())
+            .unwrap();
 
         dict.set_item("material_id", pix_info_element.material_id)
             .unwrap();
@@ -160,7 +167,7 @@ impl DrawingBufferPy {
         layer: usize,
     ) -> Py<PyDict> {
         let cell = self.db.get_depth_buffer_cell(row, col);
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
 
         let pix_info_element = self.db.pixbuffer[cell.pixinfo[layer]];
 
@@ -208,7 +215,7 @@ impl DrawingBufferPy {
 
     fn get_canvas_cell(&self, py: Python, r: usize, c: usize) -> Py<PyDict> {
         let cell = self.db.get_canvas_cell(r, c);
-        let dict = PyDict::new_bound(py); // this will be super slow
+        let dict = PyDict::new(py); // this will be super slow
         dict.set_item("f_r", cell.front_color.r).unwrap();
         dict.set_item("f_g", cell.front_color.g).unwrap();
         dict.set_item("f_b", cell.front_color.b).unwrap();
@@ -235,14 +242,14 @@ impl DrawingBufferPy {
         max_y: usize,
     ) -> Py<PyList> {
         let canvas = &self.db.canvas;
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
 
         // create a list of rows
-        let all_rows_list = PyList::empty_bound(py);
+        let all_rows_list = PyList::empty(py);
         let append_row_method = all_rows_list.getattr(intern!(py, "append")).unwrap();
         for row_idx in min_y..max_y {
             // create a list of stuff for this current row.
-            let arow_list = PyList::empty_bound(py);
+            let arow_list = PyList::empty(py);
             let append_method = arow_list.getattr(intern!(py, "append")).unwrap();
             if row_idx < self.max_row {
                 // the row_idx is inside the screen;
@@ -307,10 +314,7 @@ impl DrawingBufferPy {
                                         py,
                                         (
                                             theglyph,
-                                            &self
-                                                .style_class
-                                                .call_bound(py, (), Some(&dict))
-                                                .unwrap(),
+                                            &self.style_class.call(py, (), Some(&dict)).unwrap(),
                                         ),
                                     )
                                     .unwrap();
@@ -388,21 +392,21 @@ impl DrawingBufferPy {
                     .call_method1(py, "from_triplet", (back_triplet,))
                     .unwrap();
 
-                let dict = PyDict::new_bound(py);
+                let dict = PyDict::new(py);
                 dict.set_item("color", front_color).unwrap();
                 dict.set_item("bgcolor", back_color).unwrap();
 
                 // trying to call Style(color=front_color,bgcolor=back_color)
-                let style = self.style_class.call_bound(py, (), Some(&dict)).unwrap();
+                let style = self.style_class.call(py, (), Some(&dict)).unwrap();
 
                 let segment = self.segment_class.call1(py, ("?", style)).unwrap();
 
                 row.push(segment);
             }
-            rows.push(PyList::new_bound(py, row));
+            rows.push(PyList::new(py, row).unwrap());
         }
 
-        PyList::new_bound(py, rows).into()
+        PyList::new(py, rows).unwrap().into()
     }
 }
 

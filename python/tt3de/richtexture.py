@@ -1,16 +1,9 @@
-import array
+# -*- coding: utf-8 -*-
 import itertools
-from math import exp
-from typing import Iterable, List
+from typing import List
 
-import glm
-from rich.color import Color
-from rich.style import Style
-from rich.text import Segment
-from textual.strip import Strip
 
 from tt3de.asset_load import extract_palette
-from tt3de.points import Point3D, PPoint2D
 
 
 class TextureAscii:

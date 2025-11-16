@@ -110,7 +110,7 @@ impl PrimitiveBufferPy {
             .add_triangle3d(node_id, geometry_id, material_id, va, vb, vc)
     }
 
-    #[pyo3(signature = ( node_id, geometry_id, material_id, top, left, top_left_depth, bottom, right, bottom_right_depth, 
+    #[pyo3(signature = ( node_id, geometry_id, material_id, top, left, top_left_depth, bottom, right, bottom_right_depth,
         top_left_uv= (0.0, 0.0), bottom_right_uv= (1.0, 1.0) ))]
     fn add_rect(
         &mut self,
@@ -139,13 +139,7 @@ impl PrimitiveBufferPy {
         self.content
             .add_rect(node_id, geometry_id, material_id, top_left, bottom_right)
     }
-    fn add_static(&mut self) {
-        todo!()
-    }
 
-    fn hello(&mut self) {
-        todo!()
-    }
 
     fn get_primitive(&self, py: Python, idx: usize) -> Py<PyDict> {
         to_dict(py, &self.content.content[idx])
@@ -153,7 +147,7 @@ impl PrimitiveBufferPy {
 }
 
 fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
 
     match primitive {
         &PrimitiveElements::Triangle(t) => {
@@ -201,6 +195,7 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
         }
         &PrimitiveElements::Rect(rect) => {
             into_dict(py, &rect.primitive_reference, &dict);
+            dict.set_item("_type", "rect").unwrap();
             dict.set_item("pa", vertex_into_dict(py, &rect.top_left))
                 .unwrap();
             dict.set_item("pb", vertex_into_dict(py, &rect.bottom_right))
@@ -222,7 +217,7 @@ fn into_dict(py: Python, primitive_ref: &PrimitivReferences, dict: &Bound<PyDict
 }
 
 fn point_info_into_dict(py: Python, pi: &PointInfo<f32>) -> Py<PyDict> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     dict.set_item("row", pi.row).unwrap();
     dict.set_item("col", pi.col).unwrap();
     dict.set_item("depth", pi.p.z).unwrap();
@@ -230,7 +225,7 @@ fn point_info_into_dict(py: Python, pi: &PointInfo<f32>) -> Py<PyDict> {
 }
 
 fn vertex_into_dict(py: Python, pi: &Vertex) -> Py<PyDict> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     dict.set_item("pos", vec4_as_pylist(py, pi.pos)).unwrap();
     dict.set_item("normal", vec3_as_pylist(py, pi.normal))
         .unwrap();

@@ -1,4 +1,4 @@
-use nalgebra_glm::Vec2;
+use nalgebra_glm::{Vec2, Vec3};
 
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
@@ -18,6 +18,7 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
             prim_ref,
             drawing_buffer,
             pa.p.z,
+            Vec3::new(0.0, 0.0, 1.0),
             pa.col,
             pa.row,
             1.0,
@@ -34,6 +35,7 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
                 prim_ref,
                 drawing_buffer,
                 depth,
+                Vec3::new(0.0, 0.0, 1.0),
                 col,
                 pa.row,
                 ratio_to_a,
@@ -51,6 +53,7 @@ pub fn raster_horizontal_line<const DEPTHCOUNT: usize>(
                 prim_ref,
                 drawing_buffer,
                 depth,
+                Vec3::new(0.0, 0.0, 1.0),
                 col,
                 pa.row,
                 1.0 - ratio,
@@ -108,6 +111,7 @@ pub fn raster_line_along_columns<const DEPTHCOUNT: usize>(
             prim_ref,
             drawing_buffer,
             depth,
+            Vec3::new(0.0, 0.0, 1.0),
             col,
             row_rounder_as_usize,
             1.0 - ratio_caped,

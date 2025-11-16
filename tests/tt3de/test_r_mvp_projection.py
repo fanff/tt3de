@@ -2,7 +2,7 @@
 import math
 import unittest
 
-import glm
+from pyglm import glm
 
 from tests.tt3de.test_utils import perspective_divide
 from tt3de.prefab3d import Prefab3D
@@ -34,8 +34,8 @@ class TestMVP_Projection(unittest.TestCase):
             glm.lookAt(glm.vec3(0, 0, 3), glm.vec3(0, 0, -3), glm.vec3(0, 1, 0))
         )
 
-        vertex_buffer = VertexBufferPy(128)
-        self.assertEqual(vertex_buffer.get_vertex_count(), 0)
+        vertex_buffer = VertexBufferPy(128,128,128)
+        self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         vertices = [
             Point3D(
@@ -52,19 +52,19 @@ class TestMVP_Projection(unittest.TestCase):
             ),  # this is the point far in the back; not in the frustum
         ]
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
-            self.assertEqual(vertex_buffer.get_vertex_count(), pidx + 1)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.get_3d_len(), pidx + 1)
 
-        self.assertEqual(vertex_buffer.get_vertex_count(), 4)
+        self.assertEqual(vertex_buffer.get_3d_len(), 4)
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
         vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=4)
 
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
-        pb = glm.vec4(vertex_buffer.get_clip_space_vertex(1))
-        pc = glm.vec4(vertex_buffer.get_clip_space_vertex(2))
-        pd = glm.vec4(vertex_buffer.get_clip_space_vertex(3))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
+        pb = glm.vec4(vertex_buffer.get_3d_calculated_tuple(1))
+        pc = glm.vec4(vertex_buffer.get_3d_calculated_tuple(2))
+        pd = glm.vec4(vertex_buffer.get_3d_calculated_tuple(3))
 
         pa_ndc = perspective_divide(pa)
         pb_ndc = perspective_divide(pb)
@@ -118,8 +118,8 @@ class TestMVP_Projection(unittest.TestCase):
         # create a view matrix from yaw and pitch and position
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128)
-        self.assertEqual(vertex_buffer.get_vertex_count(), 0)
+        vertex_buffer = VertexBufferPy(128,128,128)
+        self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         vertices = [
             camera_pos
@@ -128,13 +128,13 @@ class TestMVP_Projection(unittest.TestCase):
             )  # this point is in the middle, far enough from the camera; inside frustrum
         ]
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
         vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=len(vertices))
 
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
         pa_ndc = perspective_divide(pa)
         self.assertAlmostEqual(pa_ndc.x, 0.0, 4)
         self.assertAlmostEqual(pa_ndc.y, 0.0, 4)
@@ -160,8 +160,8 @@ class TestMVP_Projection(unittest.TestCase):
 
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128)
-        self.assertEqual(vertex_buffer.get_vertex_count(), 0)
+        vertex_buffer = VertexBufferPy(128,128,128)
+        self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         # adding one point in front of the camera inside the frustum
         vertices = [
@@ -171,13 +171,13 @@ class TestMVP_Projection(unittest.TestCase):
             )  # this point is in the middle, far enough from the camera; inside frustrum
         ]
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
         vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=len(vertices))
 
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
         pa_ndc = perspective_divide(pa)
         self.assertAlmostEqual(pa_ndc.x, 0.0, 4)
         self.assertAlmostEqual(pa_ndc.y, 0.0, 4)
@@ -204,8 +204,8 @@ class TestMVP_Projection(unittest.TestCase):
 
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128)
-        self.assertEqual(vertex_buffer.get_vertex_count(), 0)
+        vertex_buffer = VertexBufferPy(128,128,128)
+        self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         point_inside_frustrum = camera_pos - (camera.direction_vector() * 5)
 
@@ -217,17 +217,17 @@ class TestMVP_Projection(unittest.TestCase):
             point_inside_frustrum + (camera.right_vector() * (0.3)),  #
         ]
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
         vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=4)
 
         # extract first 4 points
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
-        pb = glm.vec4(vertex_buffer.get_clip_space_vertex(1))
-        pc = glm.vec4(vertex_buffer.get_clip_space_vertex(2))
-        pd = glm.vec4(vertex_buffer.get_clip_space_vertex(3))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
+        pb = glm.vec4(vertex_buffer.get_3d_calculated_tuple(1))
+        pc = glm.vec4(vertex_buffer.get_3d_calculated_tuple(2))
+        pd = glm.vec4(vertex_buffer.get_3d_calculated_tuple(3))
 
         pa_ndc = perspective_divide(pa)
         pb_ndc = perspective_divide(pb)

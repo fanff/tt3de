@@ -1,183 +1,185 @@
-import itertools
-from types import TracebackType
-from typing import Any, List, Optional
+# -*- coding: utf-8 -*-
+from typing import List, Optional
 
-import glm
-from typing_extensions import Self
+from pyglm import glm
 
-from tt3de.glm_camera import GLMCamera
-from tt3de.points import Point2D, Point3D
-from tt3de.render_context_rust import RustRenderContext
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from tt3de.render_context_rust import RustRenderContext
+
+from tt3de.points import Point3D
 from tt3de.utils import (
-    p2d_tovec2,
-    p2d_uv_tomatrix,
-    p3d_tovec3,
-    p3d_tovec4,
-    p3d_triplet_to_matrix,
     random_node_id,
 )
 
 
-class TT2DNode:
-    def __init__(self, name: str = None, transform: Optional[glm.mat4] = None):
+class TreeNode:
+    def __init__(self, name: str = None):
         self.name = name if name is not None else random_node_id()
-        self.elements: List[TT2DNode] = []
-        self.local_transform: glm.mat4 = (
-            transform if transform is not None else glm.mat4(1.0)
-        )
-        self.node_id = None
+        self.elements: List[TreeNode] = []
 
-    def cache_output(self, segmap):
-        for e in self.elements:
-            e.cache_output(segmap)
+        # will be set when added to a parent node
+        self.parent: TreeNode = None
+        self.rc: "RustRenderContext" = None
 
-    def draw(self, camera: GLMCamera, geometry_buffer, model_matrix=None):
-        if model_matrix is not None:
-            _model_matrix = model_matrix * self.local_transform
-        else:
-            _model_matrix = self.local_transform
-        for elem in self.elements:
-            elem.draw(camera, geometry_buffer, _model_matrix)
-
-    def add_child(self, child: "TT2DNode"):
-        """Adds a child element to the list of elements.
+    def add_child(self, child: "TreeNode"):
+        """
+        Adds a child element to the list of elements.
 
         Args:
             child: The child element to be added.
         """
+        child.parent = self
         self.elements.append(child)
 
-    def insert_in(self, rc: "RustRenderContext", parent_transform: Optional[glm.mat4]):
-        # self.node_id = rc.transform_buffer.add_node_transform(self.local_transform)
-        if parent_transform:
-            fff = parent_transform * self.local_transform
-        else:
-            fff = self.local_transform
-        for e in self.elements:
-            e.insert_in(rc, fff)
+    def parent_chain_iterator(self):
+        current = self.parent
+        while current is not None:
+            yield current
+            current = current.parent
 
 
-class TT2DMesh(TT2DNode):
-    def __init__(
-        self, name: str = None, transform: Optional[glm.mat3] = None, material_id=0
-    ):
-        super().__init__(name=name, transform=transform)
-        self.elements = []
-        self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
-        self.material_id = material_id
-        self.node_id = None
+class TT2DNode(TreeNode):
+    def __init__(self, name: str = None, transform: Optional[glm.mat4] = None):
+        super().__init__(name=name)
 
-    def cache_output(self, segmap):
-        self.glm_elements = [
-            [p3d_tovec3(a), p3d_tovec3(b), p3d_tovec3(c)]
-            for (a, b, c) in (self.elements)
-        ]
-
-        self.glm_elements_4 = [
-            [p3d_tovec4(a), p3d_tovec4(b), p3d_tovec4(c)]
-            for (a, b, c) in (self.elements)
-        ]
-
-        import itertools
-
-        self.uvmap_prepared = itertools.chain(
-            [
-                [pa.x, pa.y, pb.x, pb.y, pc.x, pc.y]
-                for face_idx, (pa, pb, pc) in enumerate(self.uvmap)
-            ]
+        self.local_transform: glm.mat4 = (
+            transform if transform is not None else glm.mat4(1.0)
         )
+        self.global_transform_dirty: bool = True
+        self.global_transform_matrix: glm.mat4 = self.local_transform
 
-    def draw(self, camera: GLMCamera, geometry_buffer, model_matrix=None, node_id=0):
-        if model_matrix is not None:
-            _model_matrix = model_matrix * self.local_transform
-        else:
-            _model_matrix = self.local_transform
-        tr = camera.view_matrix_2D * _model_matrix
-
-        for faceidx, facepoints in enumerate(self.glm_elements_4):
-            a, b, c = facepoints
-
-            a = tr * a
-            b = tr * b
-            c = tr * c
-
-            a = [a.x, a.y, a.z]
-            b = [b.x, b.y, b.z]
-            c = [c.x, c.y, c.z]
-            uva, uvb, uvc = self.uvmap[faceidx]
-
-            face_uv = [uva.x, uva.y, uvb.x, uvb.y, uvc.x, uvc.y] + [0.0] * 42
-            geometry_buffer.add_triangle_to_buffer(
-                a,
-                b,
-                c,
-                face_uv,
-                node_id,
-                self.material_id,  # uv list  # node_id
-            )
-
-
-class TT2Polygon(TT2DNode):
-    def __init__(
-        self, name: str = None, transform: Optional[glm.mat3] = None, material_id=0
-    ):
-        super().__init__(name=name, transform=transform)
-        self.vertex_list: List[Point3D] = []
-        self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
-        self.material_id = material_id
-
+        # will be set when inserted in the render context
         self.node_id = None
+        # will be set when added to a parent node
+        # declared here for type checking purposes
+        self.elements: List[TT2DNode] = []
+        self.parent: TT2DNode = None
 
-    def insert_in(self, rc: "RustRenderContext", parent_transform: glm.mat4):
+    def add_child(self, child: "TT2DNode"):
+        """
+        Adds a child element to the list of elements.
+
+        Args:
+            child: The child element to be added.
+        """
+        # call the super add_child to set the parent
+        super().add_child(child)
+        child.global_transform_dirty = True
+
+    def global_transform(self) -> glm.mat4:
+        return self.global_transform_matrix
+
+    def to_global_transform(self) -> glm.mat4:
+        if self.parent is not None:
+            return self.parent.global_transform() * self.local_transform
+        else:
+            return self.local_transform
+
+    def __recalc_global_transform(self):
+        self.global_transform_matrix = self.to_global_transform()
+
+    def set_local_transform(self, transform: glm.mat4):
+        self.local_transform = transform
+        self.global_transform_dirty = True
+
+    def sync_in_context(self, rc: "RustRenderContext"):
+        if self.global_transform_dirty:
+            self.__recalc_global_transform()
+            rc.transform_buffer.set_node_transform(
+                self.node_id, self.global_transform_matrix
+            )
+            self.global_transform_dirty = False
+            for child in self.elements:
+                child.global_transform_dirty = True
+        for child in self.elements:
+            child.sync_in_context(rc)
+
+    def insert_in(
+        self,
+        rc: "RustRenderContext",
+    ):
+        self.rc = rc
         self.node_id = rc.transform_buffer.add_node_transform(
-            parent_transform * self.local_transform
+            self.global_transform_matrix
         )
+        self.global_transform_dirty = True
 
-        start_idx = None
-        for p3d in self.vertex_list:
-            vertex_idx = rc.vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z)
-            if start_idx is None:
-                start_idx = vertex_idx
+        for e in self.elements:
+            e.insert_in(rc)
 
-        start_uv = None
-        for uva, uvb, uvc in self.uvmap:
-            idx = rc.vertex_buffer.add_uv(
-                p2d_tovec2(uva), p2d_tovec2(uvb), p2d_tovec2(uvc)
-            )
-            if start_uv is None:
-                start_uv = idx
 
-        rc.geometry_buffer.add_polygon(
-            start_idx,
-            len(self.vertex_list) - 2,
+class TT2DPoints(TT2DNode):
+    def __init__(
+        self,
+        name: str = None,
+        transform: Optional[glm.mat4] = None,
+        point_list: List[Point3D] = None,
+        material_id=0,
+    ):
+        super().__init__(name=name, transform=transform)
+
+        self.point_list: List[Point3D] = point_list if point_list is not None else []
+        self.material_id = material_id
+
+        # will be set when inserted in the render context
+        self.geom_id = None
+
+    def insert_in(self, rc: "RustRenderContext"):
+        super().insert_in(rc)
+
+        p_start = None
+        for p3d in self.point_list:
+            vertex_idx = rc.vertex_buffer.add_2d_vertex(p3d.x, p3d.y, p3d.z)
+            if p_start is None:
+                p_start = vertex_idx
+
+        self.geom_id = rc.geometry_buffer.add_points_2d(
+            p_start,
+            len(self.point_list),
+            0,
             self.node_id,
             self.material_id,
-            start_uv,
         )
 
-    def cache_output(self, segmap):
-        self.uvmap_prepared = [
-            [pa.x, pa.y, pb.x, pb.y, pc.x, pc.y] * 8
-            for face_idx, (pa, pb, pc) in enumerate(self.uvmap)
-        ]
 
-        self.glm_elements_4 = [p3d_tovec4(v) for v in (self.vertex_list)]
+class TT2DRect(TT2DNode):
+    def __init__(
+        self,
+        name: str = None,
+        transform: Optional[glm.mat4] = None,
+        width: float = 1.0,
+        height: float = 1.0,
+        material_id=0,
+    ):
+        super().__init__(name=name, transform=transform)
 
-    def draw(self, camera: GLMCamera, geometry_buffer, model_matrix=None, node_id=0):
-        if model_matrix is not None:
-            _model_matrix = model_matrix * self.local_transform
-        else:
-            _model_matrix = self.local_transform
-        tr = camera.view_matrix_2D * _model_matrix
+        self.width = width
+        self.height = height
+        self.material_id = material_id
 
-        transformed_vertex = (tr * vertex for vertex in (self.glm_elements_4))
-        transformed_vertex = [
-            [vertex.x, vertex.y, vertex.z] for vertex in transformed_vertex
-        ]
+        # will be set when inserted in the render context
+        self.geom_id = None
+        self.vertex_indices: List[int] = []
 
-        geometry_buffer.add_polygon_to_buffer(
-            transformed_vertex,
-            self.uvmap_prepared,
-            node_id,
-            self.material_id,  # uv list  # node_id
+    def insert_in(self, rc: "RustRenderContext"):
+        super().insert_in(rc)
+
+        # add rectangle vertices
+        self.vertex_indices = []
+        for x, y in [(0, 0), (self.width, self.height)]:
+            vertex_idx = rc.vertex_buffer.add_2d_vertex(x, y, 0.0)
+            self.vertex_indices.append(vertex_idx)
+
+        uv_start_index = rc.vertex_buffer.add_uv(
+            glm.vec2(0, 0), glm.vec2(1, 1), glm.vec2(0.0, 0.0)
+        )
+
+        self.geom_id = rc.geometry_buffer.add_rect2d(
+            self.vertex_indices[0],
+            uv_start_index,
+            self.node_id,
+            self.material_id,
         )

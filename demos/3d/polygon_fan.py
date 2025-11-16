@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from time import time
-import glm
+from pyglm import glm
 
 from textual.app import App, ComposeResult
 from textual.widgets import (
@@ -47,7 +47,7 @@ class GLMTester(TT3DView):
         self.root3Dnode.add_child(poly)
 
         # final append
-        self.rc.append(self.root3Dnode)
+        self.rc.append_root(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()

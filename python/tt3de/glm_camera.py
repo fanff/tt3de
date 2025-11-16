@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
+from enum import Enum, auto
 import math
 
-import glm
+from pyglm import glm
+
+
+class ViewportScaleMode(Enum):
+    # Preserve aspect ratio, entire logical 1x1 area visible, may letterbox
+    FIT = auto()
+    # Preserve aspect ratio, fill screen, logical 1x1 area may be cropped
+    FILL = auto()
+    # Ignore aspect ratio, logical 1x1 is stretched to screen
+    STRETCH = auto()
 
 
 class GLMCamera:
@@ -24,10 +34,13 @@ class GLMCamera:
         self.dist_max = dist_max
         self.character_factor = character_factor
 
+        # 2D Camera Info
         self.zoom_2D = 1.0
-
+        self.position_2d = glm.vec2(0.0, 0.0)
         self.view_matrix_2D = glm.scale(glm.vec2(self.character_factor, 1.0))
+        self.current_method = ViewportScaleMode.STRETCH
 
+        # 3D Camera Info
         self._pos = pos
         self.yaw = 0.0
         self.pitch = 0.0
@@ -81,17 +94,70 @@ class GLMCamera:
                 (self.fov_radians * h) / w, w, h, self.dist_min, self.dist_max
             )
 
+    def get_position_2d(self) -> glm.vec2:
+        """Get the camera location in 2D space."""
+        return self.position_2d
+
+    def set_position_2d(self, pos: glm.vec2):
+        """Set the camera location in 2D space."""
+        self.position_2d = pos
+
+    def set_viewport_scale_mode(self, method: ViewportScaleMode):
+        self.current_method = method
+        self.update_2d_perspective()
+
+    def get_viewport_scale_mode(self) -> ViewportScaleMode:
+        return self.current_method
+
     def update_2d_perspective(self):
-        """"""
-        # TODO depending on mode it can be different here.
+        """
+        Update the 2D view matrix that maps a logical 1.0 x 1.0 space to screen.
 
-        # currently we do adjuste to the minimum of the screen width and height
-        # min_screen_ = min(self.screen_width, self.screen_height)
+        - ViewportScaleMode.FIT   : preserve aspect ratio, entire 1x1 visible (letterbox if needed)
+        - ViewportScaleMode.FILL  : preserve aspect ratio, screen fully covered (crop if needed)
+        - ViewportScaleMode.STRETCH: ignore aspect ratio (distort to fill screen)
 
-        scale_x = self.character_factor * self.zoom_2D
-        scale_y = self.zoom_2D
+        Assumes:
+            * Logical space is 1.0 units wide and 1.0 units tall (a square).
+            * zoom_2D is an overall scale factor.
+        """
+        aspect = self.screen_width / (self.screen_height * self.character_factor)
 
-        self.view_matrix_2D = glm.scale(glm.vec3(scale_x, scale_y, 1.0))
+        match self.current_method:
+            case ViewportScaleMode.FIT:
+                # Entire 1x1 fits on screen, preserve aspect ratio.
+                # We shrink the longer dimension so that the shorter fits perfectly.
+                if aspect >= 1.0:
+                    # Screen is wider than tall -> compress X
+                    scale_x = self.zoom_2D / aspect
+                    scale_y = self.zoom_2D
+                else:
+                    # Screen is taller than wide -> compress Y
+                    scale_x = self.zoom_2D
+                    scale_y = self.zoom_2D * aspect
+
+            case ViewportScaleMode.FILL:
+                # Screen fully covered, preserve aspect ratio, crop the 1x1 if needed.
+                if aspect >= 1.0:
+                    # Screen is wider than tall -> expand Y
+                    scale_x = self.zoom_2D
+                    scale_y = self.zoom_2D * aspect
+                else:
+                    # Screen is taller than wide -> expand X
+                    scale_x = self.zoom_2D / aspect
+                    scale_y = self.zoom_2D
+
+            case ViewportScaleMode.STRETCH:
+                # No aspect preservation at all.
+                scale_x = self.zoom_2D
+                scale_y = self.zoom_2D * self.character_factor
+
+        self.view_matrix_2D = glm.scale(glm.vec3(scale_x, -scale_y, 1.0))
+
+    def set_character_factor(self, character_factor=1.0):
+        self.character_factor = character_factor
+        self.update_perspective()
+        self.update_2d_perspective()
 
     def set_zoom_2D(self, zoom=1.0):
         self.zoom_2D = zoom
@@ -112,7 +178,7 @@ class GLMCamera:
         self._pos = self._pos + delta
 
     def move_at(self, pos: glm.vec3):
-        self.move(pos - self.pos)
+        self.move(pos - self._pos)
 
     def move_side(self, dist: float):
         self.move(self.right_vector() * dist)
@@ -150,7 +216,9 @@ class GLMCamera:
 
     def direction_vector(self) -> glm.vec3:
         # directional vector extracted from the matrix
-        return glm.column(self._rot, 2).xyz
+        return glm.column(self._rot, 2).xyz * (
+            -1 if not self.use_left_hand_perspective else 1
+        )
 
     def up_vector(self) -> glm.vec3:
         # directional up vector extracted from the matrix
@@ -161,7 +229,7 @@ class GLMCamera:
         return glm.column(self._rot, 0).xyz
 
     def position_vector(self) -> glm.vec3:
-        # position vector extracted from the matrix
+        # position vector
         return self._pos
 
     def __str__(self):

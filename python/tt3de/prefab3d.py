@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 
-import glm
+from pyglm import glm
 
 from tt3de.points import Point2D, Point3D
 from tt3de.tt_3dnodes import TT3DNode, TT3DPoint, TT3DPolygonFan

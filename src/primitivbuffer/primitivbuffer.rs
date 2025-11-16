@@ -222,7 +222,6 @@ impl PrimitiveBuffer {
 
         self.content[self.current_size] =
             PrimitiveElements::Rect(PRect::new(pr, top_left, bottom_right));
-
         self.current_size += 1;
 
         self.current_size - 1

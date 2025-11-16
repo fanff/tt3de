@@ -1,4 +1,4 @@
-use nalgebra_glm::vec2;
+use nalgebra_glm::{vec2, Vec3};
 
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
@@ -81,6 +81,7 @@ pub fn raster_prect<const DEPTHCOUNT: usize>(
                 row,
                 col,
                 0.01,
+                Vec3::new(0.0, 0.0, 1.0),
                 uv,
                 vec2(0.0, 0.0),
                 prim_ref.node_id,

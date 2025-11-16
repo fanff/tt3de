@@ -18,12 +18,4 @@ impl PRect {
             bottom_right: pb,
         }
     }
-
-    pub fn default() -> Self {
-        Self {
-            primitive_reference: PrimitivReferences::new(0, 0, 1, 0),
-            top_left: Vertex::zero(),
-            bottom_right: Vertex::zero(),
-        }
-    }
 }

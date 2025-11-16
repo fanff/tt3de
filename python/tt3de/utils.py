@@ -1,9 +1,11 @@
-from enum import Enum
+# -*- coding: utf-8 -*-
 
-import glm
-from glm import ivec2, mat3, quat, vec2, vec3, vec4
+from pyglm import glm
+from glm import ivec2, mat3, vec2, vec3, vec4
 
 from tt3de.points import Point2D, Point3D
+import random
+import string
 
 
 def p2d_tovec2(p: Point2D) -> vec2:
@@ -47,12 +49,9 @@ VEC3_YES = vec3(1.0, 1.0, 1.0)
 VEC3_ZERO = vec3(0.0, 0.0, 0.0)
 
 
-import random
-import string
-
-
 def random_node_id(length=16) -> str:
-    """Generate a random node ID with the specified length.
+    """
+    Generate a random node ID with the specified length.
 
     Args:
         length (int): The length of the node ID to generate. Default is 16.

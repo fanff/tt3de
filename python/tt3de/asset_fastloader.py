@@ -4,9 +4,8 @@ from typing import Tuple
 from tt3de.asset_load import load_bmp, load_obj, read_file
 from tt3de.points import Point2D, Point3D
 from tt3de.richtexture import ImageTexture
-from tt3de.tt_2dnodes import TT2Polygon
 from tt3de.tt_3dnodes import TT3DPolygon
-from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
+from tt3de.tt3de import MaterialBufferPy, TextureBufferPy, find_glyph_indices_py
 
 
 def fast_load(
@@ -128,10 +127,17 @@ class MaterialPerfab:
             img.image_width, img.image_height, img.chained_data(), True, True
         )
 
+        HALF_BLOCK = find_glyph_indices_py("▀")
+        FULL_BLOCK = find_glyph_indices_py("█")
+
         material_buffer = MaterialBufferPy()
         material_buffer.add_static((200, 10, 10), (50, 50, 50), 0)  # 0
-        material_buffer.add_static((200, 200, 200), (100, 100, 100), 95)  # white
-        material_buffer.add_static((200, 0, 0), (100, 100, 100), 50)  # R
+        material_buffer.add_static(
+            (200, 200, 200), (100, 100, 100), FULL_BLOCK
+        )  # 1 white
+        material_buffer.add_static(
+            (200, 0, 0), (100, 100, 100), find_glyph_indices_py("R")
+        )  # 2 R letter in red
         material_buffer.add_static((10, 200, 0), (100, 100, 100), 39)  # G
         material_buffer.add_static((10, 5, 200), (100, 100, 100), 34)  # B
 
@@ -139,12 +145,12 @@ class MaterialPerfab:
         material_buffer.add_debug_depth(6)  # 6
         material_buffer.add_debug_uv(7)  # 7
 
-        material_buffer.add_textured(0, 95)  # idx = 8
-        material_buffer.add_textured(1, 95)  # idx = 9
-        material_buffer.add_textured(2, 95)  # idx = 10
+        material_buffer.add_textured(0, HALF_BLOCK)  # idx = 8
+        material_buffer.add_textured(1, HALF_BLOCK)  # idx = 9
+        material_buffer.add_textured(2, HALF_BLOCK)  # idx = 10
 
-        material_buffer.add_textured(4, 95)  # idx = 11
-        material_buffer.add_textured(5, 95)  # idx = 12
+        material_buffer.add_textured(4, HALF_BLOCK)  # idx = 11
+        material_buffer.add_textured(5, HALF_BLOCK)  # idx = 12
 
         return texture_buffer, material_buffer
 
@@ -201,7 +207,7 @@ class Prefab2D:
         return m
 
     @staticmethod
-    def unitary_square_polygon() -> TT2Polygon:
+    def unitary_square_polygon():
         vertices = [
             Point3D(0.0, 0.0, 1.0),
             Point3D(1.0, 0.0, 1.0),
@@ -221,7 +227,7 @@ class Prefab2D:
             ],
         ]
 
-        m = TT2Polygon()
+        m = object()
         m.vertex_list = vertices
         m.uvmap = texture_coords
         return m

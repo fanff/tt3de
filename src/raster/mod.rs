@@ -1,11 +1,11 @@
-use nalgebra_glm::{RealNumber, TVec2};
+use nalgebra_glm::{RealNumber, TVec2, Vec3, Vec4};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
     drawbuffer::{drawbuffer::DrawBuffer, DrawingBufferPy},
     primitivbuffer::*,
-    vertexbuffer::{VertexBuffer, VertexBufferPy},
+    vertexbuffer::{vertex_buffer::VertexBuffer, vertex_buffer_py::VertexBufferPy},
 };
 
 pub mod raster_line_row;
@@ -46,6 +46,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     prim_ref: &PrimitivReferences,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, DEPTHACC>,
     depth: DEPTHACC,
+    normal: Vec3,
     col: usize,
     row: usize,
     u0: f32,
@@ -59,6 +60,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
         row,
         col,
         depth,
+        normal,
         w,
         w_alt,
         prim_ref.node_id,
@@ -122,7 +124,7 @@ fn barycentric_coord_shift(
 
 pub fn raster_element<const DEPTHCOUNT: usize>(
     element: &PrimitiveElements,
-    _vertexbuffer: &VertexBuffer,
+    _vertexbuffer: &VertexBuffer<Vec4>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
@@ -149,7 +151,7 @@ pub fn raster_element<const DEPTHCOUNT: usize>(
 
 pub fn raster_all<const DEPTHCOUNT: usize>(
     primitivbuffer: &PrimitiveBuffer,
-    vertexbuffer: &VertexBuffer,
+    vertexbuffer: &VertexBuffer<Vec4>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {
@@ -169,5 +171,5 @@ pub fn raster_all_py(
     let primitivbuffer = &pb.content;
 
     let drawing_buffer = &mut db.db;
-    raster_all(primitivbuffer, &vbuffpy.buffer, drawing_buffer);
+    raster_all(primitivbuffer, &vbuffpy.buffer3d, drawing_buffer);
 }

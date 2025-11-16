@@ -1,8 +1,8 @@
 use crate::utils::convert_tuple_texture_rgba;
 use pyo3::{
     pyclass, pymethods,
-    types::{PyAnyMethods, PyList},
-    Bound, Py, PyAny, Python, ToPyObject,
+    types::{PyAnyMethods, PyList, PyTuple},
+    Bound, Py, PyAny, Python,
 };
 
 pub mod noise_texture;
@@ -23,6 +23,23 @@ pub struct RGBA {
 impl RGBA {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
+    }
+    pub fn from_tuple(t: (u8, u8, u8, u8)) -> Self {
+        Self {
+            r: t.0,
+            g: t.1,
+            b: t.2,
+            a: t.3,
+        }
+    }
+    pub fn mult_albedo(&self, factor: f32) -> Self {
+        let f = factor.clamp(0.0, 1.0);
+        RGBA {
+            r: (self.r as f32 * f) as u8,
+            g: (self.g as f32 * f) as u8,
+            b: (self.b as f32 * f) as u8,
+            a: self.a,
+        }
     }
 }
 
@@ -67,7 +84,11 @@ impl<const SIZE: usize> Texture<SIZE> {
             // For clamped textures, clamp u to [0,1] and ensure u==1 maps to SIZE-1.
             let u = u.clamp(0.0, 1.0);
             let idx = (u * (SIZE as f32)) as usize;
-            if idx >= SIZE { SIZE - 1 } else { idx }
+            if idx >= SIZE {
+                SIZE - 1
+            } else {
+                idx
+            }
         };
 
         // Compute the y coordinate similarly
@@ -77,7 +98,11 @@ impl<const SIZE: usize> Texture<SIZE> {
         } else {
             let v = v.clamp(0.0, 1.0);
             let idx = (v * (SIZE as f32)) as usize;
-            if idx >= SIZE { SIZE - 1 } else { idx }
+            if idx >= SIZE {
+                SIZE - 1
+            } else {
+                idx
+            }
         };
 
         // Use bit-shift instead of multiplication because SIZE is a power of 2.
@@ -188,7 +213,8 @@ impl<'a> Iterator for TextureIterator<'a> {
         if self.index < self.pix_list.len().ok().unwrap() {
             let item: &Bound<PyAny> = &self.pix_list.get_item(self.index).ok().unwrap();
             self.index += 1;
-            convert_tuple_texture_rgba(self.py, item.to_object(self.py))
+            let tuple = item.extract().ok()?;
+            convert_tuple_texture_rgba(self.py, tuple)
         } else {
             None
         }

@@ -3,7 +3,7 @@ import math
 from abc import abstractmethod
 from time import time
 
-import glm
+from pyglm import glm
 from textual import events
 from textual.containers import Container
 from textual.geometry import Region
@@ -90,14 +90,16 @@ class TT3DView(Container):
     async def on_event(self, event: events.Event):
         if self.enableMouseFpsCamera and isinstance(event, events.MouseMove):
             if event.delta_x != 0:
-                self.camera.rotate_left_right(
-                    math.radians(event.delta_x * (800.0 / self.size.width))
-                )
+                angle = math.radians(event.delta_x * (800.0 / self.size.width))
+
+                angle = angle * (-1 if not self.camera.use_left_hand_perspective else 1)
+                self.camera.rotate_left_right(angle)
             if event.delta_y != 0:
                 offset = self.screen.get_offset(self)
                 p = math.radians(
                     (((event.y - offset.y) / self.size.height) - 0.5) * 160
                 )
+                p = p * (-1 if not self.camera.use_left_hand_perspective else 1)
                 self.camera.set_yaw_pitch(self.camera.yaw, p)
 
         elif isinstance(event, events.Click):
@@ -113,9 +115,9 @@ class TT3DView(Container):
                 case "k":
                     self.camera.move_forward(-0.3)
                 case "h":
-                    self.camera.move_side(0.3)
-                case "l":
                     self.camera.move_side(-0.3)
+                case "l":
+                    self.camera.move_side(0.3)
                 case "z":
                     self.camera.move_forward(0.3)
                 case "s":

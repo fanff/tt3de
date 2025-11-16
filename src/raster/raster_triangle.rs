@@ -1,3 +1,5 @@
+use nalgebra_glm::Vec3;
+
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
@@ -40,6 +42,7 @@ pub fn raster_triangle<const DEPTHCOUNT: usize>(
                     prim_ref,
                     drawing_buffer,
                     depth,
+                    Vec3::new(0.0, 0.0, 1.0),
                     curr_col,
                     curr_row,
                     0.0,

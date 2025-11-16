@@ -4,7 +4,7 @@ use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::texture_buffer::TextureBuffer,
-    vertexbuffer::UVBuffer,
+    vertexbuffer::uv_buffer::UVBuffer,
 };
 
 use super::RenderMaterial;

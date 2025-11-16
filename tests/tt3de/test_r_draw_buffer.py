@@ -6,7 +6,7 @@ from tests.tt3de.test_utils import assertPixInfoEqual
 from tt3de.tt3de import DrawingBufferPy
 from tt3de.tt3de import apply_material_py
 from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
-import glm
+from pyglm import glm
 from tt3de.tt3de import VertexBufferPy, TransformPackPy
 from tt3de.tt3de import PrimitiveBufferPy
 
@@ -59,6 +59,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
+                    'normal': [0.0, 0.0, 1.0]
                 },
             )
 
@@ -77,7 +78,7 @@ class Test_DrawBuffer(unittest.TestCase):
         material_buffer = MaterialBufferPy()
         texture_buffer = TextureBufferPy(32)
 
-        vertex_buffer = VertexBufferPy(128)
+        vertex_buffer = VertexBufferPy(128,128,128)
         primitive_buffer = PrimitiveBufferPy(3)
         apply_material_py(
             material_buffer,
@@ -139,6 +140,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
+                    'normal': [0.0, 0.0, 1.0],
                 },
             )
 
@@ -219,6 +221,7 @@ class Test_DrawBuffer(unittest.TestCase):
         material_id = 3
 
         inpuut_tuple = [
+            glm.vec3(1,1,1),
             1.0,  # depth value
             glm.vec2(2, 3),  # uv info
             glm.vec2(5, 6),  # uv info
@@ -314,6 +317,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _0_material_id = 3
 
         inpuut_tuple_0 = [
+            glm.vec3(1,1,1),
             3.0,  # depth value
             glm.vec2(2, 3),
             glm.vec2(5, 6),
@@ -355,6 +359,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _1_material_id = 1
 
         inpuut_tuple_1 = [
+            glm.vec3(1,1,1),
             1.0,  # depth value lower
             glm.vec2(20, 30),
             glm.vec2(50, 60),
@@ -419,6 +424,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _0_material_id = 3
 
         inpuut_tuple_0 = [
+            glm.vec3(1,1,1),
             1.0,  # depth value # this one is in front
             glm.vec2(2, 3),
             glm.vec2(5, 6),
@@ -459,6 +465,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _1_material_id = 1
 
         inpuut_tuple_1 = [
+            glm.vec3(1,1,1),
             3.0,  #  THIS one it in the back
             glm.vec2(20, 30),
             glm.vec2(50, 60),

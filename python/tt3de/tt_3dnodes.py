@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import List, Optional
 
-import glm
+from pyglm import glm
 
 from tt3de.points import Point2D, Point3D
 from tt3de.render_context_rust import RustRenderContext
@@ -58,7 +58,7 @@ class TT3DPolygonFan(TT3DNode):
 
         start_idx = None
         for p3d in self.vertex_list:
-            vertex_idx = rc.vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z)
+            vertex_idx = rc.vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z)
             if start_idx is None:
                 start_idx = vertex_idx
 
@@ -103,7 +103,7 @@ class TT3DPolygon(TT3DNode):
 
         start_idx = None
         for p3d in self.vertex_list:
-            vertex_idx = rc.vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z)
+            vertex_idx = rc.vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z)
             if start_idx is None:
                 start_idx = vertex_idx
 
@@ -142,7 +142,7 @@ class TT3DPoint(TT3DNode):
 
         start_idx = None
         for p3d in self.vertex_list:
-            vertex_idx = rc.vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z)
+            vertex_idx = rc.vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z)
             if start_idx is None:
                 start_idx = vertex_idx
 

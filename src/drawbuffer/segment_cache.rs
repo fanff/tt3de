@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 
 use pyo3::{
     intern,
@@ -139,7 +139,7 @@ pub fn create_textual_segment(
     segment_class: &Bound<PyAny>,
     style_class: &Bound<PyAny>,
 ) -> Py<PyAny> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     let f_triplet = color_triplet_class
         .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
         .unwrap();

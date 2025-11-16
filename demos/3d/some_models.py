@@ -31,31 +31,35 @@ class GLMTester(TT3DView):
     use_native_python = False
 
     def __init__(self):
-        super().__init__()
+        super().__init__(use_left_hand_perspective=False)
 
     def initialize(self):
         # prepare a bunch of material
         self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
         # create a root 3D node
         self.root3Dnode = TT3DNode()
-
-        cube = fast_load("models/cube.obj", reverse_uv_v=True)
+        self.camera.move_at(glm.vec3(0, 1, -10))
+        cube = fast_load("models/cube.obj", reverse_uv_v=True, flip_triangles=True)
         cube.material_id = 11
         cube.local_transform = glm.translate(glm.vec3(-4.1, 0, 0))
         self.root3Dnode.add_child(cube)
 
-        self.car_taxi = fast_load("models/car/Car5_Taxi.obj", reverse_uv_v=True)
+        self.car_taxi = fast_load(
+            "models/car/Car5_Taxi.obj", reverse_uv_v=True, flip_triangles=True
+        )
         self.car_taxi.material_id = 12
         self.car_taxi.local_transform = glm.translate(glm.vec3(4, 0, 0))
         self.root3Dnode.add_child(self.car_taxi)
 
-        self.car_taxi2 = fast_load("models/car/Car5_Taxi.obj", reverse_uv_v=True)
+        self.car_taxi2 = fast_load(
+            "models/car/Car5_Taxi.obj", reverse_uv_v=True, flip_triangles=True
+        )
         self.car_taxi2.material_id = 12
         self.car_taxi2.local_transform = glm.translate(glm.vec3(4, 2, 0))
         self.root3Dnode.add_child(self.car_taxi2)
 
         # final append
-        self.rc.append(self.root3Dnode)
+        self.rc.append_root(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()

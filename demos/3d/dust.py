@@ -55,7 +55,7 @@ class GLMTester(TT3DView):
             math.radians(90), glm.vec3(-1, 0, 0)
         )
         # final append
-        self.rc.append(self.root3Dnode)
+        self.rc.append_root(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()

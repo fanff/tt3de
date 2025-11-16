@@ -59,7 +59,7 @@ class GLMTester(TT3DView):
         self.root3Dnode.add_child(self.city)
 
         # final append
-        self.rc.append(self.root3Dnode)
+        self.rc.append_root(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()

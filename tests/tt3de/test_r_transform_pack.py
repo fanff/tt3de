@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import unittest
 from typing import Dict
 import unittest
 
-import glm
+from pyglm import glm
 from tt3de.tt3de import VertexBufferPy, TransformPackPy
 
 
@@ -29,18 +30,17 @@ class Test_TransformationPack(unittest.TestCase):
         trpack = TransformPackPy(12)
         trpack.set_view_matrix_glm(glm.translate(glm.vec3(1, 2, 3)))
 
-        view_list = trpack.get_view_matrix()
-        m4out = glm.mat4(*view_list)
+        m4out = trpack.get_view_matrix()
         self.assertEqual(m4out, glm.translate(glm.vec3(1, 2, 3)))
 
     def test_apply_mv(self):
 
-        abuffer = VertexBufferPy(32)
+        abuffer = VertexBufferPy(32,32,32)
         trpack = TransformPackPy(12)
 
         trpack.set_view_matrix_glm(glm.translate(glm.vec3(1, 2, 3)))
 
-        for i in range(abuffer.get_max_content()):
-            abuffer.add_vertex(1 + i, 2 + i, 3 + i)
+        for i in range(abuffer.get_3d_capacity()):
+            abuffer.add_3d_vertex(1 + i, 2 + i, 3 + i)
 
-        abuffer.apply_mv(trpack, node_id=0, start=0, end=128)
+        abuffer.apply_mv(trpack, node_id=0, start=0, end=32)

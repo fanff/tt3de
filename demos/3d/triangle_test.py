@@ -29,7 +29,7 @@ from tt3de.tt_3dnodes import TT3DNode
 
 class GLMTester(TT3DView):
     def __init__(self):
-        super().__init__()
+        super().__init__(use_left_hand_perspective=False)
 
     def initialize(self):
         # prepare a bunch of material
@@ -38,6 +38,7 @@ class GLMTester(TT3DView):
         self.root3Dnode = TT3DNode()
 
         self.root3Dnode.add_child(Prefab3D.gizmo_points())
+        self.camera.move_at(glm.vec3(0, 1, -10))
 
         tri = Prefab3D.unitary_triangle()
         tri.material_id = 5
@@ -69,7 +70,7 @@ class GLMTester(TT3DView):
         self.root3Dnode.add_child(tri)
 
         # final append
-        self.rc.append(self.root3Dnode)
+        self.rc.append_root(self.root3Dnode)
 
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()
@@ -102,11 +103,6 @@ class GLMTester(TT3DView):
         await super().on_event(event)
 
         match event.__class__:
-            case events.Leave:
-                pass
-                # info_box: Static = self.parent.query_one(".lastevent")
-                # info_box.update(f"leaving!")
-
             case events.Key:
                 event: events.Key = event
                 match event.key:

@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from statistics import mean
 from typing import Any, Coroutine, List
+import glm
 from textual.widgets import Log
 from textual import events
 from textual.app import ComposeResult
@@ -9,14 +10,9 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import (
-    Button,
-    DataTable,
-    Input,
-    Label,
-    Sparkline,
-)
+from textual.widgets import Button, DataTable, Input, Label, Sparkline, Select
 
+from tt3de.glm_camera import GLMCamera, ViewportScaleMode
 from tt3de.textual_widget import TimingRegistry
 
 
@@ -267,6 +263,227 @@ class Vector3Selector(Widget):
         event.bubble = False
         current_value = tuple([s.current_value for s in self._selector_list])
         self.post_message(Vector3Selector.Changed(self, current_value))
+
+
+class CameraLoc2D(Widget):
+    DEFAULT_CSS = """
+
+    CameraLoc2D{
+        height:auto;
+    }
+    """
+
+    @dataclass
+    class PositionChanged(Message):
+        """
+        Posted when the value changes.
+
+        Can be handled using `on_camera_loc2d_position_changed` in a subclass of `PositionChanged` or in a parent
+        widget in the DOM.
+        """
+
+        input: "CameraLoc2D"
+        """The `FloatSelector` widget that was changed."""
+
+        value: tuple[float, float]
+        """The value that the input was changed to."""
+
+    _selector_list: List[FloatSelector] = []
+    _init_info = []
+
+    def __init__(
+        self,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+        disabled: bool = False,
+        camera: GLMCamera | None = None,
+    ):
+        super().__init__(id=id, classes=classes, disabled=disabled, name=name)
+        self._init_info = camera.get_position_2d() if camera is not None else (0.0, 0.0)
+        self._camera = camera
+
+    def compose(self):
+        self._selector_list = []
+        initial_value = self._init_info
+        for sidx in range(2):
+            s = FloatSelector(-10, 10, 0.0)
+
+            s.current_buffer = initial_value[sidx]
+            self._selector_list.append(s)
+
+        yield from self._selector_list
+
+    def on_float_selector_changed(self, event: FloatSelector.Changed) -> None:
+        event.bubble = False
+        current_value = tuple([s.current_value for s in self._selector_list])
+        self._camera.set_position_2d(glm.vec2(current_value[0], current_value[1]))
+        self.post_message(CameraLoc2D.PositionChanged(self, current_value))
+
+    def refresh_camera_position(self, no_events=True):
+        elem_x: FloatSelector = self._selector_list[0]
+        elem_y: FloatSelector = self._selector_list[1]
+        if self._camera is not None:
+            cam_x, cam_y = self._camera.get_position_2d()
+            if no_events:
+                elem_x.current_value = cam_x
+                elem_y.current_value = cam_y
+            else:
+                elem_x.current_buffer = cam_x
+                elem_y.current_buffer = cam_y
+
+
+class VisualViewportScaleModeSelector(Widget):
+    DEFAULT_CSS = """
+    VisualViewportScaleModeSelector{
+        height:auto;
+    }
+    """
+
+    @dataclass
+    class ScaleModeChanged(Message):
+        """
+        Posted when the value changes.
+
+        Can be handled using `on_visual_viewport_scale_mode_changed` in a subclass of `VisualViewportScaleModeSelector` or in a parent
+        widget in the DOM.
+        """
+
+        input: "VisualViewportScaleModeSelector"
+        """The `VisualViewportScaleModeSelector` widget that was changed."""
+
+        value: int
+        """The value that the input was changed to."""
+
+    def __init__(
+        self,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+        disabled: bool = False,
+        camera: GLMCamera | None = None,
+    ):
+        super().__init__(id=id, classes=classes, disabled=disabled, name=name)
+        self._initial_value = (
+            camera.get_viewport_scale_mode()
+            if camera is not None
+            else ViewportScaleMode.FIT
+        )
+        self._camera = camera
+
+    def compose(self):
+        yield Label("Viewport Scale Mode")
+        self.selected_widget = Select(
+            [(e.name, e.value) for e in ViewportScaleMode],
+            allow_blank=False,
+            value=self._initial_value.value,
+            id="select_viewport_scale_mode",
+        )
+
+        yield self.selected_widget
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "select_viewport_scale_mode":
+            event.bubble = False
+            v = event.value
+            self.post_message(self.ScaleModeChanged(self, v))
+            if self._camera is not None:
+                self._camera.set_viewport_scale_mode(ViewportScaleMode(v))
+
+    def refresh_content(self):
+        if self._camera is not None:
+            self.selected_widget.value = self._camera.get_viewport_scale_mode().value
+
+
+class CameraConfig2D(Widget):
+    DEFAULT_CSS = """
+
+    CameraConfig2D{
+        height:auto;
+    }
+    """
+
+    @dataclass
+    class ZoomChanged(Message):
+        input: "CameraConfig2D"
+        value: float
+
+    @dataclass
+    class CharacterFactorChanged(Message):
+        input: "CameraConfig2D"
+        value: float
+
+    def __init__(
+        self,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+        disabled: bool = False,
+        camera: GLMCamera | None = None,
+    ):
+        super().__init__(id=id, classes=classes, disabled=disabled, name=name)
+        self._camera = camera
+        self._init_character_factor = (
+            camera.character_factor if camera is not None else 1.8
+        )
+        self._init_camera_zoom = camera.zoom_2D if camera is not None else 1.0
+
+    def compose(self):
+        yield Label("character_factor")
+        yield FloatSelector(
+            0.3,
+            3.5,
+            self._init_character_factor,
+            mouse_factor=0.1,
+            button_factor=0.1,
+            id="input_character_factor_2d",
+        )
+
+        yield Label("camera_zoom")
+
+        yield FloatSelector(
+            0.01,
+            10.5,
+            self._init_camera_zoom,
+            mouse_factor=0.1,
+            button_factor=0.5,
+            id="input_camera_zoom_2d",
+        )
+
+    def set_zoom(self, zoom: float, no_events=True):
+        if no_events:
+            self.query_one("#input_camera_zoom_2d").current_value = zoom
+        else:
+            self.query_one("#input_camera_zoom_2d").current_buffer = zoom
+
+    def set_character_factor(self, character_factor: float, no_events=True):
+        if no_events:
+            self.query_one(
+                "#input_character_factor_2d"
+            ).current_value = character_factor
+        else:
+            self.query_one(
+                "#input_character_factor_2d"
+            ).current_buffer = character_factor
+
+    def on_float_selector_changed(self, event: FloatSelector.Changed) -> None:
+        if event.input.id == "input_camera_zoom_2d":
+            event.bubble = False
+            v = self.query_one("#input_camera_zoom_2d").current_value
+            self.post_message(self.ZoomChanged(self, v))
+            if self._camera is not None:
+                self._camera.set_zoom_2D(v)
+        elif event.input.id == "input_character_factor_2d":
+            event.bubble = False
+            v = self.query_one("#input_character_factor_2d").current_value
+            self.post_message(self.CharacterFactorChanged(self, v))
+            if self._camera is not None:
+                self._camera.set_character_factor(v)
+
+    def refresh_content(self):
+        if self._camera is not None:
+            self.set_zoom(self._camera.zoom_2D, no_events=True)
+            self.set_character_factor(self._camera.character_factor, no_events=True)
 
 
 class CameraConfig(Widget):

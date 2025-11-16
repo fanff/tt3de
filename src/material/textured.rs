@@ -1,11 +1,73 @@
+use nalgebra_glm::Vec3;
+
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::texture_buffer::TextureBuffer,
-    vertexbuffer::UVBuffer,
+    vertexbuffer::uv_buffer::UVBuffer,
 };
 
 use super::materials::RenderMaterial;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TexturedBack {
+    pub albedo_texture_idx: usize,
+}
+impl TexturedBack {
+    pub fn new(albedo_texture_idx: usize, glyph_idx: u8) -> Self {
+        Self { albedo_texture_idx }
+    }
+}
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for TexturedBack
+{
+    fn render_mat(
+        &self,
+        cell: &mut CanvasCell,
+        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        _depth_layer: usize,
+        pixinfo: &PixInfo<f32>,
+        _primitive_element: &PrimitiveElements,
+        texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
+        _uv_buffer: &UVBuffer<f32>,
+    ) {
+        let uv = pixinfo.uv;
+        let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
+        // if distance shading
+        //.mult_albedo(distance_shading);
+        cell.back_color.copy_from(&texture_color);
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TexturedFront {
+    pub albedo_texture_idx: usize,
+}
+impl TexturedFront {
+    pub fn new(albedo_texture_idx: usize, glyph_idx: u8) -> Self {
+        Self { albedo_texture_idx }
+    }
+}
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for TexturedFront
+{
+    fn render_mat(
+        &self,
+        cell: &mut CanvasCell,
+        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        _depth_layer: usize,
+        pixinfo: &PixInfo<f32>,
+        _primitive_element: &PrimitiveElements,
+        texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
+        _uv_buffer: &UVBuffer<f32>,
+    ) {
+        let uv = pixinfo.uv;
+        let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
+        // if distance shading
+        //.mult_albedo(distance_shading);
+        cell.front_color.copy_from(&texture_color);
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Textured {
@@ -35,10 +97,36 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
     ) {
         let uv = pixinfo.uv;
         let uv1 = pixinfo.uv_1;
-        let texture_color = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv);
-        let texture_color1 = texture_buffer.get_rgba_at_v(self.albedo_texture_idx, &uv1);
+
+        // vec3 , normal vector at this pixel, in camera space (0,0,1)
+        let normal = pixinfo.normal;
+
+        // calculate alignment between camera and normal vector using a dot product
+        let shading = normal
+            .normalize()
+            .dot(&Vec3::new(0.0, 0.0, -1.0))
+            .abs()
+            .powf(2.0)
+            * 0.5f32
+            + 0.5f32;
+
+        const zNear: f32 = 0.1f32;
+        const zFar: f32 = 100.0f32;
+        const max_distance: f32 = 20.0f32;
+        let distance = _depth_cell.get_depth(_depth_layer);
+        let z_n: f32 = 2.0f32 * distance - 1.0f32;
+        let world_dist: f32 = 2.0f32 * zNear * zFar / (zFar + zNear - z_n * (zFar - zNear));
+        let distance_shading = 1.0f32 - (world_dist.clamp(0.0, max_distance) / max_distance);
+
+        let texture_color = texture_buffer
+            .get_rgba_at_v(self.albedo_texture_idx, &uv)
+            .mult_albedo(distance_shading);
+        let texture_color1 = texture_buffer
+            .get_rgba_at_v(self.albedo_texture_idx, &uv1)
+            .mult_albedo(distance_shading);
 
         cell.glyph = self.glyph_idx;
+
         cell.front_color.copy_from(&texture_color);
         cell.back_color.copy_from(&texture_color1);
     }
@@ -54,7 +142,7 @@ mod tests {
     use crate::primitivbuffer::primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveElements};
     use crate::texturebuffer::texture_buffer::TextureBuffer;
     use crate::texturebuffer::RGBA;
-    use crate::vertexbuffer::UVBuffer;
+    use crate::vertexbuffer::uv_buffer::UVBuffer;
 
     #[test]
     fn test_render_mat() {

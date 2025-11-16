@@ -23,9 +23,9 @@ Simple example on how to use the engine:
 
 from tt3de.asset_fastloader import MaterialPerfab
 from tt3de.prefab3d import Prefab3D
-from tt3de.textual_widget import TT3DView
+from tt3de.textual_widget import StandAloneTT3DView
 
-class GLMTester(TT3DView):
+class GLMTester(StandAloneTT3DView):
 
     def initialize(self):
         # prepare a bunch of material

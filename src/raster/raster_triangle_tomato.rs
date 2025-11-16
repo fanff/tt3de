@@ -240,6 +240,7 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 row,
                 col,
                 current_scanline_interpolant.pos.z,
+                current_scanline_interpolant.normal,
                 attr.uv,
                 TVec2::new(0.0, 0.0),
                 prim_ref.node_id,
@@ -445,7 +446,6 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
             let w_upper = 1.0f32 / current_upper_scanline_interpolant.pos.w;
             // Apply perspective correction to obtain the vertex attributes for the upper sample.
             let upper_attr = current_upper_scanline_interpolant * w_upper;
-
             // --- Lower Sample Calculation ---
             // Recover the interpolated reciprocal of w for the lower part.
             let w_lower = 1.0f32 / current_lower_scanline_interpolant.pos.w;
@@ -460,6 +460,7 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
                 row,
                 col,
                 current_upper_scanline_interpolant.pos.z,
+                upper_attr.normal,
                 upper_attr.uv,
                 lower_attr.uv,
                 prim_ref.node_id,

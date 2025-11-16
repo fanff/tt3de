@@ -15,7 +15,7 @@ use crate::material::apply_material;
 use crate::material::MaterialBuffer;
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::RGBA;
-use crate::vertexbuffer::UVBuffer;
+use crate::vertexbuffer::uv_buffer::UVBuffer;
 
 /// Represents information about a pixel with variable accuracy.
 ///
@@ -25,8 +25,8 @@ use crate::vertexbuffer::UVBuffer;
 ///
 /// # Fields
 ///
-/// - `w`: A 3D vector of type `T`, representing some vector information about the pixel.
-/// - `w_1`: Another 3D vector of type `T`, representing additional vector information about the pixel.
+/// - `uv`: A 2D vector representing the primary texture coordinates of the pixel.
+/// - `uv_1`: A 2D vector representing secondary texture coordinates of the pixel
 /// - `material_id`: An identifier for the material, typically used to reference a material in a materials database or array.
 /// - `primitive_id`: An identifier for the primitive (e.g., a geometric primitive like a triangle or sphere).
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
@@ -35,6 +35,7 @@ use crate::vertexbuffer::UVBuffer;
 pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub uv: TVec2<InfoAccuracy>,
     pub uv_1: TVec2<InfoAccuracy>,
+    pub normal: Vec3,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -52,6 +53,7 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         PixInfo {
             uv: TVec2::zeros(),
             uv_1: TVec2::zeros(),
+            normal: Vec3::new(0.0, 0.0, 1.0),
             material_id: 0,
             primitive_id: 0,
             node_id: 0,
@@ -336,8 +338,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
         (&self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]]) as _
     }
-    pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
-        self.canvas[r * self.col_count + c]
+    pub fn get_canvas_cell(&self, row: usize, col: usize) -> CanvasCell {
+        self.canvas[row * self.col_count + col]
     }
 
     pub fn get_min_max_depth(&self, layer: usize) -> (DEPTHACC, DEPTHACC) {
@@ -382,6 +384,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         row: usize,
         col: usize,
         depth: DEPTHACC,
+        normal: Vec3,
         uv: Vec2,
         uv_1: Vec2,
         node_id: usize,
@@ -406,7 +409,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                 // then the new value of the layer 2 is the previous layer1 ; the new of 3 is 2 etc.. :
                 // like a shifting operation of +1 index.
                 // the last element will be "droped" ; so we keep the pixel idx of the last layer before doing anything
-                if the_layer + 1 < L {
+                if the_layer <= L {
                     let last_pix_index = the_cell.pixinfo[L - 1];
                     for moving_layer_idx in (the_layer + 1..L).rev() {
                         the_cell.pixinfo[moving_layer_idx] = the_cell.pixinfo[moving_layer_idx - 1];
@@ -419,6 +422,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // and now I can set the content at the right location
                     let pix_info_dest = &mut (self.pixbuffer[last_pix_index]);
                     the_cell.depth[the_layer] = depth; // Set the depth
+                    pix_info_dest.normal = normal;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -433,6 +437,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // we are at the last layer. There is no way to push down anything; we just will replace.
                     the_cell.depth[the_layer] = depth; // Set the depth
                     let pix_info_dest = (self.pixbuffer[the_cell.pixinfo[the_layer]]).borrow_mut();
+                    pix_info_dest.normal = normal;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;

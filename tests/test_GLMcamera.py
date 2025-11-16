@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import random
 import unittest
@@ -7,7 +8,7 @@ import random
 from tt3de.glm_camera import GLMCamera
 from tt3de.points import Point3D
 
-import glm
+from pyglm import glm
 
 from glm import vec3
 
@@ -151,7 +152,7 @@ class TestCamera_SetYawPitch(unittest.TestCase):
 class TestCameraMove(unittest.TestCase):
 
     def test_camera_position_init(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
 
             init_pos = glm.vec3(random.random(), random.random(), random.random())
@@ -161,7 +162,7 @@ class TestCameraMove(unittest.TestCase):
             assertAlmostEqualvec3(c.position_vector(), init_pos)
 
     def test_camera_move(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
 
             init_pos = glm.vec3(random.random(), random.random(), random.random())
@@ -174,7 +175,7 @@ class TestCameraMove(unittest.TestCase):
 class TestCameraRotate(unittest.TestCase):
 
     def test_camera_rotate_0(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
 
             init_pos = glm.vec3(random.random(), random.random(), random.random())

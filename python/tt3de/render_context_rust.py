@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
 
 if TYPE_CHECKING:
+    from tt3de.tt_2dnodes import TT2DNode
     from tt3de.tt_3dnodes import TT3DNode
 
 from typing import List
 
-import glm
+from pyglm import glm
 from textual.geometry import Region
 from textual.strip import Strip
 
@@ -33,6 +35,8 @@ class RustRenderContext:
         screen_width,
         screen_height,
         vertex_buffer_size=1024,
+        uv_buffer_size=1024,
+        vertex_2d_buffer_size=1024,
         geometry_buffer_size=256,
         primitive_buffer_size=2048,
         transform_buffer_size=64,
@@ -43,7 +47,9 @@ class RustRenderContext:
 
         self.texture_buffer = TextureBufferPy(texture_buffer_size)
         self.material_buffer = MaterialBufferPy()
-        self.vertex_buffer = VertexBufferPy(vertex_buffer_size)
+        self.vertex_buffer = VertexBufferPy(
+            vertex_buffer_size, uv_buffer_size, vertex_2d_buffer_size
+        )
         self.geometry_buffer = GeometryBufferPy(geometry_buffer_size)
         self.geometry_buffer.add_point(0, 0, node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
@@ -55,6 +61,7 @@ class RustRenderContext:
         # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
 
         self.drawing_buffer.hard_clear(100.0)
+        self.roots_nodes: List[Union["TT3DNode", "TT2DNode"]] = []
 
     def update_wh(self, w, h):
         if w != self.width or h != self.height:
@@ -66,15 +73,10 @@ class RustRenderContext:
             # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             self.drawing_buffer.hard_clear(100.0)
 
-    def write_text(self, txt: str, row: 0, col: 0):
-        pass
-
     def clear_canvas(self):
         self.drawing_buffer.hard_clear(1000)
 
     def render(self, camera: GLMCamera):
-        self.primitive_buffer.clear()
-
         self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)
 
         self.transform_buffer.set_view_matrix_3d(
@@ -85,7 +87,11 @@ class RustRenderContext:
 
         self.transform_buffer.set_projection_matrix(camera.perspective_matrix)
 
-        # build the primitives
+        # build the primitives in the primitive buffer using the projected geometry
+        self.primitive_buffer.clear()
+
+        self.process_dirty()
+
         build_primitives_py(
             self.geometry_buffer,
             self.vertex_buffer,
@@ -93,7 +99,7 @@ class RustRenderContext:
             self.drawing_buffer,
             self.primitive_buffer,
         )
-
+        # raster all the primitives in the drawing buffer
         raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
 
         # apply_material_py(
@@ -103,6 +109,7 @@ class RustRenderContext:
         #     self.primitive_buffer,
         #     self.drawing_buffer,
         # )
+        # make a pass to apply the material on the drawing buffer
         apply_material_py_parallel(
             self.material_buffer,
             self.texture_buffer,
@@ -121,11 +128,17 @@ class RustRenderContext:
 
         return [Strip(line) for line in res]
 
-    def append(self, elem: "TT3DNode"):
+    def process_dirty(self):
+        for elem in self.roots_nodes:
+            elem.sync_in_context(self)
+
+    def append_root(self, elem: Union["TT3DNode", "TT2DNode"]):
         """
         Append a 3D node to the render context.
 
         This will call the "insert_in" method on the object you are appending and
         recursively on all its children.
         """
-        elem.insert_in(self, None)
+
+        self.roots_nodes.append(elem)
+        elem.insert_in(self)

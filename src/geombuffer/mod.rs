@@ -1,5 +1,7 @@
 use pyo3::{prelude::*, types::PyDict};
 
+use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
+
 #[derive(Debug, Clone, Copy)]
 pub struct GeomReferences {
     pub node_id: usize,
@@ -10,6 +12,17 @@ pub struct GeomReferences {
 pub struct Point {
     pub geom_ref: GeomReferences,
     pub pa: usize,
+    pub uv_idx: usize,
+}
+
+#[derive(Debug)]
+pub struct Points {
+    pub geom_ref: GeomReferences,
+
+    /// start index of the points in the vertex buffer
+    pub point_start: usize,
+    /// number of points
+    pub point_count: usize,
     pub uv_idx: usize,
 }
 
@@ -47,12 +60,13 @@ impl Polygon {
 #[derive(Debug)]
 pub enum GeomElement {
     Point3D(Point),
+    Points2D(Points),
+    Rect2D(Points),
     Line3D(Line),
     Polygon2D(Polygon),
     PolygonFan3D(Polygon),
     Polygon3D(Polygon),
 }
-
 pub struct GeometryBuffer {
     pub max_size: usize,
     pub content: Box<[GeomElement]>,
@@ -60,6 +74,57 @@ pub struct GeometryBuffer {
 }
 
 impl GeometryBuffer {
+    fn add_rect2d(
+        &mut self,
+        top_left: usize,
+        uv_start: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+
+        let elem = GeomElement::Rect2D(Points {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            point_start: top_left,
+            point_count: 2,
+            uv_idx: uv_start,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
+    fn add_points_2d(
+        &mut self,
+        point_start: usize,
+        point_count: usize,
+        uv_idx: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+
+        let elem = GeomElement::Points2D(Points {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            point_start,
+            point_count: point_count,
+            uv_idx,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
     fn add_point(
         &mut self,
         pidx: usize,
@@ -227,7 +292,16 @@ impl GeometryBufferPy {
             },
         }
     }
-
+    fn add_rect2d(
+        &mut self,
+        top_left: usize,
+        uv_start: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        self.buffer
+            .add_rect2d(top_left, uv_start, node_id, material_id)
+    }
     fn get_element(&self, py: Python, idx: usize) -> Py<PyDict> {
         geometry_into_dict(py, &self.buffer.content[idx])
     }
@@ -248,6 +322,18 @@ impl GeometryBufferPy {
         material_id: usize,
     ) -> usize {
         self.buffer.add_point(p_idx, uv_idx, node_id, material_id)
+    }
+    fn add_points_2d(
+        &mut self,
+        _py: Python,
+        p_idx: usize,
+        point_count: usize,
+        uv_idx: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        self.buffer
+            .add_points_2d(p_idx, point_count, uv_idx, node_id, material_id)
     }
     fn add_polygon2d(
         &mut self,
@@ -284,7 +370,7 @@ impl GeometryBufferPy {
     }
 
     /// Add a line to the geometry buffer
-    /// 
+    ///
     /// Args:
     ///    p_start: The index of the first point in the line
     ///    node_id: The node id of the line
@@ -304,9 +390,25 @@ impl GeometryBufferPy {
 }
 
 fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
 
     match pi {
+        GeomElement::Rect2D(pi) => {
+            dict.set_item("_type", "Rect2D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
+                .unwrap();
+            dict.set_item("point_start", pi.point_start).unwrap();
+            dict.set_item("point_count", pi.point_count).unwrap();
+            dict.set_item("uv_idx", pi.uv_idx).unwrap();
+        }
+        GeomElement::Points2D(pi) => {
+            dict.set_item("_type", "Points2D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
+                .unwrap();
+            dict.set_item("point_start", pi.point_start).unwrap();
+            dict.set_item("point_count", pi.point_count).unwrap();
+            dict.set_item("uv_idx", pi.uv_idx).unwrap();
+        }
         GeomElement::Point3D(pi) => {
             dict.set_item("pa", pi.pa).unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
@@ -347,7 +449,7 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
     dict.into()
 }
 fn geometry_ref_into_dict(py: Python, pi: &GeomReferences) -> Py<PyDict> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
 
     dict.set_item("node_id", pi.node_id).unwrap();
     dict.set_item("material_id", pi.material_id).unwrap();
