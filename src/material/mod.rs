@@ -110,7 +110,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
     // If mat is a Custom material we don't assume any specific payload here,
     // so just fall back to the default render path.
     if let Material::ComboMaterial(t) = mat {
-        if t.count <= 1 {
+        if t.count >= 1 {
             let mat0 = &material_buffer.mats[t.idx0];
             mat0.render_mat(
                 cell,
@@ -122,7 +122,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
                 uv_buffer,
             );
         }
-        if t.count <= 2 {
+        if t.count >= 2 {
             let mat1 = &material_buffer.mats[t.idx1];
             mat1.render_mat(
                 cell,
@@ -134,7 +134,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
                 uv_buffer,
             );
         }
-        if t.count <= 3 {
+        if t.count >= 3 {
             let mat2 = &material_buffer.mats[t.idx2];
             mat2.render_mat(
                 cell,
@@ -146,7 +146,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
                 uv_buffer,
             );
         }
-        if t.count <= 4 {
+        if t.count >= 4 {
             let mat3 = &material_buffer.mats[t.idx3];
             mat3.render_mat(
                 cell,
@@ -158,7 +158,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
                 uv_buffer,
             );
         }
-        if t.count <= 5 {
+        if t.count >= 5 {
             let mat4 = &material_buffer.mats[t.idx4];
             mat4.render_mat(
                 cell,

@@ -7,10 +7,11 @@ from textual.widgets import (
 )
 from textual.app import App, ComposeResult
 from tt3de.asset_fastloader import MaterialPerfab
+from tt3de.points import Point3D
 from tt3de.textual_standalone import TT3DViewStandAlone
 
 from tt3de.tt3de import find_glyph_indices_py, materials
-from tt3de.tt_2dnodes import TT2DNode, TT2DRect
+from tt3de.tt_2dnodes import TT2DLines, TT2DNode, TT2DRect
 from tt3de.textual.widgets import (
     CameraConfig2D,
     CameraLoc2D,
@@ -21,19 +22,33 @@ from tt3de.textual.widgets import (
 class DemoContent(TT3DViewStandAlone):
     def initialize(self):
         self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
+        self.root2Dnode = TT2DNode()
 
-        back_tex0 = self.rc.material_buffer.add_material(materials.TexturedBackPy(0))
+        matidx_front_tex0 = self.rc.material_buffer.add_material(
+            materials.TexturedFrontPy(0)
+        )
+        matix_back_static_black = self.rc.material_buffer.add_material(
+            materials.StaticColorBackPy((0, 0, 0, 255))
+        )
         glyph = self.rc.material_buffer.add_material(
             materials.StaticGlyphPy(find_glyph_indices_py("#"))
         )
 
         mat_idx = self.rc.material_buffer.add_material(
-            materials.ComboMaterialPy.from_list([glyph, back_tex0])
+            materials.ComboMaterialPy.from_list(
+                [glyph, matix_back_static_black, matidx_front_tex0]
+            )
         )
-        self.root2Dnode = TT2DNode()
 
+        # adding a rectangle
         self.rect = TT2DRect(width=0.5, height=0.3, material_id=mat_idx)
         self.root2Dnode.add_child(self.rect)
+
+        self.lines = TT2DLines(
+            point_list=[Point3D(1, 0, 0), Point3D(2, 1, 0)],
+            material_id=matix_back_static_black,
+        )
+        self.root2Dnode.add_child(self.lines)
 
         self.rc.append_root(self.root2Dnode)
 

@@ -1,13 +1,7 @@
 from typing import Union
 from pyglm import glm
 
-from tt3de.tt3de import materials as module_materials
-
-materials = module_materials
-
-__all__ = [
-    materials,
-]
+from tt3de.tt3de.materials import ComboMaterialPy
 
 def find_glyph_indices_py(input: str) -> int:
     """
@@ -62,7 +56,7 @@ class MaterialBufferPy:
             max_size (int): The maximum number of materials that can be stored.
         """
         ...
-    def add_material(self, material: Union[materials.ComboMaterialPy]) -> int:
+    def add_material(self, material: Union[ComboMaterialPy]) -> int:
         """
         Adds a material to the buffer.
 
@@ -132,6 +126,21 @@ class GeometryBufferPy:
             material_id (int): The material ID.
         """
         ...
+
+    def add_line2d(
+        self,
+        p_start: int,
+        point_count: int,
+        uv_idx: int,
+        node_id: int,
+        material_id: int,
+    ) -> int:
+        """
+        Adds a 2D line geometry to the buffer.
+
+        """
+        ...
+
     def add_rect2d(
         self,
         p_start: int,

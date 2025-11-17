@@ -82,18 +82,17 @@ pub fn line_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
 
             let point_a = drawbuffer.ndc_to_screen_floating_with_clamp(&pdiva.xy());
             let point_b = drawbuffer.ndc_to_screen_floating_with_clamp(&pdivb.xy());
-            primitivbuffer.add_line(
-                line.geom_ref.node_id,
-                geometry_id,
-                line.geom_ref.material_id,
-                point_a.y,
-                point_a.x,
-                pdiva.z,
-                point_b.y,
-                point_b.x,
-                pdivb.z,
-                0,
-            );
+            //primitivbuffer.add_line(
+            //    line.geom_ref.node_id,
+            //    geometry_id,
+            //    line.geom_ref.material_id,
+            //    point_a.y,
+            //    point_a.x,
+            //    pdiva.z,
+            //    point_b.y,
+            //    point_b.x,
+            //    pdivb.z,
+            //);
         }
         None => {}
     }

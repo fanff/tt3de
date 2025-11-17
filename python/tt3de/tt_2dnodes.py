@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pyglm import glm
 
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tt3de.render_context_rust import RustRenderContext
 
-from tt3de.points import Point3D
+from tt3de.points import Point2D, Point3D
 from tt3de.utils import (
     random_node_id,
 )
@@ -140,6 +140,55 @@ class TT2DPoints(TT2DNode):
             p_start,
             len(self.point_list),
             0,
+            self.node_id,
+            self.material_id,
+        )
+
+
+class TT2DLines(TT2DNode):
+    def __init__(
+        self,
+        name: str = None,
+        transform: Optional[glm.mat4] = None,
+        point_list: List[Point3D] = None,
+        segment_uv: List[Tuple[Point2D, Point2D]] = None,
+        material_id=0,
+    ):
+        super().__init__(name=name, transform=transform)
+        self.point_list: List[Point3D] = point_list if point_list is not None else []
+        self.segment_uv: List[Tuple[Point2D, Point2D]] = (
+            segment_uv
+            if segment_uv is not None
+            else [
+                (Point2D(0.0, 0.0), Point2D(1.0, 1.0))
+                for _ in range(len(self.point_list) - 1)
+            ]
+        )
+        self.material_id = material_id
+
+        # will be set when inserted in the render context
+        self.geom_id = None
+        self.vertex_indices: List[int] = []
+
+    def insert_in(self, rc: "RustRenderContext"):
+        super().insert_in(rc)
+
+        # insert all points as vertices
+        self.vertex_indices = [
+            rc.vertex_buffer.add_2d_vertex(p3d.x, p3d.y, p3d.z)
+            for p3d in self.point_list
+        ]
+        self.segment_idx = [
+            rc.vertex_buffer.add_uv(
+                glm.vec2(uva.x, uva.y), glm.vec2(uvb.x, uvb.y), glm.vec2(0.0, 0.0)
+            )
+            for (uva, uvb) in self.segment_uv
+        ]
+
+        self.geom_id = rc.geometry_buffer.add_line2d(
+            self.vertex_indices[0],
+            len(self.point_list),
+            self.segment_idx[0],
             self.node_id,
             self.material_id,
         )

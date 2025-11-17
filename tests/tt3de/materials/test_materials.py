@@ -22,10 +22,29 @@ class Test_ComboMaterial(InitSetup):
 
     def test_render_combo_material(self):
         mb = self.mb
-        static_idx = mb.add_material(materials.StaticColorBackPy((255, 0, 0, 255)))
+        static_idx = mb.add_material(materials.StaticColorBackPy((128, 0, 0, 255)))
         color_front_idx = mb.add_material(materials.StaticColorFrontPy((0, 255, 0, 255)))
         glyph_idx = mb.add_material(materials.StaticGlyphPy(42))
         cb = materials.ComboMaterialPy.from_list([static_idx, color_front_idx, glyph_idx])
+        cbidx = mb.add_material(cb)
+        self.drawing_buffer.set_depth_content(0,0,glm.vec3(0,0,1), 1.0, glm.vec2(0,0), glm.vec2(0,0),
+                                              0,1,cbidx,0)
+        apply_material_py(
+            self.mb,
+            self.texture_buffer,
+            self.vertex_buffer,
+            self.primitive_buffer,
+            self.drawing_buffer)
+
+        cell_dict  = self.drawing_buffer.get_canvas_cell(0,0)
+        self.assertEqual(cell_dict['f_r'], 0)
+        self.assertEqual(cell_dict['f_g'], 255)
+        self.assertEqual(cell_dict['f_b'], 0)
+
+        self.assertEqual(cell_dict['b_r'], 128)
+        self.assertEqual(cell_dict['b_g'], 0)
+        self.assertEqual(cell_dict['b_b'], 0)
+        self.assertEqual(cell_dict['glyph'], 42)
 
 
 class Test_StaticMaterial(InitSetup):

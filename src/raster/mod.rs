@@ -8,10 +8,7 @@ use crate::{
     vertexbuffer::{vertex_buffer::VertexBuffer, vertex_buffer_py::VertexBufferPy},
 };
 
-pub mod raster_line_row;
-use raster_line_row::*;
-pub mod raster_line_columns;
-use raster_line_columns::*;
+
 pub mod raster_line;
 use raster_line::*;
 
@@ -128,7 +125,7 @@ pub fn raster_element<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
-        PrimitiveElements::Line { fds, pa, pb, uv } => {
+        PrimitiveElements::Line { fds, pa, pb } => {
             raster_line(drawing_buffer, fds, pa, pb);
         }
         PrimitiveElements::Point { fds, point, uv: _ } => {

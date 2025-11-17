@@ -1,6 +1,6 @@
 use std::ops::{AddAssign, Div, Mul, Sub};
 
-use nalgebra_glm::{vec3, RealNumber, TVec3, Vec2};
+use nalgebra_glm::{vec3, RealNumber, TVec3, Vec2, Vec3, Vec4};
 
 use crate::raster;
 use raster::vertex::Vertex;
@@ -143,9 +143,8 @@ pub enum PrimitiveElements {
     },
     Line {
         fds: PrimitivReferences,
-        pa: PointInfo<f32>,
-        pb: PointInfo<f32>,
-        uv: usize,
+        pa: Vertex,
+        pb: Vertex,
     },
     Triangle(PTriangle),
     Triangle3D(PTriangle3D),
@@ -170,8 +169,7 @@ impl PrimitiveElements {
                 fds: _,
                 pa: _,
                 pb: _,
-                uv,
-            } => *uv,
+            } => 0,
 
             PrimitiveElements::Static { fds: _, index: _ } => 0,
             PrimitiveElements::Triangle(t) => t.uv,
@@ -291,16 +289,13 @@ impl PrimitiveBuffer {
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: f32,
-        p_a_col: f32,
-        p_a_depth: f32,
-        p_b_row: f32,
-        p_b_col: f32,
-        p_b_depth: f32,
-        uv: usize,
+        pos_a: Vec4,
+        normal_a: Vec3,
+        uv_a: Vec2,
+        pos_b: Vec4,
+        normal_b: Vec3,
+        uv_b: Vec2,
     ) -> usize {
-        let pa = PointInfo::new(p_a_row, p_a_col, p_a_depth);
-
         let elem = PrimitiveElements::Line {
             fds: PrimitivReferences {
                 geometry_id,
@@ -308,9 +303,8 @@ impl PrimitiveBuffer {
                 node_id,
                 primitive_id: self.current_size,
             },
-            pa,
-            uv,
-            pb: PointInfo::new(p_b_row, p_b_col, p_b_depth),
+            pa: Vertex::new(pos_a, normal_a, uv_a),
+            pb: Vertex::new(pos_b, normal_b, uv_b),
         };
         self.content[self.current_size] = elem;
 

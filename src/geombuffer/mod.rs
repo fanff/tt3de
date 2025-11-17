@@ -59,9 +59,13 @@ impl Polygon {
 
 #[derive(Debug)]
 pub enum GeomElement {
-    Point3D(Point),
+    // 2D elements
     Points2D(Points),
     Rect2D(Points),
+    Line2D(Points),
+
+    // 3D elements
+    Point3D(Point),
     Line3D(Line),
     Polygon2D(Polygon),
     PolygonFan3D(Polygon),
@@ -74,6 +78,31 @@ pub struct GeometryBuffer {
 }
 
 impl GeometryBuffer {
+    fn add_line2d(
+        &mut self,
+        p_start: usize,
+        point_count: usize,
+        uv_start: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        if self.current_size >= self.max_size {
+            return self.current_size;
+        }
+        let elem = GeomElement::Line2D(Points {
+            geom_ref: GeomReferences {
+                node_id,
+                material_id,
+            },
+            point_start: p_start,
+            point_count: point_count,
+            uv_idx: uv_start,
+        });
+
+        self.content[self.current_size] = elem;
+        self.current_size += 1;
+        self.current_size - 1
+    }
     fn add_rect2d(
         &mut self,
         top_left: usize,
@@ -292,6 +321,17 @@ impl GeometryBufferPy {
             },
         }
     }
+    fn add_line2d(
+        &mut self,
+        p_start: usize,
+        point_count: usize,
+        uv_start: usize,
+        node_id: usize,
+        material_id: usize,
+    ) -> usize {
+        self.buffer
+            .add_line2d(p_start, point_count, uv_start, node_id, material_id)
+    }
     fn add_rect2d(
         &mut self,
         top_left: usize,
@@ -444,6 +484,14 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("p_start", p.p_start).unwrap();
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();
+        }
+        GeomElement::Line2D(points) => {
+            dict.set_item("_type", "Line2D").unwrap();
+            dict.set_item("geom_ref", geometry_ref_into_dict(py, &points.geom_ref))
+                .unwrap();
+            dict.set_item("point_start", points.point_start).unwrap();
+            dict.set_item("point_count", points.point_count).unwrap();
+            dict.set_item("uv_idx", points.uv_idx).unwrap();
         }
     }
     dict.into()

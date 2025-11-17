@@ -11,7 +11,10 @@ use rect::*;
 
 use crate::{
     raster::vertex::Vertex,
-    utils::{vec2_as_pylist, vec3_as_pylist, vec4_as_pylist},
+    utils::{
+        convert_glm_vec2, convert_glm_vec3, convert_glm_vec4, vec2_as_pylist, vec3_as_pylist,
+        vec4_as_pylist,
+    },
 };
 
 #[pyclass]
@@ -50,28 +53,27 @@ impl PrimitiveBufferPy {
     }
     fn add_line(
         &mut self,
+        py: Python,
         node_id: usize,
         geometry_id: usize,
         material_id: usize,
-        p_a_row: f32,
-        p_a_col: f32,
-        p_a_depth: f32,
-        p_b_row: f32,
-        p_b_col: f32,
-        p_b_depth: f32,
-        uv: usize,
+        pa: Py<PyAny>,
+        normal_a: Py<PyAny>,
+        uv_a: Py<PyAny>,
+        pb: Py<PyAny>,
+        normal_b: Py<PyAny>,
+        uv_b: Py<PyAny>,
     ) -> usize {
         self.content.add_line(
             node_id,
             geometry_id,
             material_id,
-            p_a_row,
-            p_a_col,
-            p_a_depth,
-            p_b_row,
-            p_b_col,
-            p_b_depth,
-            uv,
+            convert_glm_vec4(py, pa),
+            convert_glm_vec3(py, normal_a),
+            convert_glm_vec2(py, uv_a),
+            convert_glm_vec4(py, pb),
+            convert_glm_vec3(py, normal_b),
+            convert_glm_vec2(py, uv_b),
         )
     }
 
@@ -140,7 +142,6 @@ impl PrimitiveBufferPy {
             .add_rect(node_id, geometry_id, material_id, top_left, bottom_right)
     }
 
-
     fn get_primitive(&self, py: Python, idx: usize) -> Py<PyDict> {
         to_dict(py, &self.content.content[idx])
     }
@@ -171,12 +172,11 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
             dict.set_item("depth", point.depth()).unwrap();
             dict.set_item("uv_idx", uv).unwrap();
         }
-        &PrimitiveElements::Line { fds, pa, pb, uv } => {
+        &PrimitiveElements::Line { fds, pa, pb } => {
             into_dict(py, &fds, &dict);
             // Assuming DepthBufferCell has some fields `field1` and `field2`
-            dict.set_item("pa", point_info_into_dict(py, &pa)).unwrap();
-            dict.set_item("pb", point_info_into_dict(py, &pb)).unwrap();
-            dict.set_item("uv_idx", uv).unwrap();
+            dict.set_item("pa", vertex_into_dict(py, &pa)).unwrap();
+            dict.set_item("pb", vertex_into_dict(py, &pb)).unwrap();
         }
         &PrimitiveElements::Static { fds, index } => {
             into_dict(py, &fds, &dict);

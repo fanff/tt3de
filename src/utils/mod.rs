@@ -62,6 +62,14 @@ pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {
 
     Vec3::new(a, b, c)
 }
+
+pub fn convert_glm_vec4(py: Python, values: Py<PyAny>) -> Vec4 {
+    let r = values.call_method0(py, "to_tuple").unwrap();
+    let (a, b, c, d): (f32, f32, f32, f32) = r.extract(py).unwrap();
+
+    Vec4::new(a, b, c, d)
+}
+
 pub fn convert_glm_vec2(py: Python, values: Py<PyAny>) -> Vec2 {
     let r = values.call_method0(py, "to_tuple").unwrap();
     let (a, b): (f32, f32) = r.extract(py).unwrap();

@@ -1,6 +1,6 @@
 use nalgebra_glm::{Vec2, Vec3};
 
-use crate::drawbuffer::drawbuffer::DrawBuffer;
+use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::vertex::Vertex};
 
 use super::{
     primitivbuffer::{PointInfo, PrimitivReferences},
@@ -67,8 +67,8 @@ pub fn raster_vertical_line<const DEPTHCOUNT: usize>(
 pub fn raster_line_along_rows<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
     prim_ref: &PrimitivReferences,
-    pa: &PointInfo<f32>,
-    pb: &PointInfo<f32>,
+    pa: &Vertex,
+    pb: &Vertex,
 ) {
     if pa.row == pb.row {
         raster_horizontal_line(drawing_buffer, prim_ref, pa, pb);

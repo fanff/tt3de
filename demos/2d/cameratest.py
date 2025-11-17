@@ -8,11 +8,14 @@ from textual.widgets import (
 )
 from textual.app import App, ComposeResult
 from tt3de.asset_fastloader import MaterialPerfab
-from tt3de.glm_camera import ViewportScaleMode
 from tt3de.points import Point3D
 from tt3de.textual_standalone import TT3DViewStandAlone
 from tt3de.tt_2dnodes import TT2DNode, TT2DPoints, TT2DRect
-from tt3de.textual.widgets import CameraConfig2D, VisualViewportScaleModeSelector
+from tt3de.textual.widgets import (
+    CameraConfig2D,
+    CameraLoc2D,
+    VisualViewportScaleModeSelector,
+)
 
 
 class DemoContent(TT3DViewStandAlone):
@@ -66,34 +69,23 @@ class DebuggedView(Static):
     def compose(self) -> ComposeResult:
         self.democontent = DemoContent(classes="tt3dview")
         self.democontent.debugger_component = self
-        self.cameraconfig = CameraConfig2D(
-            init_camera_zoom=self.democontent.camera.zoom_2D,
-            init_character_factor=self.democontent.camera.character_factor,
-        )
-
+        self.cameraconfig = CameraConfig2D(camera=self.democontent.camera)
+        self.modeinfo = VisualViewportScaleModeSelector(camera=self.democontent.camera)
+        self.cloc = CameraLoc2D(camera=self.democontent.camera)
         with Container(classes="someinfo"):
             yield self.cameraconfig
-            yield VisualViewportScaleModeSelector(
-                initial_value=self.democontent.camera.current_method
-            )
+            yield self.modeinfo
+            yield self.cloc
 
         yield self.democontent
 
     def container_event(self, event):
         pass
 
-    def on_camera_config2d_zoom_changed(self, event: CameraConfig2D.ZoomChanged):
-        self.democontent.camera.set_zoom_2D(event.value)
-
-    def on_camera_config2d_character_factor_changed(
-        self, event: CameraConfig2D.CharacterFactorChanged
-    ):
-        self.democontent.camera.set_character_factor(event.value)
-
-    def on_visual_viewport_scale_mode_selector_scale_mode_changed(
-        self, event: VisualViewportScaleModeSelector.ScaleModeChanged
-    ):
-        self.democontent.camera.set_viewport_scale_mode(ViewportScaleMode(event.value))
+    def has_just_rendered(self):
+        self.cameraconfig.refresh_content()
+        self.modeinfo.refresh_content()
+        self.cloc.refresh_camera_position()
 
 
 class CameraTest2D(App):

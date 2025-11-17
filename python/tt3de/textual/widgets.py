@@ -10,7 +10,8 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, Input, Label, Sparkline, Select
+from textual.widgets import Button, DataTable, Input, Label, Sparkline, Select, Checkbox
+from textual.containers import Horizontal
 
 from tt3de.glm_camera import GLMCamera, ViewportScaleMode
 from tt3de.textual_widget import TimingRegistry
@@ -304,10 +305,11 @@ class CameraLoc2D(Widget):
         self._camera = camera
 
     def compose(self):
+        yield Label("Camera Position 2D:")
         self._selector_list = []
         initial_value = self._init_info
         for sidx in range(2):
-            s = FloatSelector(-10, 10, 0.0)
+            s = FloatSelector(-2, 2, 0.0, mouse_factor=0.1, button_factor=0.1)
 
             s.current_buffer = initial_value[sidx]
             self._selector_list.append(s)
@@ -336,6 +338,10 @@ class CameraLoc2D(Widget):
 class VisualViewportScaleModeSelector(Widget):
     DEFAULT_CSS = """
     VisualViewportScaleModeSelector{
+        height:auto;
+    }
+    VisualViewportScaleModeSelector > Horizontal{
+        width:100%;
         height:auto;
     }
     """
@@ -373,14 +379,17 @@ class VisualViewportScaleModeSelector(Widget):
 
     def compose(self):
         yield Label("Viewport Scale Mode")
+
         self.selected_widget = Select(
             [(e.name, e.value) for e in ViewportScaleMode],
             allow_blank=False,
             value=self._initial_value.value,
             id="select_viewport_scale_mode",
         )
-
         yield self.selected_widget
+        with Horizontal():
+            yield Checkbox(label="FLIP_X", value=False)
+            yield Checkbox(label="FLIP_Y", value=False)
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "select_viewport_scale_mode":

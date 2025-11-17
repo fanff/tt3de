@@ -101,6 +101,7 @@ class GLMCamera:
     def set_position_2d(self, pos: glm.vec2):
         """Set the camera location in 2D space."""
         self.position_2d = pos
+        self.update_2d_perspective()
 
     def set_viewport_scale_mode(self, method: ViewportScaleMode):
         self.current_method = method
@@ -152,7 +153,10 @@ class GLMCamera:
                 scale_x = self.zoom_2D
                 scale_y = self.zoom_2D * self.character_factor
 
-        self.view_matrix_2D = glm.scale(glm.vec3(scale_x, -scale_y, 1.0))
+        glm.identity(glm.mat4)
+        self.view_matrix_2D = glm.translate(
+            glm.vec3(-self.position_2d.x, -self.position_2d.y, 0.0)
+        ) * glm.scale(glm.vec3(scale_x, -scale_y, 1.0))
 
     def set_character_factor(self, character_factor=1.0):
         self.character_factor = character_factor

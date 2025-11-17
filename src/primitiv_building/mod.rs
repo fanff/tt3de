@@ -25,7 +25,8 @@ pub mod triangle_clipping;
 use triangle_clipping::*;
 pub mod tomato_triangle_clipping;
 use tomato_triangle_clipping::*;
-
+pub mod line_clipping_2d;
+use line_clipping_2d::*;
 pub mod point_clipping;
 use point_clipping::*;
 
@@ -278,6 +279,51 @@ pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
                             screen_ccord.x,
                             point_clip_space.z,
                             p.uv_idx + point_idx,
+                        );
+                    }
+                }
+            }
+            crate::geombuffer::GeomElement::Line2D(p) => {
+                let model_matrix = transform_pack.get_node_transform(p.geom_ref.node_id);
+                let view_matrix = &transform_pack.view_matrix_2d;
+
+                vertex_buffer_2d.apply_mv(
+                    model_matrix,
+                    view_matrix,
+                    p.point_start,
+                    p.point_start + p.point_count,
+                );
+
+                for segment_idx in 0..(p.point_count - 1) {
+                    let point_vertex_idx = p.point_start + segment_idx;
+                    let pa = vertex_buffer_2d.get_calculated(point_vertex_idx);
+                    let pb = vertex_buffer_2d.get_calculated(point_vertex_idx + 1);
+
+                    let (uva, uvb, _uvc) = uv_array_input.get_uv(p.uv_idx + segment_idx);
+
+                    // clip the segment
+                    let clipped = clip_line2d(pa, pb, uva, uvb);
+                    if let Some((a_clip, b_clip, uva_clip, uvb_clip)) = clipped {
+                        // convert from homogeneous coordinates to NDC
+
+                        let point_a = drawbuffer.ndc_to_screen_floating_with_clamp(&a_clip.xy());
+                        let point_b = drawbuffer.ndc_to_screen_floating_with_clamp(&b_clip.xy());
+                        let pa_pos = vec4(point_a.x, point_a.y, a_clip.z, a_clip.w);
+                        let pb_pos = vec4(point_b.x, point_b.y, b_clip.z, b_clip.w);
+
+                        let normal_a = vec3(0.0, 0.0, 1.0);
+                        let normal_b = vec3(0.0, 0.0, 1.0);
+
+                        primitivbuffer.add_line(
+                            p.geom_ref.node_id,
+                            geometry_id,
+                            p.geom_ref.material_id,
+                            pa_pos,
+                            normal_a,
+                            uva_clip,
+                            pb_pos,
+                            normal_b,
+                            uvb_clip,
                         );
                     }
                 }
