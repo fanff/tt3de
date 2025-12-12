@@ -13,6 +13,12 @@ from tt3de.glm_camera import GLMCamera
 from tt3de.render_context_rust import RustRenderContext
 
 
+class FrameTimings:
+    update_duration: float = 0.0
+    render_duration: float = 0.0
+    to_textual_duration: float = 0.0
+
+
 class TT3DViewStandAlone(Container):
     DEFAULT_CSS = """
     TT3DViewStandAlone {
@@ -29,6 +35,7 @@ class TT3DViewStandAlone(Container):
 
     def __init__(
         self,
+        *children,
         # parameters for the widget
         name: str | None = None,
         id: str | None = None,
@@ -42,19 +49,30 @@ class TT3DViewStandAlone(Container):
         primitive_buffer_size=4096,
         transform_buffer_size=64,
         texture_buffer_size=32,
+        material_buffer_size=256,
         # parameters for the camera
         use_left_hand_perspective=True,
     ):
-        super().__init__(name=name, id=id, classes=classes, disabled=disabled)
+        super().__init__(
+            *children, name=name, id=id, classes=classes, disabled=disabled
+        )
         self.debugger_component = None
+        self.frame_timings = FrameTimings()
+
+        if use_left_hand_perspective:
+            init_camera_position = glm.vec3(0, 2, -7)
+            init_yaw, init_pitch = math.radians(0), 0
+        else:
+            init_camera_position = glm.vec3(0, 2, -7)
+            init_yaw, init_pitch = math.radians(180), 0
         self.camera = GLMCamera(
-            glm.vec3(0, 2, 7),
+            init_camera_position,
             90,
             90,
             use_left_hand_perspective=use_left_hand_perspective,
         )
-        self.camera.set_yaw_pitch(math.radians(180), 0)
-        self.camera.set_zoom_2D(0.1)
+        self.camera.set_yaw_pitch(init_yaw, init_pitch)
+        self.camera.set_zoom_2D(1.0)
         self.rc = RustRenderContext(
             90,
             90,
@@ -63,16 +81,20 @@ class TT3DViewStandAlone(Container):
             primitive_buffer_size=primitive_buffer_size,
             transform_buffer_size=transform_buffer_size,
             texture_buffer_size=texture_buffer_size,
+            material_buffer_size=material_buffer_size,
         )
 
         self.initialize()
         self.last_frame_time = time() - 1.0
         self.engine_start_time = time()
-        self.target_fps = target_fps
-        self.target_dt = 1.0 / target_fps
+        if target_fps is not None and target_fps > 0:
+            self.target_dt = 1.0 / target_fps
+        else:
+            self.target_dt = None
 
     def on_mount(self):
-        self.auto_refresh = self.target_dt
+        if self.target_dt is not None:
+            self.auto_refresh = self.target_dt
 
     async def on_event(self, event: events.Event):
         if isinstance(event, events.Resize):
@@ -106,13 +128,15 @@ class TT3DViewStandAlone(Container):
             return [Strip([]) for h in crop.height]
 
         ts = time()
-        if ts > self.last_frame_time + self.target_dt:
+        target_dt = 0 if self.target_dt is None else self.target_dt
+        if ts > self.last_frame_time + target_dt:
             self.frame_idx += 1
-            self.render_step()
+            self.update_frame()
 
             ts = time()
             result = self.rc.to_textual_2(crop)
-
+            if self.is_debugged():
+                self.frame_timings.to_textual_duration = time() - ts
             self.last_frame_time = time()
             return result
         else:
@@ -131,18 +155,37 @@ class TT3DViewStandAlone(Container):
     def post_render_step(self):
         pass
 
-    def render_step(self):
+    def update_frame(self):
+        if self.is_debugged():
+            self.update_frame_debugged()
         if self.size.width > 1 and self.size.height > 1:
             ts = time()
-            self.update_step(ts - self.last_frame_time)  # time since last frame
+            self.update_step(
+                min(ts - self.last_frame_time, 0.5)
+            )  # time since last frame
 
-            ts = time()
             self.rc.clear_canvas()
 
-            ts = time()
             self.rc.render(self.camera)
-            if self.is_debugged():
-                self.debugger_component.has_just_rendered()
+
+            self.post_render_step()
+            return True
+        return False
+
+    def update_frame_debugged(self):
+        if self.size.width > 1 and self.size.height > 1:
+            ts = time()
+            self.update_step(
+                min(ts - self.last_frame_time, 0.5)
+            )  # time since last frame
+            self.frame_timings.update_duration = time() - ts
+
+            self.rc.clear_canvas()
+            self.rc.render(self.camera)
+            self.frame_timings.render_duration = (
+                time() - ts - self.frame_timings.update_duration
+            )
+            self.debugger_component.has_just_rendered()
             self.post_render_step()
             return True
         return False

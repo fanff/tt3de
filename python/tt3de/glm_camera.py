@@ -12,12 +12,14 @@ class ViewportScaleMode(Enum):
     FILL = auto()
     # Ignore aspect ratio, logical 1x1 is stretched to screen
     STRETCH = auto()
+    # Scale logical units to screen pixels
+    SCREEN_FILL = auto()
 
 
 class GLMCamera:
     def __init__(
         self,
-        pos: glm.vec3,
+        pos3d: glm.vec3,
         screen_width: int = 100,
         screen_height: int = 100,
         fov_radians=math.radians(80),
@@ -38,17 +40,19 @@ class GLMCamera:
         self.zoom_2D = 1.0
         self.position_2d = glm.vec2(0.0, 0.0)
         self.view_matrix_2D = glm.scale(glm.vec2(self.character_factor, 1.0))
-        self.current_method = ViewportScaleMode.STRETCH
+        self.current_method = ViewportScaleMode.FIT
+        self.flip_x_2d: bool = False
+        self.flip_y_2d: bool = False
 
         # 3D Camera Info
-        self._pos = pos
-        self.yaw = 0.0
-        self.pitch = 0.0
+        self._pos = pos3d
+        self.yaw: float = 0.0
+        self.pitch: float = 0.0
 
         self._rot = self.calculate_rotation_matrix()
 
         self.perspective_matrix: glm.mat4 = glm.mat4(1.0)
-        self.use_left_hand_perspective = use_left_hand_perspective
+        self.use_left_hand_perspective: bool = use_left_hand_perspective
         self.update_perspective()
         self.update_2d_perspective()
 
@@ -98,6 +102,14 @@ class GLMCamera:
         """Get the camera location in 2D space."""
         return self.position_2d
 
+    def set_flip_x_2d(self, flip_x: bool):
+        self.flip_x_2d = flip_x
+        self.update_2d_perspective()
+
+    def set_flip_y_2d(self, flip_y: bool):
+        self.flip_y_2d = flip_y
+        self.update_2d_perspective()
+
     def set_position_2d(self, pos: glm.vec2):
         """Set the camera location in 2D space."""
         self.position_2d = pos
@@ -122,7 +134,7 @@ class GLMCamera:
             * Logical space is 1.0 units wide and 1.0 units tall (a square).
             * zoom_2D is an overall scale factor.
         """
-        aspect = self.screen_width / (self.screen_height * self.character_factor)
+        aspect = self.screen_width / (self.screen_height)
 
         match self.current_method:
             case ViewportScaleMode.FIT:
@@ -136,7 +148,7 @@ class GLMCamera:
                     # Screen is taller than wide -> compress Y
                     scale_x = self.zoom_2D
                     scale_y = self.zoom_2D * aspect
-
+                scale_y = scale_y / self.character_factor
             case ViewportScaleMode.FILL:
                 # Screen fully covered, preserve aspect ratio, crop the 1x1 if needed.
                 if aspect >= 1.0:
@@ -147,16 +159,35 @@ class GLMCamera:
                     # Screen is taller than wide -> expand X
                     scale_x = self.zoom_2D / aspect
                     scale_y = self.zoom_2D
-
+                scale_y = scale_y / self.character_factor
             case ViewportScaleMode.STRETCH:
                 # No aspect preservation at all.
                 scale_x = self.zoom_2D
-                scale_y = self.zoom_2D * self.character_factor
+                scale_y = self.zoom_2D / self.character_factor
+            case ViewportScaleMode.SCREEN_FILL:
+                scale_x = self.zoom_2D / self.screen_width
+                scale_y = self.zoom_2D / self.screen_height / self.character_factor
 
-        glm.identity(glm.mat4)
-        self.view_matrix_2D = glm.translate(
-            glm.vec3(-self.position_2d.x, -self.position_2d.y, 0.0)
-        ) * glm.scale(glm.vec3(scale_x, -scale_y, 1.0))
+        if self.flip_x_2d:
+            scale_x = -scale_x
+        if self.flip_y_2d:
+            scale_y = -scale_y
+
+        scale = glm.scale(glm.vec3(scale_x, scale_y, 1.0))
+
+        if self.current_method == ViewportScaleMode.SCREEN_FILL:
+            translation = glm.translate(
+                glm.vec3(
+                    -self.position_2d.x * self.screen_width / self.zoom_2D,
+                    -self.position_2d.y * self.screen_height / self.zoom_2D,
+                    0.0,
+                )
+            )
+        else:
+            translation = glm.translate(
+                glm.vec3(-self.position_2d.x, -self.position_2d.y, 0.0)
+            )
+        self.view_matrix_2D = scale * translation
 
     def set_character_factor(self, character_factor=1.0):
         self.character_factor = character_factor
@@ -211,10 +242,10 @@ class GLMCamera:
         self.pitch += angle
         self._rot = self.calculate_rotation_matrix()
 
-    def set_yaw_pitch(self, yaw: float, pitch: float):
+    def set_yaw_pitch(self, yaw: float = None, pitch: float = None):
         """Set the yaw and pitch of the camera."""
-        self.yaw = yaw
-        self.pitch = pitch
+        self.yaw = yaw if yaw is not None else self.yaw
+        self.pitch = pitch if pitch is not None else self.pitch
         new_rot = self.calculate_rotation_matrix()
         self._rot = new_rot
 

@@ -22,9 +22,7 @@ from tt3de.points import Point3D
 
 
 class TestMVP_Projection(unittest.TestCase):
-
     def test_simple_central_points(self):
-
         transform_buffer = TransformPackPy(64)
 
         transform_buffer.set_projection_matrix(
@@ -34,7 +32,7 @@ class TestMVP_Projection(unittest.TestCase):
             glm.lookAt(glm.vec3(0, 0, 3), glm.vec3(0, 0, -3), glm.vec3(0, 1, 0))
         )
 
-        vertex_buffer = VertexBufferPy(128,128,128)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         vertices = [
@@ -97,7 +95,6 @@ class TestMVP_Projection(unittest.TestCase):
         self.assertGreaterEqual(pd_ndc.z, 1.0)  # this is behind the far plane
 
     def test_simple_central_points_2(self):
-
         transform_buffer = TransformPackPy(64)
 
         transform_buffer.set_projection_matrix(
@@ -118,7 +115,7 @@ class TestMVP_Projection(unittest.TestCase):
         # create a view matrix from yaw and pitch and position
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128,128,128)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         vertices = [
@@ -132,7 +129,9 @@ class TestMVP_Projection(unittest.TestCase):
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
-        vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=len(vertices))
+        vertex_buffer.apply_mvp(
+            transform_buffer, node_id=node_id, start=0, end=len(vertices)
+        )
 
         pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
         pa_ndc = perspective_divide(pa)
@@ -160,7 +159,7 @@ class TestMVP_Projection(unittest.TestCase):
 
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128,128,128)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         # adding one point in front of the camera inside the frustum
@@ -175,7 +174,9 @@ class TestMVP_Projection(unittest.TestCase):
 
         node_id = transform_buffer.add_node_transform(glm.mat4(1.0))
 
-        vertex_buffer.apply_mvp(transform_buffer, node_id=node_id, start=0, end=len(vertices))
+        vertex_buffer.apply_mvp(
+            transform_buffer, node_id=node_id, start=0, end=len(vertices)
+        )
 
         pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
         pa_ndc = perspective_divide(pa)
@@ -204,7 +205,7 @@ class TestMVP_Projection(unittest.TestCase):
 
         transform_buffer.set_view_matrix_3d(camera.view_matrix_3D())
 
-        vertex_buffer = VertexBufferPy(128,128,128)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         self.assertEqual(vertex_buffer.get_3d_len(), 0)
 
         point_inside_frustrum = camera_pos - (camera.direction_vector() * 5)

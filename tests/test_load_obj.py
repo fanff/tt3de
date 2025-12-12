@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import unittest
 
@@ -11,7 +12,6 @@ def assertAlmostEqualP3D(a: Point3D, b: Point3D, limit=0.00001):
 
 
 class TestLoad(unittest.TestCase):
-
     def test_simplecube(self):
         polygon3d = fast_load("models/cube.obj")
 
@@ -22,7 +22,6 @@ class TestLoad(unittest.TestCase):
         with open("models/cube_texture.bmp", "rb") as fin:
             pxdata = load_bmp(fin)
 
-    
     def test_paletteAlign(self):
         imgpalette = load_bmp(open("models/cube_texture.bmp", "rb"))
 

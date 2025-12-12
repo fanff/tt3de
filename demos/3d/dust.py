@@ -18,12 +18,12 @@ from tt3de.textual.widgets import (
     RenderInfo,
     RustRenderContextInfo,
 )
-from tt3de.textual_widget import TT3DView
+from tt3de.textual_widget import TT3DFpsView
 
 from tt3de.tt_3dnodes import TT3DNode
 
 
-class GLMTester(TT3DView):
+class GLMTester(TT3DFpsView):
     use_native_python = False
 
     def __init__(self):

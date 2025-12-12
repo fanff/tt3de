@@ -11,7 +11,7 @@ pub struct GeomReferences {
 #[derive(Debug)]
 pub struct Point {
     pub geom_ref: GeomReferences,
-    pub pa: usize,
+    pub point_start: usize,
     pub uv_idx: usize,
 }
 
@@ -28,6 +28,7 @@ pub struct Points {
 
 #[derive(Debug)]
 pub struct Line {
+    /// deprecated
     pub geom_ref: GeomReferences,
     pub p_start: usize,
     pub uv_start: usize,
@@ -37,7 +38,9 @@ pub struct Line {
 pub struct Polygon {
     pub geom_ref: GeomReferences,
     pub p_start: usize,
+    pub p_count: usize,
     pub uv_start: usize,
+    pub triangle_start: usize,
     pub triangle_count: usize,
 }
 
@@ -45,14 +48,31 @@ impl Polygon {
     pub fn new(
         geom_ref: GeomReferences,
         p_start: usize,
+        p_count: usize,
         uv_start: usize,
+        triangle_start: usize,
         triangle_count: usize,
     ) -> Self {
         Self {
             geom_ref,
             p_start,
+            p_count,
             uv_start,
+            triangle_start,
             triangle_count,
+        }
+    }
+    pub fn default() -> Self {
+        Self {
+            geom_ref: GeomReferences {
+                node_id: 0,
+                material_id: 0,
+            },
+            p_start: 0,
+            p_count: 0,
+            uv_start: 0,
+            triangle_start: 0,
+            triangle_count: 0,
         }
     }
 }
@@ -63,12 +83,11 @@ pub enum GeomElement {
     Points2D(Points),
     Rect2D(Points),
     Line2D(Points),
+    Polygon2D(Polygon),
 
     // 3D elements
     Point3D(Point),
-    Line3D(Line),
-    Polygon2D(Polygon),
-    PolygonFan3D(Polygon),
+    Line3D(Points),
     Polygon3D(Polygon),
 }
 pub struct GeometryBuffer {
@@ -170,7 +189,7 @@ impl GeometryBuffer {
                 node_id,
                 material_id,
             },
-            pa: pidx,
+            point_start: pidx,
             uv_idx,
         });
 
@@ -182,6 +201,7 @@ impl GeometryBuffer {
     fn add_line3d(
         &mut self,
         p_start: usize,
+        point_count: usize,
         node_id: usize,
         material_id: usize,
         uv_start: usize,
@@ -189,13 +209,14 @@ impl GeometryBuffer {
         if self.current_size >= self.max_size {
             return self.current_size;
         }
-        let elem = GeomElement::Line3D(Line {
+        let elem = GeomElement::Line3D(Points {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
             },
-            p_start,
-            uv_start,
+            point_start: p_start,
+            point_count: point_count,
+            uv_idx: uv_start,
         });
 
         self.content[self.current_size] = elem;
@@ -206,10 +227,12 @@ impl GeometryBuffer {
     fn add_polygon2d(
         &mut self,
         p_start: usize,
+        p_count: usize,
+        uv_start: usize,
+        triangle_start: usize,
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
-        uv_start: usize,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -221,33 +244,9 @@ impl GeometryBuffer {
                 material_id,
             },
             p_start,
+            p_count,
             uv_start,
-            triangle_count,
-        });
-
-        self.content[self.current_size] = elem;
-        self.current_size += 1;
-        self.current_size - 1
-    }
-    fn add_polygon_fan_3d(
-        &mut self,
-        p_start: usize,
-        triangle_count: usize,
-        node_id: usize,
-        material_id: usize,
-        uv_start: usize,
-    ) -> usize {
-        if self.current_size >= self.max_size {
-            return self.current_size;
-        }
-
-        let elem = GeomElement::PolygonFan3D(Polygon {
-            geom_ref: GeomReferences {
-                node_id,
-                material_id,
-            },
-            p_start,
-            uv_start,
+            triangle_start,
             triangle_count,
         });
 
@@ -259,10 +258,12 @@ impl GeometryBuffer {
     fn add_polygon_3d(
         &mut self,
         p_start: usize,
+        p_count: usize,
+        uv_start: usize,
+        triangle_start: usize,
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
-        uv_start: usize,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -274,7 +275,9 @@ impl GeometryBuffer {
                 material_id,
             },
             p_start,
+            p_count,
             uv_start,
+            triangle_start,
             triangle_count,
         });
 
@@ -294,24 +297,13 @@ impl GeometryBufferPy {
     #[new]
     #[pyo3(signature = (max_size=64))]
     fn new(max_size: usize) -> Self {
-        let polygon_init = vec![
-            Polygon {
-                geom_ref: GeomReferences {
-                    node_id: 0,
-                    material_id: 0,
-                },
-                p_start: 0,
-                uv_start: 0,
-                triangle_count: 1,
-            };
-            max_size
-        ];
+        let polygon_init = vec![Polygon::default(); max_size];
 
         let geom_elements: Vec<GeomElement> = polygon_init
             .into_iter()
             .map(GeomElement::Polygon2D)
             .collect();
-        // Step 3: Box the Vec<GeomElement>
+        // Box the Vec<GeomElement>
         let content = geom_elements.into_boxed_slice();
         GeometryBufferPy {
             buffer: GeometryBuffer {
@@ -378,54 +370,88 @@ impl GeometryBufferPy {
     fn add_polygon2d(
         &mut self,
         p_start: usize,
+        p_count: usize,
+        uv_start: usize,
+        triangle_start: usize,
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
-        uv_start: usize,
     ) -> usize {
-        self.buffer
-            .add_polygon2d(p_start, triangle_count, node_id, material_id, uv_start)
+        self.buffer.add_polygon2d(
+            p_start,
+            p_count,
+            uv_start,
+            triangle_start,
+            triangle_count,
+            node_id,
+            material_id,
+        )
     }
-    fn add_polygon_fan_3d(
-        &mut self,
-        p_start: usize,
-        triangle_count: usize,
-        node_id: usize,
-        material_id: usize,
-        uv_start: usize,
-    ) -> usize {
-        self.buffer
-            .add_polygon_fan_3d(p_start, triangle_count, node_id, material_id, uv_start)
-    }
+
     fn add_polygon_3d(
         &mut self,
         p_start: usize,
+        p_count: usize,
+        uv_start: usize,
+        triangle_start: usize,
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
-        uv_start: usize,
     ) -> usize {
-        self.buffer
-            .add_polygon_3d(p_start, triangle_count, node_id, material_id, uv_start)
+        self.buffer.add_polygon_3d(
+            p_start,
+            p_count,
+            uv_start,
+            triangle_start,
+            triangle_count,
+            node_id,
+            material_id,
+        )
     }
 
-    /// Add a line to the geometry buffer
-    ///
-    /// Args:
-    ///    p_start: The index of the first point in the line
-    ///    node_id: The node id of the line
-    ///    material_id: The material id of the line
-    ///    uv_start: The index of the first uv in the line
-    #[pyo3(signature = (p_start, node_id, material_id, uv_start))]
+    /// Add a 3D line to the geometry buffer
+    #[pyo3(signature = (p_start, point_count, uv_start, node_id, material_id))]
     fn add_line3d(
         &mut self,
         p_start: usize,
+        point_count: usize,
+        uv_start: usize,
         node_id: usize,
         material_id: usize,
-        uv_start: usize,
     ) -> usize {
         self.buffer
-            .add_line3d(p_start, node_id, material_id, uv_start)
+            .add_line3d(p_start, point_count, node_id, material_id, uv_start)
+    }
+
+    #[pyo3(signature = (geom_idx, new_material_id))]
+    pub fn update_geometry_material(&mut self, geom_idx: usize, new_material_id: usize) {
+        if geom_idx >= self.buffer.current_size {
+            return;
+        }
+
+        match &mut self.buffer.content[geom_idx] {
+            GeomElement::Rect2D(pi) => {
+                pi.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Points2D(pi) => {
+                pi.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Point3D(pi) => {
+                pi.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Line3D(l) => {
+                l.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Polygon2D(p) => {
+                p.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Polygon3D(p) => {
+                p.geom_ref.material_id = new_material_id;
+            }
+            GeomElement::Line2D(points) => {
+                points.geom_ref.material_id = new_material_id;
+            }
+        }
     }
 }
 
@@ -450,7 +476,8 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("uv_idx", pi.uv_idx).unwrap();
         }
         GeomElement::Point3D(pi) => {
-            dict.set_item("pa", pi.pa).unwrap();
+            dict.set_item("_type", "Point3D").unwrap();
+            dict.set_item("p_start", pi.point_start).unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &pi.geom_ref))
                 .unwrap();
         }
@@ -458,8 +485,9 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("_type", "Line3D").unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &l.geom_ref))
                 .unwrap();
-            dict.set_item("p_start", l.p_start).unwrap();
-            dict.set_item("uv_start", l.uv_start).unwrap();
+            dict.set_item("point_start", l.point_start).unwrap();
+            dict.set_item("point_count", l.point_count).unwrap();
+            dict.set_item("uv_idx", l.uv_idx).unwrap();
         }
         GeomElement::Polygon2D(p) => {
             dict.set_item("_type", "Polygon2D").unwrap();
@@ -469,14 +497,7 @@ fn geometry_into_dict(py: Python, pi: &GeomElement) -> Py<PyDict> {
             dict.set_item("triangle_count", p.triangle_count).unwrap();
             dict.set_item("uv_start", p.uv_start).unwrap();
         }
-        GeomElement::PolygonFan3D(p) => {
-            dict.set_item("_type", "PolygonFan3D").unwrap();
-            dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))
-                .unwrap();
-            dict.set_item("p_start", p.p_start).unwrap();
-            dict.set_item("triangle_count", p.triangle_count).unwrap();
-            dict.set_item("uv_start", p.uv_start).unwrap();
-        }
+
         GeomElement::Polygon3D(p) => {
             dict.set_item("_type", "Polygon3D").unwrap();
             dict.set_item("geom_ref", geometry_ref_into_dict(py, &p.geom_ref))

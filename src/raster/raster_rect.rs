@@ -109,7 +109,7 @@ mod test_raster_rect {
 
     #[test]
     fn test_raster_rect() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0, true, false);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -152,7 +152,7 @@ mod test_raster_rect {
 
     #[test]
     fn test_raster_outbound() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 100.0, true, false);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,

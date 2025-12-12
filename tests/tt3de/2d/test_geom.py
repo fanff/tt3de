@@ -18,6 +18,7 @@ class Test_2DGeometryBuffer(unittest.TestCase):
         self.assertEqual(geom_buffer.geometry_count(), 0)
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
+
     def test_add_points_2d(self):
         """Test adding a 2D point and verify its addition to the buffer."""
         geom_buffer = self.geom_buffer
@@ -46,6 +47,7 @@ class Test_2DGeometryBuffer(unittest.TestCase):
 
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
+
     def test_add_polygon2d(self):
         """Test adding a 2D polygon and verify its addition to the buffer."""
         geom_buffer = self.geom_buffer

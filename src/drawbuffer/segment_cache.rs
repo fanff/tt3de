@@ -22,6 +22,9 @@ impl SegmentCache {
             bit_size_back,
         }
     }
+    pub fn get_cache_size(&self) -> usize {
+        self.data.len()
+    }
     pub fn new_iso(bit_size: u8) -> Self {
         SegmentCache {
             data: BTreeMap::new(),

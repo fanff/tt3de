@@ -8,12 +8,8 @@ use crate::{
     vertexbuffer::{vertex_buffer::VertexBuffer, vertex_buffer_py::VertexBufferPy},
 };
 
-
 pub mod raster_line;
 use raster_line::*;
-
-pub mod raster_triangle;
-use raster_triangle::*;
 
 pub mod raster_point;
 use raster_point::*;
@@ -25,18 +21,6 @@ use raster_triangle_tomato::*;
 
 pub mod vertex;
 use vertex::*;
-
-//  calculating min/max of multiple values;
-fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
-    std::cmp::min(std::cmp::min(a, b), c)
-}
-fn max_3_int<T: Ord>(a: T, b: T, c: T) -> T {
-    std::cmp::max(std::cmp::max(a, b), c)
-}
-
-fn min_2_int<T: Ord>(a: T, b: T) -> T {
-    std::cmp::min(a, b)
-}
 
 // function that "set stuff" in the drawing buffer; assuming its a double raster
 fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
@@ -130,9 +114,6 @@ pub fn raster_element<const DEPTHCOUNT: usize>(
         }
         PrimitiveElements::Point { fds, point, uv: _ } => {
             raster_point_info(drawing_buffer, fds, point);
-        }
-        PrimitiveElements::Triangle(t) => {
-            raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
         }
         PrimitiveElements::Triangle3D(t) => {
             // raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);

@@ -41,12 +41,13 @@ class RustRenderContext:
         primitive_buffer_size=2048,
         transform_buffer_size=64,
         texture_buffer_size=32,
+        material_buffer_size=32,
     ):
         self.width = screen_width
         self.height = screen_height
 
         self.texture_buffer = TextureBufferPy(texture_buffer_size)
-        self.material_buffer = MaterialBufferPy()
+        self.material_buffer = MaterialBufferPy(material_buffer_size)
         self.vertex_buffer = VertexBufferPy(
             vertex_buffer_size, uv_buffer_size, vertex_2d_buffer_size
         )

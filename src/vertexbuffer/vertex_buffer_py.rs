@@ -1,4 +1,4 @@
-use nalgebra_glm::{Mat4, Vec2, Vec4};
+use nalgebra_glm::{Mat4, Vec2, Vec3, Vec4};
 use pyo3::{
     prelude::*,
     types::{PyFunction, PyTuple},
@@ -7,14 +7,17 @@ use pyo3::{
 use crate::{
     utils::{convert_glm_vec2, convert_glm_vec3},
     vertexbuffer::{
-        transform_pack::TransformPack, transform_pack_py::TransformPackPy, uv_buffer::UVBuffer,
-        vertex_buffer::VertexBuffer,
+        transform_pack::TransformPack,
+        transform_pack_py::TransformPackPy,
+        uv_buffer::UVBuffer,
+        vertex_buffer::{TriangleBuffer, VertexBuffer},
     },
 };
 
 #[pyclass]
 pub struct VertexBufferPy {
     pub buffer3d: VertexBuffer<Vec4>,
+    pub triangle_buffer3d: TriangleBuffer,
     pub uv_array: UVBuffer<f32>,
     pub buffer2d: VertexBuffer<Vec4>,
 }
@@ -38,6 +41,7 @@ impl VertexBufferPy {
             buffer3d: VertexBuffer::with_capacity(buffer3d_size),
             uv_array: UVBuffer::new(uv_array_size),
             buffer2d: VertexBuffer::with_capacity(buffer2d_size),
+            triangle_buffer3d: TriangleBuffer::new(buffer3d_size / 3),
         }
     }
 
@@ -99,13 +103,8 @@ impl VertexBufferPy {
 
         // Step 2: Access the `data` attribute safely  (magic!)
         let inner_data: &TransformPack = &thething.borrow().data;
-
-        self.buffer2d.apply_mv(
-            inner_data.get_node_transform(node_id),
-            &inner_data.view_matrix_2d,
-            start,
-            end,
-        )
+        let mv = inner_data.get_node_transform(node_id) * &inner_data.view_matrix_2d;
+        self.buffer2d.apply_mv(&mv, start, end)
     }
 
     // 3d section
@@ -119,6 +118,27 @@ impl VertexBufferPy {
     fn add_3d_vertex(&mut self, x: f32, y: f32, z: f32) -> usize {
         let ve = Vec4::new(x, y, z, 1.0);
         self.buffer3d.add_vertex(&ve)
+    }
+
+    fn add_3d_triangle(
+        &mut self,
+        py: Python,
+        v0: usize,
+        v1: usize,
+        v2: usize,
+        uva: Py<PyAny>,
+        uvb: Py<PyAny>,
+        uvc: Py<PyAny>,
+        normal: Py<PyAny>,
+    ) -> (usize, usize) {
+        let va: Vec2 = convert_glm_vec2(py, uva);
+        let vb: Vec2 = convert_glm_vec2(py, uvb);
+        let vc: Vec2 = convert_glm_vec2(py, uvc);
+
+        let normal_vec: Vec3 = convert_glm_vec3(py, normal);
+        let uv_index = self.uv_array.add_uv(&va, &vb, &vc);
+        let triangle_index = self.triangle_buffer3d.add_triangle(v0, v1, v2, normal_vec);
+        (uv_index, triangle_index)
     }
 
     fn get_3d_vertex_tuple(&self, py: Python, idx: usize) -> Py<PyTuple> {
@@ -146,13 +166,8 @@ impl VertexBufferPy {
 
         // Step 2: Access the `data` attribute safely  (magic!)
         let inner_data: &TransformPack = &thething.borrow().data;
-
-        self.buffer3d.apply_mv(
-            inner_data.get_node_transform(node_id),
-            &inner_data.view_matrix_2d,
-            start,
-            end,
-        )
+        let mv = inner_data.get_node_transform(node_id) * &inner_data.view_matrix_3d;
+        self.buffer3d.apply_mv(&mv, start, end)
     }
 
     pub fn apply_mvp(

@@ -15,7 +15,7 @@ use segment_cache::*;
 
 #[pyclass]
 pub struct DrawingBufferPy {
-    pub db: DrawBuffer<2, f32>,
+    pub db: DrawBuffer<4, f32>,
     max_row: usize,
     max_col: usize,
     layer_count: usize,
@@ -33,7 +33,8 @@ pub struct DrawingBufferPy {
 #[pymethods]
 impl DrawingBufferPy {
     #[new]
-    fn new(py: Python, max_row: usize, max_col: usize) -> Self {
+    #[pyo3(signature = (max_row, max_col, flip_x=false, flip_y=true))]
+    fn new(py: Python, max_row: usize, max_col: usize, flip_x: bool, flip_y: bool) -> Self {
         let rich_style_module = py.import("rich.style").unwrap();
         let rich_color_module = py.import("rich.color").unwrap();
         let rich_text_module = py.import("rich.text").unwrap();
@@ -63,7 +64,7 @@ impl DrawingBufferPy {
         );
         segment_cache.insert_with_hash(0, aseg0);
         DrawingBufferPy {
-            db: DrawBuffer::new(max_row, max_col, 10.0),
+            db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),
             max_row,
             max_col,
             layer_count: 2,
@@ -75,8 +76,25 @@ impl DrawingBufferPy {
             default_segment,
         }
     }
+
+    pub fn get_cache_size(&self) -> usize {
+        self.seg_cache.get_cache_size()
+    }
     pub fn layer_count(&self) -> usize {
         self.layer_count
+    }
+    pub fn get_flip_x(&self) -> bool {
+        self.db.flip_x
+    }
+    pub fn set_flip_x(&mut self, v: bool) {
+        self.db.set_flip_x(v);
+    }
+    pub fn get_flip_y(&self) -> bool {
+        self.db.flip_y
+    }
+
+    pub fn set_flip_y(&mut self, v: bool) {
+        self.db.set_flip_y(v);
     }
 
     pub fn get_row_count(&self) -> usize {
@@ -422,4 +440,9 @@ impl DrawingBufferPy {
 #[pyfunction(text_signature = "(input)")]
 pub fn find_glyph_indices_py(input: char) -> i8 {
     find_glyph_index(input)
+}
+
+#[pyfunction(text_signature = "(input)")]
+pub fn get_glyph_set() -> String {
+    GLYPH_STATIC_STR.join("")
 }

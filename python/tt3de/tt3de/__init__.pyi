@@ -1,7 +1,20 @@
-from typing import Union
+from ast import List
+from typing import Dict, Tuple
 from pyglm import glm
 
-from tt3de.tt3de.materials import ComboMaterialPy
+from tt3de.tt3de.materials import (
+    BaseTexturePy,
+    StaticColorPy,
+)
+
+def get_glyph_set() -> str:
+    """
+    Returns the static glyph set as a string.
+
+    Returns:
+        str: The static glyph set.
+    """
+    ...
 
 def find_glyph_indices_py(input: str) -> int:
     """
@@ -19,17 +32,19 @@ class TextureBufferPy:
     def __init__(self, max_size: int):
         """
         Initializes the texture buffer.
+        Each Texture must be within self.max_texture_size size.
 
         Args:
             max_size (int): The maximum number of textures that can be stored.
         """
+        self.max_texture_size = max_size
         ...
 
     def add_texture(
         self,
         image_width: int,
         image_height: int,
-        chained_data: bytes,
+        chained_data: List[int],
         repeat_width: bool,
         repeat_height: bool,
     ) -> int:
@@ -39,12 +54,32 @@ class TextureBufferPy:
         Args:
             image_width (int): The width of the image.
             image_height (int): The height of the image.
-            chained_data (bytes): The image data.
+            chained_data (List[int]): The image data.
             repeat_width (bool): Whether to repeat the texture horizontally.
             repeat_height (bool): Whether to repeat the texture vertically.
 
         Returns:
             int: The index of the texture.
+        """
+        ...
+
+    def add_atlas_texture_from_iter(
+        self,
+        width: int,
+        height: int,
+        pixels: List[int],
+        pix_size_width: int,
+        pix_size_height: int,
+    ) -> int:
+        """
+        Adds an atlas texture from an iterator of pixels.
+
+        Args:
+            width (int): The width of the atlas texture.
+            height (int): The height of the atlas texture.
+            pixels (List[int]): The pixel data.
+            pix_size_width (int): The width of each pixel.
+            pix_size_height (int): The height of each pixel.
         """
         ...
 
@@ -56,12 +91,31 @@ class MaterialBufferPy:
             max_size (int): The maximum number of materials that can be stored.
         """
         ...
-    def add_material(self, material: Union[ComboMaterialPy]) -> int:
+
+    def add_static_color(
+        self,
+        mat: StaticColorPy,
+    ) -> int:
         """
-        Adds a material to the buffer.
+        Adds a static color material to the buffer.
 
         Args:
-            material (Union[materials.ComboMaterialPy]): The material to add.
+            mat (StaticColorPy): The static color material to add.
+
+        Returns:
+            int: The index of the material.
+        """
+        ...
+
+    def add_base_texture(
+        self,
+        mat: BaseTexturePy,
+    ) -> int:
+        """
+        Adds a base texture material to the buffer.
+
+        Args:
+            mat (BaseTexturePy): The base texture material to add.
 
         Returns:
             int: The index of the material.
@@ -90,6 +144,7 @@ class GeometryBufferPy:
             max_size (int): The maximum number of geometries that can be stored.
         """
         ...
+
     def get_element(self, idx: int) -> dict:
         """
         Fetches a geometry element at the given index.
@@ -101,6 +156,7 @@ class GeometryBufferPy:
             dict: A dictionary representing the geometry element.
         """
         ...
+
     def geometry_count(self) -> int:
         """
         Returns:
@@ -157,6 +213,7 @@ class GeometryBufferPy:
             material_id (int): The material ID.
         """
         ...
+
     def add_polygon2d(
         self,
         p_start: int,
@@ -187,6 +244,7 @@ class VertexBufferPy:
             max_vertex_2d_size (int): The maximum number of 2D vertices that can be stored.
         """
         ...
+
     def add_2d_vertex(self, x: float, y: float, z: float) -> int:
         """
         Adds a 2D vertex to the buffer.
@@ -200,6 +258,7 @@ class VertexBufferPy:
             int: The index of the newly added vertex.
         """
         ...
+
     def get_2d_vertex_tuple(self, idx: int) -> tuple:
         """
         Fetches a 2D vertex at the given index.
@@ -211,6 +270,7 @@ class VertexBufferPy:
             tuple: A tuple representing the vertex (x, y, z, w).
         """
         ...
+
     def get_2d_calculated_tuple(self, idx: int) -> tuple:
         """
         Fetches a 2D vertex in clip space at the given index.
@@ -243,6 +303,7 @@ class VertexBufferPy:
             int: The maximum number of 3D vertices that can be stored.
         """
         ...
+
     def get_3d_len(self) -> int:
         """
         Returns:
@@ -256,18 +317,21 @@ class VertexBufferPy:
             int: The maximum number of 2D vertices that can be stored.
         """
         ...
+
     def get_2d_len(self) -> int:
         """
         Returns:
             int: The current number of 2D vertices stored.
         """
         ...
+
     def get_uv_size(self) -> int:
         """
         Returns:
             int: The current number of UV sets stored.
         """
         ...
+
     def get_3d_vertex_tuple(self, idx: int) -> tuple:
         """
         Fetches a vertex at the given index.
@@ -279,6 +343,7 @@ class VertexBufferPy:
             tuple: A tuple representing the vertex (x, y, z, w).
         """
         ...
+
     def get_3d_calculated_tuple(self, idx: int) -> tuple:
         """
         Fetches a vertex in clip space at the given index.
@@ -289,6 +354,7 @@ class VertexBufferPy:
             tuple: A tuple representing the clip space vertex (x, y, z, w).
         """
         ...
+
     def add_uv(
         self,
         uv0: glm.vec2,
@@ -308,6 +374,33 @@ class VertexBufferPy:
         """
         ...
 
+    def add_3d_triangle(
+        self,
+        v0: int,
+        v1: int,
+        v2: int,
+        uva: glm.vec2,
+        uvb: glm.vec2,
+        uvc: glm.vec2,
+        normal: glm.vec3,
+    ) -> Tuple[int, int]:
+        """
+        Adds a 3D triangle to the buffer.
+
+        Args:
+            v0 (int): The index of the first vertex.
+            v1 (int): The index of the second vertex.
+            v2 (int): The index of the third vertex.
+            uva (glm.vec2): The UV coordinate for the first vertex.
+            uvb (glm.vec2): The UV coordinate for the second vertex.
+            uvc (glm.vec2): The UV coordinate for the third vertex.
+            normal (glm.vec3): The normal vector for the triangle.
+
+        Returns:
+            (int, int): A tuple containing the UV index and triangle index.
+        """
+        ...
+
 class TransformPackPy:
     def __init__(self, max_size=64):
         """
@@ -317,6 +410,7 @@ class TransformPackPy:
             max_size (int): The maximum number of transforms that can be stored.
         """
         ...
+
     def clear(self) -> None:
         """
         Remove all stored node transforms.
@@ -419,7 +513,9 @@ class TransformPackPy:
         ...
 
 class DrawingBufferPy:
-    def __init__(self, max_row: int, max_col: int):
+    def __init__(
+        self, max_row: int, max_col: int, flip_x: bool = False, flip_y: bool = False
+    ):
         """
         Initializes the drawing buffer.
 
@@ -428,6 +524,7 @@ class DrawingBufferPy:
             max_col (int): The maximum number of columns.
         """
         ...
+
     def set_depth_content(
         self,
         row: int,
@@ -466,15 +563,38 @@ class PrimitiveBufferPy:
             max_size (int): The maximum number of primitives that can be stored.
         """
         ...
+
     def primitive_count(self) -> int:
         """
         Returns:
             int: The current number of primitives stored.
         """
         ...
+
     def clear(self) -> None:
         """
         Clears all stored primitives.
+        """
+        ...
+
+    def get_all_as_dicts(self) -> List[Dict]:
+        """
+        Fetches all primitives as a list of dictionaries.
+
+        Returns:
+            list: A list of dictionaries representing the primitives.
+        """
+        ...
+
+    def get_primitive(self, idx: int) -> dict:
+        """
+        Fetches a primitive at the given index.
+
+        Args:
+            idx (int): The index of the primitive to fetch.
+
+        Returns:
+            dict: A dictionary representing the primitive.
         """
         ...
 

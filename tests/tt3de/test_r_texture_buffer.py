@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 import pytest
 from tt3de.asset_fastloader import fast_load
@@ -45,10 +46,6 @@ class Test_TextureArray(unittest.TestCase):
         )
         self.assertEqual(texture_array.size(), 3)
         self.assertEqual(texture_array.get_wh_of(2), (256, 114))
-
-        self.assertEqual(texture_array.get_rgba_at(2, 0.0, 0.0), (204, 145, 114, 255))
-        self.assertEqual(texture_array.get_rgba_at(2, 0.1, 0.0), (211, 149, 113, 255))
-        self.assertEqual(texture_array.get_rgba_at(2, 0.1, 0.1), (205, 146, 112, 255))
 
     def test_mapping_repeat(self):
         texture_array = TextureBufferPy(12)

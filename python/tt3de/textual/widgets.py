@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass
+import math
 from statistics import mean
 from typing import Any, Coroutine, List
-import glm
+from pyglm import glm
 from textual.widgets import Log
 from textual import events
 from textual.app import ComposeResult
@@ -14,7 +15,7 @@ from textual.widgets import Button, DataTable, Input, Label, Sparkline, Select, 
 from textual.containers import Horizontal
 
 from tt3de.glm_camera import GLMCamera, ViewportScaleMode
-from tt3de.textual_widget import TimingRegistry
+from tt3de.textual_standalone import FrameTimings, TT3DViewStandAlone
 
 
 class FloatSelector(Widget, can_focus=False):
@@ -116,6 +117,16 @@ class FloatSelector(Widget, can_focus=False):
         yield Button("-", classes="minus-1")
         yield Input(f"{round(self.current_value, self.round_figures)}")
         yield Button("+", classes="plus-1")
+
+    def on_input_changed(self, event: Input.Changed):
+        try:
+            v = float(event.value)
+
+            if self.is_mouse_clicking:
+                return
+            self.current_buffer = v
+        except ValueError:
+            pass
 
     def on_button_pressed(self, event: Button.Pressed):
         match str(event.button.label):
@@ -309,7 +320,7 @@ class CameraLoc2D(Widget):
         self._selector_list = []
         initial_value = self._init_info
         for sidx in range(2):
-            s = FloatSelector(-2, 2, 0.0, mouse_factor=0.1, button_factor=0.1)
+            s = FloatSelector(-10, 10, 0.0, mouse_factor=0.1, button_factor=0.1)
 
             s.current_buffer = initial_value[sidx]
             self._selector_list.append(s)
@@ -377,6 +388,9 @@ class VisualViewportScaleModeSelector(Widget):
         )
         self._camera = camera
 
+        self._init_flip_x = False
+        self._init_flip_y = False
+
     def compose(self):
         yield Label("Viewport Scale Mode")
 
@@ -388,8 +402,20 @@ class VisualViewportScaleModeSelector(Widget):
         )
         yield self.selected_widget
         with Horizontal():
-            yield Checkbox(label="FLIP_X", value=False)
-            yield Checkbox(label="FLIP_Y", value=False)
+            self.flip_x = Checkbox(label="FLIP_X", value=self._init_flip_x)
+            self.flip_y = Checkbox(label="FLIP_Y", value=self._init_flip_y)
+            yield self.flip_x
+            yield self.flip_y
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        if event.checkbox == self.flip_x:
+            v = event.value
+            if self._camera is not None:
+                self._camera.set_flip_x_2d(v)
+        elif event.checkbox == self.flip_y:
+            v = event.value
+            if self._camera is not None:
+                self._camera.set_flip_y_2d(v)
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "select_viewport_scale_mode":
@@ -452,7 +478,7 @@ class CameraConfig2D(Widget):
 
         yield FloatSelector(
             0.01,
-            10.5,
+            300.0,
             self._init_camera_zoom,
             mouse_factor=0.1,
             button_factor=0.5,
@@ -533,25 +559,25 @@ class CameraConfig(Widget):
         input: "CameraConfig"
         value: float
 
-    _init_camera_position = None
-
     def __init__(
         self,
-        initial_cam_position=(0.0, 0.0, 0.0),
+        camera,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
     ):
         super().__init__(id=id, classes=classes, disabled=disabled, name=name)
-        self._init_camera_position = initial_cam_position
+        self._camera: GLMCamera = camera
 
     def compose(self):
         yield Label("Position:")
+
+        c_pos = self._camera.position_vector()
         yield Vector3Selector(
             minvalue=(-10, -10, -10),
             maxvalue=(10, 10, 10),
-            initial_value=self._init_camera_position,
+            initial_value=(c_pos.x, c_pos.y, c_pos.z),
             id="input_camera_position",
         )
 
@@ -560,7 +586,7 @@ class CameraConfig(Widget):
         yield FloatSelector(
             -1200.0,
             1200.0,
-            0.0,
+            math.degrees(self._camera.yaw),
             mouse_factor=3.0,
             button_factor=10.0,
             id="input_camera_yaw",
@@ -568,7 +594,7 @@ class CameraConfig(Widget):
         yield FloatSelector(
             -110.0,
             110,
-            0.0,
+            math.degrees(self._camera.pitch),
             mouse_factor=3.0,
             button_factor=10.0,
             id="input_camera_pitch",
@@ -576,37 +602,42 @@ class CameraConfig(Widget):
 
         yield Label("Fov")
         yield FloatSelector(
-            30, 130, 50, mouse_factor=1.0, button_factor=1.0, id="input_camera_fov"
+            30,
+            130,
+            math.degrees(self._camera.fov_radians),
+            mouse_factor=1.0,
+            button_factor=1.0,
+            id="input_camera_fov",
         )
         yield Label("Min_depth & Max_depth")
-        yield FloatSelector(0.00, 20, 0.2, 0.01, 0.1, id="input_camera_mindepth")
-        yield FloatSelector(10, 1000, 100.0, id="input_camera_maxdepth")
+        yield FloatSelector(
+            0.00, 20, self._camera.dist_min, 0.01, 0.1, id="input_camera_mindepth"
+        )
+        yield FloatSelector(10, 1000, self._camera.dist_max, id="input_camera_maxdepth")
         yield Label("character_factor")
         yield FloatSelector(
             0.3,
             3.5,
-            1.8,
+            self._camera.character_factor,
             mouse_factor=0.1,
             button_factor=0.1,
             id="input_character_factor",
         )
 
-        yield Label("camera_zoom")
+        yield Label("Projection Method:")
 
-        yield FloatSelector(
-            0.1,
-            3.5,
-            1.8,
-            mouse_factor=0.1,
-            button_factor=0.5,
-            id="input_camera_zoom",
+        yield Checkbox(
+            label="Use Left Hand Perspective",
+            value=self._camera.use_left_hand_perspective,
+            id="checkbox_left_hand_perspective",
         )
 
-    # async def on_event(self,event):
-    #    await super().on_event(event)
-    #    if not isinstance(event,(events.MouseEvent,events.Compose,events.Mount,events.Resize,events.Show,events.Unmount)):
-    #        if not isinstance(event,(events.Enter,events.Leave,events.DescendantBlur,events.DescendantFocus)):
-    #            print("")
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        if event.checkbox.id == "checkbox_left_hand_perspective":
+            v = event.value
+            self._camera.use_left_hand_perspective = v
+            self._camera.update_perspective()
+
     def on_float_selector_changed(self, event: FloatSelector.Changed) -> None:
         proj_ids = [
             "input_camera_fov",
@@ -617,7 +648,22 @@ class CameraConfig(Widget):
 
         rots_ids = ["input_camera_yaw", "input_camera_pitch"]
 
-        zoom_id = ["input_camera_zoom"]
+        match event.input.id:
+            case "input_camera_fov":
+                self._camera.set_projectioninfo(fov_radians=math.radians(event.value))
+            case "input_camera_mindepth":
+                self._camera.set_projectioninfo(dist_min=event.value)
+            case "input_camera_maxdepth":
+                self._camera.set_projectioninfo(dist_max=event.value)
+            case "input_character_factor":
+                self._camera.set_projectioninfo(character_factor=event.value)
+            case "input_camera_zoom":
+                pass  # self._camera.set_zoom(event.value)
+            case "input_camera_yaw":
+                self._camera.set_yaw_pitch(yaw=math.radians(event.value))
+            case "input_camera_pitch":
+                self._camera.set_yaw_pitch(pitch=math.radians(event.value))
+
         if event.input.id in proj_ids:
             event.bubble = False
             v = [self.query_one(f"#{wid}").current_value for wid in proj_ids]
@@ -627,15 +673,15 @@ class CameraConfig(Widget):
             event.bubble = False
             v = [self.query_one(f"#{wid}").current_value for wid in rots_ids]
             self.post_message(self.OrientationChanged(self, v))
-        elif event.input.id in zoom_id:
-            event.bubble = False
-            v = self.query_one(f"#{zoom_id[0]}").current_value
-            self.post_message(self.ZoomChanged(self, v))
         else:
             raise Exception("must be an error ?!")
 
     def on_vector3selector_changed(self, event: Vector3Selector.Changed) -> None:
         if event.input.id == "input_camera_position":
+            self._camera.move_at(
+                glm.vec3(event.value[0], event.value[1], event.value[2])
+            )
+
             event.bubble = False
             self.post_message(CameraConfig.PositionChanged(self, event.value))
 
@@ -660,12 +706,6 @@ class CameraConfig(Widget):
             self.query_one("#input_camera_yaw").current_value = yaw
             self.query_one("#input_camera_pitch").current_value = pitch
 
-    def refresh_camera_zoom(self, zoom: float, no_events=True):
-        if no_events:
-            self.query_one("#input_camera_zoom").current_value = zoom
-        else:
-            self.query_one("#input_camera_zoom").current_buffer = zoom
-
 
 class RenderInfo(Widget, can_focus=False):
     DEFAULT_CSS = """
@@ -682,16 +722,18 @@ class RenderInfo(Widget, can_focus=False):
 
     def __init__(
         self,
+        component: TT3DViewStandAlone,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
     ):
         super().__init__(id=id, classes=classes, disabled=disabled, name=name)
+        self.component = component
 
     def compose(self) -> ComposeResult:
         keep_count = 50
-        yield Label("Frame idx", id="frame_idx")
+        yield Label("", id="target_fps")
         yield Label("fps", id="timeinfo")
         yield Sparkline(
             [0] * keep_count, summary_function=mean, id="render_duration_sl"
@@ -700,13 +742,14 @@ class RenderInfo(Widget, can_focus=False):
         yield Label("to_textual", id="to_tex")
         yield Sparkline([0] * keep_count, summary_function=mean, id="to_tex_sl")
 
-    def append_frame_duration(self, timing_registry: TimingRegistry):
-        duration = timing_registry.get_duration("tsrender_dur")
+    def refresh_content(self, frame_timings: FrameTimings):
+        duration = frame_timings.render_duration
 
         spark: Sparkline = self.query_one("#render_duration_sl")
-        spark.data = spark.data[1:] + [duration]
 
-        mean_dur_sec = mean(spark.data)
+        spark.data = [self.component.target_dt] + spark.data[2:] + [duration]
+
+        mean_dur_sec = mean(spark.data[1:])
 
         if mean_dur_sec == 0.0:
             fps_render = float("nan")
@@ -714,23 +757,25 @@ class RenderInfo(Widget, can_focus=False):
             fps_render = 1.0 / mean_dur_sec
 
         line: Label = self.query_one("#timeinfo")
-        line.update(f"Render: {(1000 * mean_dur_sec):.2f} ms ({fps_render:.1f} rps)")
+        line.update(
+            f"Render: {(1000 * mean_dur_sec):.2f} ms ({fps_render:.1f} rps , {mean_dur_sec * 100 / self.component.target_dt:.2f}%)"
+        )
 
-        # update the frame count
-        self.update_frame_count(timing_registry.get_duration("frame_idx"))
+        line: Label = self.query_one("#target_fps")
+        line.update(f"Target: {(self.component.target_dt * 1000):.2f} ms/frame")
 
         # update the to_textual_timing
-        to_tt_duration = timing_registry.get_duration("to_textual_")
+        update_duration = frame_timings.update_duration
+
+        to_tt_duration = frame_timings.to_textual_duration
         spark: Sparkline = self.query_one("#to_tex_sl")
         spark.data = spark.data[1:] + [to_tt_duration]
         mean_dur_sec = mean(spark.data)
 
         line: Label = self.query_one("#to_tex")
-        line.update(f"to_text: {(1000 * mean_dur_sec):.2f} ms ")
-
-    def update_frame_count(self, frame_count: int):
-        line: Label = self.query_one("#frame_idx")
-        line.update(f"Frame: {frame_count}")
+        line.update(
+            f"to_text: {(1000 * mean_dur_sec):.2f} ms ({mean_dur_sec * 100 / self.component.target_dt:.2f}%) "
+        )
 
 
 DEPTH_BUFFER_COLUMNS = ["L#", "depth", "geom", "node", "mat", "prim"]

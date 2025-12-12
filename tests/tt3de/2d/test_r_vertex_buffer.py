@@ -7,9 +7,9 @@ from tt3de.tt3de import VertexBufferPy, TransformPackPy
 
 
 class Test_VertexBuffer2D(unittest.TestCase):
-
     def setUp(self):
-        self.abuffer = VertexBufferPy(32,32,32)
+        self.abuffer = VertexBufferPy(32, 32, 32)
+
     def test_create(self):
         abuffer = self.abuffer
         trpack = TransformPackPy(232)
@@ -17,6 +17,7 @@ class Test_VertexBuffer2D(unittest.TestCase):
         abuffer.add_2d_vertex(1, 2, 3)
         self.assertEqual(abuffer.get_2d_vertex_tuple(0), (1.0, 2.0, 3.0, 1.0))
         self.assertEqual(abuffer.get_2d_len(), 1)
+
     def test_add_vertex(self):
         abuffer = self.abuffer
         self.assertEqual(abuffer.get_2d_len(), 0)
@@ -29,8 +30,6 @@ class Test_VertexBuffer2D(unittest.TestCase):
         self.assertEqual(abuffer.get_2d_vertex_tuple(0), (1.0, 2.0, 3.0, 1.0))
         self.assertEqual(abuffer.get_2d_vertex_tuple(1), (12.0, 22.0, 32.0, 1.0))
         self.assertEqual(abuffer.get_2d_vertex_tuple(2), (11.0, 21.0, 31.0, 1.0))
-
-
 
     def test_apply_mv(self):
         abuffer = self.abuffer
@@ -50,7 +49,6 @@ class Test_VertexBuffer2D(unittest.TestCase):
 
         z = abuffer.get_2d_vertex_tuple(1)
         self.assertEqual(z, (2.0, 3.0, 4.0, 1.0))
-
 
         z0_mv = abuffer.get_2d_calculated_tuple(0)
         self.assertEqual(z0_mv, (2.0, 4.0, 6.0, 1.0))  # translated

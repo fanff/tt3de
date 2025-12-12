@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn test_raster_line() {
         // Test case 1: pa.row > drawing_buffer.row_count
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 10.0, true, false);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_raster_line_horizontal() {
         // Test case 1: pa.row > drawing_buffer.row_count
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(10, 10, 10.0, true, false);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,

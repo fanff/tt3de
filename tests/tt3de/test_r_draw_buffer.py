@@ -12,9 +12,7 @@ from tt3de.tt3de import PrimitiveBufferPy
 
 
 class Test_DrawBuffer(unittest.TestCase):
-
     def test_create_verybig(self):
-
         gb = DrawingBufferPy(10, 10)
 
         layer = 0
@@ -59,7 +57,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
-                    'normal': [0.0, 0.0, 1.0]
+                    "normal": [0.0, 0.0, 1.0],
                 },
             )
 
@@ -71,14 +69,13 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(ccelldict, hyp)
 
     def test_apply_material(self):
-
         draw_buffer = DrawingBufferPy(10, 10)
         draw_buffer.hard_clear(100.0)
 
         material_buffer = MaterialBufferPy()
         texture_buffer = TextureBufferPy(32)
 
-        vertex_buffer = VertexBufferPy(128,128,128)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         primitive_buffer = PrimitiveBufferPy(3)
         apply_material_py(
             material_buffer,
@@ -140,7 +137,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
-                    'normal': [0.0, 0.0, 1.0],
+                    "normal": [0.0, 0.0, 1.0],
                 },
             )
 
@@ -155,7 +152,6 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(maxd, 12.0)
 
     def test_set_canvasX(self):
-
         drawbuffer = DrawingBufferPy(32, 32)
 
         drawbuffer.hard_clear(10)
@@ -221,7 +217,7 @@ class Test_DrawBuffer(unittest.TestCase):
         material_id = 3
 
         inpuut_tuple = [
-            glm.vec3(1,1,1),
+            glm.vec3(1, 1, 1),
             1.0,  # depth value
             glm.vec2(2, 3),  # uv info
             glm.vec2(5, 6),  # uv info
@@ -317,7 +313,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _0_material_id = 3
 
         inpuut_tuple_0 = [
-            glm.vec3(1,1,1),
+            glm.vec3(1, 1, 1),
             3.0,  # depth value
             glm.vec2(2, 3),
             glm.vec2(5, 6),
@@ -359,7 +355,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _1_material_id = 1
 
         inpuut_tuple_1 = [
-            glm.vec3(1,1,1),
+            glm.vec3(1, 1, 1),
             1.0,  # depth value lower
             glm.vec2(20, 30),
             glm.vec2(50, 60),
@@ -424,7 +420,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _0_material_id = 3
 
         inpuut_tuple_0 = [
-            glm.vec3(1,1,1),
+            glm.vec3(1, 1, 1),
             1.0,  # depth value # this one is in front
             glm.vec2(2, 3),
             glm.vec2(5, 6),
@@ -465,7 +461,7 @@ class Test_DrawBuffer(unittest.TestCase):
         _1_material_id = 1
 
         inpuut_tuple_1 = [
-            glm.vec3(1,1,1),
+            glm.vec3(1, 1, 1),
             3.0,  #  THIS one it in the back
             glm.vec2(20, 30),
             glm.vec2(50, 60),
@@ -517,7 +513,6 @@ class Test_DrawBuffer(unittest.TestCase):
 
 
 class Test_totextual(unittest.TestCase):
-
     def test_to_textual_2(self):
         gb = DrawingBufferPy(max_row=10, max_col=20)
         gb.hard_clear(100.0)
@@ -592,7 +587,6 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(len(res[0]), 30)
 
     def test_to_textual_2_zero_init(self):
-
         gb = DrawingBufferPy(max_row=0, max_col=0)
 
         gb.set_bit_size_front(8, 8, 8)

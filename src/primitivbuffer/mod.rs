@@ -109,7 +109,7 @@ impl PrimitiveBufferPy {
         );
 
         self.content
-            .add_triangle3d(node_id, geometry_id, material_id, va, vb, vc)
+            .add_triangle(node_id, geometry_id, material_id, va, vb, vc)
     }
 
     #[pyo3(signature = ( node_id, geometry_id, material_id, top, left, top_left_depth, bottom, right, bottom_right_depth,
@@ -145,28 +145,23 @@ impl PrimitiveBufferPy {
     fn get_primitive(&self, py: Python, idx: usize) -> Py<PyDict> {
         to_dict(py, &self.content.content[idx])
     }
+    fn get_all_as_dicts(&self, py: Python) -> Vec<Py<PyDict>> {
+        let box_content = &self.content.content;
+        // iterate only up to current_size
+        box_content[0..self.content.current_size]
+            .iter()
+            .map(|p| to_dict(py, p))
+            .collect()
+    }
 }
 
 fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
     let dict = PyDict::new(py);
 
     match primitive {
-        &PrimitiveElements::Triangle(t) => {
-            into_dict(py, &t.primitive_reference, &dict);
-            dict.set_item("_type", "triangle").unwrap();
-            // Assuming DepthBufferCell has some fields `field1` and `field2`
-            dict.set_item("pa", point_info_into_dict(py, &t.pa))
-                .unwrap();
-            dict.set_item("pb", point_info_into_dict(py, &t.pb))
-                .unwrap();
-            dict.set_item("pc", point_info_into_dict(py, &t.pc))
-                .unwrap();
-
-            dict.set_item("uv_idx", t.uv).unwrap();
-        }
         &PrimitiveElements::Point { fds, uv, point } => {
             into_dict(py, &fds, &dict);
-            // Assuming DepthBufferCell has some fields `field1` and `field2`
+            dict.set_item("_type", "point").unwrap();
             dict.set_item("row", point.row).unwrap();
             dict.set_item("col", point.col).unwrap();
             dict.set_item("depth", point.depth()).unwrap();
@@ -174,13 +169,12 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
         }
         &PrimitiveElements::Line { fds, pa, pb } => {
             into_dict(py, &fds, &dict);
-            // Assuming DepthBufferCell has some fields `field1` and `field2`
+            dict.set_item("_type", "line").unwrap();
             dict.set_item("pa", vertex_into_dict(py, &pa)).unwrap();
             dict.set_item("pb", vertex_into_dict(py, &pb)).unwrap();
         }
         &PrimitiveElements::Static { fds, index } => {
             into_dict(py, &fds, &dict);
-            // Assuming DepthBufferCell has some fields `field1` and `field2`
             dict.set_item("index", index).unwrap();
             dict.set_item("_type", "static").unwrap();
         }
@@ -188,7 +182,6 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
         &PrimitiveElements::Triangle3D(t) => {
             into_dict(py, &t.primitive_reference, &dict);
             dict.set_item("_type", "triangle").unwrap();
-            // Assuming DepthBufferCell has some fields `field1` and `field2`
             dict.set_item("pa", vertex_into_dict(py, &t.pa)).unwrap();
             dict.set_item("pb", vertex_into_dict(py, &t.pb)).unwrap();
             dict.set_item("pc", vertex_into_dict(py, &t.pc)).unwrap();

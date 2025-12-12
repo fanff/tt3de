@@ -6,11 +6,11 @@ from tt3de.tt3de import MaterialBufferPy, TextureBufferPy, materials
 from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture
 
+
 class Test_MaterialBufferPy(unittest.TestCase):
-
-
     def setUp(self):
         self.mb = MaterialBufferPy()
+
     def test_create(self):
         mb = MaterialBufferPy()
 
@@ -33,7 +33,6 @@ class Test_MaterialBufferPy(unittest.TestCase):
         self.assertEqual(mb.add_material(cb), 0)
         self.assertEqual(mb.count(), 1)
 
-
     def test_add_combo_material(self):
         mb = self.mb
         self.assertEqual(mb.count(), 0)
@@ -45,20 +44,11 @@ class Test_MaterialBufferPy(unittest.TestCase):
         self.assertEqual(mb.add_combo_material(cb), 0)
         self.assertEqual(mb.count(), 1)
 
-        cb = materials.ComboMaterialPy.from_list([5,6,7])
+        cb = materials.ComboMaterialPy.from_list([5, 6, 7])
         self.assertEqual(cb.count, 3)
         self.assertEqual(cb.idx0, 5)
         self.assertEqual(cb.idx1, 6)
         self.assertEqual(cb.idx2, 7)
-
-    def test_add_textured_back(self):
-        mb = self.mb
-        self.assertEqual(mb.count(), 0)
-        tb = materials.TexturedBackPy(0)
-        tb.albedo_texture_idx = 3
-
-        self.assertEqual(mb.add_material(tb), 0)
-        self.assertEqual(mb.count(), 1)
 
     def test_add_texture(self):
         texture_array = TextureBufferPy(12)

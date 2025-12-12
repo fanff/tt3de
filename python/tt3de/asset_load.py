@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import struct
 from typing import List, Tuple
 
@@ -9,7 +10,9 @@ def read_file(obj_file):
         return fin.read()
 
 
-def load_bmp(f) -> List[List[int]]:
+def load_bmp(
+    f, alpha=255, transparent_colors: List[Tuple[int, int, int]] = None
+) -> List[List[int]]:
     def read_bytes(f, num):
         return struct.unpack("<" + "B" * num, f.read(num))
 
@@ -53,17 +56,24 @@ def load_bmp(f) -> List[List[int]]:
     row_padded = (
         width * 3 + 3
     ) & ~3  # Row size is padded to the nearest 4-byte boundary
-    pixel_data: List[List[int]] = []
+
+    image_rows: List[List[int]] = []
 
     for y in range(height):
         row = []
         for x in range(width):
             b, g, r = read_bytes(f, 3)
-            row.append((r, g, b))
-        pixel_data.insert(0, row)  # BMP files are bottom to top
+
+            # make color and append to the row
+            if transparent_colors and (r, g, b) in transparent_colors:
+                row.append((r, g, b, 0))
+            else:
+                row.append((r, g, b, alpha))
+
+        image_rows.insert(0, row)  # BMP files are bottom to top
         f.read(row_padded - width * 3)  # Skip padding
 
-    return pixel_data
+    return list(reversed(image_rows))
 
 
 def round_to_palette(

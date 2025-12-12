@@ -5,7 +5,7 @@ use nalgebra_glm::{vec3, RealNumber, TVec3, Vec2, Vec3, Vec4};
 use crate::raster;
 use raster::vertex::Vertex;
 
-use super::{PRect, PTriangle, PTriangle3D};
+use super::{PRect, PTriangle3D};
 
 #[derive(Clone, Copy)]
 pub struct PointInfo<DEPTHACC: RealNumber> {
@@ -146,7 +146,7 @@ pub enum PrimitiveElements {
         pa: Vertex,
         pb: Vertex,
     },
-    Triangle(PTriangle),
+
     Triangle3D(PTriangle3D),
 
     Rect(PRect),
@@ -172,7 +172,6 @@ impl PrimitiveElements {
             } => 0,
 
             PrimitiveElements::Static { fds: _, index: _ } => 0,
-            PrimitiveElements::Triangle(t) => t.uv,
             PrimitiveElements::Triangle3D(_t) => 0,
             PrimitiveElements::Rect(_r) => 0,
         }
@@ -188,7 +187,7 @@ pub struct PrimitiveBuffer {
 impl PrimitiveBuffer {
     pub fn new(max_size: usize) -> Self {
         let init_array: Vec<PrimitiveElements> =
-            vec![PrimitiveElements::Triangle(PTriangle::zero()); max_size];
+            vec![PrimitiveElements::Triangle3D(PTriangle3D::zero()); max_size];
 
         let content = init_array.into_boxed_slice();
 
@@ -225,7 +224,7 @@ impl PrimitiveBuffer {
         self.current_size - 1
     }
 
-    pub fn add_triangle3d(
+    pub fn add_triangle(
         &mut self,
         node_id: usize,
         geometry_id: usize,
@@ -312,45 +311,7 @@ impl PrimitiveBuffer {
 
         self.current_size - 1
     }
-    pub fn add_triangle(
-        &mut self,
-        node_id: usize,
-        geometry_id: usize,
-        material_id: usize,
-        p_a_row: f32,
-        p_a_col: f32,
-        p_a_depth: f32,
-        p_b_row: f32,
-        p_b_col: f32,
-        p_b_depth: f32,
-        p_c_row: f32,
-        p_c_col: f32,
-        p_c_depth: f32,
-        uv_idx: usize,
-    ) -> usize {
-        if self.current_size == self.max_size {
-            return self.current_size;
-        }
 
-        let pr = PrimitivReferences {
-            geometry_id,
-            material_id,
-            node_id,
-            primitive_id: self.current_size,
-        };
-
-        self.content[self.current_size] = PrimitiveElements::Triangle(PTriangle::new(
-            pr,
-            PointInfo::new(p_a_row, p_a_col, p_a_depth),
-            PointInfo::new(p_b_row, p_b_col, p_b_depth),
-            PointInfo::new(p_c_row, p_c_col, p_c_depth),
-            uv_idx,
-        ));
-
-        self.current_size += 1;
-
-        self.current_size - 1
-    }
     pub fn add_static(&mut self) {
         todo!()
     }

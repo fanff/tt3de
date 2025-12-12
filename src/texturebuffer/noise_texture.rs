@@ -44,7 +44,7 @@ impl NoiseTexture {
             noise,
         }
     }
-    pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
+    pub fn uv_map(&self, u: f32, v: f32, _idx: usize) -> RGBA {
         let nv = self.noise.get_noise_2d(u, v);
         RGBA {
             r: (nv * 255.0) as u8,

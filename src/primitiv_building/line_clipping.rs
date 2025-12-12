@@ -1,8 +1,9 @@
-use nalgebra_glm::{dot, Number, Vec4};
+use nalgebra_glm::{dot, Number, Vec2, Vec3, Vec4};
 
 use crate::{
     drawbuffer::drawbuffer::DrawBuffer,
-    geombuffer::Line,
+    geombuffer::{GeomReferences, Line},
+    raster::vertex::Vertex,
     vertexbuffer::{uv_buffer::UVBuffer, vertex_buffer::VertexBuffer},
 };
 
@@ -56,22 +57,17 @@ pub fn clip_line_to_clip_space(pa: &Vec4, pb: &Vec4) -> Option<(Vec4, Vec4)> {
 
 /// Converts a line to a primitive and adds it to the primitivbuffer.
 /// Clip the line to the bounbding box of the view frustum.
-pub fn line_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
-    line: &Line,
+pub fn line3d_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
+    pa: &Vec4,
+    pb: &Vec4,
+    uv_triplet: (&Vec2, &Vec2, &Vec2),
+    geom_ref: &GeomReferences,
     geometry_id: usize,
     vertex_buffer: &VertexBuffer<Vec4>,
     uv_array: &UVBuffer<f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {
-    // coordinates of the two points of the line
-    // in clip space coordinates (x, y, z, w) (homogeneous coordinates)
-    let pa = vertex_buffer.get_calculated(line.p_start);
-    let pb = vertex_buffer.get_calculated(line.p_start + 1);
-
-    // get the uv coordinates
-    let _uv = uv_array.get_uv(line.uv_start);
-
     // clip the line to the view frustum
     let clipped_line = clip_line_to_clip_space(pa, pb);
     match clipped_line {
@@ -82,17 +78,18 @@ pub fn line_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
 
             let point_a = drawbuffer.ndc_to_screen_floating_with_clamp(&pdiva.xy());
             let point_b = drawbuffer.ndc_to_screen_floating_with_clamp(&pdivb.xy());
-            //primitivbuffer.add_line(
-            //    line.geom_ref.node_id,
-            //    geometry_id,
-            //    line.geom_ref.material_id,
-            //    point_a.y,
-            //    point_a.x,
-            //    pdiva.z,
-            //    point_b.y,
-            //    point_b.x,
-            //    pdivb.z,
-            //);
+
+            primitivbuffer.add_line(
+                geom_ref.node_id,
+                geometry_id,
+                geom_ref.material_id,
+                Vec4::new(point_a.x, point_a.y, pdiva.z, pdiva.w),
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec2::new(0.0, 0.0).xy(),
+                Vec4::new(point_b.x, point_b.y, pdivb.z, pdivb.w),
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec2::new(1.0, 1.0).xy(),
+            );
         }
         None => {}
     }

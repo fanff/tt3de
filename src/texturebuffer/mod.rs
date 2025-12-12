@@ -1,4 +1,6 @@
 use crate::utils::convert_tuple_texture_rgba;
+use nalgebra::{Const, VecStorage};
+use nalgebra_glm::Vec4;
 use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyList, PyTuple},
@@ -11,6 +13,11 @@ pub mod atlas_texture;
 use atlas_texture::*;
 pub mod texture_buffer;
 use texture_buffer::*;
+
+pub mod toglyph_methods_py;
+use toglyph_methods_py::*;
+pub mod toglyph_methods;
+use toglyph_methods::*;
 
 #[derive(Clone, Copy)]
 pub struct RGBA {
@@ -41,12 +48,44 @@ impl RGBA {
             a: self.a,
         }
     }
+    pub fn luminance(&self) -> f32 {
+        0.2126 * (self.r as f32) + 0.7152 * (self.g as f32) + 0.0722 * (self.b as f32)
+    }
 }
+
+pub trait UvMapper {
+    fn get_width(&self) -> usize;
+    fn get_height(&self) -> usize;
+    fn uv_map(&self, u: f32, v: f32, idx: usize) -> RGBA;
+}
+
+impl<const SIZE: usize> UvMapper for Texture<SIZE> {
+    fn get_width(&self) -> usize {
+        SIZE
+    }
+    fn get_height(&self) -> usize {
+        SIZE
+    }
+    fn uv_map(&self, u: f32, v: f32, _idx: usize) -> RGBA {
+        self.uv_map_inline(u, v)
+    }
+}
+impl<const SIZE: usize> UvMapper for TextureCustom<SIZE> {
+    fn get_width(&self) -> usize {
+        self.width
+    }
+    fn get_height(&self) -> usize {
+        self.height
+    }
+    fn uv_map(&self, u: f32, v: f32, _idx: usize) -> RGBA {
+        self.uv_map_inline(u, v)
+    }
+}
+
 
 #[derive(Clone)]
 pub struct Texture<const SIZE: usize> {
     data: Box<[RGBA]>, // Fixed-size array of RGBA colors
-
     repeat_x: bool,
     repeat_y: bool,
 }
@@ -73,7 +112,7 @@ impl<const SIZE: usize> Texture<SIZE> {
         }
     }
     #[inline(always)]
-    pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
+    pub fn uv_map_inline(&self, u: f32, v: f32) -> RGBA {
         // Compute the x coordinate
         let x = if self.repeat_x {
             // For repeating textures, use rem_euclid to get a positive remainder,
@@ -108,7 +147,7 @@ impl<const SIZE: usize> Texture<SIZE> {
         // Use bit-shift instead of multiplication because SIZE is a power of 2.
         // Compute the number of bits to shift: log2(SIZE).
         let shift = SIZE.trailing_zeros() as usize;
-        self.data[(x << shift) + y]
+        self.data[(y << shift) + x]
     }
 }
 
@@ -147,7 +186,7 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
         }
     }
 
-    pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
+    pub fn uv_map_inline(&self, u: f32, v: f32) -> RGBA {
         let u_val = if self.repeat_x {
             u % 1.0
         } else {
@@ -164,6 +203,7 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
         let y = (v_val * self.height as f32) as usize;
 
         self.texture.data[y * self.width + x]
+        //self.texture.data[x * self.height + y]
     }
 }
 
@@ -171,17 +211,39 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
 pub enum TextureType<const SIZE: usize> {
     Custom(TextureCustom<SIZE>),
     Fixed(Texture<SIZE>),
-    Atlas(TextureAtlas<SIZE>),
+    AtlasCustom(TextureAtlas<TextureCustom<SIZE>, SIZE>),
+    Atlas(TextureAtlas<Texture<SIZE>, SIZE>),
     Noise(NoiseTexture),
 }
 
-impl<const SIZE: usize> TextureType<SIZE> {
-    pub fn uv_map(&self, u: f32, v: f32) -> RGBA {
+impl<const SIZE: usize> UvMapper for TextureType<SIZE> {
+    fn uv_map(&self, u: f32, v: f32, idx: usize) -> RGBA {
         match self {
-            TextureType::Custom(t) => t.uv_map(u, v),
-            TextureType::Fixed(t) => t.uv_map(u, v),
-            TextureType::Atlas(t) => t.texture.uv_map(u, v),
-            TextureType::Noise(t) => t.uv_map(u, v),
+            TextureType::Custom(t) => t.uv_map(u, v, 0),
+            TextureType::Fixed(t) => t.uv_map(u, v, 0),
+            TextureType::Atlas(t) => t.uv_map(u, v, idx),
+            TextureType::Noise(t) => t.uv_map(u, v, 0),
+            TextureType::AtlasCustom(texture_atlas) => texture_atlas.uv_map(u, v, idx),
+        }
+    }
+
+    fn get_width(&self) -> usize {
+        match self {
+            TextureType::Custom(t) => t.get_width(),
+            TextureType::Fixed(t) => t.get_width(),
+            TextureType::Atlas(t) => t.get_width(),
+            TextureType::Noise(_) => SIZE,
+            TextureType::AtlasCustom(texture_atlas) => texture_atlas.get_width(),
+        }
+    }
+
+    fn get_height(&self) -> usize {
+        match self {
+            TextureType::Custom(t) => t.get_height(),
+            TextureType::Fixed(t) => t.get_height(),
+            TextureType::Atlas(t) => t.get_height(),
+            TextureType::Noise(_) => SIZE,
+            TextureType::AtlasCustom(texture_atlas) => texture_atlas.get_height(),
         }
     }
 }
@@ -224,6 +286,9 @@ impl<'a> Iterator for TextureIterator<'a> {
 #[pyclass]
 pub struct TextureBufferPy {
     pub data: TextureBuffer<256>,
+
+    #[pyo3(get)]
+    pub max_texture_size: usize,
 }
 
 #[pymethods]
@@ -231,7 +296,10 @@ impl TextureBufferPy {
     #[new]
     fn new(max_size: usize) -> TextureBufferPy {
         let tb = TextureBuffer::new(max_size);
-        TextureBufferPy { data: tb }
+        TextureBufferPy {
+            data: tb,
+            max_texture_size: 256,
+        }
     }
     fn size(&self) -> usize {
         self.data.current_size
@@ -256,12 +324,33 @@ impl TextureBufferPy {
         self.data
             .add_texture_from_iter(width, height, texture_iter, repeat_width, repeat_height)
     }
+
+    fn add_atlas_texture_from_iter(
+        &mut self,
+        py: Python,
+        width: usize,
+        height: usize,
+        pixels: Py<PyList>,
+        pix_size_width: usize,
+        pix_size_height: usize,
+    ) -> usize {
+        let pixel_iter = pixels.bind(py).cast::<PyList>().unwrap();
+        let texture_iter = TextureIterator::new(py, pixel_iter);
+
+        self.data.add_atlas_texture_from_iter(
+            width,
+            height,
+            pix_size_width,
+            pix_size_height,
+            texture_iter,
+        )
+    }
     fn add_noise_texture(&mut self, seed: i32, int_config: i32) -> usize {
         self.data.add_noise_texture(seed, int_config)
     }
 
     fn get_rgba_at(&self, idx: usize, u: f32, v: f32) -> (u8, u8, u8, u8) {
-        let c = self.data.get_rgba_at(idx, u, v);
+        let c = self.data.get_rgba_at(idx, u, v, 0);
         (c.r, c.g, c.b, c.a)
     }
 }

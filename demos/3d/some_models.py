@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import math
-from time import time
 
 from pyglm import glm
 
 from textual import events
 from textual.app import App, ComposeResult
-from textual.containers import Container
 from textual.widgets import (
     Header,
     Static,
@@ -16,78 +14,94 @@ from textual.css.query import NoMatches
 from tt3de.asset_fastloader import MaterialPerfab, fast_load
 
 
-from tt3de.textual.widgets import (
-    CameraConfig,
-    EngineLog,
-    RenderInfo,
-    RustRenderContextInfo,
-)
-from tt3de.textual_widget import TT3DView
+from tt3de.prefab3d import Prefab3D
+from tt3de.richtexture import ImageTexture
+from tt3de.textual.debugged_view import DebuggedView
+from tt3de.textual_standalone import TT3DViewStandAlone
 
+from tt3de.tt3de import find_glyph_indices_py, materials
 from tt3de.tt_3dnodes import TT3DNode
+from tt3de.tt3de import toglyphmethod
 
 
-class GLMTester(TT3DView):
+class GLMTester(TT3DViewStandAlone):
     use_native_python = False
 
     def __init__(self):
-        super().__init__(use_left_hand_perspective=False)
+        super().__init__(
+            vertex_buffer_size=8192,
+            use_left_hand_perspective=False,
+        )
 
     def initialize(self):
         # prepare a bunch of material
         self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
         # create a root 3D node
         self.root3Dnode = TT3DNode()
-        self.camera.move_at(glm.vec3(0, 1, -10))
-        cube = fast_load("models/cube.obj", reverse_uv_v=True, flip_triangles=True)
-        cube.material_id = 11
-        cube.local_transform = glm.translate(glm.vec3(-4.1, 0, 0))
-        self.root3Dnode.add_child(cube)
+
+        self.root3Dnode.add_child(Prefab3D.gizmo_lines())
+        self.cube1 = fast_load(
+            "models/cube.obj", reverse_uv_v=False, flip_triangles=True
+        )
+        self.cube1.material_id = 11
+        self.cube1.local_transform = glm.translate(glm.vec3(-1.1, 0, 0)) * glm.rotate(
+            math.radians(180), glm.vec3(0, 1, 0)
+        )
+        self.root3Dnode.add_child(self.cube1)
+
+        # loading a second cube with a bitmap texture
+        img: ImageTexture = fast_load("models/cube_texture.bmp")
+        cube2_texture_index = self.rc.texture_buffer.add_texture(
+            img.image_width, img.image_height, img.chained_data(), True, True
+        )
+        HALF_BLOCK = find_glyph_indices_py("▀")
+        cube2_material_idx = self.rc.material_buffer.add_base_texture(
+            materials.BaseTexturePy(
+                albedo_texture_idx=cube2_texture_index,
+                albedo_texture_subid=0,
+                glyph_texture_idx=0,
+                glyph_texture_subid=0,
+                front=True,
+                back=True,
+                glyph=True,
+                glyph_uv_0=True,
+                front_uv_0=True,
+                back_uv_0=False,
+                glyph_method=toglyphmethod.ToGlyphMethodPyStatic(HALF_BLOCK),
+            )
+        )
+
+        self.cube2 = fast_load(
+            "models/cube.obj", reverse_uv_v=False, flip_triangles=True
+        )
+        self.cube2.material_id = cube2_material_idx
+        self.cube2.local_transform = glm.rotate(math.radians(180), glm.vec3(0, 1, 0))
+
+        self.cube2slot = TT3DNode(transform=glm.translate(glm.vec3(1.5, 0, 0)))
+        self.cube2slot.add_child(self.cube2)
+        self.root3Dnode.add_child(self.cube2slot)
 
         self.car_taxi = fast_load(
-            "models/car/Car5_Taxi.obj", reverse_uv_v=True, flip_triangles=True
+            "models/car/Car5_Taxi.obj", reverse_uv_v=False, flip_triangles=True
         )
         self.car_taxi.material_id = 12
         self.car_taxi.local_transform = glm.translate(glm.vec3(4, 0, 0))
         self.root3Dnode.add_child(self.car_taxi)
-
-        self.car_taxi2 = fast_load(
-            "models/car/Car5_Taxi.obj", reverse_uv_v=True, flip_triangles=True
-        )
-        self.car_taxi2.material_id = 12
-        self.car_taxi2.local_transform = glm.translate(glm.vec3(4, 2, 0))
-        self.root3Dnode.add_child(self.car_taxi2)
+        #
+        # self.car_taxi2 = fast_load(
+        #    "models/car/Car5_Taxi.obj", reverse_uv_v=False, flip_triangles=True
+        # )
+        # self.car_taxi2.material_id = 12
+        # self.car_taxi2.local_transform = glm.translate(glm.vec3(4, 2, 0))
+        # self.root3Dnode.add_child(self.car_taxi2)
 
         # final append
         self.rc.append_root(self.root3Dnode)
 
-        # setup a time reference, to avoid trigonometry issues
-        self.reftime = time()
-
-    def update_step(self, timediff):
-        self.car_taxi.set_transform(
-            self.rc, glm.rotate(time() - self.reftime, glm.vec3(0, 1, 0))
-        )
-
-    def post_render_step(self):
-        cc: CameraConfig = self.parent.query_one("CameraConfig")
-        v = self.camera.position_vector()
-        cc.refresh_camera_position((v.x, v.y, v.z))
-        cc.refresh_camera_rotation(
-            (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
-        )
-        cc.refresh_camera_zoom(self.camera.zoom_2D)
-        self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
-
-        context_log: RustRenderContextInfo = self.parent.query_one(
-            RustRenderContextInfo
-        )
-
-        context_log.update_counts(
-            {
-                "geom": self.rc.geometry_buffer.geometry_count(),
-                "prim": self.rc.primitive_buffer.primitive_count(),
-            }
+    def update_step(self, _timediff):
+        self.cube2.apply_transform(
+            glm.rotate(_timediff / 2, glm.vec3(0, 1, 0))
+            * glm.rotate(_timediff / 4, glm.vec3(1, 0, 0))
         )
 
     async def on_event(self, event: events.Event):
@@ -126,9 +140,9 @@ class GLMTester(TT3DView):
 
                         self.camera.view_matrix_2D
                         # self.root2Dnode.local_transform = glm.translate(small_tr_vector)*self.root2Dnode.local_transform
-                        self.parent.query_one("EngineLog").add_line(
-                            f"click ! {str(world_click_position)}"
-                        )
+                        # self.parent.query_one("EngineLog").add_line(
+                        #    f"click ! {str(world_click_position)}"
+                        # )
 
             case events.MouseScrollDown:
                 self.camera.set_zoom_2D(self.camera.zoom_2D * 0.9)
@@ -142,55 +156,13 @@ class GLMTester(TT3DView):
                     pass
 
 
-class Content(Static):
-    def compose(self) -> ComposeResult:
-        with Container(classes="someinfo"):
-            yield Static("", classes="lastevent")
-            yield EngineLog()
-            yield CameraConfig()
-            yield RenderInfo()
-            yield RustRenderContextInfo()
-
-        yield GLMTester()
-
-    def on_camera_config_projection_changed(
-        self, event: CameraConfig.ProjectionChanged
-    ):
-        viewelem: GLMTester = self.query_one("GLMTester")
-
-        fov, dist_min, dist_max, charfactor = event.value
-        viewelem.camera.set_projectioninfo(
-            math.radians(fov), dist_min, dist_max, charfactor
-        )
-
-
-class Demo3dView(App):
-    DEFAULT_CSS = """
-    Content {
-        layout: horizontal;
-        height: 100%;
-
-    }
-    TT3DView {
-
-        height: 100%;
-        width: 4fr;
-    }
-
-    .someinfo {
-        height: 100%;
-        width: 1fr;
-        border: solid red;
-    }
-
-    """
-
+class Some3DModels(App):
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Content()
+        yield DebuggedView(GLMTester())
 
 
 if __name__ == "__main__":
-    app = Demo3dView()
+    app = Some3DModels()
     app._disable_tooltips = True
     app.run()

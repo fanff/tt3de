@@ -1,6 +1,6 @@
 use nalgebra_glm::{lerp, Vec2, Vec4};
 
-use super::TriangleBuffer;
+use super::SmallTriangleBuffer;
 
 fn interpolate_with_uv(p1: &Vec4, p2: &Vec4, uv1: &Vec2, uv2: &Vec2, t: f32) -> (Vec4, Vec2) {
     //p1 + t * (p2 - p1)
@@ -12,7 +12,7 @@ fn clip1<const OUTPUT_SIZE: usize>(
     pb: &Vec4,
     pc: &Vec4,
     (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<OUTPUT_SIZE>,
+    output_buffer: &mut SmallTriangleBuffer<OUTPUT_SIZE>,
 ) {
     let alpha_a = (-pa.z) / (pb.z - pa.z);
     let alpha_b = -pa.z / (pc.z - pa.z);
@@ -34,7 +34,7 @@ fn clip2<const OUTPUT_SIZE: usize>(
     pb: &Vec4,
     pc: &Vec4,
     (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<OUTPUT_SIZE>,
+    output_buffer: &mut SmallTriangleBuffer<OUTPUT_SIZE>,
 ) {
     let alpha_a = (-pa.z) / (pc.z - pa.z);
     let alpha_b = (-pb.z) / (pc.z - pb.z);
@@ -53,7 +53,7 @@ pub fn tomato_clip_triangle_to_clip_space(
     pb: &Vec4,
     pc: &Vec4,
     (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<12>,
+    output_buffer: &mut SmallTriangleBuffer<12>,
 ) {
     if pa.x > pa.w && pb.x > pb.w && pc.x > pc.w {
         return;

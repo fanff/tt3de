@@ -1,6 +1,11 @@
-use std::mem::MaybeUninit;
+use std::{
+    cell::{Ref, RefCell},
+    mem::MaybeUninit,
+    ops::Mul,
+};
 
-use nalgebra_glm::{Mat3, Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
+use nalgebra::{Const, Dyn, RawStorage, RawStorageMut, VecStorage};
+use nalgebra_glm::{Mat3, Mat4, Mat4x2, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
 
 pub trait AllowedVec {
     fn zeros() -> Self;
@@ -128,11 +133,10 @@ impl VertexBuffer<Vec4> {
         self.len += 1;
         self.len - 1
     }
-    pub fn apply_mv(&mut self, model_matrix: &Mat4, view_matrix: &Mat4, start: usize, end: usize) {
-        let m4 = view_matrix * model_matrix;
+    pub fn apply_mv(&mut self, mv: &Mat4, start: usize, end: usize) {
         for i in start..end {
             let vp = unsafe { self.data[i].assume_init_mut() };
-            vp.mvp = m4 * vp.v;
+            vp.mvp = mv * vp.v;
         }
     }
     pub fn apply_mvp(
@@ -148,5 +152,34 @@ impl VertexBuffer<Vec4> {
             let vp = unsafe { self.data[i].assume_init_mut() };
             vp.mvp = m4 * vp.v;
         }
+    }
+}
+
+pub struct TriangleBuffer {
+    // lifespan of TriangleBuffer is tied to ActualVertextData
+    pub point_addr: Vec<(usize, usize, usize)>, //  Index of triangle vertices , from the ActualVertextData Struct, for each triangle allowind points[point_addr.0] to get the actual Vec4
+    pub normal_vector: Vec<Vec3>,               // normal vector for each triangle
+}
+
+impl TriangleBuffer {
+    pub fn new(capacity: usize) -> TriangleBuffer {
+        TriangleBuffer {
+            point_addr: Vec::with_capacity(capacity),
+            normal_vector: Vec::with_capacity(capacity),
+        }
+    }
+
+    pub fn add_triangle(&mut self, v0: usize, v1: usize, v2: usize, normal: Vec3) -> usize {
+        self.point_addr.push((v0, v1, v2));
+        self.normal_vector.push(normal);
+
+        self.point_addr.len() - 1
+    }
+
+    pub fn get_triangle(&self, idx: usize) -> (usize, usize, usize, &Vec3) {
+        let (v0, v1, v2) = unsafe { self.point_addr.get_unchecked(idx) };
+
+        let normal = unsafe { self.normal_vector.get_unchecked(idx) };
+        (*v0, *v1, *v2, normal)
     }
 }

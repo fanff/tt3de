@@ -12,7 +12,6 @@ class Test_TransformationPack(unittest.TestCase):
         trpack = TransformPackPy(23)
 
     def test_add_node(self):
-
         transform_buffer = TransformPackPy(128)
 
         m4 = glm.translate(glm.vec3(1, 2, 3))
@@ -34,8 +33,7 @@ class Test_TransformationPack(unittest.TestCase):
         self.assertEqual(m4out, glm.translate(glm.vec3(1, 2, 3)))
 
     def test_apply_mv(self):
-
-        abuffer = VertexBufferPy(32,32,32)
+        abuffer = VertexBufferPy(32, 32, 32)
         trpack = TransformPackPy(12)
 
         trpack.set_view_matrix_glm(glm.translate(glm.vec3(1, 2, 3)))

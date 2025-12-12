@@ -1,5 +1,7 @@
 use std::borrow::BorrowMut;
 
+use nalgebra::Dyn;
+use nalgebra::VecStorage;
 use nalgebra_glm::clamp_vec;
 use nalgebra_glm::floor;
 use nalgebra_glm::max;
@@ -9,6 +11,7 @@ use nalgebra_glm::Number;
 use nalgebra_glm::TVec2;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
+use nalgebra_glm::Vec4;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::apply_material;
@@ -244,13 +247,26 @@ pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, DepthBufferAccuracy: Numbe
     pub pixbuffer: Box<[PixInfo<f32>]>,
     pub row_count: usize,
     pub col_count: usize,
-
     pub half_size: Vec2,
+    pub flip_x: bool,
+    pub flip_y: bool,
+    scale: Vec2,
+}
+fn flip_to_vec(flip_x: bool, flip_y: bool) -> Vec2 {
+    let x = if flip_x { -1.0 } else { 1.0 };
+    let y = if flip_y { -1.0 } else { 1.0 };
+    vec2(x, y)
 }
 
 // here theL ( layer) are like.. bounded; A is accuracy of the depth buffer (f32 usually)
 impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
-    pub fn new(row_count: usize, col_count: usize, default_depth: DEPTHACC) -> Self {
+    pub fn new(
+        row_count: usize,
+        col_count: usize,
+        default_depth: DEPTHACC,
+        flip_x: bool,
+        flip_y: bool,
+    ) -> Self {
         // this store the depth for every cell, for every "layer" + and index
         let mut depthbuffer =
             vec![DepthBufferCell::new_set(default_depth); row_count * col_count].into_boxed_slice();
@@ -284,9 +300,19 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             col_count,
             row_count,
             half_size: Vec2::new(col_count as f32 / 2.0, row_count as f32 / 2.0),
+            flip_x: flip_x,
+            flip_y: flip_y,
+            scale: flip_to_vec(flip_x, flip_y),
         }
     }
-
+    pub fn set_flip_x(&mut self, v: bool) {
+        self.flip_x = v;
+        self.scale = flip_to_vec(self.flip_x, self.flip_y);
+    }
+    pub fn set_flip_y(&mut self, v: bool) {
+        self.flip_y = v;
+        self.scale = flip_to_vec(self.flip_x, self.flip_y);
+    }
     pub fn clear_depth(&mut self, value: DEPTHACC) {
         for (idx, depth_cell) in self.depthbuffer.iter_mut().enumerate() {
             depth_cell.clear(value, idx * L);
@@ -301,7 +327,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does NOT apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
-        let mut sumoftwovec: Vec2 = v.component_mul(&vec2(1.0, -1.0)) + vec2(1.0, 1.0);
+        let mut sumoftwovec: Vec2 = v.component_mul(&self.scale) + vec2(1.0, 1.0);
         // vectorial summ and multiplication; component wise
         sumoftwovec.component_mul_assign(&self.half_size);
         sumoftwovec

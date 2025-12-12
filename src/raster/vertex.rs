@@ -1,5 +1,6 @@
 use std::fmt;
 
+use nalgebra::VecStorage;
 use nalgebra_glm::{Vec2, Vec3, Vec4};
 
 /// Represents a vertex in a 3D space.

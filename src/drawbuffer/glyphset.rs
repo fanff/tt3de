@@ -19,8 +19,10 @@ pub const GLYPH_STATIC_STR: [&str; 256] = [
     "♠", "♣", "♥", "♦", //
 ];
 //⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿
-pub const HALF_UPPER_BLOCK: usize = 95;
-pub const HALF_LOWER_BLOCK: usize = 99;
+
+pub const SPACE: u8 = 0;
+pub const HALF_UPPER_BLOCK: u8 = 95;
+pub const HALF_LOWER_BLOCK: u8 = 99;
 
 /// return the first index of the glyph in the GLYPH_STATIC_STR array
 pub fn find_glyph_index(glyph: char) -> i8 {

@@ -596,7 +596,7 @@ mod test_raster_duo_triangle {
 
     fn setup_drawing() -> (DrawBuffer<2, f32>, PrimitivReferences) {
         (
-            DrawBuffer::<2, f32>::new(8, 10, 10.0),
+            DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true),
             PrimitivReferences {
                 geometry_id: 1,
                 material_id: 2,
@@ -616,7 +616,7 @@ mod test_raster_mono_triangle {
 
     #[test]
     fn triangle_case_flat_bottom_a_b_c() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -655,7 +655,7 @@ mod test_raster_mono_triangle {
     }
     #[test]
     fn triangle_case_flat_bottom_b_c_a() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -694,7 +694,7 @@ mod test_raster_mono_triangle {
     }
     #[test]
     fn triangle_case_flat_bottom_c_a_b() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -734,7 +734,7 @@ mod test_raster_mono_triangle {
 
     #[test]
     fn triangle_case_flat_top_a_b_c() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -773,7 +773,7 @@ mod test_raster_mono_triangle {
     }
     #[test]
     fn triangle_case_flat_top_b_c_a() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,
@@ -812,7 +812,7 @@ mod test_raster_mono_triangle {
     }
     #[test]
     fn triangle_case_flat_top_c_a_b() {
-        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0);
+        let mut drawing_buffer = DrawBuffer::<2, f32>::new(8, 10, 10.0, false, true);
         let prim_ref = PrimitivReferences {
             geometry_id: 1,
             material_id: 2,

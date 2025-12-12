@@ -1,6 +1,6 @@
 use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
 use crate::material::combo_material::ComboMaterial;
-use crate::material::textured::{TexturedBack, TexturedFront};
+use crate::material::textured::BaseTexture;
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
 
@@ -14,19 +14,16 @@ use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Textured};
 pub enum Material<T = ()> {
     DoNothing {},
     Texture(Textured),
-    TexturedBack(TexturedBack),
-    TexturedFront(TexturedFront),
+    BaseTexture(BaseTexture),
     StaticColor {
+        front: bool,
+        back: bool,
+        glyph: bool,
         front_color: RGBA,
         back_color: RGBA,
-        glyph_idx: u8, // b'a'
+        glyph_idx: u8,
     },
-    StaticColorBack {
-        back_color: RGBA,
-    },
-    StaticColorFront {
-        front_color: RGBA,
-    },
+
     StaticGlyph {
         glyph_idx: u8,
     },
@@ -40,7 +37,24 @@ pub enum Material<T = ()> {
     ComboMaterial(ComboMaterial),
     Custom(T),
 }
-
+impl Material {
+    pub fn set_glyph_texture_subid(&mut self, _subid: usize) {
+        match self {
+            Material::BaseTexture(t) => {
+                t.glyph_texture_subid = _subid;
+            }
+            _ => {}
+        }
+    }
+    pub fn set_albedo_texture_subid(&mut self, _subid: usize) {
+        match self {
+            Material::BaseTexture(t) => {
+                t.albedo_texture_subid = _subid;
+            }
+            _ => {}
+        }
+    }
+}
 pub trait RenderMaterial<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize> {
     fn render_mat(
         &self,
@@ -142,24 +156,24 @@ impl<
                 uv_buffer,
             ),
             Material::StaticColor {
+                front,
+                back,
+                glyph,
                 front_color,
                 back_color,
                 glyph_idx,
             } => {
-                cell.glyph = *glyph_idx;
-                cell.front_color.copy_from(front_color);
-                cell.back_color.copy_from(back_color);
+                if *front {
+                    cell.front_color.copy_from(front_color);
+                }
+                if *back {
+                    cell.back_color.copy_from(back_color);
+                }
+                if *glyph {
+                    cell.glyph = *glyph_idx;
+                }
             }
-            Material::StaticColorBack { back_color } => {
-                cell.back_color.copy_from(back_color);
-            }
-            Material::StaticColorFront { front_color } => {
-                cell.front_color.copy_from(front_color);
-            }
-            Material::StaticGlyph { glyph_idx } => {
-                cell.glyph = *glyph_idx;
-            }
-            Material::TexturedBack(textured_back) => textured_back.render_mat(
+            Material::BaseTexture(textured_front) => textured_front.render_mat(
                 cell,
                 depth_cell,
                 depth_layer,
@@ -168,15 +182,7 @@ impl<
                 texture_buffer,
                 uv_buffer,
             ),
-            Material::TexturedFront(textured_front) => textured_front.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            ),
+            Material::StaticGlyph { glyph_idx } => todo!(),
         }
     }
 } // juste un maxi match pour l'implem

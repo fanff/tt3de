@@ -40,6 +40,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
     }
 }
 
+#[derive(Clone)]
 #[pyclass]
 pub struct ComboMaterialPy {
     #[pyo3(get, set)]

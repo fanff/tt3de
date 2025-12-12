@@ -20,7 +20,6 @@ sizes = [16, 32, 64, 128, 256, 512]
 @pytest.mark.parametrize("n", sizes)
 @pytest.mark.benchmark(group="pix_shader_loop")
 def test_bench_full_pass(benchmark, n):
-
     texture_buffer = TextureBufferPy(12)
 
     material_buffer = MaterialBufferPy()
@@ -28,7 +27,7 @@ def test_bench_full_pass(benchmark, n):
 
     drawing_buffer = DrawingBufferPy(n, n)
     drawing_buffer.hard_clear(100.0)
-    vertex_buffer = VertexBufferPy(32,32,32)
+    vertex_buffer = VertexBufferPy(32, 32, 32)
     primitive_buffer = PrimitiveBufferPy(3)
 
     benchmark(
