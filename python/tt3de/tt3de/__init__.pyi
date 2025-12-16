@@ -83,6 +83,21 @@ class TextureBufferPy:
         """
         ...
 
+    def get_rgba_at(
+        self, texture_idx: int, u: float, v: float
+    ) -> Tuple[int, int, int, int]:
+        """
+        Fetches the RGBA value at the given UV coordinates for a specific texture.
+
+        Args:
+            texture_idx (int): The index of the texture.
+            u (float): The U coordinate (0.0 to 1.0).
+            v (float): The V coordinate (0.0 to 1.0).
+        Returns:
+            Tuple[int, int, int, int]: The RGBA value as a tuple.
+        """
+        ...
+
 class MaterialBufferPy:
     def __init__(self, max_size=64):
         """

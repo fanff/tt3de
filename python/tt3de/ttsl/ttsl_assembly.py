@@ -68,19 +68,29 @@ class OpCodes(Enum):
     MUL = "mul"
     DIV = "div"
     NEG = "neg"
+
     JMP = "jmp"
     JMP_IF_FALSE = "jmp_if_false"
+
     RET = "ret"
     CMP_GT = "cmp_gt"
     CMP_GTE = "cmp_gte"
+
     STORE = "store"
     STORE_VEC_FROM_SCALAR = "store_vec_from_scalar"
     READ_AXIS_X = "read_axis_x"
     READ_AXIS_Y = "read_axis_y"
     READ_AXIS_Z = "read_axis_z"
     READ_AXIS_W = "read_axis_w"
+
     SIN = "sin"
     ABS = "abs"
+    SQRT = "sqrt"
+    COS = "cos"
+    TAN = "tan"
+    EXP = "exp"
+    LN = "ln"
+    LOG = "log"
 
 
 @dataclass
@@ -313,8 +323,16 @@ class CFGNode:
         top.extend(self.instructions)
         return top
 
-    def add_instruction(self, instr: IRInstr) -> None:
-        self.instructions.append((instr))
+    def append_instruction(self, instr: IRInstr) -> None:
+        self.instructions.append(instr)
+
+    def insert_before_terminator(self, instr: IRInstr) -> None:
+        term_ops = {OpCodes.JMP, OpCodes.JMP_IF_FALSE, OpCodes.RET}
+        instrs = self.instructions  # however you store them
+        if instrs and instrs[-1].op in term_ops:
+            instrs.insert(len(instrs) - 1, instr)
+        else:
+            instrs.append(instr)
 
     def is_jumping(self) -> bool:
         for instr in reversed(self.instrs()):
@@ -333,6 +351,21 @@ class CFGNode:
 
     def set_end(self, end: int) -> None:
         pass
+
+    def find_temp_operand(
+        self, temp_id: TempID, only_on_dest: bool = False
+    ) -> Optional[IRInstr]:
+        for instr in self.instrs():
+            if not only_on_dest:
+                for op in [instr.src1, instr.src2, instr.src3, instr.src4]:
+                    if isinstance(op, (Temp, TempID)):
+                        if is_operand_temp(op) and op.id == temp_id:
+                            return instr
+            for op in [instr.dst]:
+                if isinstance(op, (Temp, TempID)):
+                    if is_operand_temp(op) and op.id == temp_id:
+                        return instr
+        return None
 
 
 class CFG:
@@ -704,7 +737,7 @@ def build_cfg_from_ir(
             current_node = new_node
 
         if instr.op is OpCodes.RET:
-            current_node.add_instruction(instr)
+            current_node.append_instruction(instr)
             current_node.set_end(line + 1)
 
             cfg.add_arc(current_node.name, terminal_node.name)
@@ -713,7 +746,7 @@ def build_cfg_from_ir(
         elif instr.op in {OpCodes.JMP, OpCodes.JMP_IF_FALSE}:
             if current_node is None:
                 continue  # we have already returned, unless you have another later
-            current_node.add_instruction(instr)
+            current_node.append_instruction(instr)
             current_node.set_end(line + 1)
             current_node = None
         else:
@@ -721,7 +754,7 @@ def build_cfg_from_ir(
                 print("Warning: instruction after return/jump without label.")
                 print(f"  Instr: {instr}")
             else:
-                current_node.add_instruction(instr)
+                current_node.append_instruction(instr)
 
     if current_node is not None:
         current_node.set_end(len(ttsl_compiler.code.instrs))

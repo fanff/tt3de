@@ -5,9 +5,9 @@ pub mod primitiv_building;
 pub mod primitivbuffer;
 pub mod raster;
 pub mod texturebuffer;
+pub mod ttsl;
 pub mod utils;
 pub mod vertexbuffer;
-
 use pyo3::prelude::*;
 
 /// Python module definition

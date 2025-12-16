@@ -129,7 +129,7 @@ class TT2DNode(TreeNode, DirtyProcessor, Transform2DMixin):
         self.global_transform_matrix: glm.mat4 = self.local_transform
 
         # will be set when inserted in the render context
-        self.node_id = None
+        self.node_id: int | None = None
         # will be set when added to a parent node
         # declared here for type checking purposes
         self.elements: List[TT2DNode] = []
@@ -222,7 +222,7 @@ class TT2DPoints(WithMaterialID, TT2DNode):
         name: str = None,
         transform: Optional[glm.mat4] = None,
         point_list: List[Point3D] = None,
-        material_id=0,
+        material_id: int = 0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
 
@@ -231,6 +231,7 @@ class TT2DPoints(WithMaterialID, TT2DNode):
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
+        assert self.node_id is not None
 
         self.vert_idx = [
             rc.vertex_buffer.add_2d_vertex(p3d.x, p3d.y, p3d.z)

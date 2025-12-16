@@ -3,8 +3,8 @@ from rich.text import Text
 from rich.style import Style
 from rich.table import Table
 from typing import List, Any, Dict
-
-from tt3de.ttsl.compiler import TTSLCompilerContext
+from rich.console import Console
+from tt3de.ttsl.compiler import CompilationPass, TTSLCompilerContext
 from tt3de.ttsl.ttsl_assembly import CFG, IRInstr, IRType, OpCodes, Temp
 
 TYPE_COLORS = {
@@ -50,7 +50,7 @@ def const_pool_to_rich(const_pool: Dict) -> Table:
     return const_table
 
 
-def instr_list_to_rich(instrs: List[IRInstr]) -> Table:
+def instr_list_to_rich(instrs: List[IRInstr], start_line: int = 0) -> Table:
     table = Table(show_header=True, title="IR Program", header_style="bold magenta")
     table.add_column("Idx", style="dim", width=6)
     table.add_column(
@@ -65,57 +65,64 @@ def instr_list_to_rich(instrs: List[IRInstr]) -> Table:
     table.add_column("Src4")
     table.add_column("Imm")
     table.add_column("Comment")
-
-    for idx, instr in enumerate(instrs):
+    # table.add_section()
+    current_line = start_line
+    for _idx, instr in enumerate(instrs):
         if instr.op == OpCodes.PHI:
-            table.add_section()
-            operands_txt = [
-                Text.assemble(block_id_to_rich(block_id), ">", temp_to_rich(temp))
-                for block_id, temp in instr.phi_operands.items()
-            ]
+            add_instr_to_table(instr, "-", table)
+        else:
+            current_line += 1
+            add_instr_to_table(instr, current_line, table)
+    return table
 
-            vars = ["-"] * 5
-            for var in range(5):
-                if len(operands_txt) > 0:
-                    vars[var] = operands_txt.pop(0)
 
-            vars.append(
-                Text.assemble(
-                    *(operands_txt + [instr.comment]),
-                )
+def add_instr_to_table(instr: IRInstr, line_idx: int, table: Table) -> None:
+    if instr.op == OpCodes.PHI:
+        operands_txt = [
+            Text.assemble(block_id_to_rich(block_id), ">", temp_to_rich(temp))
+            for block_id, temp in instr.phi_operands.items()
+        ]
+
+        vars = ["-"] * 5
+        for var in range(5):
+            if len(operands_txt) > 0:
+                vars[var] = operands_txt.pop(0)
+
+        vars.append(
+            Text.assemble(
+                *(operands_txt + [instr.comment]),
             )
-
-            table.add_row(
-                str(idx), instr.label, instr.op.name, temp_to_rich(instr.dst), *vars
-            )
-            continue
-        dst = temp_to_rich(instr.dst) if instr.dst is not None else Text("-")
-        src1 = temp_to_rich(instr.src1) if instr.src1 is not None else Text("-")
-        src2 = temp_to_rich(instr.src2) if instr.src2 is not None else Text("-")
-        src3 = temp_to_rich(instr.src3) if instr.src3 is not None else Text("-")
-        src4 = temp_to_rich(instr.src4) if instr.src4 is not None else Text("-")
-        imm = Text(str(instr.imm)) if instr.imm is not None else Text("-")
-        label = (
-            Text(f"{instr.label}:", style=Style(color="yellow"))
-            if instr.label is not None
-            else Text("")
         )
-        comment = Text(instr.comment) if instr.comment is not None else Text("-")
 
         table.add_row(
-            str(idx),
-            label,
-            instr.op.name,
-            dst,
-            src1,
-            src2,
-            src3,
-            src4,
-            imm,
-            comment,
+            str(line_idx), instr.label, instr.op.name, temp_to_rich(instr.dst), *vars
         )
+        return
+    dst = temp_to_rich(instr.dst) if instr.dst is not None else Text("-")
+    src1 = temp_to_rich(instr.src1) if instr.src1 is not None else Text("-")
+    src2 = temp_to_rich(instr.src2) if instr.src2 is not None else Text("-")
+    src3 = temp_to_rich(instr.src3) if instr.src3 is not None else Text("-")
+    src4 = temp_to_rich(instr.src4) if instr.src4 is not None else Text("-")
+    imm = Text(str(instr.imm)) if instr.imm is not None else Text("-")
+    label = (
+        Text(f"{instr.label}:", style=Style(color="yellow"))
+        if instr.label is not None
+        else Text("")
+    )
+    comment = Text(instr.comment) if instr.comment is not None else Text("-")
 
-    return table
+    table.add_row(
+        str(line_idx),
+        label,
+        instr.op.name,
+        dst,
+        src1,
+        src2,
+        src3,
+        src4,
+        imm,
+        comment,
+    )
 
 
 def env_table_to_rich(env: Dict[str, Temp]) -> Table:
@@ -157,3 +164,22 @@ def cfg_to_rich(cfg: CFG) -> Table:
                 row.append(Text(" ", style=Style(color="red")))
         table.add_row(*row)
     return table
+
+
+class PassPrintConsole(CompilationPass):
+    def run(self) -> None:
+        ttsl_compiler = self.ttsl_compiler
+
+        console = Console()
+
+        cfg: CFG = ttsl_compiler.cfg
+
+        tinstrs = instr_list_to_rich(cfg.to_irprog())
+
+        tenv = env_table_to_rich(ttsl_compiler.named_variables)
+        tconst_pool = const_pool_to_rich(ttsl_compiler.const_pool)
+        t_cfg = cfg_to_rich(cfg)
+
+        all_ = [tinstrs, tenv, tconst_pool, t_cfg]
+        for item in all_:
+            console.print(item)

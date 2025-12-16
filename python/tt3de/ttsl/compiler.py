@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pyglm import glm
 
+from tt3de.ttsl.ttisa.low_level_def import generate_all_forms
 from tt3de.ttsl.ttsl_assembly import (
     CFG,
     STR_TO_IRTYPE,
@@ -40,8 +41,8 @@ ALLOWED_IR_TYPES = {
 VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
 GLOBAL_VAR_TTSL_TIME = "ttsl_time"
-PIXELVAR_TTSL_UV0 = "ttsl_uv0"
-PIXELVAR_TTSL_UV1 = "ttsl_uv1"
+PIXELVAR_TTSL_UV0: str = "ttsl_uv0"
+PIXELVAR_TTSL_UV1: str = "ttsl_uv1"
 
 GLOBAL_VARIABLES_STR_TYPE = {
     GLOBAL_VAR_TTSL_TIME: IRType.F32,
@@ -113,8 +114,9 @@ class TTSLCompilerContext:
 
     def allways_present_variables_at_init(self) -> Dict[str, IRType]:
         return {
-            "ttsl_uv0": IRType.V2,
-            "ttsl_uv1": IRType.V2,
+            GLOBAL_VAR_TTSL_TIME: GLOBAL_VARIABLES_STR_TYPE[GLOBAL_VAR_TTSL_TIME],
+            PIXELVAR_TTSL_UV0: IRType.V2,
+            PIXELVAR_TTSL_UV1: IRType.V2,
         }
 
     def comment(self, text: str):
@@ -741,15 +743,16 @@ class SSARenamer:
             return None
 
         if is_operand_ssavar(op):
+            assert isinstance(op, str)
             v = op
             t = self.top(v)
             if t is None:
                 # Uninitialized use:
                 raise ValueError(f"SSA rename: use of variable {v!r} before definition")
             return self._allocated_temps_for_id(t)
-            # return TempID(t)
+
         elif isinstance(op, Temp):
-            # TODO if op is a temps which ID is actually SSAVarID string
+            #  if op is a temps which ID is actually SSAVarID string
             maybe_variable = self.ttsl_compiler.temp_id_to_variable(op.id)
             if maybe_variable is not None:
                 v = maybe_variable
@@ -788,6 +791,7 @@ class SSARenamer:
             or self.ttsl_compiler.temp_id_to_variable(dst.id) is not None
         )
         v = self.ttsl_compiler.temp_id_to_variable(dst.id)
+        assert isinstance(v, str)
         new_temp = self.new_temp(ty)
         new_tid = new_temp.id
         self.push(v, new_tid)
@@ -815,6 +819,7 @@ class SSARenamer:
         # Rewrite def if dst is a VarRef
 
         if self.is_var_def(instr.dst):
+            assert isinstance(instr.dst, Temp)
             ty = instr.dst.ty
 
             v, new_dst = self.rewrite_def(instr.dst, ty=ty)
@@ -905,7 +910,9 @@ class CompilationPass:
 
 class PassSSARenamer(CompilationPass):
     def run(self) -> None:
+        assert self.ttsl_compiler is not None
         ttsl_compiler = self.ttsl_compiler
+        assert isinstance(ttsl_compiler.cfg, CFG)
         cfg = ttsl_compiler.cfg
         # 1) Build dominators/idom/dom-tree (you have it)
         dom = cfg.compute_dominators()
@@ -944,3 +951,213 @@ class PassSSARenamer(CompilationPass):
         # renamer.push("time", existing_time_tempid)
 
         renamer.rename()
+
+
+# post optimization passes
+
+
+class PassPhiNodeLowering(CompilationPass):
+    def run(self) -> None:
+        ttsl_compiler = self.ttsl_compiler
+        cfg = ttsl_compiler.cfg
+        assert isinstance(cfg, CFG)
+
+        for node_id in cfg.all_nodes():
+            node = cfg.nodes[node_id]
+            new_instrs: List[IRInstr] = []
+            for instr in node.instrs():
+                if instr.op == OpCodes.PHI:
+                    # Lower phi node
+                    phi_var = instr.dst
+                    assert isinstance(phi_var, Temp)
+
+                    for pred_block_id, operand_temp in instr.phi_operands.items():
+                        pred_node = cfg.nodes[pred_block_id]
+
+                        assert isinstance(operand_temp, TempID)
+                        # phi operands are TempIDs, not Temps
+                        operand = pred_node.find_temp_operand(
+                            operand_temp, only_on_dest=True
+                        )
+                        assert isinstance(operand, Temp)
+                        # Insert a move instruction at the end of the predecessor block
+                        move_instr = IRInstr(
+                            op=OpCodes.STORE,
+                            dst=phi_var,
+                            src1=operand_temp,
+                        )
+                        pred_node.insert_before_terminator(move_instr)
+                else:
+                    new_instrs.append(instr)
+            node.set_instrs(new_instrs)
+
+
+class CFGSimplifyPass(CompilationPass):
+    def run(self) -> None:
+        ttsl_compiler = self.ttsl_compiler
+        cfg = ttsl_compiler.cfg
+
+        cfg.simplify_cfg()
+
+
+class RegisterAllocatorPass(CompilationPass):
+    def run(self) -> None:
+        ttsl_compiler = self.ttsl_compiler
+        cfg = ttsl_compiler.cfg
+
+        # Simple register allocation: map each Temp to a unique register ID
+        temp_to_reg: Dict[int, int] = {}
+        next_reg_id = 1  # Start register IDs from 1
+
+        for node_id, node in cfg.nodes.items():
+            for instr in node.instrs():
+                # Allocate registers for src operands
+                for src in [instr.src1, instr.src2, instr.src3, instr.src4]:
+                    if isinstance(src, Temp):
+                        if src.id not in temp_to_reg:
+                            temp_to_reg[src.id] = next_reg_id
+                            next_reg_id += 1
+                # Allocate register for dst operand
+                dst = instr.dst
+                if isinstance(dst, Temp):
+                    if dst.id not in temp_to_reg:
+                        temp_to_reg[dst.id] = next_reg_id
+                        next_reg_id += 1
+
+        # Replace Temps with their allocated register IDs
+        for node_id, node in cfg.nodes.items():
+            for instr in node.instrs():
+                for attr in ["src1", "src2", "src3", "src4"]:
+                    src = getattr(instr, attr)
+                    if isinstance(src, Temp):
+                        reg_id = temp_to_reg[src.id]
+                        setattr(instr, attr, reg_id)
+                dst = instr.dst
+                if isinstance(dst, Temp):
+                    reg_id = temp_to_reg[dst.id]
+                    instr.dst = reg_id
+
+
+class PassToByteCode(CompilationPass):
+    def run(self) -> None:
+        self.all_ops = generate_all_forms()
+
+        ttsl_compiler = self.ttsl_compiler
+        cfg = ttsl_compiler.cfg
+
+        # order the nodes in a way that respects control flow
+        all_nodes = cfg.reverse_post_order(cfg.init_idx)
+
+        # all_nodes = cfg.bfs(cfg.init_idx)
+
+        self.jump_targets_address: Dict[Tuple[NodeID, int], str] = {}
+
+        self.blocks_name_to_address: Dict[str, int] = {}
+
+        self.blocks_bytecode: Dict[
+            NodeID, List[Tuple[int, int, int, int, int, int]]
+        ] = {}
+        for node_id in all_nodes:
+            node = cfg.nodes[node_id]
+            block_bytecode = []
+            for instr in node.instrs():
+                node.phis
+                if instr.op == OpCodes.PHI:
+                    continue  # Phi nodes are not emitted in bytecode
+                elif instr.op == OpCodes.JMP or instr.op == OpCodes.JMP_IF_FALSE:
+                    # Handle jump instructions
+                    # keep the jump target
+                    self.jump_targets_address[
+                        (
+                            node_id,
+                            len(block_bytecode),
+                        )
+                    ] = instr.dst
+                    # set address to 0 for now; will patch later
+                    instr.dst = 0
+                    if_byte_code = self.transform_instr_to_bytecode(instr)
+                    block_bytecode.extend(if_byte_code)
+                    continue
+
+                byte_code = self.transform_instr_to_bytecode(instr)
+                block_bytecode.extend(byte_code)
+            print(f"Block {node_id} bytecode:", block_bytecode)
+            self.blocks_bytecode[node_id] = block_bytecode
+
+        # now assign addresses to blocks
+        current_address = 0
+        for node_id in all_nodes:
+            node = cfg.nodes[node_id]
+            block_bytecode = self.blocks_bytecode[node_id]
+            self.blocks_name_to_address[node.name] = current_address
+            current_address += len(block_bytecode)
+        # now patch jump targets
+        for (block_id, instr_idx), target_label in self.jump_targets_address.items():
+            target_address = self.blocks_name_to_address[target_label]
+            block_bytecode = self.blocks_bytecode[block_id]
+            instr_tuple = list(block_bytecode[instr_idx])
+            instr_tuple[1] = target_address  # patch dst operand
+            block_bytecode[instr_idx] = tuple(instr_tuple)
+
+        # finally, flatten all bytecode
+        final_bytecode: List[Tuple[int, int, int, int, int, int]] = []
+        for node_id in all_nodes:
+            block_bytecode = self.blocks_bytecode[node_id]
+            final_bytecode.extend(block_bytecode)
+
+        self.final_bytecode = final_bytecode
+        for idx, instr in enumerate(self.final_bytecode):
+            print(f"{idx:04}: {instr}")
+
+    def operand_to_id(self, op: IROperand) -> int:
+        if op is None:
+            return 0  # Assuming 0 means 'no operand' in bytecode
+        elif isinstance(op, Temp):
+            return op.id
+        elif isinstance(op, int):
+            return op
+        else:
+            raise NotImplementedError(f"Unsupported operand type: {type(op)}")
+
+    def find_opcode_key(self, instr: IRInstr) -> int:
+        instr.src1
+        instr.src2
+        instr.src3
+        instr.src4
+        for form in self.all_ops:
+            form["type"]  # output_type
+            form["name"]  # opcode name
+            # form["input_types"]  # input types
+            # form.opcode_index
+            if instr.op.name in form["name"]:
+                pass  # return 0
+        return instr.op.name
+
+    def transform_instr_to_bytecode(
+        self, instr: IRInstr
+    ) -> List[Tuple[int, int, int, int, int, int]]:
+        bytecode_instructions = []
+        if instr.op in (OpCodes.LABEL, OpCodes.PHI, OpCodes.COMMENT):
+            return bytecode_instructions  # No bytecode for these
+
+        op = self.find_opcode_key(instr)
+
+        srcs = [instr.src1, instr.src2, instr.src3, instr.src4]
+        dst = instr.dst
+
+        # Convert operands to their integer representations
+        src_ids = [self.operand_to_id(src) for src in srcs]
+        dst_id = self.operand_to_id(dst)
+
+        # Create bytecode instruction tuple
+        bytecode_instr = (
+            op,
+            dst_id,
+            src_ids[0],
+            src_ids[1],
+            src_ids[2],
+            src_ids[3],
+        )
+        bytecode_instructions.append(bytecode_instr)
+
+        return bytecode_instructions
