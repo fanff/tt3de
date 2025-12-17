@@ -91,6 +91,7 @@ class OpCodes(Enum):
     EXP = "exp"
     LN = "ln"
     LOG = "log"
+    MIX = "mix"
 
 
 @dataclass
@@ -106,9 +107,29 @@ class IRInstr:
     comment: Optional[str]  # optional comment for debugging
 
     phi_operands: Optional[Dict[NodeID, Temp]] = None  # only for phi nodes
+    byte_code: Optional[List[int]] = None  # placeholder for bytecode representation
+
+    def uniop(
+        op: OpCodes,
+        dst: Optional[IROperand] = None,
+        src: Optional[IROperand] = None,
+        comment: Optional[str] = None,
+    ) -> "IRInstr":
+        return IRInstr(
+            op=op,
+            dst=dst,
+            src1=src,
+            src2=None,
+            src3=None,
+            src4=None,
+            imm=None,
+            label=None,
+            comment=comment,
+        )
 
     def __post_init__(self):
         self.phi_operands = {}
+        self.byte_code = [0] * 6  # placeholder for bytecode representation
 
     def copy(self) -> "IRInstr":
         return IRInstr(
@@ -135,13 +156,14 @@ class IRInstr:
 
 class IRProgram:
     instrs: list[IRInstr]
-    const_pool: dict[int, Any]  # index -> value
 
     label_counter: int = 0
 
     def __init__(self):
         self.instrs = []
-        self.const_pool = {}
+
+        # index -> value
+        self.const_pool: dict[int, Tuple[Any, IRType]] = {}
 
         # keep track of spans that starts with a label and end with either
         # a label, or end of program, or a jump
@@ -302,21 +324,17 @@ def regroup_load_consts_at_top(
 
 
 class CFGNode:
-    name: str
-    cfg: "CFG" = None
-    phis: Dict[SSAVarID, IRInstr] = None
-
     def __init__(self, name: str):
-        self.name = name
-        self.cfg = None
-        self.phis = {}
+        self.name: str = name
+        # self.cfg: "CFG" = None
+        self.phis: Dict[SSAVarID, IRInstr] = {}
 
         self.instructions: List[IRInstr] = []
 
-    def instrs(self) -> List[IRInstr]:
+    def instrs(self, include_phis=True) -> List[IRInstr]:
         top = []
         # deterministic order is nice for debugging
-        if self.phis:
+        if self.phis and include_phis:
             top.extend(
                 v for k, v in (sorted(self.phis.items(), key=lambda item: item[0]))
             )  # or sorted by var id
@@ -367,6 +385,16 @@ class CFGNode:
                         return instr
         return None
 
+    def set_instrs(self, instrs: List[IRInstr]) -> None:
+        self.instructions = instrs
+
+    def get_terminator(self) -> Optional[IRInstr]:
+        if self.instructions:
+            last_instr = self.instructions[-1]
+            if last_instr.op in {OpCodes.JMP, OpCodes.JMP_IF_FALSE, OpCodes.RET}:
+                return last_instr
+        return None
+
 
 class CFG:
     def __init__(self):
@@ -392,7 +420,7 @@ class CFG:
         """Add a node and return its index."""
         idx = len(self.nodes)
         self.nodes.append(node)
-        node.cfg = self
+        # node.cfg = self
         if node.name in self._node_name_to_id:
             raise ValueError(f"Duplicate node name: {node.name}")
         self._node_name_to_id[node.name] = idx
@@ -415,6 +443,11 @@ class CFG:
     def add_arc_idx(self, src_idx: NodeID, dst_idx: NodeID) -> None:
         """Add an edge using node indices."""
         self.arcs.append((src_idx, dst_idx))
+
+    def remove_arc_idx(self, src_idx: int, dst_idx: int) -> None:
+        self.arcs = [
+            (s, d) for (s, d) in self.arcs if not (s == src_idx and d == dst_idx)
+        ]
 
     def get_arcs(self) -> List[Tuple[NodeID, NodeID]]:
         """Get all arcs in the CFG."""
@@ -476,6 +509,33 @@ class CFG:
     def dfs_from(self, start_name: str) -> List[CFGNode]:
         start_idx = self.get_idx(start_name)
         return [self.nodes[i] for i in self.dfs(start_idx)]
+
+    def reverse_post_order(self, entry_idx: Optional[NodeID] = None) -> List[NodeID]:
+        """
+        Compute Reverse Post Order (RPO) of the CFG starting from entry_idx. Only
+        reachable nodes are included.
+
+        RPO is commonly used for block layout and many forward dataflow passes.
+        """
+        if entry_idx is None:
+            entry_idx = self.init_idx
+
+        visited: Set[int] = set()
+        postorder: List[int] = []
+
+        def dfs(n: int) -> None:
+            visited.add(n)
+            for s in self.successors(n):
+                if s not in visited and self.nodes[s] is not None:
+                    dfs(s)
+            postorder.append(n)
+
+        if self.nodes[entry_idx] is None:
+            return []
+
+        dfs(entry_idx)
+        postorder.reverse()
+        return postorder
 
     # ---------------- Dominator analysis ----------------
     def compute_dominators(
@@ -615,9 +675,9 @@ class CFG:
 
     def compute_dominance_frontiers(
         self,
-        entry_idx: int = None,
-        idom: Dict[int, int] = None,
-        dom: Dict[int, Set[int]] = None,
+        entry_idx: int,
+        idom: Dict[int, Optional[int]],
+        dom: Dict[int, Set[int]],
     ) -> Dict[int, Set[int]]:
         """
         Compute dominance frontiers for all nodes.
@@ -695,7 +755,7 @@ class CFG:
                             imm=None,
                             label=None,
                             comment=f"Phi for {var}({temp.id}) (insert at block {y})",
-                            phi_operands=[],
+                            phi_operands={},
                         )
                         block_phis.setdefault(y, {})[var] = phi
                         has_phi.add(y)

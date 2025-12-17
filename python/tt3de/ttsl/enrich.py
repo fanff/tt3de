@@ -5,7 +5,15 @@ from rich.table import Table
 from typing import List, Any, Dict
 from rich.console import Console
 from tt3de.ttsl.compiler import CompilationPass, TTSLCompilerContext
-from tt3de.ttsl.ttsl_assembly import CFG, IRInstr, IRType, OpCodes, Temp
+from tt3de.ttsl.ttsl_assembly import (
+    CFG,
+    IRInstr,
+    IRType,
+    OpCodes,
+    Temp,
+    CFGNode,
+    NodeID,
+)
 
 TYPE_COLORS = {
     IRType.F32: Style(color="cyan"),
@@ -48,6 +56,33 @@ def const_pool_to_rich(const_pool: Dict) -> Table:
             str(idx), Text.assemble(type_to_rich(const_type), " ", str(const))
         )
     return const_table
+
+
+def node_to_table_instruction(nodeid: NodeID, node: CFGNode) -> Table:
+    table = Table(
+        show_header=True, title=f"Basic Block {nodeid}", header_style="bold blue"
+    )
+    table.add_column("Idx", style="dim", width=6)
+    table.add_column(
+        "Label",
+        justify="right",
+    )
+    table.add_column("Op")
+    table.add_column("Dst")
+    table.add_column("Src1")
+    table.add_column("Src2")
+    table.add_column("Src3")
+    table.add_column("Src4")
+    table.add_column("Imm")
+    table.add_column("Comment")
+    current_line = 0
+    for _idx, instr in enumerate(node.instrs()):
+        if instr.op == OpCodes.PHI:
+            add_instr_to_table(instr, "-", table)
+        else:
+            current_line += 1
+            add_instr_to_table(instr, current_line, table)
+    return table
 
 
 def instr_list_to_rich(instrs: List[IRInstr], start_line: int = 0) -> Table:
@@ -147,10 +182,10 @@ def compiler_to_rich(compiler: TTSLCompilerContext) -> List[Any]:
     return [env_table] + const_pool_to_rich(compiler.code)
 
 
-def cfg_to_rich(cfg: CFG) -> Table:
+def cfg_to_accesstable(cfg: CFG) -> Table:
     """Represent the CFG as rich tables with accessiblity matrix."""
 
-    table = Table(show_header=True, title="Variables", header_style="bold magenta")
+    table = Table(show_header=True, title="CFG Arcs", header_style="bold magenta")
 
     table.add_column("  ", style="dim")
     for node_idx, node in cfg.node_items():
@@ -168,18 +203,20 @@ def cfg_to_rich(cfg: CFG) -> Table:
 
 class PassPrintConsole(CompilationPass):
     def run(self) -> None:
+        assert isinstance(self.ttsl_compiler, TTSLCompilerContext)
         ttsl_compiler = self.ttsl_compiler
-
+        assert isinstance(ttsl_compiler.cfg, CFG)
+        cfg = ttsl_compiler.cfg
         console = Console()
-
-        cfg: CFG = ttsl_compiler.cfg
-
-        tinstrs = instr_list_to_rich(cfg.to_irprog())
 
         tenv = env_table_to_rich(ttsl_compiler.named_variables)
         tconst_pool = const_pool_to_rich(ttsl_compiler.const_pool)
-        t_cfg = cfg_to_rich(cfg)
+        t_cfg = cfg_to_accesstable(cfg)
 
-        all_ = [tinstrs, tenv, tconst_pool, t_cfg]
+        all_ = [tenv, tconst_pool, t_cfg]
         for item in all_:
             console.print(item)
+
+        for node_idx, node in cfg.node_items():
+            table = node_to_table_instruction(node_idx, node)
+            console.print(table)

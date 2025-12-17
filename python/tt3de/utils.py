@@ -12,10 +12,6 @@ def p2d_tovec2(p: Point2D) -> vec2:
     return vec2(p.x, p.y)
 
 
-def p2d_uv_tomatrix(ps: tuple[Point2D, Point2D, Point2D]) -> glm.mat3x2:
-    return glm.mat3x2(p2d_tovec2(ps[0]), p2d_tovec2(ps[1]), p2d_tovec2(ps[2]))
-
-
 def vec3_str(v) -> str:
     return f"vec3({v.x:.2f},{v.y:.2f},{v.z:.2f})"
 

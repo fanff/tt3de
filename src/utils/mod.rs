@@ -1,10 +1,46 @@
+use std::collections::HashMap;
+
 use nalgebra_glm::{Mat4, Vec2, Vec3, Vec4};
+use once_cell::sync::OnceCell;
 use pyo3::{
-    types::{PyAnyMethods, PyList, PyTuple, PyTupleMethods},
-    Bound, Py, PyAny, Python,
+    types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyTuple, PyTupleMethods},
+    Bound, Py, PyAny, PyResult, Python,
 };
 
 use super::texturebuffer::RGBA;
+
+// caching the glm.vec2, vec3, vec4 constructors
+static GLM_VEC2: OnceCell<Py<PyAny>> = OnceCell::new();
+static GLM_VEC3: OnceCell<Py<PyAny>> = OnceCell::new();
+static GLM_VEC4: OnceCell<Py<PyAny>> = OnceCell::new();
+
+fn get_glm_vec2(py: Python<'_>) -> PyResult<&Py<PyAny>> {
+    GLM_VEC2.get_or_try_init(|| {
+        let pyglm = py.import("pyglm")?;
+        let glm = pyglm.getattr("glm")?;
+        let vec2 = glm.getattr("vec2")?;
+        Ok(vec2.into())
+    })
+}
+
+fn get_glm_vec3(py: Python<'_>) -> PyResult<&Py<PyAny>> {
+    GLM_VEC3.get_or_try_init(|| {
+        let pyglm = py.import("pyglm")?;
+        let glm = pyglm.getattr("glm")?;
+        let vec3 = glm.getattr("vec3")?;
+        Ok(vec3.into())
+    })
+}
+fn get_glm_vec4(py: Python<'_>) -> PyResult<&Py<PyAny>> {
+    GLM_VEC4.get_or_try_init(|| {
+        let pyglm = py.import("pyglm")?;
+        let glm = pyglm.getattr("glm")?;
+        let vec4 = glm.getattr("vec4")?;
+        Ok(vec4.into())
+    })
+}
+
+// convert PyAny glm.mat4 to nalgebra_glm::Mat4
 
 pub fn convert_pymat4(py: Python, glm_mat4: &Py<PyAny>) -> Mat4 {
     let tuple = glm_mat4.call_method0(py, "to_tuple").unwrap();
@@ -43,6 +79,22 @@ pub fn mat4_to_pyglm(py: Python, mat4: Mat4) -> Py<PyAny> {
     glm_mat4_instance.into()
 }
 
+// convert Vec2, Vec3, Vec4 to Pyglm objects
+pub fn vec3_to_pyglm(py: Python<'_>, vec3: Vec3) -> Py<PyAny> {
+    let ctor = get_glm_vec3(py).unwrap();
+    ctor.call1(py, (vec3.x, vec3.y, vec3.z)).unwrap()
+}
+
+pub fn vec2_to_pyglm(py: Python<'_>, vec2: Vec2) -> Py<PyAny> {
+    let ctor = get_glm_vec2(py).unwrap();
+    ctor.call1(py, (vec2.x, vec2.y)).unwrap()
+}
+pub fn vec4_to_pyglm(py: Python<'_>, vec4: Vec4) -> Py<PyAny> {
+    let ctor = get_glm_vec4(py).unwrap();
+    ctor.call1(py, (vec4.x, vec4.y, vec4.z, vec4.w)).unwrap()
+}
+
+// functions to convert Vec2, Vec3, Vec4 to PyList
 pub fn vec2_as_pylist(py: Python, vec2: Vec2) -> Py<PyAny> {
     let list = PyList::new(py, vec2.as_slice());
     list.unwrap().into()
@@ -56,6 +108,7 @@ pub fn vec4_as_pylist(py: Python, vec4: Vec4) -> Py<PyAny> {
     list.unwrap().into()
 }
 
+// functions to convert PyAny to Vec2, Vec3, Vec4
 pub fn convert_glm_vec3(py: Python, values: Py<PyAny>) -> Vec3 {
     let r = values.call_method0(py, "to_tuple").unwrap();
     let (a, b, c): (f32, f32, f32) = r.extract(py).unwrap();
@@ -125,4 +178,40 @@ pub fn convert_tuple_rgba(tuple: &Bound<PyTuple>) -> Option<RGBA> {
         }
         _ => None,
     }
+}
+
+pub fn from_pydict_int_v2<'py>(py: Python<'py>, dict: &Bound<'py, PyDict>) -> HashMap<i64, Vec2> {
+    let mut map = HashMap::new();
+
+    for (key, value) in dict.iter() {
+        let key_i64: i64 = key.extract().unwrap();
+        let vec2: Vec2 = convert_glm_vec2(py, value.unbind()); // or `value` depending on your fn sig
+        map.insert(key_i64, vec2);
+    }
+
+    map
+}
+
+pub fn from_pydict_int_v3<'py>(py: Python<'py>, dict: &Bound<'py, PyDict>) -> HashMap<i64, Vec3> {
+    let mut map = HashMap::new();
+
+    for (key, value) in dict.iter() {
+        let key_i64: i64 = key.extract().unwrap();
+        let vec3: Vec3 = convert_glm_vec3(py, value.unbind()); // or `value` depending on your fn sig
+        map.insert(key_i64, vec3);
+    }
+
+    map
+}
+
+pub fn from_pydict_int_v4<'py>(py: Python<'py>, dict: &Bound<'py, PyDict>) -> HashMap<i64, Vec4> {
+    let mut map = HashMap::new();
+
+    for (key, value) in dict.iter() {
+        let key_i64: i64 = key.extract().unwrap();
+        let vec4: Vec4 = convert_glm_vec4(py, value.unbind()); // or `value` depending on your fn sig
+        map.insert(key_i64, vec4);
+    }
+
+    map
 }

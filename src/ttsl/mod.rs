@@ -1,9 +1,10 @@
 use nalgebra_glm::{Vec2, Vec3, Vec4};
 mod opcodes;
 use opcodes::*;
+pub mod ttslpy;
 
 #[derive(Clone, Debug)]
-struct Instr {
+pub struct Instr {
     pub opcode: u8,
     pub dst: u8,
     pub a: u8,
@@ -13,7 +14,7 @@ struct Instr {
 }
 
 impl Instr {
-    pub fn from_bytes(bytes: &[u8; 6]) -> Self {
+    pub fn from_bytes(bytes: &[u8]) -> Self {
         Instr {
             opcode: bytes[0],
             dst: bytes[1],
@@ -25,7 +26,7 @@ impl Instr {
     }
 }
 
-struct Registers {
+pub struct Registers {
     pub bool_: [bool; 256],
     pub i32_: [i32; 256],
     pub f32_: [f32; 256],
@@ -62,7 +63,6 @@ impl TTPU {
         let mut ip: usize = 0;
         loop {
             let instr = unsafe { bytecode.get_unchecked(ip) };
-            ip += 1;
 
             if let Some(r) = exec_opcode(
                 instr.opcode,
@@ -76,6 +76,7 @@ impl TTPU {
             ) {
                 return r;
             }
+            ip += 1;
         }
     }
 }

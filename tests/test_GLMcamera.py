@@ -10,8 +10,6 @@ from tt3de.points import Point3D
 
 from pyglm import glm
 
-from glm import vec3
-
 
 def assertAlmostEqualvec3(a: glm.vec3, b: glm.vec3, limit=0.00001):
     assert glm.length(a - b) < limit, f"error equaling : \na = {a}\nb = {b} "

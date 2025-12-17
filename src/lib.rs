@@ -6,6 +6,7 @@ pub mod primitivbuffer;
 pub mod raster;
 pub mod texturebuffer;
 pub mod ttsl;
+
 pub mod utils;
 pub mod vertexbuffer;
 use pyo3::prelude::*;
@@ -40,6 +41,9 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(drawbuffer::find_glyph_indices_py, m)?)?;
     m.add_function(wrap_pyfunction!(drawbuffer::get_glyph_set, m)?)?;
+
+    // adding run function for ttsl
+    m.add_function(wrap_pyfunction!(ttsl::ttslpy::ttsl_run, m)?)?;
 
     let submodule = PyModule::new(m.py(), "materials")?;
     submodule.add_class::<ComboMaterialPy>()?;

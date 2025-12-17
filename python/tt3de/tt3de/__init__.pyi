@@ -624,3 +624,15 @@ def build_primitives_py(
     Builds primitives from the geometry buffer into the primitive buffer.
     """
     ...
+
+def ttsl_run(*args) -> Tuple[glm.vec3, glm.vec3, int]:
+    """
+    Runs the TTSL bytecode with the provided registers.
+
+    Args:
+        *args: The registers and bytecode to run.
+
+    Returns:
+        Tuple[glm.vec3, glm.vec3, int]: A tuple containing the front vector, back vector, and glyph index.
+    """
+    ...

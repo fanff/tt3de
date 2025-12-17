@@ -28,7 +28,7 @@ class Form(dict):
         return self["input_types"]
 
     @property
-    def opcode_index(self) -> str:
+    def opcode_index(self) -> int:
         return self["opcode_index"]
 
 
@@ -167,8 +167,6 @@ def generate_binary_unitype_forms(input_types, op_code_family) -> List[Form]:
                     "input_types": [
                         ir_type,
                         ir_type,
-                        None,
-                        None,
                     ],
                     "rust_expr": "{a} "
                     + {
@@ -213,19 +211,25 @@ def generate_binary_cross_type_forms(
             target_type = ir_type_left if ir_type_right == IRType.F32 else ir_type_right
 
             for op_code in op_code_family:
-                form = {
-                    "name": f"{op_code.name}_{ir_type_left.name}_{ir_type_right.name}",
-                    "type": target_type,
-                    "rust_expr": "{a} "
-                    + {
-                        OpCodes.ADD: "+",
-                        OpCodes.MUL: "*",
-                        OpCodes.SUB: "-",
-                        OpCodes.DIV: "/",
-                    }[op_code]
-                    + " {b}",
-                    "bank": ir_type_left.name.lower() + "_",
-                }
+                form = Form(
+                    {
+                        "name": f"{op_code.name}_{ir_type_left.name}_{ir_type_right.name}",
+                        "type": target_type,
+                        "input_types": [
+                            ir_type_left,
+                            ir_type_right,
+                        ],
+                        "rust_expr": "{a} "
+                        + {
+                            OpCodes.ADD: "+",
+                            OpCodes.MUL: "*",
+                            OpCodes.SUB: "-",
+                            OpCodes.DIV: "/",
+                        }[op_code]
+                        + " {b}",
+                        "bank": ir_type_left.name.lower() + "_",
+                    }
+                )
 
                 match_code = f"""
                 {form["name"]} => {{
@@ -281,12 +285,15 @@ def generate_unary_forms(
                 math_function_dict = MATH_FUNCTION_NATIVE_TYPES
             else:
                 math_function_dict = MATH_FUNCTION_VEC_TYPES
-            form = {
-                "name": f"{op_code.name}_{ir_type.name}",
-                "type": ir_type.name.lower(),
-                "rust_expr": math_function_dict[op_code],
-                "bank": ir_type.name.lower() + "_",
-            }
+            form = Form(
+                {
+                    "name": f"{op_code.name}_{ir_type.name}",
+                    "type": ir_type,
+                    "rust_expr": math_function_dict[op_code],
+                    "input_types": [ir_type],
+                    "bank": ir_type.name.lower() + "_",
+                }
+            )
             match_code = f"""
 
                 {form["name"]} => {{
@@ -306,7 +313,6 @@ def generate_store_vec_from_scalar():
     all_vec_types = [IRType.V2, IRType.V3, IRType.V4]
 
     operand_name_order = ["a", "b", "c", "d"]
-
     forms = []
     for some_val, ir_type in enumerate(all_vec_types):
         vec_compnant: int = some_val + 2
@@ -318,12 +324,15 @@ def generate_store_vec_from_scalar():
         )
         vecnew += ")"
 
-        form = {
-            "name": f"STORE_{ir_type.name}_FROM_F32",
-            "type": ir_type,
-            "rust_expr": vecnew,
-            "bank": ir_type.name.lower() + "_",
-        }
+        form = Form(
+            {
+                "name": f"{OpCodes.STORE_VEC_FROM_SCALAR.name}_{ir_type.name}_F32",
+                "type": ir_type,
+                "rust_expr": vecnew,
+                "input_types": [IRType.F32] * vec_compnant,
+                "bank": ir_type.name.lower() + "_",
+            }
+        )
         input_vars = [
             Rustgen.let_operand_register_be(operand_name_order[i], IRType.F32)
             for i in range(vec_compnant)
@@ -358,8 +367,45 @@ op_code_family = [OpCodes.ADD, OpCodes.MUL, OpCodes.SUB, OpCodes.DIV]
 
 
 # TODO add the unary cross type forms like the "norm" operation that vecn > f32
-# TODO add the narry cross type like the vecto builders operattion from f32 to vecn
-# TODO add the cross type that read the vectore components into f32
+
+
+def generate_read_axis_forms():
+    read_axis_forms = []
+    AXIS = ["X", "Y", "Z", "W"]
+    AXIS_SIZE = {
+        IRType.V2: 2,
+        IRType.V3: 3,
+        IRType.V4: 4,
+    }
+    for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
+        for axis_index, axis_name in enumerate(AXIS):
+            if axis_index >= AXIS_SIZE[ir_type]:
+                continue
+            form = Form(
+                {
+                    "name": f"READ_AXIS_{axis_name}_{ir_type.name}_TO_F32",
+                    "type": IRType.F32,
+                    "input_types": [ir_type],
+                    "rust_expr": f"{axis_name.lower()}",
+                    "bank": "f32_",
+                }
+            )
+            match_code = f"""
+                {form["name"]} => {{
+                    {Rustgen.unsafe_block(
+                        f"""
+                    {Rustgen.let_base_register_be(ir_type)}
+                    {Rustgen.let_operand_register_be("a", ir_type)}
+                    {Rustgen.let_base_register_be(IRType.F32)}
+                    *base_f32_.add(dst as usize) = a_val.{axis_name.lower()};
+                    """
+                    )}
+                None
+                }}
+                """
+            form["rust_match_code"] = match_code
+            read_axis_forms.append(form)
+    return read_axis_forms
 
 
 # {'bank': 'v2_', 'name': 'SIN_V2', 'rust_expr': '{a}.sin()', 'type': 'v2'},
@@ -371,15 +417,18 @@ def generate_comparison_forms() -> List[Form]:
     COM_FORMS = [OpCodes.CMP_GT, OpCodes.CMP_GTE]
     for ir_type in [IRType.F32, IRType.I32]:
         for op_code in COM_FORMS:
-            form = {
-                "name": f"{op_code.name}_{ir_type.name}",
-                "type": IRType.BOOL,
-                "rust_expr": {
-                    OpCodes.CMP_GT: "{a} > {b}",
-                    OpCodes.CMP_GTE: "{a} >= {b}",
-                }[op_code],
-                "bank": "bool_",
-            }
+            form = Form(
+                {
+                    "name": f"{op_code.name}_{ir_type.name}",
+                    "type": IRType.BOOL,
+                    "input_types": [ir_type, ir_type],
+                    "rust_expr": {
+                        OpCodes.CMP_GT: "{a} > {b}",
+                        OpCodes.CMP_GTE: "{a} >= {b}",
+                    }[op_code],
+                    "bank": "bool_",
+                }
+            )
 
             match_code = f"""
                 {form["name"]} => {{
@@ -405,7 +454,7 @@ def generate_jump_forms() -> List[Form]:
             "input_types": [IRType.I32, None, None, None],
             "rust_match_code": """OP_JMP => {
             // Unconditional jump to instruction at address 'a'
-            *ip = a as usize - 1; // -1 because ip will be incremented after this
+            *ip = dst as usize - 1; // -1 because ip will be incremented after this
             None
         }""",
         }
@@ -452,6 +501,50 @@ def generate_return_form() -> Form:
         }
     """
     return return_form
+
+
+def generate_glm_tool_mix_forms() -> List[Form]:
+    # lets do mix (vecn, vecn, f32) -> vecn
+    mix_forms = []
+    for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
+        form = Form(
+            {
+                "name": f"MIX_{ir_type.name}",
+                "type": ir_type,
+                "input_types": [ir_type, ir_type, IRType.F32],
+                "rust_expr": "mix(&{a}, &{b}, {c})",
+                "bank": ir_type.name.lower() + "_",
+            }
+        )
+        rust_block = Rustgen.unsafe_block(
+            "\n".join(
+                [
+                    Rustgen.let_base_register_be(IRType.F32),
+                    Rustgen.let_base_register_be(ir_type),
+                    Rustgen.let_operand_register_be("a", ir_type),
+                    Rustgen.let_operand_register_be("b", ir_type),
+                    Rustgen.let_operand_register_be("c", IRType.F32),
+                    Rustgen.base_register_is(
+                        "mix(&{a}, &{b}, {c})".format(a="a_val", b="b_val", c="c_val"),
+                        ir_type,
+                    ),
+                ]
+            )
+        )
+        match_code = f"""
+                {form["name"]} => {{
+                    {rust_block}
+                None
+                }}
+                """
+        form["rust_match_code"] = match_code
+        mix_forms.append(form)
+
+    return mix_forms
+
+
+def generate_glm_tools_forms() -> List[Form]:
+    return generate_glm_tool_mix_forms()
 
 
 def generate_all_forms() -> List[Form]:
@@ -504,7 +597,9 @@ def generate_all_forms() -> List[Form]:
     store_vec_forms = generate_store_vec_from_scalar()
 
     jump_forms = generate_jump_forms()
-
+    read_axis_forms = generate_read_axis_forms()
+    glm_tool_forms = generate_glm_tools_forms()
+    # store_vec_forms = generate_store_vec_from_scalar()
     all_generated_forms = (
         nums_parallel_add_sub
         + nums_parallel_mult_div
@@ -513,6 +608,8 @@ def generate_all_forms() -> List[Form]:
         + unary_forms
         + comp_forms
         + store_vec_forms
+        + read_axis_forms
+        + glm_tool_forms
         + jump_forms
     )
     # print(f"Total generated forms: {len(all_generated_forms)}")
@@ -523,6 +620,7 @@ def generate_all_forms() -> List[Form]:
     return all_generated_forms
 
 
+RERE = 23
 if __name__ == "__main__":
     all_generated_forms = generate_all_forms()
     # now generate the rust file
@@ -531,7 +629,8 @@ if __name__ == "__main__":
     // Generated with Love <3.
 
 
-    use nalgebra_glm::{abs, cos, exp, log, log2, sin, sqrt, tan, Vec2, Vec3, Vec4};
+    use nalgebra_glm::{abs, cos, exp, log, log2, sin,
+     mix, sqrt, tan, Vec2, Vec3, Vec4};
 
     use crate::ttsl::Registers;
 
@@ -577,3 +676,9 @@ if __name__ == "__main__":
 
     with open("src/ttsl/opcodes.rs", "w") as f:
         f.write(rust_opcode_file_content)
+
+    op_code_definitions_statement_py = [
+        f"""{form['name']} = {form['opcode_index']}""" for form in all_generated_forms
+    ]
+    with open("python/tt3de/ttsl/ttisa/ttisa_opcodes.py", "w") as f:
+        f.write("\n".join(op_code_definitions_statement_py))
