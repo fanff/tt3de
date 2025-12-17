@@ -12,6 +12,7 @@ A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to
     * **Double Raster**: Allows the use of 2 colors per ASCII character (background and foreground).
     * **Perlin Noise**: Basic Perlin noise mapped texture.
 
+
 ## Recommended Terminals :
 
 | Terminal              | Windows                      | macOS                | Linux                |
