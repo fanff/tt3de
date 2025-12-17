@@ -12,7 +12,7 @@ authors = ["fanf <fanf@fanf>"]
 description = ""
 name = "tt3de"
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [tool.poetry.dependencies]
 pyglm = "^2.7.1"
