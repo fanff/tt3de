@@ -15,7 +15,7 @@ class TestLoad(unittest.TestCase):
     def test_simplecube(self):
         polygon3d = fast_load("models/cube.obj")
 
-        self.assertEqual(len(polygon3d.vertex_list), 12 * 3)
+        self.assertEqual(len(polygon3d.vertex_list), 8)
         self.assertEqual(len(polygon3d.uvmap), 12)
 
     def test_simpleimg(self):

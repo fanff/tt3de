@@ -16,15 +16,15 @@ class Prefab3D:
             Point3D(1.0, 0.0, 0.0),
             Point3D(1.0, 1.0, 0.0),
         ]
-        texture_coords = [
+        texture_coords = (
             Point2D(0.0, 0),
             Point2D(1.0, 0.0),
             Point2D(1.0, 1.0),
-        ]
+        )
 
         m = TT3DPolygon()
         m.vertex_list = vertices
-        m.triangles = [[0, 1, 2]]
+        m.triangles = [(0, 1, 2)]
         m.uvmap = [texture_coords]
         return m
 
@@ -38,20 +38,20 @@ class Prefab3D:
         ]
 
         triangles = [
-            [0, 1, 2],
-            [0, 2, 3],
+            (0, 1, 2),
+            (0, 2, 3),
         ]
         texture_coords = [
-            [
+            (
                 Point2D(0.0, 0),
                 Point2D(1.0, 0.0),
                 Point2D(1.0, 1.0),
-            ],
-            [
+            ),
+            (
                 Point2D(0.0, 0),
                 Point2D(1.0, 1.0),
                 Point2D(0.0, 1.0),
-            ],
+            ),
         ]
 
         m = TT3DPolygon()
@@ -99,11 +99,11 @@ class Prefab3D:
     @staticmethod
     def unitary_Point() -> TT3DPoint:
         vertices = [Point3D(0, 0, 0.0)]
-        texture_coords = [
+        texture_coords = (
             Point2D(0.0, 0),
             Point2D(1, 0),
             Point2D(1, 1),
-        ]
+        )
 
         m = TT3DPoint()
         m.vertex_list = vertices
@@ -148,10 +148,10 @@ class Prefab3D:
             ),
         ]
         texture_coords = [
-            [
+            (
                 Point2D(0.0, 0),
                 Point2D(1.0, 1.0),
-            ]
+            )
         ]
 
         m = TT3DLine()

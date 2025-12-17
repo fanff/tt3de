@@ -56,13 +56,13 @@ class Test_Stages(unittest.TestCase):
 
         geometry_buffer = GeometryBufferPy(32)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=1
         )  ## this is the geomid default and MUST be the background.
 
         node_id = 3
         material_id = 1
-        geometry_buffer.add_polygon_3d(0, 1, node_id, material_id, 0)
+        geometry_buffer.add_polygon_3d(0, 3, 0, 0, 1, node_id, material_id)
 
         # create a buffer of primitives
         primitive_buffer = PrimitiveBufferPy(10)
@@ -119,7 +119,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         transform_pack = TransformPackPy(64)
 
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
         self.assertEqual(geometry_buffer.geometry_count(), 1)
@@ -148,16 +148,16 @@ class Test_PrimitivBuilding(unittest.TestCase):
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
-        geometry_buffer = GeometryBufferPy(256)
+        geometry_buffer: GeometryBufferPy = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
         self.assertEqual(geometry_buffer.geometry_count(), 1)
         # now add the line
         node_id = transform_pack.add_node_transform(glm.mat4(1.0))
         material_id = 1
-        self.assertEqual(geometry_buffer.add_line3d(0, node_id, material_id, 0), 1)
+        self.assertEqual(geometry_buffer.add_line3d(0, 2, 0, node_id, material_id), 1)
 
         # make a glm camera
         camera = GLMCamera(glm.vec3(0, 0, -5))
@@ -192,14 +192,14 @@ class Test_PrimitivBuilding(unittest.TestCase):
             },
         )
 
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
 
         # self.assertEqual(prim0["pb"]["row"], ~270) # pb is a bit shifted to the bottom because it has y positive
-        self.assertEqual(prim0["pb"]["col"], 256)
+        self.assertEqual(prim0["pb"]["pos"][0], 256)
 
         self.assertGreater(
-            prim0["pb"]["depth"], prim0["pa"]["depth"]
+            prim0["pb"]["pos"][2], prim0["pa"]["pos"][2]
         )  # pb is after pa; clearly
 
     def test_one_line3D_cutting_backplane(self):
@@ -222,7 +222,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
@@ -296,15 +296,25 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
         node_id = 2
         material_id = 1
         uv_index = 2
+        uv_index, triangl_index = vertex_buffer.add_3d_triangle(
+            0,
+            1,
+            2,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 1.0),
+            glm.vec2(1.0, 1.0),
+            glm.vec3(0.0, 0.0, 1.0),
+        )
         self.assertEqual(
-            geometry_buffer.add_polygon_3d(0, 1, node_id, material_id, uv_index), 1
+            geometry_buffer.add_polygon_3d(0, 3, uv_index, 0, 1, node_id, material_id),
+            1,
         )
 
         # create a buffer of primitives
@@ -357,7 +367,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
 
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
@@ -423,14 +433,14 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
         node_id = 3
         material_id = 2
         self.assertEqual(
-            geometry_buffer.add_point(
+            geometry_buffer.add_point_3d(
                 0,
                 2,
                 node_id,
@@ -477,7 +487,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         primitive_buffer = PrimitiveBufferPy(256)
         vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
@@ -508,7 +518,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         ]
         for pidx, p3d in enumerate(vertices):
             self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
-            geometry_buffer.add_point(pidx, 0, node_id=node_id, material_id=23)
+            geometry_buffer.add_point_3d(pidx, 0, node_id=node_id, material_id=23)
 
         self.assertEqual(geometry_buffer.geometry_count(), len(vertices) + 1)
 
@@ -611,7 +621,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         primitive_buffer = PrimitiveBufferPy(256)
         vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
-        geometry_buffer.add_point(
+        geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
 
@@ -643,7 +653,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         for pidx, p3d in enumerate(vertices):
             self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
-            geometry_buffer.add_point(pidx, 0, node_id=node_id, material_id=23)
+            geometry_buffer.add_point_3d(pidx, 0, node_id=node_id, material_id=23)
 
         self.assertEqual(geometry_buffer.geometry_count(), len(vertices) + 1)
 
@@ -757,7 +767,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         self.transform_pack.set_view_matrix_3d(self.camera.view_matrix_3D())
 
         self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
-        self.geometry_buffer.add_point(
+        self.geometry_buffer.add_point_3d(
             0, 0, node_id=0, material_id=0
         )  # this is the geomid default and MUST be the background.
         self.node_id = self.transform_pack.add_node_transform(glm.mat4(1.0))

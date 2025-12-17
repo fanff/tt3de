@@ -18,40 +18,6 @@ with the additional constraint that total scene complexity remains intentionally
 and a modest number of objects.
 
 
-Current Rendering Pipeline
---------------------------
-
-The engine implements a traditional raster pipeline:
-
-1. Model & View Transformation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Each object has a unique Model matrix (M).
-Before rasterization, the engine computes Model–View (MV) transformed vertices for each mesh and stores them in a buffer. This places geometry into a unified view space, where the camera is at the origin.
-
-2. Projection & Clipping
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A classical perspective projection (P) is applied, followed by the homogeneous perspective divide.
-Triangles are clipped against the canonical view volume, and valid primitives are produced for rasterization.
-
-3. Rasterization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Triangles are converted to screen-space primitives, producing:
-
-* Pixel coverage
-* Depth values
-* Interpolated attributes (UVs, normals, vertex colors)
-
-A depth buffer is maintained to ensure correct visibility.
-
-4. Basic Texturing & Lighting
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The texturing step currently uses:
-
-* Classical UV-mapped textures
-* TODO: Simple Lambert-like normal darkening, where lighting is approximated by dot products against a single directional light or camera vector
-
-
 How to use the engine
 =====================
 
@@ -59,7 +25,7 @@ User can load and build the scene using specific python class and methods.
 Those classes will take care of the buffer management and the rendering process.
 
 The application is built using the Textual library, so the 3D engine is integrated into a Textual application as a widget.
-The main class to use is the TT3DView, which is a subclass of Textual's Widget class.
+
 
 Simple example on how to use the engine:
 

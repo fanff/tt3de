@@ -18,8 +18,8 @@ from tt3de.utils import (
 
 
 class TreeNode:
-    def __init__(self, name: str = None):
-        self.name = name if name is not None else random_node_id()
+    def __init__(self, name: str | None = None):
+        self.name: str = name if name is not None else random_node_id()
         self.elements: List[TreeNode] = []
 
         # will be set when added to a parent node
@@ -118,7 +118,7 @@ class Transform2DMixin:
 
 
 class TT2DNode(TreeNode, DirtyProcessor, Transform2DMixin):
-    def __init__(self, name: str = None, transform: Optional[glm.mat4] = None):
+    def __init__(self, name: str | None = None, transform: Optional[glm.mat4] = None):
         super().__init__(name=name)
 
         self.local_transform: glm.mat4 = (
@@ -135,7 +135,7 @@ class TT2DNode(TreeNode, DirtyProcessor, Transform2DMixin):
         self.elements: List[TT2DNode] = []
         self.parent: TT2DNode = None
 
-    def add_child(self, child: "TT2DNode"):
+    def add_child(self, child: "TT2DNode"):  # type: ignore
         """
         Adds a child element to the list of elements.
 
@@ -168,6 +168,7 @@ class TT2DNode(TreeNode, DirtyProcessor, Transform2DMixin):
 
     def sync_in_context(self, rc: "RustRenderContext"):
         if self.global_transform_dirty:
+            assert self.node_id is not None
             self.__recalc_global_transform()
             rc.transform_buffer.set_node_transform(
                 self.node_id, self.global_transform_matrix
@@ -202,6 +203,7 @@ class WithMaterialID(DirtyProcessor):
         self.geom_id = None
 
     def sync_in_context(self, rc: "RustRenderContext"):
+        assert isinstance(self.geom_id, int)
         if self.dirty_material:
             rc.geometry_buffer.update_geometry_material(
                 self.geom_id,
@@ -219,9 +221,9 @@ class WithMaterialID(DirtyProcessor):
 class TT2DPoints(WithMaterialID, TT2DNode):
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         transform: Optional[glm.mat4] = None,
-        point_list: List[Point3D] = None,
+        point_list: List[Point3D] | None = None,
         material_id: int = 0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
@@ -251,10 +253,10 @@ class TT2DPoints(WithMaterialID, TT2DNode):
 class TT2DLines(TT2DNode):
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         transform: Optional[glm.mat4] = None,
-        point_list: List[Point3D] = None,
-        segment_uv: List[Tuple[Point2D, Point2D]] = None,
+        point_list: List[Point3D] | None = None,
+        segment_uv: List[Tuple[Point2D, Point2D]] | None = None,
         material_id=0,
     ):
         super().__init__(name=name, transform=transform)
@@ -275,7 +277,7 @@ class TT2DLines(TT2DNode):
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
-
+        assert self.node_id is not None
         # insert all points as vertices
         self.vertex_indices = [
             rc.vertex_buffer.add_2d_vertex(p3d.x, p3d.y, p3d.z)
@@ -300,11 +302,11 @@ class TT2DLines(TT2DNode):
 class TT2DPolygon(WithMaterialID, TT2DNode):
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         transform: Optional[glm.mat4] = None,
-        point_list: List[Point3D] = None,
-        triangles: List[Tuple[int, int, int]] = None,
-        uvmap: List[Tuple[Point2D, Point2D, Point2D]] = None,
+        point_list: List[Point3D] | None = None,
+        triangles: List[Tuple[int, int, int]] | None = None,
+        uvmap: List[Tuple[Point2D, Point2D, Point2D]] | None = None,
         material_id=0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
@@ -321,6 +323,7 @@ class TT2DPolygon(WithMaterialID, TT2DNode):
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
+        assert self.node_id is not None
 
         # add all points as vertices
         self.vertex_indices = [
@@ -351,6 +354,9 @@ class TT2DPolygon(WithMaterialID, TT2DNode):
             if triangle_start is None:
                 triangle_start = triangle_idx
 
+        assert start_uv is not None
+        assert triangle_start is not None
+
         self.geom_id = rc.geometry_buffer.add_polygon2d(
             self.vertex_indices[0],
             len(self.vertex_indices),
@@ -365,7 +371,7 @@ class TT2DPolygon(WithMaterialID, TT2DNode):
 class TT2DUnitSquare(TT2DPolygon):
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         transform: Optional[glm.mat4] = None,
         material_id=0,
         centered: bool = False,
@@ -392,7 +398,7 @@ class TT2DUnitSquare(TT2DPolygon):
 class TT2DRect(TT2DNode):
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         transform: Optional[glm.mat4] = None,
         width: float = 1.0,
         height: float = 1.0,
@@ -410,7 +416,7 @@ class TT2DRect(TT2DNode):
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
-
+        assert self.node_id is not None
         # add rectangle vertices
         self.vertex_indices = []
         for x, y in [(0, 0), (self.width, self.height)]:

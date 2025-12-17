@@ -9,12 +9,12 @@ from tt3de.textual_standalone import TT3DViewStandAlone
 
 class TimingRegistry:
     def __init__(self):
-        self.data = {}
+        self.data: dict[str, float] = {}
 
-    def set_duration(self, name, duration):
+    def set_duration(self, name: str, duration: float):
         self.data[name] = duration
 
-    def get_duration(self, name) -> float:
+    def get_duration(self, name: str) -> float:
         return self.data.get(name, -1.0)
 
 

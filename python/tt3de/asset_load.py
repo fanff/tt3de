@@ -11,7 +11,7 @@ def read_file(obj_file):
 
 
 def load_bmp(
-    f, alpha=255, transparent_colors: List[Tuple[int, int, int]] = None
+    f, alpha=255, transparent_colors: List[Tuple[int, int, int]] | None = None
 ) -> List[List[int]]:
     def read_bytes(f, num):
         return struct.unpack("<" + "B" * num, f.read(num))
@@ -27,23 +27,23 @@ def load_bmp(
     if header_field != (0x42, 0x4D):  # 'BM'
         raise ValueError("Not a BMP file")
 
-    file_size = read_int(f)
-    reserved1 = read_short(f)
-    reserved2 = read_short(f)
+    _file_size = read_int(f)
+    _reserved1 = read_short(f)
+    _reserved2 = read_short(f)
     pixel_array_offset = read_int(f)
 
     # Read DIB header
-    dib_header_size = read_int(f)
+    _dib_header_size = read_int(f)
     width = read_int(f)
     height = read_int(f)
-    planes = read_short(f)
+    _planes = read_short(f)
     bit_count = read_short(f)
-    compression = read_int(f)
-    image_size = read_int(f)
-    x_pixels_per_meter = read_int(f)
-    y_pixels_per_meter = read_int(f)
-    colors_used = read_int(f)
-    important_colors = read_int(f)
+    _compression = read_int(f)
+    _image_size = read_int(f)
+    _x_pixels_per_meter = read_int(f)
+    _y_pixels_per_meter = read_int(f)
+    _colors_used = read_int(f)
+    _important_colors = read_int(f)
 
     # Check if it's a 24-bit BMP
     if bit_count != 24:
@@ -184,7 +184,7 @@ def load_obj(obj_bytes):
                 triangles_vindex.append(tuple(face_vertices_index))
                 t.uvmap = uv_vectors
 
-                FNnormals = face_normals[0:3]
+                _FNnormals = face_normals[0:3]
 
                 # print(f"norml {FNnormals}")
                 triangles.append(t)
@@ -199,7 +199,7 @@ def load_obj(obj_bytes):
                         for layer in range(1)
                     ]
 
-                    FNnormals = face_normals[0:3]
+                    _FNnormals = face_normals[0:3]
 
                     t = Triangle3D(
                         face_vertices[0],

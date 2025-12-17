@@ -35,7 +35,7 @@ class Test_2DBuildPrimitives(unittest.TestCase):
 
     def test_points2d(self):
         geom_buffer = self.geom_buffer
-        geom_buffer.add_point(0, 0, node_id=0, material_id=0)
+        geom_buffer.add_point_3d(0, 0, node_id=0, material_id=0)
         vertex_buffer = self.vertex_buffer
         transform_buffer = self.transform_buffer
         drawing_buffer = self.drawing_buffer
@@ -77,7 +77,7 @@ class Test_2DBuildPrimitives(unittest.TestCase):
 
     def test_rect2d(self):
         geom_buffer = self.geom_buffer
-        geom_buffer.add_point(0, 0, node_id=0, material_id=0)
+        geom_buffer.add_point_3d(0, 0, node_id=0, material_id=0)
         vertex_buffer = self.vertex_buffer
         transform_buffer = self.transform_buffer
         drawing_buffer = self.drawing_buffer

@@ -107,6 +107,23 @@ class MaterialBufferPy:
         """
         ...
 
+    def add_static(
+        self,
+        albedo: Tuple[int, int, int] | Tuple[int, int, int, int],
+        emissive: Tuple[int, int, int] | Tuple[int, int, int, int],
+        glyph_idx: int,
+    ) -> int:
+        """
+        Adds a static material to the buffer.
+        Args:
+            albedo (Tuple[int, int, int]): The albedo color.
+            emissive (Tuple[int, int, int]): The emissive color.
+            glyph_idx (int): The glyph index.
+        Returns:
+            int: The index of the material.
+        """
+        ...
+
     def add_static_color(
         self,
         mat: StaticColorPy,
@@ -157,6 +174,12 @@ class GeometryBufferPy:
 
         Args:
             max_size (int): The maximum number of geometries that can be stored.
+        """
+        ...
+
+    def clear(self) -> None:
+        """
+        Clears all stored geometries.
         """
         ...
 
@@ -232,19 +255,105 @@ class GeometryBufferPy:
     def add_polygon2d(
         self,
         p_start: int,
+        p_count: int,
+        uv_start: int,
+        triangle_start: int,
         triangle_count: int,
         node_id: int,
         material_id: int,
-        uv_start: int,
     ) -> int:
         """
-        Adds polygon2d geometry to the buffer.
+        Adds a 2D polygon geometry to the buffer.
+
         Args:
             p_start (int): The starting point index.
+            p_count (int): The number of points.
+            uv_start (int): The starting UV index.
+            triangle_start (int): The starting triangle index.
             triangle_count (int): The number of triangles.
             node_id (int): The node ID.
             material_id (int): The material ID.
+        Returns:
+            int: The index of the geometry.
+        """
+        ...
+
+    def update_geometry_material(self, geom_idx: int, new_material_id: int) -> None:
+        """
+        Updates the material ID of a geometry element.
+
+        Args:
+            geom_idx (int): The index of the geometry element to update.
+            new_material_id (int): The new material ID to set.
+        """
+        ...
+
+    def add_polygon_3d(
+        self,
+        p_start: int,
+        p_count: int,
+        uv_start: int,
+        triangle_start: int,
+        triangle_count: int,
+        node_id: int,
+        material_id: int,
+    ) -> int:
+        """
+        Adds a 3D polygon geometry to the buffer.
+        Args:
+            p_start (int): The starting point index.
+            p_count (int): The number of points.
             uv_start (int): The starting UV index.
+            triangle_start (int): The starting triangle index.
+            triangle_count (int): The number of triangles.
+            node_id (int): The node ID.
+            material_id (int): The material ID.
+        Returns:
+            int: The index of the geometry.
+        """
+        ...
+
+    def add_point_3d(
+        self,
+        p_idx: int,
+        uv_idx: int,
+        node_id: int,
+        material_id: int,
+    ) -> int:
+        """
+        Adds a 3D point geometry to the buffer.
+
+        Args:
+            p_idx (int): The point index.
+            uv_idx (int): The UV index.
+            node_id (int): The node ID.
+            material_id (int): The material ID.
+
+        Returns:
+            int: The index of the geometry.
+        """
+        ...
+
+    def add_line3d(
+        self,
+        p_start: int,
+        point_count: int,
+        uv_idx: int,
+        node_id: int,
+        material_id: int,
+    ) -> int:
+        """
+        Adds a 3D line geometry to the buffer.
+
+        Args:
+            p_start (int): The starting point index.
+            point_count (int): The number of points.
+            uv_idx (int): The UV index.
+            node_id (int): The node ID.
+            material_id (int): The material ID.
+
+        Returns:
+            int: The index of the geometry.
         """
         ...
 

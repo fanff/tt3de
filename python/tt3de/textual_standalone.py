@@ -29,9 +29,6 @@ class TT3DViewStandAlone(Container):
     can_focus = True  # see https://textual.textualize.io/guide/input/#focusable-widgets
 
     frame_idx: int = 0
-    camera: GLMCamera = None
-    last_frame_time = 0.0
-    engine_start_time = 0.0
 
     def __init__(
         self,
@@ -65,7 +62,7 @@ class TT3DViewStandAlone(Container):
         else:
             init_camera_position = glm.vec3(0, 2, -7)
             init_yaw, init_pitch = math.radians(180), 0
-        self.camera = GLMCamera(
+        self.camera: GLMCamera = GLMCamera(
             init_camera_position,
             90,
             90,
@@ -85,8 +82,8 @@ class TT3DViewStandAlone(Container):
         )
 
         self.initialize()
-        self.last_frame_time = time() - 1.0
-        self.engine_start_time = time()
+        self.last_frame_time: float = float(time() - 1.0)
+        self.engine_start_time: float = float(time())
         if target_fps is not None and target_fps > 0:
             self.target_dt = 1.0 / target_fps
         else:
@@ -125,7 +122,7 @@ class TT3DViewStandAlone(Container):
         if crop.height == 0:
             return []
         if crop.width == 0:
-            return [Strip([]) for h in crop.height]
+            return [Strip([]) for h in range(crop.height)]
 
         ts = time()
         target_dt = 0 if self.target_dt is None else self.target_dt
@@ -148,7 +145,7 @@ class TT3DViewStandAlone(Container):
         pass
 
     @abstractmethod
-    def update_step(self, tg):
+    def update_step(self, delta_time: float):
         pass
 
     @abstractmethod

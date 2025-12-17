@@ -51,8 +51,8 @@ class RustRenderContext:
         self.vertex_buffer = VertexBufferPy(
             vertex_buffer_size, uv_buffer_size, vertex_2d_buffer_size
         )
-        self.geometry_buffer = GeometryBufferPy(geometry_buffer_size)
-        self.geometry_buffer.add_point(0, 0, node_id=0, material_id=0)
+        self.geometry_buffer: GeometryBufferPy = GeometryBufferPy(geometry_buffer_size)
+        self.geometry_buffer.add_point_3d(0, 0, node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
         self.transform_buffer = TransformPackPy(transform_buffer_size)
         self.drawing_buffer = DrawingBufferPy(max_row=self.height, max_col=self.width)
@@ -61,7 +61,7 @@ class RustRenderContext:
         # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
         # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
 
-        self.drawing_buffer.hard_clear(100.0)
+        self.drawing_buffer.hard_clear(1000.0)
         self.roots_nodes: List[Union["TT3DNode", "TT2DNode"]] = []
 
     def update_wh(self, w, h):
@@ -72,10 +72,10 @@ class RustRenderContext:
             )
             # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
-            self.drawing_buffer.hard_clear(100.0)
+            self.drawing_buffer.hard_clear(1000.0)
 
     def clear_canvas(self):
-        self.drawing_buffer.hard_clear(1000)
+        self.drawing_buffer.hard_clear(1000.0)
 
     def render(self, camera: GLMCamera):
         self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)

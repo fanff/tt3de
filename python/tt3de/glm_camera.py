@@ -49,7 +49,7 @@ class GLMCamera:
         self.yaw: float = 0.0
         self.pitch: float = 0.0
 
-        self._rot = self.calculate_rotation_matrix()
+        self._rot: glm.mat4 = self.calculate_rotation_matrix()
 
         self.perspective_matrix: glm.mat4 = glm.mat4(1.0)
         self.use_left_hand_perspective: bool = use_left_hand_perspective
@@ -69,10 +69,10 @@ class GLMCamera:
 
     def set_projectioninfo(
         self,
-        fov_radians: float = None,
-        dist_min: float = None,
-        dist_max: float = None,
-        character_factor: float = None,
+        fov_radians: float | None = None,
+        dist_min: float | None = None,
+        dist_max: float | None = None,
+        character_factor: float | None = None,
     ):
         if fov_radians is not None:
             self.fov_radians = fov_radians
@@ -221,7 +221,7 @@ class GLMCamera:
     def move_forward(self, dist: float):
         self.move(self.direction_vector() * dist)
 
-    def calculate_rotation_matrix(self):
+    def calculate_rotation_matrix(self) -> glm.mat4:
         """Calculate the rotation matrix from yaw and pitch angles."""
         # Create a rotation matrix from yaw and pitch
         yaw_matrix = glm.rotate(
@@ -242,7 +242,7 @@ class GLMCamera:
         self.pitch += angle
         self._rot = self.calculate_rotation_matrix()
 
-    def set_yaw_pitch(self, yaw: float = None, pitch: float = None):
+    def set_yaw_pitch(self, yaw: float | None = None, pitch: float | None = None):
         """Set the yaw and pitch of the camera."""
         self.yaw = yaw if yaw is not None else self.yaw
         self.pitch = pitch if pitch is not None else self.pitch
@@ -251,17 +251,17 @@ class GLMCamera:
 
     def direction_vector(self) -> glm.vec3:
         # directional vector extracted from the matrix
-        return glm.column(self._rot, 2).xyz * (
+        return glm.column(self._rot, 2).xyz * (  # type: ignore
             -1 if not self.use_left_hand_perspective else 1
         )
 
     def up_vector(self) -> glm.vec3:
         # directional up vector extracted from the matrix
-        return glm.column(self._rot, 1).xyz
+        return glm.column(self._rot, 1).xyz  # type: ignore
 
     def right_vector(self) -> glm.vec3:
         # directional right vector extracted from the matrix
-        return glm.column(self._rot, 0).xyz
+        return glm.column(self._rot, 0).xyz  # type: ignore
 
     def position_vector(self) -> glm.vec3:
         # position vector

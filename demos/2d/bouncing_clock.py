@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import List
 
 import datetime
 from pyglm import glm
@@ -34,8 +35,8 @@ class BouncingClock(TT3DViewStandAlone):
         self.clock_node = TT2DNode()
 
         # the clock format is "HH:MM:SS.ZZZ"
-        self.clock_chars = list("00:00:00")
-        self.digit_nodes = []
+        self.clock_chars: List[str] = list("00:00:00")
+        self.digit_nodes: List[TT2DUnitSquare] = []
 
         char_pos_x = 0.0
         for i, ch in enumerate(self.clock_chars):

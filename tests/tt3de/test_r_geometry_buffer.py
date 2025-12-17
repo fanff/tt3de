@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 
@@ -13,7 +14,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         geom_buffer.clear()
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
-    def test_add_point(self):
+    def test_add_point_3d(self):
         """Test adding a single point and verify buffer contents."""
         geom_buffer = GeometryBufferPy(10)
         self.assertEqual(geom_buffer.geometry_count(), 0)
@@ -21,7 +22,7 @@ class Test_GeometryBuffer(unittest.TestCase):
         uv_idx = 0
         node_id = 100
         material_id = 200
-        geom_buffer.add_point(pidx, uv_idx, node_id, material_id)
+        geom_buffer.add_point_3d(pidx, uv_idx, node_id, material_id)
 
         # Access the raw content if possible to verify or check content_idx increase
         self.assertEqual(geom_buffer.geometry_count(), 1)
@@ -104,12 +105,12 @@ class Test_GeometryBuffer(unittest.TestCase):
         self.assertEqual(geom_buffer.geometry_count(), 0)
 
     def test_buffer_overflow(self):
-        """Test it does not crash and ignore stuff"""
+        """Test it does not crash and ignore stuff."""
         geom_buffer = GeometryBufferPy(
             10
         )  # Start with a small buffer size to test resizing
         for i in range(100):  # Add more items than the initial size
-            geom_buffer.add_point(0, 0, 100, 200)
+            geom_buffer.add_point_3d(0, 0, 100, 200)
 
         self.assertEqual(geom_buffer.geometry_count(), 10)
         geom_buffer.clear()

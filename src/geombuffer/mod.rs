@@ -173,7 +173,7 @@ impl GeometryBuffer {
         self.current_size += 1;
         self.current_size - 1
     }
-    fn add_point(
+    fn add_point_3d(
         &mut self,
         pidx: usize,
         uv_idx: usize,
@@ -345,7 +345,7 @@ impl GeometryBufferPy {
     fn geometry_count(&self) -> usize {
         self.buffer.current_size
     }
-    fn add_point(
+    fn add_point_3d(
         &mut self,
         _py: Python,
         p_idx: usize,
@@ -353,7 +353,8 @@ impl GeometryBufferPy {
         node_id: usize,
         material_id: usize,
     ) -> usize {
-        self.buffer.add_point(p_idx, uv_idx, node_id, material_id)
+        self.buffer
+            .add_point_3d(p_idx, uv_idx, node_id, material_id)
     }
     fn add_points_2d(
         &mut self,
@@ -423,7 +424,6 @@ impl GeometryBufferPy {
             .add_line3d(p_start, point_count, node_id, material_id, uv_start)
     }
 
-    #[pyo3(signature = (geom_idx, new_material_id))]
     pub fn update_geometry_material(&mut self, geom_idx: usize, new_material_id: usize) {
         if geom_idx >= self.buffer.current_size {
             return;

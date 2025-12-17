@@ -11,7 +11,7 @@ from tests.tt3de.test_utils import assertPolygon3DEqual
 class Test_2DGeometryBuffer(unittest.TestCase):
     def setUp(self):
         # create a default GeometryBufferPy before each test
-        self.geom_buffer = GeometryBufferPy(32)
+        self.geom_buffer: GeometryBufferPy = GeometryBufferPy(32)
 
     def test_empty(self):
         geom_buffer = self.geom_buffer
@@ -59,10 +59,12 @@ class Test_2DGeometryBuffer(unittest.TestCase):
         uv_idx = 3
         geom_buffer.add_polygon2d(
             0,
-            2,
+            3,
+            uv_idx,
+            0,
+            1,
             node_id,
             material_id,
-            uv_idx,
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)

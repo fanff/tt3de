@@ -10,7 +10,9 @@ from tt3de.utils import p2d_tovec2, random_node_id
 
 
 class TT3DNode(TreeNode, DirtyProcessor):
-    def __init__(self, name: str = None, transform: Optional[glm.mat4] = None):
+    def __init__(self, name: str | None = None, transform: Optional[glm.mat4] = None):
+        if name is None:
+            name = f"Node3D_{random_node_id()}"
         super().__init__(name=name)
         self.name = name if name is not None else random_node_id()
 
@@ -23,7 +25,7 @@ class TT3DNode(TreeNode, DirtyProcessor):
         self.elements: List[TT3DNode] = []
         self.parent: TT3DNode = None
 
-    def add_child(self, child: "TT3DNode"):
+    def add_child(self, child: "TT3DNode"):  # type: ignore
         """
         Adds a child element to the list of elements.
 
@@ -54,6 +56,7 @@ class TT3DNode(TreeNode, DirtyProcessor):
 
     def sync_in_context(self, rc: "RustRenderContext"):
         if self.global_transform_dirty:
+            assert self.node_id is not None
             self.__recalc_global_transform()
             rc.transform_buffer.set_node_transform(
                 self.node_id, self.global_transform_matrix
@@ -87,8 +90,13 @@ class TT3DNode(TreeNode, DirtyProcessor):
 
 class TT3DPolygonFan(WithMaterialID, TT3DNode):
     def __init__(
-        self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
+        self,
+        name: str | None = None,
+        transform: Optional[glm.mat4] = None,
+        material_id=0,
     ):
+        if name is None:
+            name = f"PolygonFan_{random_node_id()}"
         super().__init__(name=name, transform=transform, material_id=material_id)
         self.vertex_list: List[Point3D] = []
         self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
@@ -113,7 +121,7 @@ class TT3DPolygonFan(WithMaterialID, TT3DNode):
 
         # rc.geometry_buffer.add_line3d(start_idx, self.node_id, self.material_id, 0)
         # rc.geometry_buffer.add_line3d(start_idx+1, self.node_id, self.material_id, 0)
-        self.geom_id = rc.geometry_buffer.add_polygon_fan_3d(
+        self.geom_id = rc.geometry_buffer.add_polygon_3d(
             start_idx,
             len(self.vertex_list) - 2,
             self.node_id,
@@ -124,7 +132,10 @@ class TT3DPolygonFan(WithMaterialID, TT3DNode):
 
 class TT3DPolygon(WithMaterialID, TT3DNode):
     def __init__(
-        self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
+        self,
+        name: str | None = None,
+        transform: Optional[glm.mat4] = None,
+        material_id=0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
         self.vertex_list: List[Point3D] = []
@@ -137,6 +148,8 @@ class TT3DPolygon(WithMaterialID, TT3DNode):
         super().insert_in(rc)
         if self.geom_id is not None:
             raise ValueError("Already inserted in GeometryBuffer")
+        assert rc.geometry_buffer is not None
+        assert self.node_id is not None
 
         # insert all vertices
         vertex_index_list = [
@@ -174,7 +187,8 @@ class TT3DPolygon(WithMaterialID, TT3DNode):
                 start_uv = uv_idx
             if triangle_start is None:
                 triangle_start = triangle_idx
-
+        assert start_uv is not None
+        assert triangle_start is not None
         self.geom_id = rc.geometry_buffer.add_polygon_3d(
             start_idx,
             len(vertex_index_list),
@@ -188,7 +202,10 @@ class TT3DPolygon(WithMaterialID, TT3DNode):
 
 class TT3DPoint(WithMaterialID, TT3DNode):
     def __init__(
-        self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
+        self,
+        name: str | None = None,
+        transform: Optional[glm.mat4] = None,
+        material_id=0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
         self.vertex_list: List[Point3D] = []
@@ -197,6 +214,7 @@ class TT3DPoint(WithMaterialID, TT3DNode):
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
+        assert self.node_id is not None
 
         start_idx = None
         for p3d in self.vertex_list:
@@ -211,15 +229,19 @@ class TT3DPoint(WithMaterialID, TT3DNode):
             )
             if start_uv is None:
                 start_uv = idx
-
-        self.geom_id = rc.geometry_buffer.add_point(
+        assert start_idx is not None
+        assert start_uv is not None
+        self.geom_id = rc.geometry_buffer.add_point_3d(
             start_idx, start_uv, self.node_id, self.material_id
         )
 
 
 class TT3DLine(WithMaterialID, TT3DNode):
     def __init__(
-        self, name: str = None, transform: Optional[glm.mat4] = None, material_id=0
+        self,
+        name: str | None = None,
+        transform: Optional[glm.mat4] = None,
+        material_id=0,
     ):
         super().__init__(name=name, transform=transform, material_id=material_id)
         self.vertex_list: List[Point3D] = []
@@ -238,7 +260,7 @@ class TT3DLine(WithMaterialID, TT3DNode):
             )
             for (uva, uvb) in self.segment_uv
         ]
-
+        assert self.node_id is not None
         self.geom_id = rc.geometry_buffer.add_line3d(
             self.vertex_indices[0],
             len(self.vertex_list),
