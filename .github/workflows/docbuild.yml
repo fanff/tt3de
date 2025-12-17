@@ -35,7 +35,7 @@ jobs:
 
       - name: Install deps
         run: |
-          poetry install --with dev --no-interaction
+          poetry install --with dev --no-interaction --no-root
 
       - name: Build Sphinx HTML
         run: |
