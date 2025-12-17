@@ -8,7 +8,7 @@ fn min_with_cmp(a: u16, b: u16, c: u16) -> u16 {
     std::cmp::min(std::cmp::min(a, b), c)
 }
 
-fn benchmark(c: &mut Criterion) {
+pub fn bench_min(c: &mut Criterion) {
     let a: u16 = 10;
     let bval: u16 = 20;
     let c_val: u16 = 5;
@@ -22,5 +22,5 @@ fn benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, benchmark);
+criterion_group!(benches, bench_min);
 criterion_main!(benches);

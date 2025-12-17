@@ -1,5 +1,6 @@
 use std::fmt;
 
+use nalgebra::VecStorage;
 use nalgebra_glm::{Vec2, Vec3, Vec4};
 
 /// Represents a vertex in a 3D space.
@@ -29,6 +30,14 @@ impl Vertex {
     /// A new `Vertex` with the specified attributes.
     pub fn new(pos: Vec4, normal: Vec3, uv: Vec2) -> Self {
         Self { pos, normal, uv }
+    }
+
+    pub fn zero() -> Self {
+        Self {
+            pos: Vec4::zeros(),
+            normal: Vec3::zeros(),
+            uv: Vec2::zeros(),
+        }
     }
 }
 // implementing math operation for Vertex (+, - , scalar mult&division)
@@ -94,7 +103,7 @@ impl std::ops::SubAssign for Vertex {
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Vertex")
-            .field("pos", &(&self.pos.x, &self.pos.y, &self.pos.z))
+            .field("pos", &(&self.pos.x, &self.pos.y, &self.pos.z, &self.pos.w))
             .field("normal", &(&self.normal.x, &self.normal.y, &self.normal.z))
             .field("uv", &(&self.uv.x, &self.uv.y))
             .finish()

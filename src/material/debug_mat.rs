@@ -4,10 +4,10 @@ use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::texture_buffer::TextureBuffer,
-    vertexbuffer::UVBuffer,
+    vertexbuffer::uv_buffer::UVBuffer,
 };
 
-use super::RenderMatTrait;
+use super::RenderMaterial;
 
 #[derive(Clone)]
 pub struct DebugDepth {
@@ -18,8 +18,8 @@ impl DebugDepth {
         Self { glyph_idx }
     }
 }
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER, UVCOUNT> for DebugDepth
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for DebugDepth
 {
     fn render_mat(
         &self,
@@ -29,7 +29,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         _pixinfo: &PixInfo<f32>,
         _primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        _uv_buffer: &UVBuffer<f32>,
     ) {
         cell.glyph = self.glyph_idx;
 
@@ -51,8 +51,8 @@ impl DebugUV {
         Self { glyph_idx }
     }
 }
-impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: usize>
-    RenderMatTrait<TEXTURE_BUFFER_SIZE, DEPTHLAYER, UVCOUNT> for DebugUV
+impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
+    RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for DebugUV
 {
     fn render_mat(
         &self,
@@ -62,7 +62,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize, const UVCOUNT: u
         _pixinfo: &PixInfo<f32>,
         _primitive_element: &PrimitiveElements,
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
-        _uv_buffer: &UVBuffer<UVCOUNT, f32>,
+        _uv_buffer: &UVBuffer<f32>,
     ) {
         cell.glyph = self.glyph_idx;
 

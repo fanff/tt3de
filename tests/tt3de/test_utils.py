@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 import math
-import glm
+from pyglm import glm
 
 
 def perspective_divide(v: glm.vec4):

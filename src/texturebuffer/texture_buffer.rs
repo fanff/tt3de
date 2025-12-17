@@ -1,5 +1,7 @@
 use nalgebra_glm::Vec2;
 
+use crate::texturebuffer::UvMapper;
+
 use super::{NoiseTexture, Texture, TextureAtlas, TextureCustom, TextureType, RGBA};
 
 pub struct TextureBuffer<const SIZE: usize> {
@@ -8,6 +10,30 @@ pub struct TextureBuffer<const SIZE: usize> {
     pub textures: Box<[TextureType<SIZE>]>,
 }
 
+fn make_texture<const SIZE: usize>(
+    width: usize,
+    height: usize,
+    input: impl IntoIterator<Item = RGBA>,
+    repeat_width: bool,
+    repeat_height: bool,
+) -> TextureType<SIZE> {
+    let texture_type = if width == SIZE && height == SIZE {
+        TextureType::Fixed(Texture::<SIZE>::from_iter(
+            input,
+            repeat_width,
+            repeat_height,
+        ))
+    } else {
+        TextureType::Custom(TextureCustom::<SIZE>::new(
+            input,
+            width,
+            height,
+            repeat_width,
+            repeat_height,
+        ))
+    };
+    texture_type
+}
 impl<const SIZE: usize> TextureBuffer<SIZE> {
     pub fn new(max_size: usize) -> TextureBuffer<SIZE> {
         let init_color = RGBA {
@@ -27,18 +53,16 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
         }
     }
 
-    pub fn get_rgba_at(&self, idx: usize, u: f32, v: f32) -> RGBA {
-        let atexture = &self.textures[idx];
-        
+    pub fn get_rgba_at(&self, texture_idx: usize, u: f32, v: f32, uv_idx: usize) -> RGBA {
+        let atexture = &self.textures[texture_idx];
 
-        atexture.uv_map(u, v)
+        atexture.uv_map(u, v, uv_idx)
     }
 
-    pub fn get_rgba_at_v(&self, idx: usize, uv: &Vec2) -> RGBA {
+    pub fn get_rgba_at_v(&self, idx: usize, uv: &Vec2, uv_idx: usize) -> RGBA {
         let atexture = &self.textures[idx];
-        
 
-        atexture.uv_map(uv.x, uv.y)
+        atexture.uv_map(uv.x, uv.y, uv_idx)
     }
 
     pub fn get_wh_of(&self, idx: usize) -> (usize, usize) {
@@ -49,6 +73,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
             TextureType::Fixed(_) => (SIZE, SIZE),
             TextureType::Atlas(_) => (SIZE, SIZE),
             TextureType::Noise(_) => (SIZE, SIZE),
+            TextureType::AtlasCustom(texture_atlas) => todo!(),
         }
     }
     pub fn add_texture_from_iter<I: IntoIterator<Item = RGBA>>(
@@ -63,21 +88,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
             panic!("Texture buffer is full");
         }
 
-        let texture_type = if width == SIZE && height == SIZE {
-            TextureType::Fixed(Texture::<SIZE>::from_iter(
-                input,
-                repeat_width,
-                repeat_height,
-            ))
-        } else {
-            TextureType::Custom(TextureCustom::<SIZE>::new(
-                input,
-                width,
-                height,
-                repeat_width,
-                repeat_height,
-            ))
-        };
+        let texture_type = make_texture::<SIZE>(width, height, input, repeat_width, repeat_height);
 
         self.textures[self.current_size] = texture_type;
         self.current_size += 1;
@@ -97,19 +108,41 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
     }
     pub fn add_atlas_texture_from_iter<I: IntoIterator<Item = RGBA>>(
         &mut self,
-        pix_size: usize,
+        width: usize,
+        height: usize,
+        pix_size_width: usize,
+        pix_size_height: usize,
         input: I,
     ) -> usize {
         if self.current_size >= self.max_size {
             panic!("Texture buffer is full");
         }
 
-        let atlas_texture = TextureAtlas {
-            texture: Texture::<SIZE>::from_iter(input, true, true),
-            pix_size,
-        };
+        if width == SIZE && height == SIZE {
+            let text = TextureType::Atlas(TextureAtlas {
+                texture: Texture::<SIZE>::from_iter(input, false, false),
+                pix_size_width,
+                pix_size_height,
+            });
+            self.textures[self.current_size] = text;
+        } else {
+            let text = TextureType::AtlasCustom(
+                TextureAtlas {
+                    texture: TextureCustom::<SIZE>::new(
+                        input,
+                        width,
+                        height,
+                        false,
+                        false,
+                    ),
+                    pix_size_width,
+                    pix_size_height,
+                },
 
-        self.textures[self.current_size] = TextureType::Atlas(atlas_texture);
+            );
+
+            self.textures[self.current_size] = text;
+        }
         self.current_size += 1;
         self.current_size - 1
     }

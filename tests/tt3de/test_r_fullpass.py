@@ -1,13 +1,14 @@
+# -*- coding: utf-8 -*-
 import math
 import random
 import unittest
-import glm
-from rtt3de import GeometryBufferPy
-from rtt3de import AbigDrawing
-from rtt3de import MaterialBufferPy
-from rtt3de import TextureBufferPy
-from rtt3de import VertexBufferPy, TransformPackPy
-from rtt3de import PrimitiveBufferPy
+from pyglm import glm
+from tt3de.tt3de import GeometryBufferPy
+from tt3de.tt3de import DrawingBufferPy
+from tt3de.tt3de import MaterialBufferPy
+from tt3de.tt3de import TextureBufferPy
+from tt3de.tt3de import VertexBufferPy, TransformPackPy
+from tt3de.tt3de import PrimitiveBufferPy
 
 from tests.tt3de.test_utils import (
     assertLine3DPrimitiveKeyEqual,
@@ -19,7 +20,7 @@ from tt3de.asset_fastloader import fast_load
 from tt3de.glm_camera import GLMCamera
 from tt3de.richtexture import ImageTexture
 
-from rtt3de import raster_all_py, build_primitives_py, apply_material_py
+from tt3de.tt3de import raster_all_py, build_primitives_py, apply_material_py
 
 
 class Test_Stages(unittest.TestCase):
@@ -41,15 +42,17 @@ class Test_Stages(unittest.TestCase):
         self.assertEqual(material_buffer.count(), 2)
 
         # create a drawing buffer
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         # create a geometry buffer to hold the initial elemnts
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128, 128, 128)
 
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 1.0), 0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.5, 1.0), 1)
-        self.assertEqual(vertex_buffer.add_vertex(0.5, 0.5, 1.0), 2)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 1.0), 0)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.5, 1.0), 1)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.5, 0.5, 1.0), 2)
+
+        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
         geometry_buffer = GeometryBufferPy(32)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
@@ -87,11 +90,10 @@ class Test_Stages(unittest.TestCase):
 
 
 class Test_PrimitivBuilding(unittest.TestCase):
-
     def test_empty_build(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
 
         transform_pack = TransformPackPy(64)
@@ -110,9 +112,9 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
     def test_one_default(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
         transform_pack = TransformPackPy(64)
 
@@ -135,20 +137,23 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 
     def test_one_line3D_inside_frustrum(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
-        vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 0.0), 0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.5, 3.0), 1)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0), 0)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.5, 3.0), 1)
+
+        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
+        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
         geometry_buffer.add_point(
             0, 0, node_id=0, material_id=0
         )  ## this is the geomid default and MUST be the background.
-
+        self.assertEqual(geometry_buffer.geometry_count(), 1)
         # now add the line
         node_id = transform_pack.add_node_transform(glm.mat4(1.0))
         material_id = 1
@@ -198,16 +203,21 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )  # pb is after pa; clearly
 
     def test_one_line3D_cutting_backplane(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
-        vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 0.0), 0)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
+
+        # adding a point at 0,0,0
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0), 0)
+
+        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
+        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
 
         # setup a point away from the camera; controlling clipping
         self.assertEqual(
-            vertex_buffer.add_vertex(0.0, 0.5, 100.0), 1
+            vertex_buffer.add_3d_vertex(0.0, 0.5, 100.0), 1
         )  # too far away from the back of the frustrum plane; will be clipped.
 
         geometry_buffer = GeometryBufferPy(256)
@@ -268,15 +278,15 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )  # pb is the clipped point. at the back of the frustum
 
     def test_simple_one_triangle(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
-        vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 0.5), 0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.5, 0.5), 1)
-        self.assertEqual(vertex_buffer.add_vertex(0.5, 0.5, 0.5), 2)
-        self.assertEqual(vertex_buffer.add_vertex(0.5, 0.0, 0.5), 3)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 0.5), 0)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.5, 0.5), 1)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.5, 0.5, 0.5), 2)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.5, 0.0, 0.5), 3)
 
         # add some uv coordinates 0 , 1 for nothing
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
@@ -325,15 +335,15 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
     def test_simple_two_triangle(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
-        vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 1.0), 0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 1.0, 1.0), 1)
-        self.assertEqual(vertex_buffer.add_vertex(1.0, 1.0, 1.0), 2)
-        self.assertEqual(vertex_buffer.add_vertex(1.0, 0.0, 1.0), 3)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 1.0), 0)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 1.0, 1.0), 1)
+        self.assertEqual(vertex_buffer.add_3d_vertex(1.0, 1.0, 1.0), 2)
+        self.assertEqual(vertex_buffer.add_3d_vertex(1.0, 0.0, 1.0), 3)
 
         # add some uv coordinates 0 , 1 for nothing
         vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
@@ -401,15 +411,15 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
     def test_one_point_inside_raw_config(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
 
         transform_pack = TransformPackPy(64)
-        vertex_buffer = VertexBufferPy()
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 0.0, 1.0), 0)
-        self.assertEqual(vertex_buffer.add_vertex(0.0, 1.0, 1.0), 1)
-        self.assertEqual(vertex_buffer.add_vertex(1.0, 1.0, 1.0), 2)
-        self.assertEqual(vertex_buffer.add_vertex(1.0, 0.0, 1.0), 3)
+        vertex_buffer = VertexBufferPy(128, 128, 128)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.0, 1.0), 0)
+        self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 1.0, 1.0), 1)
+        self.assertEqual(vertex_buffer.add_3d_vertex(1.0, 1.0, 1.0), 2)
+        self.assertEqual(vertex_buffer.add_3d_vertex(1.0, 0.0, 1.0), 3)
 
         geometry_buffer = GeometryBufferPy(256)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
@@ -448,6 +458,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         self.assertEqual(
             prim0,
             {
+                "_type": "point",
                 "primitive_id": 0,
                 "geometry_id": 1,
                 "node_id": node_id,
@@ -455,15 +466,16 @@ class Test_PrimitivBuilding(unittest.TestCase):
                 "row": 256,
                 "col": 256,
                 "depth": 1.0,
+                "uv_idx": 0,
             },
         )
 
     def test_points_with_camera_left_right(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         transform_buffer = TransformPackPy(64)
         primitive_buffer = PrimitiveBufferPy(256)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
         geometry_buffer.add_point(
             0, 0, node_id=0, material_id=0
@@ -495,7 +507,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
             point_inside_frustrum + (camera.right_vector() * (0.3)),  #
         ]
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
             geometry_buffer.add_point(pidx, 0, node_id=node_id, material_id=23)
 
         self.assertEqual(geometry_buffer.geometry_count(), len(vertices) + 1)
@@ -505,10 +517,10 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
         # extract first 4 points
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
-        pb = glm.vec4(vertex_buffer.get_clip_space_vertex(1))
-        pc = glm.vec4(vertex_buffer.get_clip_space_vertex(2))
-        pd = glm.vec4(vertex_buffer.get_clip_space_vertex(3))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
+        pb = glm.vec4(vertex_buffer.get_3d_calculated_tuple(1))
+        pc = glm.vec4(vertex_buffer.get_3d_calculated_tuple(2))
+        pd = glm.vec4(vertex_buffer.get_3d_calculated_tuple(3))
 
         for p in [pa, pb, pc, pd]:
             p_ndc = perspective_divide(p)
@@ -593,11 +605,11 @@ class Test_PrimitivBuilding(unittest.TestCase):
         ##})
 
     def test_points_with_camera_top_down(self):
-        drawing_buffer = AbigDrawing(512, 512)
+        drawing_buffer = DrawingBufferPy(512, 512)
         drawing_buffer.hard_clear(1000)
         transform_buffer = TransformPackPy(64)
         primitive_buffer = PrimitiveBufferPy(256)
-        vertex_buffer = VertexBufferPy()
+        vertex_buffer = VertexBufferPy(128, 128, 128)
         geometry_buffer = GeometryBufferPy(256)
         geometry_buffer.add_point(
             0, 0, node_id=0, material_id=0
@@ -630,7 +642,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         ]
 
         for pidx, p3d in enumerate(vertices):
-            self.assertEqual(vertex_buffer.add_vertex(p3d.x, p3d.y, p3d.z), pidx)
+            self.assertEqual(vertex_buffer.add_3d_vertex(p3d.x, p3d.y, p3d.z), pidx)
             geometry_buffer.add_point(pidx, 0, node_id=node_id, material_id=23)
 
         self.assertEqual(geometry_buffer.geometry_count(), len(vertices) + 1)
@@ -640,10 +652,10 @@ class Test_PrimitivBuilding(unittest.TestCase):
         )
 
         # extract first 4 points
-        pa = glm.vec4(vertex_buffer.get_clip_space_vertex(0))
-        pb = glm.vec4(vertex_buffer.get_clip_space_vertex(1))
-        pc = glm.vec4(vertex_buffer.get_clip_space_vertex(2))
-        pd = glm.vec4(vertex_buffer.get_clip_space_vertex(3))
+        pa = glm.vec4(vertex_buffer.get_3d_calculated_tuple(0))
+        pb = glm.vec4(vertex_buffer.get_3d_calculated_tuple(1))
+        pc = glm.vec4(vertex_buffer.get_3d_calculated_tuple(2))
+        pd = glm.vec4(vertex_buffer.get_3d_calculated_tuple(3))
 
         for p in [pa, pb, pc, pd]:
             p_ndc = perspective_divide(p)
@@ -728,14 +740,13 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
 
 class Test3DLineClippingCases(unittest.TestCase):
-
     def setUp(self):
         # Setup the environment for the tests
-        self.drawing_buffer = AbigDrawing(512, 512)
+        self.drawing_buffer = DrawingBufferPy(512, 512)
         self.drawing_buffer.hard_clear(1000)
 
         self.transform_pack = TransformPackPy(64)
-        self.vertex_buffer = VertexBufferPy()
+        self.vertex_buffer = VertexBufferPy(128, 128, 128)
         self.geometry_buffer = GeometryBufferPy(256)
         self.camera = GLMCamera(glm.vec3(0, 0, -5))
         self.primitive_buffer = PrimitiveBufferPy(256)
@@ -745,7 +756,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         self.transform_pack.set_projection_matrix(self.camera.perspective_matrix)
         self.transform_pack.set_view_matrix_3d(self.camera.view_matrix_3D())
 
-        self.vertex_buffer.add_vertex(0.0, 0.0, 0.0)
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
         self.geometry_buffer.add_point(
             0, 0, node_id=0, material_id=0
         )  # this is the geomid default and MUST be the background.
@@ -756,11 +767,16 @@ class Test3DLineClippingCases(unittest.TestCase):
         pass
 
     def test_one_line3D_clipping_backplane(self):
-
         # setup a point away from the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             0.0, 0.5, 100.0
         )  # too far away from the back of the frustrum plane; will be clipped.
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        # adding uv for the two next points of the line
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         node_id = 0
@@ -800,9 +816,17 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def test_one_line3D_clipping_nearplane(self):
         # setup a point near to the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             0.0, 0.5, -4.1
         )  # too close to the near plane; will be clipped.
+
+        # setting up the second point of the line at the origin
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        # adding uv for the two points of the line
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         material_id = 1
@@ -818,8 +842,8 @@ class Test3DLineClippingCases(unittest.TestCase):
             self.drawing_buffer,
             self.primitive_buffer,
         )
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
+        clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
+        clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
         self.assertEqual(self.primitive_buffer.primitive_count(), 1)
 
         prim0 = self.primitive_buffer.get_primitive(0)
@@ -842,9 +866,16 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def test_one_line3D_clipping_leftplane(self):
         # setup a point to the left of the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             -100.0, 0.5, 5.0
         )  # too far to the left of the frustum plane; will be clipped.
+
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        # adding uv for the two points of the line
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         material_id = 1
@@ -861,8 +892,8 @@ class Test3DLineClippingCases(unittest.TestCase):
             self.primitive_buffer,
         )
 
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
+        clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
+        clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
         self.assertEqual(self.primitive_buffer.primitive_count(), 1)
 
         prim0 = self.primitive_buffer.get_primitive(0)
@@ -875,8 +906,8 @@ class Test3DLineClippingCases(unittest.TestCase):
                 "material_id": material_id,
             },
         )
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
+        clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
+        clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
         self.assertEqual(prim0["pa"]["row"], 256)
         self.assertEqual(prim0["pa"]["col"], 256)
         self.assertLess(prim0["pa"]["depth"], 1.0)  #
@@ -889,9 +920,15 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def test_one_line3D_clipping_rightplane(self):
         # setup a point to the right of the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             100.0, 0.5, 5.0
         )  # too far to the right of the frustum plane; will be clipped.
+
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         material_id = 1
@@ -933,9 +970,15 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def test_one_line3D_clipping_topplane(self):
         # setup a point above the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             0.0, -100.0, 5.0
         )  # too far above the frustum plane; will be clipped.
+
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         material_id = 1
@@ -964,8 +1007,8 @@ class Test3DLineClippingCases(unittest.TestCase):
             },
         )
 
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
+        clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
+        clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
         self.assertEqual(prim0["pa"]["row"], 256)
         self.assertEqual(prim0["pa"]["col"], 256)
         self.assertLess(prim0["pa"]["depth"], 1.0)  #
@@ -980,9 +1023,15 @@ class Test3DLineClippingCases(unittest.TestCase):
 
     def test_one_line3D_clipping_bottomplane(self):
         # setup a point below the camera; controlling clipping
-        self.vertex_buffer.add_vertex(
+        self.vertex_buffer.add_3d_vertex(
             0.0, 100.0, 5.0
         )  # too far below the frustum plane; will be clipped.
+
+        self.vertex_buffer.add_3d_vertex(0.0, 0.0, 0.0)
+
+        self.vertex_buffer.add_uv(
+            glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0)
+        )
 
         # now add the line
         material_id = 1
@@ -1011,8 +1060,8 @@ class Test3DLineClippingCases(unittest.TestCase):
             },
         )
 
-        clippa = self.vertex_buffer.get_clip_space_vertex(0)
-        clippb = self.vertex_buffer.get_clip_space_vertex(1)
+        clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
+        clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
         self.assertEqual(prim0["pa"]["row"], 256)
         self.assertEqual(prim0["pa"]["col"], 256)
         self.assertLess(prim0["pa"]["depth"], 1.0)  #

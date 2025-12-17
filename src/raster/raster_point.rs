@@ -1,3 +1,5 @@
+use nalgebra_glm::Vec3;
+
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
 use super::{
@@ -17,6 +19,7 @@ pub fn raster_point_info<const DEPTHCOUNT: usize>(
         prim_ref,
         drawing_buffer,
         point.depth(),
+        Vec3::new(0.0, 0.0, 1.0),
         point.col,
         point.row,
         1.0,

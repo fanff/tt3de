@@ -1,5 +1,7 @@
 use std::borrow::BorrowMut;
 
+use nalgebra::Dyn;
+use nalgebra::VecStorage;
 use nalgebra_glm::clamp_vec;
 use nalgebra_glm::floor;
 use nalgebra_glm::max;
@@ -9,13 +11,14 @@ use nalgebra_glm::Number;
 use nalgebra_glm::TVec2;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
+use nalgebra_glm::Vec4;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::apply_material;
 use crate::material::MaterialBuffer;
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::RGBA;
-use crate::vertexbuffer::UVBuffer;
+use crate::vertexbuffer::uv_buffer::UVBuffer;
 
 /// Represents information about a pixel with variable accuracy.
 ///
@@ -25,8 +28,8 @@ use crate::vertexbuffer::UVBuffer;
 ///
 /// # Fields
 ///
-/// - `w`: A 3D vector of type `T`, representing some vector information about the pixel.
-/// - `w_1`: Another 3D vector of type `T`, representing additional vector information about the pixel.
+/// - `uv`: A 2D vector representing the primary texture coordinates of the pixel.
+/// - `uv_1`: A 2D vector representing secondary texture coordinates of the pixel
 /// - `material_id`: An identifier for the material, typically used to reference a material in a materials database or array.
 /// - `primitive_id`: An identifier for the primitive (e.g., a geometric primitive like a triangle or sphere).
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
@@ -35,6 +38,7 @@ use crate::vertexbuffer::UVBuffer;
 pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub uv: TVec2<InfoAccuracy>,
     pub uv_1: TVec2<InfoAccuracy>,
+    pub normal: Vec3,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -52,6 +56,7 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         PixInfo {
             uv: TVec2::zeros(),
             uv_1: TVec2::zeros(),
+            normal: Vec3::new(0.0, 0.0, 1.0),
             material_id: 0,
             primitive_id: 0,
             node_id: 0,
@@ -170,12 +175,10 @@ impl CanvasCell {
 pub struct DepthBufferCell<A: Number, const L: usize> {
     pub pixinfo: [usize; L], // referencing pixel info per index
     pub depth: [A; L],
-    // alternativelly, an array of tuple ? !
-    //content: [(usize, A); L],
-    pub row: usize,
-    pub col: usize,
 }
-impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize> Default for DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT> {
+impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize> Default
+    for DepthBufferCell<DepthAccuracy, DEPTHLAYERCOUNT>
+{
     fn default() -> Self {
         Self::new()
     }
@@ -188,8 +191,6 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [DepthAccuracy::zero(); DEPTHLAYERCOUNT],
-            row: 0,
-            col: 0,
         }
     }
 
@@ -201,8 +202,6 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         DepthBufferCell {
             pixinfo: [0; DEPTHLAYERCOUNT],
             depth: [value; DEPTHLAYERCOUNT],
-            row: 0,
-            col: 0,
         }
     }
     fn clear(&mut self, value: DepthAccuracy, idx: usize) {
@@ -217,14 +216,11 @@ impl<DepthAccuracy: Number, const DEPTHLAYERCOUNT: usize>
         }
     }
 
-    fn set_init_pix_ref(&mut self, idx: usize, row: usize, col: usize) {
+    fn set_init_pix_ref(&mut self, idx: usize) {
         for layer in 0..DEPTHLAYERCOUNT {
             let lol = &mut (self.pixinfo[layer]);
             *(lol) = idx + layer
         }
-
-        self.row = row;
-        self.col = col;
     }
 }
 
@@ -251,13 +247,26 @@ pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, DepthBufferAccuracy: Numbe
     pub pixbuffer: Box<[PixInfo<f32>]>,
     pub row_count: usize,
     pub col_count: usize,
-
     pub half_size: Vec2,
+    pub flip_x: bool,
+    pub flip_y: bool,
+    scale: Vec2,
+}
+fn flip_to_vec(flip_x: bool, flip_y: bool) -> Vec2 {
+    let x = if flip_x { -1.0 } else { 1.0 };
+    let y = if flip_y { -1.0 } else { 1.0 };
+    vec2(x, y)
 }
 
 // here theL ( layer) are like.. bounded; A is accuracy of the depth buffer (f32 usually)
 impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
-    pub fn new(row_count: usize, col_count: usize, default_depth: DEPTHACC) -> Self {
+    pub fn new(
+        row_count: usize,
+        col_count: usize,
+        default_depth: DEPTHACC,
+        flip_x: bool,
+        flip_y: bool,
+    ) -> Self {
         // this store the depth for every cell, for every "layer" + and index
         let mut depthbuffer =
             vec![DepthBufferCell::new_set(default_depth); row_count * col_count].into_boxed_slice();
@@ -277,7 +286,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             for col in 0..col_count {
                 let idx = row * col_count + col;
 
-                depthbuffer[idx].set_init_pix_ref(idx * L, row, col);
+                depthbuffer[idx].set_init_pix_ref(idx * L);
             }
         }
 
@@ -291,9 +300,19 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
             col_count,
             row_count,
             half_size: Vec2::new(col_count as f32 / 2.0, row_count as f32 / 2.0),
+            flip_x: flip_x,
+            flip_y: flip_y,
+            scale: flip_to_vec(flip_x, flip_y),
         }
     }
-
+    pub fn set_flip_x(&mut self, v: bool) {
+        self.flip_x = v;
+        self.scale = flip_to_vec(self.flip_x, self.flip_y);
+    }
+    pub fn set_flip_y(&mut self, v: bool) {
+        self.flip_y = v;
+        self.scale = flip_to_vec(self.flip_x, self.flip_y);
+    }
     pub fn clear_depth(&mut self, value: DEPTHACC) {
         for (idx, depth_cell) in self.depthbuffer.iter_mut().enumerate() {
             depth_cell.clear(value, idx * L);
@@ -308,7 +327,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does NOT apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
-        let mut sumoftwovec: Vec2 = v.component_mul(&vec2(1.0, -1.0)) + vec2(1.0, 1.0);
+        let mut sumoftwovec: Vec2 = v.component_mul(&self.scale) + vec2(1.0, 1.0);
         // vectorial summ and multiplication; component wise
         sumoftwovec.component_mul_assign(&self.half_size);
         sumoftwovec
@@ -317,7 +336,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
     /// This does apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating_with_clamp(&self, v: &Vec2) -> Vec2 {
         let as_screen = self.ndc_to_screen_floating(v);
-        
+
         clamp_vec(
             &round(&as_screen),
             &Vec2::zeros(),
@@ -327,13 +346,11 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 
     pub fn get_depth(&self, r: usize, c: usize, l: usize) -> DEPTHACC {
         let x = self.depthbuffer[r * self.col_count + c];
-        
+
         x.depth[l]
     }
 
     pub fn get_depth_buffer_cell(&self, row: usize, col: usize) -> DepthBufferCell<DEPTHACC, L> {
-        
-
         self.depthbuffer[row * self.col_count + col]
     }
 
@@ -344,13 +361,11 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         layer_idx: usize,
     ) -> &PixInfo<f32> {
         let depth_buffer_cell = self.depthbuffer[row * self.col_count + col];
-        
 
         (&self.pixbuffer[depth_buffer_cell.pixinfo[layer_idx]]) as _
     }
-    pub fn get_canvas_cell(&self, r: usize, c: usize) -> CanvasCell {
-        
-        self.canvas[r * self.col_count + c]
+    pub fn get_canvas_cell(&self, row: usize, col: usize) -> CanvasCell {
+        self.canvas[row * self.col_count + col]
     }
 
     pub fn get_min_max_depth(&self, layer: usize) -> (DEPTHACC, DEPTHACC) {
@@ -395,6 +410,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         row: usize,
         col: usize,
         depth: DEPTHACC,
+        normal: Vec3,
         uv: Vec2,
         uv_1: Vec2,
         node_id: usize,
@@ -419,7 +435,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                 // then the new value of the layer 2 is the previous layer1 ; the new of 3 is 2 etc.. :
                 // like a shifting operation of +1 index.
                 // the last element will be "droped" ; so we keep the pixel idx of the last layer before doing anything
-                if the_layer + 1 < L {
+                if the_layer <= L {
                     let last_pix_index = the_cell.pixinfo[L - 1];
                     for moving_layer_idx in (the_layer + 1..L).rev() {
                         the_cell.pixinfo[moving_layer_idx] = the_cell.pixinfo[moving_layer_idx - 1];
@@ -432,6 +448,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // and now I can set the content at the right location
                     let pix_info_dest = &mut (self.pixbuffer[last_pix_index]);
                     the_cell.depth[the_layer] = depth; // Set the depth
+                    pix_info_dest.normal = normal;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -446,6 +463,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // we are at the last layer. There is no way to push down anything; we just will replace.
                     the_cell.depth[the_layer] = depth; // Set the depth
                     let pix_info_dest = (self.pixbuffer[the_cell.pixinfo[the_layer]]).borrow_mut();
+                    pix_info_dest.normal = normal;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -465,15 +483,11 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
 }
 
 // will apply the material for every pixel.
-pub fn apply_material_on<
-    const TEXTURESIZE: usize,
-    const UVCOUNT: usize,
-    const DEPTHLAYER: usize,
->(
+pub fn apply_material_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
-    uv_buffer: &UVBuffer<UVCOUNT, f32>,
+    uv_buffer: &UVBuffer<f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
     for (depth_cell, canvascell) in draw_buffer
@@ -496,4 +510,52 @@ pub fn apply_material_on<
             );
         }
     }
+}
+
+use once_cell::sync::Lazy;
+use rayon::prelude::*;
+
+// Create a global thread pool that is initialized only once.
+static GLOBAL_THREAD_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
+    // Set your desired fixed number of threads.
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8) // For example, use 4 threads.
+        .build()
+        .expect("Failed to build thread pool")
+});
+
+/// This function applies the material to every pixel in parallel.
+pub fn apply_material_on_parallel<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
+    draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
+    material_buffer: &MaterialBuffer,
+    texture_buffer: &TextureBuffer<TEXTURESIZE>,
+    uv_buffer: &UVBuffer<f32>,
+    primitive_buffer: &PrimitiveBuffer,
+) {
+    // Use the global thread pool to run our work.
+    GLOBAL_THREAD_POOL.install(|| {
+        // `par_iter` and `par_iter_mut` split the work among threads.
+        draw_buffer
+            .depthbuffer
+            .par_iter()
+            .zip(draw_buffer.canvas.par_iter_mut())
+            .for_each(|(depth_cell, canvas_cell)| {
+                for depth_layer in (0..DEPTHLAYER).rev() {
+                    // Access the pixel info; note that `pixbuffer` is assumed read-only.
+                    let pixinfo = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
+
+                    // Call the material application function.
+                    apply_material(
+                        pixinfo,
+                        material_buffer,
+                        texture_buffer,
+                        uv_buffer,
+                        primitive_buffer,
+                        depth_cell,
+                        depth_layer,
+                        canvas_cell,
+                    );
+                }
+            });
+    });
 }

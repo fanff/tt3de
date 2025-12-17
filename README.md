@@ -6,11 +6,24 @@ A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to
 
 * **Rendering Primitives**: Supports points, lines, and triangles in both 2D and 3D contexts.
 * **ASCII Output**: Renders 3D scenes in a charming ASCII art style.
-* **Color Shading Support**: Renders with RGB colors and shading levels.
+* **Color Shading Support**: Renders with RGB colors.
 * **Materials**: Supports 14 materials, including:
     * **Texture Mapping**: Supports textures up to 256x256 pixels.
     * **Double Raster**: Allows the use of 2 colors per ASCII character (background and foreground).
     * **Perlin Noise**: Basic Perlin noise mapped texture.
+
+## Recommended Terminals :
+
+| Terminal              | Windows                      | macOS                | Linux                |
+|-----------------------|------------------------------|----------------------|----------------------|
+| [wez Terminal](https://wezterm.org/)          | :star: Fastest rendering accross all terms          |                      |                      |
+| [tabby](https://tabby.sh/) | :star: Runs ok, struggle at big resolutions |                      |                      |
+| default Windows Terminal | :x: Can't keep up with the rendering |                      |                      |
+| VScode terminal       | :x: Does not even works | :x: Can't keep up with rendering | :x:                   |
+| [gostty](https://ghostty.org/)                |                               | :star: Perfect! | :star: Perfect, assuming you have your graphics drivers installed |
+| [kitty](https://sw.kovidgoyal.net/kitty/)                 |                              | Almost perfect, start to slow down at HighRes | untested       |
+| iTerm/iTerm2          |                              | Won't keep up with high refresh rate (>10fps) |                   |
+
 
 ## Setting Up the Development Version
 
@@ -34,22 +47,25 @@ To set up a development version of this engine:
     poetry install
     ```
 4. Compile the Rust version locally:
+
     ```bash
-    maturin develop
+    poetry run maturin develop --profile release
     ```
-5. Run the Rust unit tests:
+5. Check the demo:
+    ```bash
+    PYTHONPATH=python poetry run python demos/3d/some_models.py
+    ```
+
+6. Run the Rust unit tests:
     ```bash
     cargo test
     ```
-6. Run the Python unit tests:
+7. Run the Python unit tests:
     ```bash
     poetry run pytest
     ```
 
-7. Check the demo:
-    ```bash
-    poetry run python demos/3d/some_models.py
-    ```
+
 
 ### Tips for Python Path in VSCode
 
@@ -71,3 +87,6 @@ In `settings.json`:
 }
 ```
 
+### Known Issues
+
+* Many...

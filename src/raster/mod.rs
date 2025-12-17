@@ -1,49 +1,33 @@
-use nalgebra_glm::{Real, TVec2};
+use nalgebra_glm::{RealNumber, TVec2, Vec3, Vec4};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
 use crate::{
-    drawbuffer::{drawbuffer::DrawBuffer, AbigDrawing},
+    drawbuffer::{drawbuffer::DrawBuffer, DrawingBufferPy},
     primitivbuffer::*,
-    vertexbuffer::{VertexBuffer, VertexBufferPy},
+    vertexbuffer::{vertex_buffer::VertexBuffer, vertex_buffer_py::VertexBufferPy},
 };
 
-pub mod raster_line_row;
-use raster_line_row::*;
-pub mod raster_line_columns;
-use raster_line_columns::*;
 pub mod raster_line;
 use raster_line::*;
-
-pub mod raster_triangle;
-use raster_triangle::*;
 
 pub mod raster_point;
 use raster_point::*;
 
+pub mod raster_rect;
+use raster_rect::*;
 pub mod raster_triangle_tomato;
 use raster_triangle_tomato::*;
 
 pub mod vertex;
 use vertex::*;
 
-//  calculating min/max of multiple values;
-fn min_3_int<T: Ord>(a: T, b: T, c: T) -> T {
-    std::cmp::min(std::cmp::min(a, b), c)
-}
-fn max_3_int<T: Ord>(a: T, b: T, c: T) -> T {
-    std::cmp::max(std::cmp::max(a, b), c)
-}
-
-fn min_2_int<T: Ord>(a: T, b: T) -> T {
-    std::cmp::min(a, b)
-}
-
 // function that "set stuff" in the drawing buffer; assuming its a double raster
-fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
+fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     prim_ref: &PrimitivReferences,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, DEPTHACC>,
     depth: DEPTHACC,
+    normal: Vec3,
     col: usize,
     row: usize,
     u0: f32,
@@ -57,6 +41,7 @@ fn set_pixel_double_weights<DEPTHACC: Real, const DEPTHCOUNT: usize>(
         row,
         col,
         depth,
+        normal,
         w,
         w_alt,
         prim_ref.node_id,
@@ -118,33 +103,33 @@ fn barycentric_coord_shift(
     (w1, w2, w3)
 }
 
-pub fn raster_element<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
+pub fn raster_element<const DEPTHCOUNT: usize>(
     element: &PrimitiveElements,
-    _vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
+    _vertexbuffer: &VertexBuffer<Vec4>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     match element {
-        PrimitiveElements::Line { fds, pa, pb, uv } => {
+        PrimitiveElements::Line { fds, pa, pb } => {
             raster_line(drawing_buffer, fds, pa, pb);
         }
         PrimitiveElements::Point { fds, point, uv: _ } => {
             raster_point_info(drawing_buffer, fds, point);
         }
-        PrimitiveElements::Triangle(t) => {
-            raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
-        }
         PrimitiveElements::Triangle3D(t) => {
             // raster_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc);
             tomato_draw_triangle(drawing_buffer, &t.primitive_reference, &t.pa, &t.pb, &t.pc)
+        }
+        PrimitiveElements::Rect(rect) => {
+            raster_prect(drawing_buffer, &rect);
         }
 
         PrimitiveElements::Static { fds: _, index: _ } => todo!(),
     }
 }
 
-pub fn raster_all<const DEPTHCOUNT: usize, const VERTEX_COUNT: usize>(
+pub fn raster_all<const DEPTHCOUNT: usize>(
     primitivbuffer: &PrimitiveBuffer,
-    vertexbuffer: &VertexBuffer<VERTEX_COUNT>,
+    vertexbuffer: &VertexBuffer<Vec4>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {
@@ -159,10 +144,10 @@ pub fn raster_all_py(
     _py: Python,
     pb: &PrimitiveBufferPy,
     vbuffpy: &VertexBufferPy,
-    mut db: PyRefMut<'_, AbigDrawing>,
+    mut db: PyRefMut<'_, DrawingBufferPy>,
 ) {
     let primitivbuffer = &pb.content;
 
     let drawing_buffer = &mut db.db;
-    raster_all(primitivbuffer, &vbuffpy.buffer, drawing_buffer);
+    raster_all(primitivbuffer, &vbuffpy.buffer3d, drawing_buffer);
 }

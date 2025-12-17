@@ -126,20 +126,3 @@ def normalize(v: "Point3D"):
     if norm == 0:
         norm = 1e-6
     return Point3D(v.x / norm, v.y / norm, v.z / norm)
-
-
-class Drawable3D:
-    texture: "TextureTT3DE"
-
-    def draw(self, camera, screen_width, screen_height) -> Iterable[PPoint2D]:
-        raise NotImplemented("")
-
-    def cache_output(self, segmap):
-        raise NotImplemented("")
-
-    @staticmethod
-    def is_in_scree(pp: PPoint2D):
-        return pp.depth > 1 and pp.x >= 0 and pp.x < 1 and pp.y >= 0 and pp.y < 1
-
-    def render_point(self, pp: PPoint2D):
-        raise NotImplemented("")

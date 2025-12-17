@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import random
 import unittest
@@ -7,9 +8,7 @@ import random
 from tt3de.glm_camera import GLMCamera
 from tt3de.points import Point3D
 
-import glm
-
-from glm import vec3
+from pyglm import glm
 
 
 def assertAlmostEqualvec3(a: glm.vec3, b: glm.vec3, limit=0.00001):
@@ -17,7 +16,6 @@ def assertAlmostEqualvec3(a: glm.vec3, b: glm.vec3, limit=0.00001):
 
 
 class TestGLMLOOK(unittest.TestCase):
-
     def test_point_at(self):
         init_pos = glm.vec3(random.random(), random.random(), random.random())
 
@@ -30,10 +28,8 @@ class TestGLMLOOK(unittest.TestCase):
 
 
 class TestPointAt(unittest.TestCase):
-
     def test_point_at_intheplane(self):
         for i in range(100):
-
             c = GLMCamera(glm.vec3(0, 0, 0))
 
             rp = glm.normalize(glm.vec3(random.random(), 0, random.random()))
@@ -51,7 +47,6 @@ class TestPointAt(unittest.TestCase):
 
     def test_point_random(self):
         for i in range(100):
-
             c = GLMCamera(glm.vec3(0, 0, 0))
 
             rp = glm.normalize(
@@ -149,11 +144,9 @@ class TestCamera_SetYawPitch(unittest.TestCase):
 
 
 class TestCameraMove(unittest.TestCase):
-
     def test_camera_position_init(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
-
             init_pos = glm.vec3(random.random(), random.random(), random.random())
             c = GLMCamera(init_pos)
             # c.point_at(init_pos+glm.vec3(0, 0, 1))
@@ -161,9 +154,8 @@ class TestCameraMove(unittest.TestCase):
             assertAlmostEqualvec3(c.position_vector(), init_pos)
 
     def test_camera_move(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
-
             init_pos = glm.vec3(random.random(), random.random(), random.random())
             c = GLMCamera(init_pos)
             assertAlmostEqualvec3(c.position_vector(), init_pos)
@@ -172,11 +164,9 @@ class TestCameraMove(unittest.TestCase):
 
 
 class TestCameraRotate(unittest.TestCase):
-
     def test_camera_rotate_0(self):
-        """verify camera is right handed"""
+        """Verify camera is right handed."""
         for i in range(100):
-
             init_pos = glm.vec3(random.random(), random.random(), random.random())
             c = GLMCamera(init_pos)
 

@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 import math
 import pytest
 
 
-from rtt3de import PrimitiveBufferPy
-from rtt3de import AbigDrawing
+from tt3de.tt3de import PrimitiveBufferPy
+from tt3de.tt3de import DrawingBufferPy
 
-from rtt3de import raster_all_py
-from rtt3de import VertexBufferPy
+from tt3de.tt3de import raster_all_py
+from tt3de.tt3de import VertexBufferPy
 
 
 def rust_version(primitive_buffer, vertex_buffer, drawing_buffer):
@@ -19,15 +20,13 @@ sizes = [32, 64, 128, 256, 512, 2048, 4096]
 @pytest.mark.parametrize("size", sizes)
 @pytest.mark.benchmark(group="triangle_raster")
 def test_bench_rust_triangle_raster(benchmark, size):
-
-    drawing_buffer = AbigDrawing(256, 256)
+    drawing_buffer = DrawingBufferPy(256, 256)
     drawing_buffer.hard_clear(1000)
 
     primitive_buffer = PrimitiveBufferPy(2000)
-    vertex_buffer = VertexBufferPy()
+    vertex_buffer = VertexBufferPy(32, 32, 32)
     # create a geometry buffer to hold the initial elemnts
     for i in range(1000):
-
         primitive_buffer.add_triangle(
             102,  # node
             i,  # geom
@@ -55,11 +54,11 @@ TRI_COUT = [100, 1000, 10000]
 @pytest.mark.benchmark(group="triangle_rust_raster")
 def test_bench_rust_triangle_raster_mode(benchmark, mode, tri_count):
     size = 64
-    drawing_buffer = AbigDrawing(256, 256)
+    drawing_buffer = DrawingBufferPy(256, 256)
     drawing_buffer.hard_clear(10000)
 
     primitive_buffer = PrimitiveBufferPy(tri_count + 1)
-    vertex_buffer = VertexBufferPy()
+    vertex_buffer = VertexBufferPy(128, 128, 128)
 
     if mode == "STACK":
         # every triangle is "above the previous one"
@@ -83,7 +82,6 @@ def test_bench_rust_triangle_raster_mode(benchmark, mode, tri_count):
         # ALL triangles have rigourousely
         # the same depth
         for i in range(tri_count):
-
             primitive_buffer.add_triangle(
                 102,  # node
                 i,  # geom

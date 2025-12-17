@@ -5,20 +5,20 @@ fn interpolate_with_uv(p1: &Vec4, p2: &Vec4, uv1: &Vec2, uv2: &Vec2, t: f32) -> 
     (lerp(p1, p2, t), lerp(uv1, uv2, t))
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct TriangleBuffer<const INNER_SIZE: usize> {
+#[derive(Debug, Clone)]
+pub struct SmallTriangleBuffer<const INNER_SIZE: usize> {
     pub content: [[Vec4; 3]; INNER_SIZE],
     pub uvs: [[Vec2; 3]; INNER_SIZE],
     pub count: usize,
 }
 
-impl<const INNER_SIZE: usize> Default for TriangleBuffer<INNER_SIZE> {
+impl<const INNER_SIZE: usize> Default for SmallTriangleBuffer<INNER_SIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const INNER_SIZE: usize> TriangleBuffer<INNER_SIZE> {
+impl<const INNER_SIZE: usize> SmallTriangleBuffer<INNER_SIZE> {
     pub fn new() -> Self {
         Self {
             content: [[Vec4::zeros(); 3]; INNER_SIZE],
@@ -53,7 +53,7 @@ pub fn half_clip_triangle_to_plane<const INNER_SIZE: usize>(
     pc: &Vec4,
     plane: Vec4,
     uv_triplet: (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<INNER_SIZE>,
+    output_buffer: &mut SmallTriangleBuffer<INNER_SIZE>,
 ) {
     let pa_dist = dot(&plane, pa);
     let pb_dist = dot(&plane, pb);
@@ -76,7 +76,7 @@ pub fn clip_triangle_to_plane<const INNER_SIZE: usize>(
     pc: &Vec4,
     plane: &Vec4,
     uv_triplet: (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<INNER_SIZE>,
+    output_buffer: &mut SmallTriangleBuffer<INNER_SIZE>,
 ) {
     let pa_dist = dot(plane, pa);
     let pb_dist = dot(plane, pb);
@@ -217,7 +217,7 @@ pub fn clip_triangle_to_clip_space(
     pb: &Vec4,
     pc: &Vec4,
     (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2),
-    output_buffer: &mut TriangleBuffer<12>,
+    output_buffer: &mut SmallTriangleBuffer<12>,
 ) {
     // defining the plane of the clipping
     let planes = [
@@ -231,8 +231,8 @@ pub fn clip_triangle_to_clip_space(
 
     output_buffer.clear();
     // create two buffers to store the triangles
-    let mut buffer1: TriangleBuffer<12> = TriangleBuffer::new();
-    let mut buffer2: TriangleBuffer<12> = TriangleBuffer::new();
+    let mut buffer1: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
+    let mut buffer2: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
     buffer1.push_vec4(*pa, *pb, *pc, (uva, uvb, uvc));
 
     let mut input_buffer = &mut buffer1;
@@ -317,7 +317,7 @@ mod tests_clip_triangle_to_space {
         let pa = Vec4::new(0.0, 0.0, 0.0, 1.0);
         let pb = Vec4::new(1.0, 0.0, 0.0, 1.0);
         let pc = Vec4::new(0.0, 1.0, 0.0, 1.0);
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
         let uvs = (
             &Vec2::new(0.0, 0.0),
             &Vec2::new(1.0, 0.0),
@@ -350,7 +350,7 @@ mod tests_clip_triangle_to_space {
         let pa = Vec4::new(0.0, 0.0, 0.0, 1.0);
         let pb = Vec4::new(1.5, 0.0, 0.0, 1.0);
         let pc = Vec4::new(0.0, 1.5, 0.0, 1.0);
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
         let uvs = (
             &Vec2::new(0.0, 0.0),
             &Vec2::new(1.0, 0.0),
@@ -414,7 +414,7 @@ mod tests_clip_triangle_to_space {
         let pa = Vec4::new(-2.0, -2.0, -2.0, 1.0);
         let pb = Vec4::new(-3.0, -3.0, -3.0, 1.0);
         let pc = Vec4::new(-4.0, -4.0, -4.0, 1.0);
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
 
         let uvs = (
             &Vec2::new(0.0, 0.0),
@@ -433,7 +433,7 @@ mod tests_clip_triangle_to_space {
         let pa = Vec4::new(1.0, 1.0, 1.0, 1.0);
         let pb = Vec4::new(-1.0, 1.0, 1.0, 1.0);
         let pc = Vec4::new(1.0, -1.0, 1.0, 1.0);
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
 
         let uvs = (
             &Vec2::new(0.0, 0.0),
@@ -453,7 +453,7 @@ mod tests_clip_triangle_to_space {
         let pb = Vec4::new(0.0, 0.0, 2.0, 1.0);
         let pc = Vec4::new(0.1, 0.1, 2.0, 1.0);
 
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
         let uvs = (
             &Vec2::new(0.0, 0.0),
             &Vec2::new(1.0, 0.0),
@@ -484,7 +484,7 @@ mod tests_clip_triangle_to_space {
         let pb = Vec4::new(-0.1, 0.0, 0.0, 1.0);
         let pc = Vec4::new(0.0, 0.0, 2.0, 1.0);
 
-        let mut output_buffer = TriangleBuffer::new();
+        let mut output_buffer = SmallTriangleBuffer::new();
         let uvs = (
             &Vec2::new(0.0, 0.0),
             &Vec2::new(1.0, 0.0),
@@ -524,7 +524,7 @@ mod tests_clip_triangle_to_plane {
 
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
-        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
         clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 1);
@@ -545,7 +545,7 @@ mod tests_clip_triangle_to_plane {
 
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
-        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
         clip_triangle_to_plane(&pa, &pb, &pc, &plane_left, uv_triplet, &mut output_buffer);
 
         assert_eq!(output_buffer.count, 0);
@@ -569,7 +569,7 @@ mod tests_clip_triangle_to_plane {
 
         let uv_triplet = (&uv_a, &uv_b, &uv_c);
 
-        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
         clip_triangle_to_plane(&pa, &pb, &pc, &plane_left, uv_triplet, &mut output_buffer);
         // one result on the left
         assert_eq!(output_buffer.count, 1);
@@ -600,7 +600,7 @@ mod tests_clip_triangle_to_plane {
         // left plane
         let plane = vec4(1.0, 0.0, 0.0, 1.0); // plane: x + 1 >= 0
 
-        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
         clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
         // one triangle is generated
         assert_eq!(output_buffer.count, 1);
@@ -631,7 +631,7 @@ mod tests_clip_triangle_to_plane {
         // left plane
         let plane = vec4(1.0, 0.0, 0.0, 1.0); // plane: x + 1 >= 0
 
-        let mut output_buffer: TriangleBuffer<12> = TriangleBuffer::new();
+        let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
         clip_triangle_to_plane(&pa, &pb, &pc, &plane, uv_triplet, &mut output_buffer);
 
         // two triangles are generated
@@ -648,5 +648,95 @@ mod tests_clip_triangle_to_plane {
         assert_eq!(tri2[0], pb);
         assert_eq!(tri2[1], tri1[2]);
         assert!(tri2[2].x >= -1.0);
+    }
+}
+
+/// Clips a triangle to the view frustum in clip space, but only in X and Y.
+///
+/// This function clips the triangle against the four planes:
+/// -x ≤ w, x ≤ w, -y ≤ w, y ≤ w
+///
+/// It does **not** clip in Z; you are expected to handle near/far clipping
+/// separately if needed.
+///
+/// Uses the Sutherland-Hodgman clipping algorithm similarly to
+/// `clip_triangle_to_clip_space`, but restricted to X/Y planes.
+///
+/// # Parameters
+///
+/// - `pa`: The first vertex of the triangle in clip space.
+/// - `pb`: The second vertex of the triangle in clip space.
+/// - `pc`: The third vertex of the triangle in clip space.
+///
+/// - `uva`: The UV coordinates of the first vertex.
+/// - `uvb`: The UV coordinates of the second vertex.
+/// - `uvc`: The UV coordinates of the third vertex.
+///
+/// - `output_buffer`: The buffer to store the resulting clipped triangles.
+pub fn clip_triangle_to_clip_space_xy(
+    pa: &Vec4,
+    pb: &Vec4,
+    pc: &Vec4,
+    (uva, uvb, uvc): (&Vec2, &Vec2, &Vec2),
+    output_buffer: &mut SmallTriangleBuffer<8>,
+) {
+    // Only X and Y planes: left, right, bottom, top
+    let planes = [
+        (Vec4::new(-1.0, 0.0, 0.0, 1.0), 0), // left
+        (Vec4::new(1.0, 0.0, 0.0, 1.0), 0),  // right
+        (Vec4::new(0.0, -1.0, 0.0, 1.0), 0), // bottom
+        (Vec4::new(0.0, 1.0, 0.0, 1.0), 0),  // top
+    ];
+
+    output_buffer.clear();
+
+    // internal buffers – capacity adjusted to 8
+    let mut buffer1: SmallTriangleBuffer<8> = SmallTriangleBuffer::new();
+    let mut buffer2: SmallTriangleBuffer<8> = SmallTriangleBuffer::new();
+    buffer1.push_vec4(*pa, *pb, *pc, (uva, uvb, uvc));
+
+    let mut input_buffer = &mut buffer1;
+    let mut output_buffer_temp = &mut buffer2;
+
+    // clip the triangle to each XY plane
+    for (plane, method) in planes.iter() {
+        output_buffer_temp.clear();
+
+        for (vertex_triplet, uv_triplet) in input_buffer.iter() {
+            let tri = vertex_triplet;
+            match method {
+                1 => {
+                    half_clip_triangle_to_plane(
+                        &tri[0],
+                        &tri[1],
+                        &tri[2],
+                        *plane,
+                        (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
+                        output_buffer_temp,
+                    );
+                }
+                _ => {
+                    clip_triangle_to_plane(
+                        &tri[0],
+                        &tri[1],
+                        &tri[2],
+                        plane,
+                        (&uv_triplet[0], &uv_triplet[1], &uv_triplet[2]),
+                        output_buffer_temp,
+                    );
+                }
+            }
+        }
+
+        std::mem::swap(&mut input_buffer, &mut output_buffer_temp);
+    }
+
+    // copy the clipped triangles to the final output buffer
+    for (triangle, uvs) in input_buffer.iter() {
+        let cpa: Vec4 = triangle[0];
+        let cpb: Vec4 = triangle[1];
+        let cpc: Vec4 = triangle[2];
+
+        output_buffer.push_vec4(cpa, cpb, cpc, (&uvs[0], &uvs[1], &uvs[2]));
     }
 }

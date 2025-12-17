@@ -1,11 +1,11 @@
+# -*- coding: utf-8 -*-
 import itertools
 import unittest
 
-from rtt3de import PrimitiveBufferPy
+from tt3de.tt3de import PrimitiveBufferPy
 
 
 class Test_PrimitivesBuffer(unittest.TestCase):
-
     def assert_comparelist(self, a, b):
         self.assertEqual(len(a), len(b))
         for i, z in zip(a, b):
@@ -117,7 +117,6 @@ class Test_PrimitivesBuffer(unittest.TestCase):
         self.assertEqual(primitive_buffer.primitive_count(), 10)
 
     def test_add_point(self):
-
         primitive_buffer = PrimitiveBufferPy(10)
         self.assertEqual(primitive_buffer.primitive_count(), 0)
 

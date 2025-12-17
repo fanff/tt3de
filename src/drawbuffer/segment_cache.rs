@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 
 use pyo3::{
     intern,
@@ -21,6 +21,9 @@ impl SegmentCache {
             bit_size_front,
             bit_size_back,
         }
+    }
+    pub fn get_cache_size(&self) -> usize {
+        self.data.len()
     }
     pub fn new_iso(bit_size: u8) -> Self {
         SegmentCache {
@@ -139,7 +142,7 @@ pub fn create_textual_segment(
     segment_class: &Bound<PyAny>,
     style_class: &Bound<PyAny>,
 ) -> Py<PyAny> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     let f_triplet = color_triplet_class
         .call1((reduced_hash[0], reduced_hash[1], reduced_hash[2]))
         .unwrap();
