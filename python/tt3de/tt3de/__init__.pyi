@@ -649,6 +649,68 @@ class DrawingBufferPy:
         """
         ...
 
+    def hard_clear(self, default_depth: float) -> None:
+        """
+        Clears the drawing buffer with a default depth value.
+
+        Args:
+            default_depth (float): The default depth value to set.
+        """
+        ...
+
+    def get_row_count(self) -> int:
+        """
+        Returns:
+            int: The current number of rows.
+        """
+        ...
+
+    def get_col_count(self) -> int:
+        """
+        Returns:
+            int: The current number of columns.
+        """
+        ...
+
+    def get_flip_x(self) -> bool:
+        """
+        Returns:
+            bool: Whether the X axis is flipped.
+        """
+        ...
+
+    def set_flip_x(self, flip: bool) -> None:
+        """
+        Sets whether the X axis is flipped.
+
+        Args:
+            flip (bool): Whether to flip the X axis.
+        """
+        ...
+
+    def get_flip_y(self) -> bool:
+        """
+        Returns:
+            bool: Whether the Y axis is flipped.
+        """
+        ...
+
+    def set_flip_y(self, flip: bool) -> None:
+        """
+        Sets whether the Y axis is flipped.
+
+        Args:
+            flip (bool): Whether to flip the Y axis.
+        """
+        ...
+
+    def get_cache_size(self) -> int:
+        """
+        Returns:
+            int: The current rich.style Style cache size.
+        """
+        ...
+
     def set_depth_content(
         self,
         row: int,

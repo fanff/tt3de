@@ -404,7 +404,7 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
         let col_start = (left_edge_interpolant.pos.x - 0.5f32).ceil().max(0.0) as usize;
         let col_end = (right_edge_interpolant.pos.x - 0.5f32)
             .ceil()
-            .min((drawing_buffer.col_count - 1) as f32) as usize;
+            .min((drawing_buffer.col_count) as f32) as usize;
 
         #[cfg(test)]
         {

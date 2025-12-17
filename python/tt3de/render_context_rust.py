@@ -55,7 +55,9 @@ class RustRenderContext:
         self.geometry_buffer.add_point_3d(0, 0, node_id=0, material_id=0)
         self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
         self.transform_buffer = TransformPackPy(transform_buffer_size)
-        self.drawing_buffer = DrawingBufferPy(max_row=self.height, max_col=self.width)
+        self.drawing_buffer: DrawingBufferPy = DrawingBufferPy(
+            max_row=self.height, max_col=self.width
+        )
 
         self.global_bit_size = 4
         # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)

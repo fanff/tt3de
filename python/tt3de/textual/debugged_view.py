@@ -54,10 +54,14 @@ class FrameBufferConfig(Static):
     def compose(self) -> ComposeResult:
         self.width_label = Label(f"Init Width: {self.db.get_col_count()}")
         self.height_label = Label(f"Init Height: {self.db.get_row_count()}")
+        self.aspect_label = Label("Aspect Ratio: 1.0")
         self.cache_size_label = Label(f"Cache Size: {self.db.get_cache_size()}")
+
         yield self.width_label
         yield self.height_label
         yield self.cache_size_label
+        yield self.aspect_label
+
         self.flip_x_checkbox = Checkbox(label="Flip X", value=self.db.get_flip_x())
         self.flip_y_checkbox = Checkbox(label="Flip Y", value=self.db.get_flip_y())
         yield self.flip_x_checkbox
@@ -73,11 +77,18 @@ class FrameBufferConfig(Static):
 
     def refresh_content(self):
         self.db: DrawingBufferPy = self.rc.drawing_buffer
+        assert isinstance(self.db, DrawingBufferPy)
         self.flip_x_checkbox.value = self.db.get_flip_x()
         self.flip_y_checkbox.value = self.db.get_flip_y()
 
-        self.width_label.content = f"Width: {self.db.get_col_count()}"
-        self.height_label.content = f"Height: {self.db.get_row_count()}"
+        col = self.db.get_col_count()
+        row = self.db.get_row_count()
+        self.width_label.content = f"Width: {col}"
+        self.height_label.content = f"Height: {row}"
+
+        aspect = float(col) / (row) if row != 0 else 0
+        aspectcf = float(col) / (row * 1.8) if row != 0 else 0
+        self.aspect_label.content = f"Aspect Ratio: {aspect:.2f} ({aspectcf:.2f} cf)"
 
         self.cache_size_label.content = f"Cache Size: {self.db.get_cache_size()}"
 

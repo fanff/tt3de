@@ -8,7 +8,7 @@ from pyglm import glm
 class ViewportScaleMode(Enum):
     # Preserve aspect ratio, entire logical 1x1 area visible, may letterbox
     FIT = auto()
-    # Preserve aspect ratio, fill screen, logical 1x1 area may be cropped
+    # Preserve aspect ratio, fill screen
     FILL = auto()
     # Ignore aspect ratio, logical 1x1 is stretched to screen
     STRETCH = auto()
@@ -138,6 +138,9 @@ class GLMCamera:
 
         match self.current_method:
             case ViewportScaleMode.FIT:
+                aspect = self.screen_width / (
+                    self.screen_height * self.character_factor
+                )
                 # Entire 1x1 fits on screen, preserve aspect ratio.
                 # We shrink the longer dimension so that the shorter fits perfectly.
                 if aspect >= 1.0:
@@ -148,7 +151,7 @@ class GLMCamera:
                     # Screen is taller than wide -> compress Y
                     scale_x = self.zoom_2D
                     scale_y = self.zoom_2D * aspect
-                scale_y = scale_y / self.character_factor
+                # scale_y = scale_y / self.character_factor
             case ViewportScaleMode.FILL:
                 # Screen fully covered, preserve aspect ratio, crop the 1x1 if needed.
                 if aspect >= 1.0:
