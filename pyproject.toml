@@ -7,7 +7,7 @@ dependencies = ["pyglm>2.7.0", "pypng>=0.20220715.0", "textual>=6.6.0"]
 description = "TT3DE: Tiny Textual 3D Engine"
 name = "tt3de"
 readme = "README.md"
-version = "0.1.0"
+version = "0.1.2"
 
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
@@ -19,7 +19,7 @@ authors = ["fanf <fanf@fanf>"]
 description = ""
 name = "tt3de"
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [tool.poetry.dependencies]
 pyglm = "^2.7.1"
