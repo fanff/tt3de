@@ -192,5 +192,5 @@ class DebuggedView(Static):
                 config_panel.styles.display = "block"
                 event.button.label = "<"
             else:
-                config_panel.styles.display = "none"
+                config_panel.styles.display = "none"  # type: ignore
                 event.button.label = ">"

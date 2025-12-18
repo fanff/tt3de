@@ -109,8 +109,8 @@ class MaterialBufferPy:
 
     def add_static(
         self,
-        albedo: Tuple[int, int, int] | Tuple[int, int, int, int],
-        emissive: Tuple[int, int, int] | Tuple[int, int, int, int],
+        front: Tuple[int, int, int] | Tuple[int, int, int, int],
+        back: Tuple[int, int, int] | Tuple[int, int, int, int],
         glyph_idx: int,
     ) -> int:
         """

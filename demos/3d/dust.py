@@ -5,7 +5,6 @@ from time import time
 from pyglm import glm
 
 from textual.app import App, ComposeResult
-from textual.containers import Container
 from textual.widgets import (
     Header,
     Static,
@@ -13,25 +12,20 @@ from textual.widgets import (
 
 from tt3de.obj_loader import load_obj
 
-from tt3de.textual.widgets import (
-    CameraConfig,
-    RenderInfo,
-    RustRenderContextInfo,
-)
 from tt3de.textual_widget import TT3DFpsView
 
 from tt3de.tt_3dnodes import TT3DNode
 
 
 class GLMTester(TT3DFpsView):
-    use_native_python = False
-
     def __init__(self):
         super().__init__(
-            vertex_buffer_size=4096 * 2,
+            vertex_buffer_size=4096 * 20,
             geometry_buffer_size=4096 * 2,
             texture_buffer_size=64,
             transform_buffer_size=4096 * 2,
+            primitive_buffer_size=4096 * 20,
+            use_left_hand_perspective=True,
         )
 
     def initialize(self):
@@ -42,14 +36,10 @@ class GLMTester(TT3DFpsView):
 
         obj_file = os.path.join(current_demo_folder, "Dust/Dust.obj")
 
-        polys, polyfans = load_obj(
-            obj_file, self.rc.texture_buffer, self.rc.material_buffer
-        )
+        polys = load_obj(obj_file, self.rc.texture_buffer, self.rc.material_buffer)
 
-        for poly in polys:
+        for poly in polys.all_polygons(True):
             self.root3Dnode.add_child(poly)
-        for polyfan in polyfans:
-            self.root3Dnode.add_child(polyfan)
 
         self.root3Dnode.local_transform = glm.rotate(
             math.radians(90), glm.vec3(-1, 0, 0)
@@ -60,49 +50,13 @@ class GLMTester(TT3DFpsView):
         # setup a time reference, to avoid trigonometry issues
         self.reftime = time()
 
-    def update_step(self, timediff):
+    def update_step(self, delta_time: float):
         pass
-
-    def post_render_step(self):
-        cc: CameraConfig = self.parent.query_one("CameraConfig")
-        v = self.camera.position_vector()
-        cc.refresh_camera_position((v.x, v.y, v.z))
-        cc.refresh_camera_rotation(
-            (math.degrees(self.camera.yaw), math.degrees(self.camera.pitch))
-        )
-
-        self.parent.query_one("RenderInfo").append_frame_duration(self.timing_registry)
-
-        context_log: RustRenderContextInfo = self.parent.query_one(
-            RustRenderContextInfo
-        )
-
-        context_log.update_counts(
-            {
-                "geom": self.rc.geometry_buffer.geometry_count(),
-                "prim": self.rc.primitive_buffer.primitive_count(),
-            }
-        )
 
 
 class Content(Static):
     def compose(self) -> ComposeResult:
-        with Container(classes="someinfo"):
-            yield CameraConfig()
-            yield RenderInfo()
-            yield RustRenderContextInfo()
-
         yield GLMTester()
-
-    def on_camera_config_projection_changed(
-        self, event: CameraConfig.ProjectionChanged
-    ):
-        viewelem: GLMTester = self.query_one("GLMTester")
-
-        fov, dist_min, dist_max, charfactor = event.value
-        viewelem.camera.set_projectioninfo(
-            math.radians(fov), dist_min, dist_max, charfactor
-        )
 
 
 class Demo3dView(App):

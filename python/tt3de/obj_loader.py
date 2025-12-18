@@ -2,21 +2,21 @@
 
 
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 from glm import floor
 
 from tt3de.points import Point2D, Point3D
 from tt3de.richtexture import ImageTexture
 from tt3de.tt3de import MaterialBufferPy, TextureBufferPy
-from tt3de.tt_3dnodes import TT3DPolygon, TT3DPolygonFan
+from tt3de.tt_3dnodes import TT3DPolygon
 import png
 
 
 class OBJData:
     def __init__(self):
-        self.vertices = []
-        self.texture_coords = []
+        self.vertices: List[List[float]] = []
+        self.texture_coords: List[List[float]] = []
         self.normals = []
         self.groups: List[OBJGroup] = []
         self.materials = []
@@ -27,17 +27,51 @@ class OBJData:
                 return m
         return None
 
+    def all_polygons(self, flip_triangles=False) -> List[TT3DPolygon]:
+        """Triangulate all groups ngones into TT3DPolygons; One TT3DPolygon per material
+        for every triangle sharing the same material."""
+        all_polygons: List[TT3DPolygon] = []
+        for obj_group in self.groups:
+            group_polygons = obj_group.triangulate(self, flip_triangles)
+            for material_name, polygon in group_polygons.items():
+                all_polygons.append(polygon)
+        return all_polygons
+
+    def merge_by_material(self, flip_triangles=False) -> Dict[str, TT3DPolygon]:
+        """Triangulate all groups ngones into TT3DPolygons; One TT3DPolygon per material
+        for every triangle sharing the same material."""
+        all_polygons: Dict[str, TT3DPolygon] = {}
+        for obj_group in self.groups:
+            group_polygons = obj_group.triangulate(self, flip_triangles)
+            for material_name, polygon in group_polygons.items():
+                if material_name in all_polygons:
+                    existing_polygon = all_polygons[material_name]
+                    # merge polygons together
+                    offset = len(existing_polygon.vertex_list)
+                    existing_polygon.vertex_list.extend(polygon.vertex_list)
+                    existing_polygon.uvmap.extend(polygon.uvmap)
+                    for tri in polygon.triangles:
+                        existing_polygon.triangles.append(
+                            tuple(idx + offset for idx in tri)
+                        )
+                else:
+                    all_polygons[material_name] = polygon
+        return all_polygons
+
 
 class OBJGroup:
-    def __init__(self, name=""):
-        self.name = name
+    def __init__(self, name: str = ""):
+        self.name: str = name
 
         self.faces_ngon = []
         """
         faces_ngon is a list of tuples.
 
         Each tuple contains a list of strings representing the vertices of the ngon and
-        the material name.
+        the material name. 1/2/3 means vertex 1, uv 2, normal 3.
+        e.g. [("1/1/1", "2/2/2", "3/3/3"), obj_material_instance] => a triangle with the given material
+        2. [("1/1/1", "2/2/2", "3/3/3", "4/4/4"), obj_material_instance] => a quad with the given material
+        etc.
         """
 
     def add_ngon_strs(self, ngon_str, obj_material):
@@ -49,37 +83,47 @@ class OBJGroup:
         """
         self.faces_ngon.append((ngon_str, obj_material))
 
-    def triangulate(self, obj_data: OBJData, flip_triangles=False):
-        """For every ngon in faces_ngon, return a list of triangles and their
-        material."""
+    def triangulate(
+        self, obj_data: OBJData, flip_triangles=False
+    ) -> Dict[str, TT3DPolygon]:
+        """Triangulate the ngons in this group into TT3DPolygons; One TT3DPolygon per
+        material for every triangle sharing the same material."""
         triangles: List[Tuple[List[str], OBJMaterial]] = []
-        polygon_fans: List[Tuple[List[str], OBJMaterial]] = []
         for ngon_strs, obj_material in self.faces_ngon:
             # if there is 3 elements in ngon_strs, it is already a triangle
             if len(ngon_strs) == 3:
                 triangles.append((ngon_strs, obj_material))
             else:
-                # it is assumed to be a polygon fan
-                polygon_fans.append((ngon_strs, obj_material))
+                # it is assumed to be a polygon fan so we can expand it into triangles
+                first_vertex = ngon_strs[0]
+                for i in range(1, len(ngon_strs) - 1):
+                    triangle_strs = [
+                        first_vertex,
+                        ngon_strs[i],
+                        ngon_strs[i + 1],
+                    ]
+                    triangles.append((triangle_strs, obj_material))
 
-        # the triangles list will be extracted as a TT3DPolygon of independant triangles for every material
-        material_indexed_triangles = {}
+        # parsing triangles info and remapping vertices
+        material_indexed_triangles: Dict[str, List[Any]] = {}
+
         for triangle_strs, obj_material in triangles:
-            triangle_vertices = []
-            triangle_texture_coords = []
+            triangle_vertices_index: List[int] = []
+            triangle_texture_coords: List[Tuple[float, float]] = []
             triangle_normals = []
+
             for vertex_str in triangle_strs:
                 vertex_data = vertex_str.split("/")
                 # retrieve the vertex, uv and normal data
                 vertice_index = int(vertex_data[0])
                 uv_index = int(vertex_data[1])
                 normal_index = int(vertex_data[2])
-                vertice = obj_data.vertices[vertice_index - 1]
+                _vertice = obj_data.vertices[vertice_index - 1]
                 uv = obj_data.texture_coords[uv_index - 1]
                 normal = obj_data.normals[normal_index - 1]
 
                 # append the data to the triangle lists
-                triangle_vertices.append(vertice)
+                triangle_vertices_index.append(vertice_index)
                 triangle_texture_coords.append(uv)
                 triangle_normals.append(normal)
 
@@ -87,108 +131,85 @@ class OBJGroup:
                 material_indexed_triangles[obj_material.name] = []
             material_indexed_triangles[obj_material.name].append(
                 (
-                    triangle_vertices,
+                    triangle_vertices_index,
                     triangle_texture_coords,
                     triangle_normals,
                     obj_material,
                 )
             )
 
+        # group_vidx = {}
+        # for obj_v, group_v in vertices_remapper.items():
+        #     vertice = obj_data.vertices[obj_v - 1]
+        #     group_vidx[group_v] = Point3D(vertice[0], vertice[1], vertice[2])
+        # [v for k, v in sorted(group_vidx.items(), key=lambda x: x[0])]
         # create one TT3DPolygon for every material
-        polygons = []
+        polygons: Dict[str, TT3DPolygon] = {}
         for material_name, triangles_data in material_indexed_triangles.items():
-            polygon = TT3DPolygon()
+            if material_name in polygons:
+                polygon = polygons[material_name]
+            else:
+                polygon = TT3DPolygon()
+                polygons[material_name] = polygon
+            vertex_remapper = {}
+            vertex_counter = 0
             for (
-                triangle_vertices,
+                triangle_vertices_index,
                 triangle_texture_coords,
                 triangle_normals,
                 obj_material,
             ) in triangles_data:
                 # adding all triangles to the polygon
-                points = [Point3D(x, y, z) for x, y, z in triangle_vertices]
+                rebuilded_vertices_idx = []
+
+                for vidx in triangle_vertices_index:
+                    if vidx not in vertex_remapper:
+                        vertex_remapper[vidx] = vertex_counter
+                        vertex_counter += 1
+                    rebuilded_vertices_idx.append(vertex_remapper[vidx])
 
                 if flip_triangles:
-                    points = [points[0], points[2], points[1]]
-                polygon.vertex_list.extend(points)
+                    rebuilded_vertices_idx = [
+                        rebuilded_vertices_idx[0],
+                        rebuilded_vertices_idx[2],
+                        rebuilded_vertices_idx[1],
+                    ]
+                # polygon.vertex_list.extend(points)
 
-                uv = [Point2D(x, y) for x, y in triangle_texture_coords]
+                uvl: List[Point2D] = [Point2D(x, y) for x, y in triangle_texture_coords]
+                p0x, p0y = triangle_texture_coords[0]
+                p1x, p1y = triangle_texture_coords[1]
+                p2x, p2y = triangle_texture_coords[2]
+
+                # shift the uv toward somewhere positive (TT3DE can't manage negative uv for now)
+                if False:
+                    minu = floor(min(p0x, p1x, p2x))
+                    minv = floor(min(p0y, p1y, p2y))
+                else:
+                    minu = 0
+                    minv = 0
+                uv = [
+                    Point2D(p0x - minu, p0y - minv),
+                    Point2D(p1x - minu, p1y - minv),
+                    Point2D(p2x - minu, p2y - minv),
+                ]
                 if flip_triangles:
-                    uv = [uv[0], uv[2], uv[1]]
+                    uv = (uvl[0], uvl[2], uvl[1])
+                else:
+                    uv = (uvl[0], uvl[1], uvl[2])
                 polygon.uvmap.append(uv)
+                polygon.triangles.append(tuple(rebuilded_vertices_idx))
             polygon.material_id = obj_material.material_index
 
-            polygons.append(polygon)
+            group_vidx: Dict[int, Point3D] = {}
+            for obj_v, group_v in vertex_remapper.items():
+                # vertice = obj_data.vertices[obj_v - 1]
+                group_vidx[group_v] = Point3D(*obj_data.vertices[obj_v - 1])
+            polygon.vertex_list = [
+                v for k, v in sorted(group_vidx.items(), key=lambda x: x[0])
+            ]
 
-        # the polygon_fans list will be extracted as a TT3DPolygonFan of independant triangles
-        material_indexed_polygon_fans = {}
-        for polygon_fan_strs, obj_material in polygon_fans:
-            polygon_fan_vertices = []
-            polygon_fan_texture_coords = []
-            polygon_fan_normals = []
-            for vertex_str in polygon_fan_strs:
-                vertex_data = vertex_str.split("/")
-                # retrieve the vertex, uv and normal data
-                vertice_index = int(vertex_data[0])
-                uv_index = int(vertex_data[1])
-                normal_index = int(vertex_data[2])
-                vertice = obj_data.vertices[vertice_index - 1]
-                uv = obj_data.texture_coords[uv_index - 1]
-                normal = obj_data.normals[normal_index - 1]
-
-                # append the data to the triangle lists
-                polygon_fan_vertices.append(vertice)
-                polygon_fan_texture_coords.append(uv)
-                polygon_fan_normals.append(normal)
-
-            if obj_material.name not in material_indexed_polygon_fans:
-                material_indexed_polygon_fans[obj_material.name] = []
-            material_indexed_polygon_fans[obj_material.name].append(
-                (
-                    polygon_fan_vertices,
-                    polygon_fan_texture_coords,
-                    polygon_fan_normals,
-                    obj_material,
-                )
-            )
-
-        polygon_fans = []
-        # build the polygon_fans
-        for material_name, polygon_fans_data in material_indexed_polygon_fans.items():
-            polygon_fan = TT3DPolygonFan()
-            for (
-                polygon_fan_vertices,
-                polygon_fan_texture_coords,
-                polygon_fan_normals,
-                obj_material,
-            ) in polygon_fans_data:
-                # adding all triangles to the polygon
-                points = [Point3D(x, y, z) for x, y, z in polygon_fan_vertices]
-                polygon_fan.vertex_list.extend(points)
-
-                # unfan the uv by tripplets
-                centrer_u, center_v = polygon_fan_texture_coords[0]
-                for i in range(1, len(polygon_fan_texture_coords) - 1):
-                    p1x, p1y = polygon_fan_texture_coords[i]
-                    p2x, p2y = polygon_fan_texture_coords[i + 1]
-
-                    # shift the uv toward positive values
-                    minu = floor(min(centrer_u, p1x, p2x))
-                    minv = floor(min(center_v, p1y, p2y))
-                    uv = [
-                        Point2D(centrer_u - minu, center_v - minv),
-                        Point2D(p1x - minu, p1y - minv),
-                        Point2D(p2x - minu, p2y - minv),
-                    ]
-                    if flip_triangles:
-                        uv = [uv[0], uv[2], uv[1]]
-                    polygon_fan.uvmap.append(uv)
-
-                # uv = [Point2D(x,y) for x,y in polygon_fan_texture_coords]
-                # polygon_fan.uvmap.append(uv)
-            polygon_fan.material_id = obj_material.material_index
-
-            polygon_fans.append(polygon_fan)
-        return polygons, polygon_fans
+        return polygons
 
 
 class OBJMaterial:
@@ -298,13 +319,14 @@ def load_mtl(
 
 def load_obj(
     file_path, texture_buffer: TextureBufferPy, material_buffer: MaterialBufferPy
-):
+) -> OBJData:
     # get directory of obj file
     directory = os.path.dirname(file_path)
     obj_data = OBJData()
     with open(file_path, "r") as f:
         all_lines = f.readlines()
     current_mtl_obj = None
+    current_obj_group: OBJGroup | None = None
     for line in all_lines:
         if line.startswith("v "):
             obj_data.vertices.append([float(x) for x in line[2:].split()])
@@ -318,9 +340,10 @@ def load_obj(
         elif line.startswith("f "):
             current_mtl_obj
             ngon_str = [x for x in line[2:].split()]
-            if current_mtl_obj is not None:
+            if current_obj_group is None:
                 current_obj_group = OBJGroup("default")
                 obj_data.groups.append(current_obj_group)
+            assert current_obj_group is not None
             current_obj_group.add_ngon_strs(ngon_str, current_mtl_obj)
         elif line.startswith("mtllib "):
             mtlfile_name = line[7:].strip()
@@ -332,10 +355,8 @@ def load_obj(
             mtl_obj = obj_data.get_material_by_name(mtl_line)
             current_mtl_obj = mtl_obj
 
-    all_polygons, all_polygon_fans = [], []
-    # now proceed to triangulate the ngons
-    for obj_group in obj_data.groups:
-        polygons, polygon_fans = obj_group.triangulate(obj_data)
-        all_polygons.extend(polygons)
-        all_polygon_fans.extend(polygon_fans)
-    return all_polygons, all_polygon_fans
+    # all_polygons = []
+    ## now proceed to triangulate the ngons
+    # for obj_group in obj_data.groups:
+    #    obj_group.triangulate(obj_data)
+    return obj_data

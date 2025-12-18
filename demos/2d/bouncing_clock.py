@@ -110,10 +110,16 @@ class BouncingClock(TT3DViewStandAlone):
                 self.digit_nodes[i].set_material_id(mat_id)
 
 
+debug_view = False
+
+
 class CameraTest2D(App):
     def compose(self) -> ComposeResult:
         yield Header()
-        yield DebuggedView(BouncingClock())
+        if debug_view:
+            yield DebuggedView(BouncingClock())
+        else:
+            yield BouncingClock()
 
 
 if __name__ == "__main__":

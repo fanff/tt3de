@@ -192,7 +192,9 @@ class MaterialPerfab:
         FULL_BLOCK = find_glyph_indices_py("█")
 
         material_buffer = MaterialBufferPy()
-        material_buffer.add_static((50, 50, 50), (50, 50, 50), 0)  # 0
+        material_buffer.add_static(
+            (0, 0, 0), (0, 0, 0), find_glyph_indices_py("▀")
+        )  # 0
         material_buffer.add_static(
             (200, 200, 200), (100, 100, 100), FULL_BLOCK
         )  # 1 white

@@ -53,6 +53,9 @@ impl MaterialBuffer {
         self.current_size += 1;
         self.current_size - 1
     }
+    pub fn set_material(&mut self, idx: usize, mat: Material) {
+        self.mats[idx] = mat;
+    }
 
     fn add_static(&mut self, front_color: RGBA, back_color: RGBA, glyph_idx: u8) -> usize {
         let retur = self.current_size;
@@ -211,6 +214,10 @@ impl MaterialBufferPy {
         }
     }
     fn add_material(&mut self, py: Python, mat: Bound<'_, MaterialPy>) -> usize {
+        panic!("Not implemented");
+    }
+
+    fn set_material(&mut self, py: Python, idx: usize, mat: Bound<'_, MaterialPy>) {
         panic!("Not implemented");
     }
 

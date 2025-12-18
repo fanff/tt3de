@@ -2,6 +2,13 @@
 build-backend = "maturin"
 requires = ["maturin>=1.0,<2.0"]
 
+[project]
+dependencies = ["pyglm>2.7.0", "pypng>=0.20220715.0", "textual>=6.6.0"]
+description = "TT3DE: Tiny Textual 3D Engine"
+name = "tt3de"
+readme = "README.md"
+version = "0.1.0"
+
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
