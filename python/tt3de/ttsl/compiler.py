@@ -22,6 +22,7 @@ from tt3de.ttsl.ttsl_assembly import (
     is_operand_ssavar,
     CFGNode,
     build_cfg_from_ir,
+    ConstantPool,
 )
 
 PRELUDE_GLM_IMPORT = """
@@ -128,7 +129,7 @@ class TTSLCompilerContext:
         # place holder for later passes
         self.cfg: CFG | None = None
         self.ssa_var_definitions: Dict[SSAVarID, Set[NodeID]] = {}
-        self.const_pool: dict[int, Tuple[Any, IRType]] = {}
+        self.const_pool: ConstantPool = ConstantPool()
 
         # Predefine some variables
         for name, ty in self.always_present_variables_at_init().items():
