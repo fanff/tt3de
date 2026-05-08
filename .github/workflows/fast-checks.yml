@@ -1,0 +1,43 @@
+name: Fast Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-tests:
+    name: Cargo Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run cargo test
+        run: cargo test
+
+  python-build-and-tests:
+    name: Maturin Develop + Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install deps
+        run: uv sync --group dev
+      - name: Build extension in develop mode
+        run: uv run maturin develop
+      - name: Run Python tests
+        run: uv run pytest
