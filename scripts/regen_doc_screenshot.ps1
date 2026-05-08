@@ -28,3 +28,4 @@ if (-not (Test-Path -LiteralPath $conf)) {
 }
 
 uv run --no-sync tt3de-regen-doc-screenshot
+uv run --no-sync python scripts/gen_doc_example_screenshots.py
