@@ -14,8 +14,8 @@
     .\scripts\regen_doc_screenshot.ps1
 
 .EXAMPLE
-    # From anywhere (paths relative to this script):
-    pwsh -File path\to\tt3de\scripts\regen_doc_screenshot.ps1
+    # From anywhere:
+    powershell -ExecutionPolicy Bypass -File C:\path\to\tt3de\scripts\regen_doc_screenshot.ps1
 #>
 $ErrorActionPreference = 'Stop'
 
