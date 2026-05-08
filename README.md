@@ -60,6 +60,10 @@ To set up a development version of this engine:
     ```bash
     uv run pytest
     ```
+8. Regenerate TTSL opcode/ABI files after opcode definition changes:
+    ```bash
+    uv run tt3de-gen-opcodes
+    ```
 
 
 

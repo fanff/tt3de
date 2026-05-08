@@ -390,16 +390,16 @@ def generate_read_axis_forms():
                     "bank": "f32_",
                 }
             )
-            match_code = f"""
-                {form["name"]} => {{
-                    {Rustgen.unsafe_block(
-                        f"""
+            rust_body = f"""
                     {Rustgen.let_base_register_be(ir_type)}
                     {Rustgen.let_operand_register_be("a", ir_type)}
                     {Rustgen.let_base_register_be(IRType.F32)}
                     *base_f32_.add(dst as usize) = a_val.{axis_name.lower()};
                     """
-                    )}
+            rust_body = Rustgen.unsafe_block(rust_body)
+            match_code = f"""
+                {form["name"]} => {{
+                    {rust_body}
                 None
                 }}
                 """
@@ -620,8 +620,7 @@ def generate_all_forms() -> List[Form]:
     return all_generated_forms
 
 
-RERE = 23
-if __name__ == "__main__":
+def main() -> None:
     all_generated_forms = generate_all_forms()
     # now generate the rust file
 
@@ -682,3 +681,7 @@ if __name__ == "__main__":
     ]
     with open("python/tt3de/ttsl/ttisa/ttisa_opcodes.py", "w") as f:
         f.write("\n".join(op_code_definitions_statement_py))
+
+
+if __name__ == "__main__":
+    main()
