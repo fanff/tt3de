@@ -1,0 +1,14 @@
+---
+description: Test coverage and regression expectations for tt3de
+globs: **/tests/**/*.py
+alwaysApply: false
+---
+
+# Testing Standards
+
+- Add or update tests for each behavior change in compiler, geometry, raster, or asset-loading paths.
+- Prefer focused unit tests in `tests/tt3de/` that validate one behavior per test case.
+- Use deterministic fixtures and constants; avoid timing-sensitive assertions.
+- For compiler and parser changes, include both valid and invalid input cases.
+- Keep test names descriptive about scenario and expected result.
+- If a bug is fixed, include a regression test that fails before the fix and passes after.

@@ -17,6 +17,20 @@ Its current architecture is built on triangle-based geometry,
 with the additional constraint that total scene complexity remains intentionally small—typically dozens of triangles per object,
 and a modest number of objects.
 
+Quick start
+===========
+
+Run one of the demos from the project root (with ``PYTHONPATH=python`` set):
+
+.. code-block:: bash
+
+   poetry run python demos/2d/standalone.py
+   poetry run python demos/2d/material_test.py
+   poetry run python demos/3d/triangle_test.py
+   poetry run python demos/3d/some_models.py
+
+For a smooth experience, prefer terminals that handle high refresh well (see project README terminal notes).
+
 
 How to use the engine
 =====================
@@ -84,3 +98,4 @@ Simple example on how to use the engine:
    high_level_api
    low_level_api
    ttsl
+   ttsl_compiler

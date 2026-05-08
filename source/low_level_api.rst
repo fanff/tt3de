@@ -186,3 +186,12 @@ Actions:
 Output:
 
 - Fully shaded Canvas representing the final frame
+
+
+Where to see this in demos
+==========================
+
+- ``demos/2d/material_test.py``: material switching and glyph/textured output
+- ``demos/3d/triangle_test.py``: primitive generation and simple material assignment
+- ``demos/3d/some_models.py``: textured materials, model loading, and per-frame transforms
+- ``demos/3d/city_01.py`` / ``demos/3d/city_02.py``: larger mesh workloads and camera movement context

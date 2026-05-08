@@ -1,0 +1,13 @@
+---
+description: Change workflow guardrails for code and docs updates
+globs: {**/*.py,**/*.rs,**/*.md}
+alwaysApply: false
+---
+
+# Workflow Guardrails
+
+- Keep changes scoped: avoid unrelated refactors in the same edit unless required for correctness.
+- Do not silently change public API behavior without updating tests and docs in the same branch.
+- Preserve existing formatting/tooling conventions; run project linters/tests after substantive edits.
+- Prefer additive, reviewable commits with clear intent and low-risk diffs.
+- Flag assumptions and potential follow-up work when implementation trade-offs are required.

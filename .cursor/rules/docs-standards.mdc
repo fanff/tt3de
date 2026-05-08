@@ -1,0 +1,13 @@
+---
+description: Documentation sync standards for language and demo changes
+globs: **/*.md
+alwaysApply: false
+---
+
+# Documentation Standards
+
+- When behavior changes, update the closest canonical docs (for example `README.md` or `source/*.md`) in the same change.
+- Keep examples runnable and aligned with current API names and arguments.
+- Prefer concise sections with concrete commands or snippets over long prose.
+- Clearly call out compatibility notes or breaking changes.
+- For TTSL updates, ensure opcode/assembly semantics stay synchronized with docs.
