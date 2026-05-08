@@ -38,7 +38,13 @@ class Test_GeometryBuffer(unittest.TestCase):
         uv_start = 0
         node_id = 101
         material_id = 201
-        geom_buffer.add_line3d(start_vertext_idx, node_id, material_id, uv_start)
+        geom_buffer.add_line3d(
+            start_vertext_idx,
+            2,
+            uv_start,
+            node_id,
+            material_id,
+        )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
         geom_buffer.clear()
@@ -55,10 +61,12 @@ class Test_GeometryBuffer(unittest.TestCase):
         uv_idx = 3
         geom_buffer.add_polygon_3d(
             0,
+            3,
+            uv_idx,
+            0,
             1,
             node_id,
             material_id,
-            uv_idx,
         )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
@@ -85,7 +93,15 @@ class Test_GeometryBuffer(unittest.TestCase):
         node_id = 102
         material_id = 202
 
-        geom_buffer.add_polygon2d(2, 23, node_id, material_id, 32)
+        geom_buffer.add_polygon2d(
+            2,
+            3,
+            32,
+            0,
+            23,
+            node_id,
+            material_id,
+        )
 
         self.assertEqual(geom_buffer.geometry_count(), 1)
         elem0 = geom_buffer.get_element(0)

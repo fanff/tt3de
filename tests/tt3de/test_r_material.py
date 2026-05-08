@@ -30,8 +30,9 @@ class Test_MaterialBufferPy(unittest.TestCase):
         cb.idx0 = 0
         cb.idx1 = 1
 
-        self.assertEqual(mb.add_material(cb), 0)
-        self.assertEqual(mb.count(), 1)
+        with self.assertRaises(TypeError):
+            mb.add_material(cb)
+        self.assertEqual(mb.count(), 0)
 
     def test_add_combo_material(self):
         mb = self.mb

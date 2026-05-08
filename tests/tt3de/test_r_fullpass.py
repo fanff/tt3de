@@ -52,7 +52,15 @@ class Test_Stages(unittest.TestCase):
         self.assertEqual(vertex_buffer.add_3d_vertex(0.0, 0.5, 1.0), 1)
         self.assertEqual(vertex_buffer.add_3d_vertex(0.5, 0.5, 1.0), 2)
 
-        vertex_buffer.add_uv(glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0), glm.vec2(0.0, 0.0))
+        uv_idx, triangle_idx = vertex_buffer.add_3d_triangle(
+            0,
+            1,
+            2,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 1.0),
+            glm.vec2(1.0, 1.0),
+            glm.vec3(0.0, 0.0, 1.0),
+        )
 
         geometry_buffer = GeometryBufferPy(32)
         self.assertEqual(geometry_buffer.geometry_count(), 0)
@@ -62,7 +70,7 @@ class Test_Stages(unittest.TestCase):
 
         node_id = 3
         material_id = 1
-        geometry_buffer.add_polygon_3d(0, 3, 0, 0, 1, node_id, material_id)
+        geometry_buffer.add_polygon_3d(0, 3, uv_idx, triangle_idx, 1, node_id, material_id)
 
         # create a buffer of primitives
         primitive_buffer = PrimitiveBufferPy(10)
@@ -229,7 +237,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
         # now add the line
         node_id = transform_pack.add_node_transform(glm.mat4(1.0))
         material_id = 1
-        self.assertEqual(geometry_buffer.add_line3d(0, node_id, material_id, 0), 1)
+        self.assertEqual(geometry_buffer.add_line3d(0, 2, 0, node_id, material_id), 1)
 
         # make a glm camera
         camera = GLMCamera(glm.vec3(0, 0, -5))
@@ -264,17 +272,17 @@ class Test_PrimitivBuilding(unittest.TestCase):
             },
         )
 
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
 
         # self.assertEqual(prim0["pb"]["row"], ~270) # pb is a bit shifted to the bottom because it has y positive
-        self.assertEqual(prim0["pb"]["col"], 256)
+        self.assertEqual(prim0["pb"]["pos"][0], 256)
 
         self.assertGreater(
-            prim0["pb"]["depth"], prim0["pa"]["depth"]
+            prim0["pb"]["pos"][2], prim0["pa"]["pos"][2]
         )  # pb is after pa; clearly
         self.assertAlmostEqual(
-            prim0["pb"]["depth"], 1.0
+            prim0["pb"]["pos"][2], 1.0
         )  # pb is the clipped point. at the back of the frustum
 
     def test_simple_one_triangle(self):
@@ -373,9 +381,29 @@ class Test_PrimitivBuilding(unittest.TestCase):
 
         node_id = 3
         material_id = 2
-        # adding two triangles ; with uv ccorrdinate 2
+        uv_start, triangle_start = vertex_buffer.add_3d_triangle(
+            0,
+            1,
+            2,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 1.0),
+            glm.vec2(1.0, 1.0),
+            glm.vec3(0.0, 0.0, 1.0),
+        )
+        vertex_buffer.add_3d_triangle(
+            0,
+            2,
+            3,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(1.0, 1.0),
+            glm.vec2(1.0, 0.0),
+            glm.vec3(0.0, 0.0, 1.0),
+        )
         self.assertEqual(
-            geometry_buffer.add_polygon_fan_3d(0, 2, node_id, material_id, 2), 1
+            geometry_buffer.add_polygon_3d(
+                0, 4, uv_start, triangle_start, 2, node_id, material_id
+            ),
+            1,
         )
 
         # create a buffer of primitives
@@ -791,7 +819,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         node_id = 0
         material_id = 1
-        self.assertEqual(self.geometry_buffer.add_line3d(0, node_id, material_id, 0), 1)
+        self.assertEqual(self.geometry_buffer.add_line3d(0, 2, 0, node_id, material_id), 1)
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
         build_primitives_py(
@@ -814,14 +842,14 @@ class Test3DLineClippingCases(unittest.TestCase):
             },
         )
 
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertEqual(prim0["pb"]["col"], 256)
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertEqual(prim0["pb"]["pos"][0], 256)
         self.assertGreater(
-            prim0["pb"]["depth"], prim0["pa"]["depth"]
+            prim0["pb"]["pos"][2], prim0["pa"]["pos"][2]
         )  # pb is after pa; clearly
         self.assertAlmostEqual(
-            prim0["pb"]["depth"], 1.0
+            prim0["pb"]["pos"][2], 1.0
         )  # pb is the clipped point. at the back of the frustum
 
     def test_one_line3D_clipping_nearplane(self):
@@ -841,7 +869,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         material_id = 1
         self.assertEqual(
-            self.geometry_buffer.add_line3d(0, self.node_id, material_id, 0), 1
+            self.geometry_buffer.add_line3d(0, 2, 0, self.node_id, material_id), 1
         )
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
@@ -867,12 +895,12 @@ class Test3DLineClippingCases(unittest.TestCase):
             },
         )
 
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertLess(prim0["pa"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pa"]["col"], 0.0)  #
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertLess(prim0["pa"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pa"]["pos"][0], 0.0)  #
 
-        self.assertAlmostEqual(prim0["pb"]["depth"], 0.0)
+        self.assertAlmostEqual(prim0["pb"]["pos"][2], 0.0)
 
     def test_one_line3D_clipping_leftplane(self):
         # setup a point to the left of the camera; controlling clipping
@@ -890,7 +918,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         material_id = 1
         self.assertEqual(
-            self.geometry_buffer.add_line3d(0, self.node_id, material_id, 0), 1
+            self.geometry_buffer.add_line3d(0, 2, 0, self.node_id, material_id), 1
         )
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
@@ -918,15 +946,15 @@ class Test3DLineClippingCases(unittest.TestCase):
         )
         clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
         clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertLess(prim0["pa"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pa"]["col"], 0.0)  #
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertLess(prim0["pa"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pa"]["pos"][0], 0.0)  #
 
         self.assertLessEqual(
-            prim0["pb"]["row"], 256
+            prim0["pb"]["pos"][1], 256
         )  # is a little bellow pa; because y is positive
-        self.assertEqual(prim0["pb"]["col"], 0)  # pb is at the left frustum plane
+        self.assertEqual(prim0["pb"]["pos"][0], 0)  # pb is at the left frustum plane
 
     def test_one_line3D_clipping_rightplane(self):
         # setup a point to the right of the camera; controlling clipping
@@ -943,7 +971,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         material_id = 1
         self.assertEqual(
-            self.geometry_buffer.add_line3d(0, self.node_id, material_id, 0), 1
+            self.geometry_buffer.add_line3d(0, 2, 0, self.node_id, material_id), 1
         )
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
@@ -967,16 +995,16 @@ class Test3DLineClippingCases(unittest.TestCase):
             },
         )
 
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertLess(prim0["pa"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pa"]["col"], 0.0)  #
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertLess(prim0["pa"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pa"]["pos"][0], 0.0)  #
 
         self.assertEqual(
-            prim0["pb"]["col"], 511
+            prim0["pb"]["pos"][0], 511
         )  # pb is at the Right of the frustum plane
-        self.assertLess(prim0["pb"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pb"]["col"], 0.0)  #
+        self.assertLess(prim0["pb"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pb"]["pos"][0], 0.0)  #
 
     def test_one_line3D_clipping_topplane(self):
         # setup a point above the camera; controlling clipping
@@ -993,7 +1021,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         material_id = 1
         self.assertEqual(
-            self.geometry_buffer.add_line3d(0, self.node_id, material_id, 0), 1
+            self.geometry_buffer.add_line3d(0, 2, 0, self.node_id, material_id), 1
         )
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
@@ -1019,17 +1047,17 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
         clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertLess(prim0["pa"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pa"]["col"], 0.0)  #
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertLess(prim0["pa"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pa"]["pos"][0], 0.0)  #
 
         self.assertEqual(
-            prim0["pb"]["row"], 511
+            prim0["pb"]["pos"][1], 511
         )  # pb the is at the top of the frustum plane
-        self.assertEqual(prim0["pb"]["col"], 256)  # in the middle from left right
-        self.assertLess(prim0["pb"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pb"]["col"], 0.0)  #
+        self.assertEqual(prim0["pb"]["pos"][0], 256)  # in the middle from left right
+        self.assertLess(prim0["pb"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pb"]["pos"][0], 0.0)  #
 
     def test_one_line3D_clipping_bottomplane(self):
         # setup a point below the camera; controlling clipping
@@ -1046,7 +1074,7 @@ class Test3DLineClippingCases(unittest.TestCase):
         # now add the line
         material_id = 1
         self.assertEqual(
-            self.geometry_buffer.add_line3d(0, self.node_id, material_id, 0), 1
+            self.geometry_buffer.add_line3d(0, 2, 0, self.node_id, material_id), 1
         )
 
         self.assertEqual(self.primitive_buffer.primitive_count(), 0)
@@ -1072,14 +1100,14 @@ class Test3DLineClippingCases(unittest.TestCase):
 
         clippa = self.vertex_buffer.get_3d_calculated_tuple(0)
         clippb = self.vertex_buffer.get_3d_calculated_tuple(1)
-        self.assertEqual(prim0["pa"]["row"], 256)
-        self.assertEqual(prim0["pa"]["col"], 256)
-        self.assertLess(prim0["pa"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pa"]["col"], 0.0)  #
+        self.assertEqual(prim0["pa"]["pos"][1], 256)
+        self.assertEqual(prim0["pa"]["pos"][0], 256)
+        self.assertLess(prim0["pa"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pa"]["pos"][0], 0.0)  #
 
         self.assertEqual(
-            prim0["pb"]["row"], 0
+            prim0["pb"]["pos"][1], 0
         )  # pb the is at the bottom of the frustum plane
-        self.assertEqual(prim0["pb"]["col"], 256)  # in the middle from left right
-        self.assertLess(prim0["pb"]["depth"], 1.0)  #
-        self.assertGreater(prim0["pb"]["col"], 0.0)  #
+        self.assertEqual(prim0["pb"]["pos"][0], 256)  # in the middle from left right
+        self.assertLess(prim0["pb"]["pos"][2], 1.0)  #
+        self.assertGreater(prim0["pb"]["pos"][0], 0.0)  #

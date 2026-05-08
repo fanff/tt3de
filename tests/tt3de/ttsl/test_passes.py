@@ -48,7 +48,7 @@ class Test_SampleCompilation(unittest.TestCase):
                     color_sky: vec3 = vec3(0.2, 0.4, 0.8)
                     color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
                     t: float = (pos.y + 1.0) / 2.0
-                    mixed: vec3 = mix(color_sky, color_horizon, t)
+                    mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
 
                     return mixed
             """
@@ -75,7 +75,7 @@ class Test_SampleCompilation(unittest.TestCase):
                     color_sky: vec3 = vec3(0.2, 0.4, 0.8)
                     color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
                     t: float = (pos.y + 1.0) / 2.0
-                    mixed: vec3 = mix(color_sky, color_horizon, t)
+                    mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
 
                     return mixed
             """
