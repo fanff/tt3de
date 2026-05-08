@@ -33,6 +33,7 @@ version = "0.1.2"
 
 [project.scripts]
 tt3de-gen-opcodes = "tt3de.ttsl.ttisa.low_level_def:main"
+tt3de-regen-doc-screenshot = "tt3de.dev_regen_doc_screenshot:main"
 
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)

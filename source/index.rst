@@ -31,6 +31,20 @@ Run one of the demos from the project root (with ``PYTHONPATH=python`` set):
 
 For a smooth experience, prefer terminals that handle high refresh well (see project README terminal notes).
 
+Screenshot examples (Textual SVG capture)
+=========================================
+
+The composite below shows three bordered columns (red, blue, green titles) with TT3DE content:
+minimal triangle, multi-triangle RGB scene, and ``Header`` plus triangle. Captured via
+``scripts/dev_tt3de_screenshot.py`` (default ``TriplePanelDemoApp``).
+
+.. figure:: _static/screenshots/triple_panel.svg
+   :width: 100%
+   :align: center
+   :alt: Three TT3DE Textual panels in one terminal capture
+
+   Regenerate with ``make regen-doc-screenshot`` or ``uv run --no-sync python scripts/dev_tt3de_screenshot.py ...`` after editing ``scripts/screenshot_apps/triple_panel.py`` (see Agent guidelines).
+
 
 How to use the engine
 =====================
