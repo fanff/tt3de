@@ -1,52 +1,35 @@
 # -*- coding: utf-8 -*-
+"""Taxi car 3D model loaded from OBJ + BMP (doc screenshot scene)."""
 
 from pyglm import glm
 from textual.app import App, ComposeResult
 
+from tt3de.asset_fastloader import MaterialPerfab, fast_load
 from tt3de.prefab3d import Prefab3D
 from tt3de.textual_standalone import TT3DViewStandAlone
-from tt3de.tt3de import find_glyph_indices_py
 from tt3de.tt_3dnodes import TT3DNode
 
 
-class MultiTriangleScene(TT3DViewStandAlone):
-    """Three flat-shaded triangles, no BMP assets."""
+class TaxiModelScene(TT3DViewStandAlone):
+    """Car5_Taxi OBJ with texture and a 3-axis gizmo for spatial context."""
 
     def initialize(self):
-        red = self.rc.material_buffer.add_static(
-            (200, 40, 40),
-            (80, 80, 80),
-            find_glyph_indices_py("R"),
-        )
-        green = self.rc.material_buffer.add_static(
-            (40, 200, 40),
-            (80, 80, 80),
-            find_glyph_indices_py("G"),
-        )
-        blue = self.rc.material_buffer.add_static(
-            (60, 60, 200),
-            (80, 80, 80),
-            find_glyph_indices_py("B"),
-        )
+        self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
 
         root = TT3DNode()
+        root.add_child(Prefab3D.gizmo_lines())
 
-        t1 = Prefab3D.unitary_triangle()
-        t1.material_id = red
-        t1.local_transform = glm.translate(glm.vec3(-1.15, 0.9, 0.0))
+        taxi = fast_load(
+            "models/car/Car5_Taxi.obj", reverse_uv_v=False, flip_triangles=True
+        )
+        taxi.material_id = 12
+        taxi.local_transform = glm.translate(glm.vec3(0, 0, 0))
+        root.add_child(taxi)
 
-        t2 = Prefab3D.unitary_triangle()
-        t2.material_id = green
-        t2.local_transform = glm.translate(glm.vec3(0.05, 0.9, 0.0))
-
-        t3 = Prefab3D.unitary_triangle()
-        t3.material_id = blue
-        t3.local_transform = glm.translate(glm.vec3(1.25, 0.9, 0.0))
-
-        root.add_child(t1)
-        root.add_child(t2)
-        root.add_child(t3)
         self.rc.append_root(root)
+
+        self.camera.move_at(glm.vec3(3.0, 2.5, -4.0))
+        self.camera.point_at(glm.vec3(0.0, 0.5, 0.0))
 
     def update_step(self, delta_time: float):
         pass
@@ -55,12 +38,14 @@ class MultiTriangleScene(TT3DViewStandAlone):
         pass
 
 
-class MultiTriangleDemoApp(App):
+class TaxiModelDemoApp(App):
+    """Fullscreen taxi model view."""
+
     DEFAULT_CSS = """
-    MultiTriangleDemoApp {
+    TaxiModelDemoApp {
         align: center middle;
     }
     """
 
     def compose(self) -> ComposeResult:
-        yield MultiTriangleScene(target_fps=0)
+        yield TaxiModelScene(target_fps=0)

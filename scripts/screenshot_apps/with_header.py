@@ -3,12 +3,12 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header
 
-from screenshot_apps.red_triangle import RedTriangleView
+from screenshot_apps.red_triangle import TexturedCubeView
 
 
-class RedTriangleHeaderDemoApp(App):
-    """Same scene as red triangle with Textual chrome (Header)."""
+class CubeHeaderDemoApp(App):
+    """Textured cube scene with Textual chrome (Header)."""
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield RedTriangleView(target_fps=0)
+        yield TexturedCubeView(target_fps=0)

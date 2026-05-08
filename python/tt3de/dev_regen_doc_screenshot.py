@@ -2,13 +2,16 @@
 """
 Regenerate the Sphinx static triptych SVG (development; run from repository root only).
 
-Note: ``uv run tt3de-regen-doc-screenshot`` may reinstall the editable package before
-launch. Prefer ``uv run --no-sync python scripts/dev_tt3de_screenshot.py ...``,
-``make regen-doc-screenshot``, or ``scripts/regen_doc_screenshot.{ps1,sh}`` for faster iteration.
+Usage::
+
+    uv run tt3de-regen-doc-screenshot
+
+This is the canonical way to regenerate ``source/_static/screenshots/triple_panel.svg``.
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,9 +39,14 @@ def main() -> None:
         "-o",
         str(out),
         "--width",
-        "132",
+        "200",
         "--height",
-        "28",
+        "56",
+        "--png",
     ]
-    subprocess.run(cmd, check=True, cwd=str(cwd))
+    env = os.environ.copy()
+    env["COLORTERM"] = "truecolor"
+    env.pop("NO_COLOR", None)
+    subprocess.run(cmd, check=True, cwd=str(cwd), env=env)
     print(f"wrote {out}")
+    print(f"wrote {out.with_suffix('.png')}")
