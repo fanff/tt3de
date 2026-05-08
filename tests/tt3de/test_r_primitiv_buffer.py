@@ -2,6 +2,7 @@
 import itertools
 import unittest
 
+from pyglm import glm
 from tt3de.tt3de import PrimitiveBufferPy
 
 
@@ -32,13 +33,12 @@ class Test_PrimitivesBuffer(unittest.TestCase):
             line_node_id,
             line_geometry_id,
             line_material_id,
-            line_ax,
-            line_ay,
-            line_az,
-            line_bx,
-            line_by,
-            line_bz,
-            0,
+            glm.vec4(line_ax, line_ay, line_az, 1.0),
+            glm.vec3(0.0, 0.0, 1.0),
+            glm.vec2(0.0, 0.0),
+            glm.vec4(line_bx, line_by, line_bz, 1.0),
+            glm.vec3(0.0, 0.0, 1.0),
+            glm.vec2(0.0, 0.0),
         )
 
         aprimitiv = primitive_buffer.get_primitive(0)
