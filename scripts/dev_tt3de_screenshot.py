@@ -23,6 +23,7 @@ import asyncio
 import importlib
 import importlib.util
 import os
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -31,6 +32,51 @@ from textual.app import App
 
 
 DEFAULT_APP_REF = "screenshot_apps.triple_panel:TriplePanelDemoApp"
+
+
+# JetBrains Mono webfonts are served by jsDelivr (cdnjs does not host this
+# package). We pin to the @2.304 tag for reproducible documentation builds.
+_JETBRAINS_FONT_FACE_BLOCKS = """\
+    @font-face {
+        font-family: "JetBrains Mono";
+        src: local("JetBrainsMono-Regular"),
+                url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@2.304/web/woff2/JetBrainsMono-Regular.woff2") format("woff2"),
+                url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@2.304/web/woff/JetBrainsMono-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "JetBrains Mono";
+        src: local("JetBrainsMono-Bold"),
+                url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@2.304/web/woff2/JetBrainsMono-Bold.woff2") format("woff2"),
+                url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@2.304/web/woff/JetBrainsMono-Bold.woff") format("woff");
+        font-style: normal;
+        font-weight: 700;
+    }"""
+
+
+_FIRA_FONT_FACE_RE = re.compile(
+    r'@font-face\s*\{[^}]*font-family:\s*"Fira Code"[^}]*\}'
+)
+
+
+def swap_font_to_jetbrains_mono(svg: str) -> str:
+    """
+    Rewrite Rich's default Fira Code SVG font hooks to JetBrains Mono.
+
+    Textual's ``App.export_screenshot`` does not forward Rich's ``code_format``
+    or ``font_aspect_ratio`` parameters, so we post-process the SVG: replace the
+    two contiguous Fira Code ``@font-face`` blocks and the matrix
+    ``font-family`` declaration. If the upstream template ever changes shape,
+    no replacement happens and we keep the original SVG unchanged.
+    """
+    matches = list(_FIRA_FONT_FACE_RE.finditer(svg))
+    if not matches:
+        return svg
+    first = matches[0].start()
+    last = matches[-1].end()
+    rewritten = svg[:first] + _JETBRAINS_FONT_FACE_BLOCKS + svg[last:]
+    return rewritten.replace("Fira Code, monospace", "JetBrains Mono, monospace")
 
 
 def repo_root_from_script() -> Path:
@@ -106,7 +152,8 @@ async def capture_screenshot_svg(
         await pilot.pause(0.05)
         if delay > 0:
             await asyncio.sleep(delay)
-        return app.export_screenshot(title=screenshot_title)
+        svg = app.export_screenshot(title=screenshot_title)
+        return swap_font_to_jetbrains_mono(svg)
 
 
 def main(argv: list[str] | None = None) -> int:
