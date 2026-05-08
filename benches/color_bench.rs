@@ -28,9 +28,9 @@ fn blend_f32(src: &Vec4, dst: &Vec4) -> TVec4<f32> {
     let a = src.w;
     let ia = 1.0 - a;
 
-    let r = (src.x * a + dst.x * ia);
-    let g = (src.y * a + dst.y * ia);
-    let b = (src.z * a + dst.z * ia);
+    let r = src.x * a + dst.x * ia;
+    let g = src.y * a + dst.y * ia;
+    let b = src.z * a + dst.z * ia;
     let a_out = 1.0; // or keep dst/ src etc. depending on your model
 
     TVec4::new(r, g, b, a_out)
@@ -41,9 +41,9 @@ fn blend_u8(src: TVec4<u8>, dst: TVec4<u8>) -> TVec4<u8> {
     let a = src.w as f32 / 255.0; // 0.0..=1.0
     let ia = 1.0 - a;
 
-    let cr = (src.x as f32 * a + dst.x as f32 * ia);
-    let cg = (src.y as f32 * a + dst.y as f32 * ia);
-    let cb = (src.z as f32 * a + dst.z as f32 * ia);
+    let cr = src.x as f32 * a + dst.x as f32 * ia;
+    let cg = src.y as f32 * a + dst.y as f32 * ia;
+    let cb = src.z as f32 * a + dst.z as f32 * ia;
     let a_out = 255; // or src.w/other
 
     TVec4::new(cr as u8, cg as u8, cb as u8, a_out)

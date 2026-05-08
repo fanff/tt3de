@@ -71,8 +71,6 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
 
 #[cfg(test)]
 mod tests {
-    use approx::abs_diff_eq;
-
     use super::*;
 
     #[test]

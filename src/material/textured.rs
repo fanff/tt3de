@@ -316,7 +316,7 @@ mod tests {
     use super::*;
     use crate::drawbuffer::drawbuffer::{CanvasCell, Color};
     use crate::primitivbuffer::primitiv_triangle::PTriangle3D;
-    use crate::primitivbuffer::primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveElements};
+    use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
     use crate::texturebuffer::texture_buffer::TextureBuffer;
     use crate::texturebuffer::RGBA;
     use crate::vertexbuffer::uv_buffer::UVBuffer;
