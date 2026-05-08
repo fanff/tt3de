@@ -3,7 +3,10 @@
 
 EXAMPLE_APP_REFS = (
     "screenshot_apps.triple_panel:TriplePanelDemoApp",
-    "screenshot_apps.red_triangle:RedTriangleDemoApp",
-    "screenshot_apps.multi_triangle:MultiTriangleDemoApp",
-    "screenshot_apps.with_header:RedTriangleHeaderDemoApp",
+    "screenshot_apps.red_triangle:TexturedCubeDemoApp",
+    "screenshot_apps.multi_triangle:TaxiModelDemoApp",
+    "screenshot_apps.city_scene:CityBlockDemoApp",
+    "screenshot_apps.with_header:CubeHeaderDemoApp",
+    "screenshot_apps.primitives_2d:Primitives2DDemoApp",
+    "screenshot_apps.primitives_3d:Primitives3DDemoApp",
 )

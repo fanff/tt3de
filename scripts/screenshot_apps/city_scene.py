@@ -1,25 +1,32 @@
 # -*- coding: utf-8 -*-
-"""Textured 3D cube loaded from OBJ + BMP (doc screenshot scene)."""
-
-import math
+"""City block loaded from OBJ + BMP, top-down camera (doc screenshot scene)."""
 
 from pyglm import glm
 from textual.app import App, ComposeResult
 
-from tt3de.asset_fastloader import MaterialPerfab, fast_load
+from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture
 from tt3de.textual_standalone import TT3DViewStandAlone
-from tt3de.tt3de import find_glyph_indices_py, materials, toglyphmethod
+from tt3de.tt3de import (
+    MaterialBufferPy,
+    TextureBufferPy,
+    find_glyph_indices_py,
+    materials,
+    toglyphmethod,
+)
 from tt3de.tt_3dnodes import TT3DNode
 
 
-class TexturedCubeView(TT3DViewStandAlone):
-    """A textured cube showing OBJ loading, BMP textures, and UV mapping."""
+class CityBlockScene(TT3DViewStandAlone):
+    """Town_1 OBJ with TownColor_256 texture, angled top-down view."""
 
     def initialize(self):
-        self.rc.texture_buffer, self.rc.material_buffer = MaterialPerfab.rust_set_0()
+        self.rc.material_buffer = MaterialBufferPy()
+        self.rc.texture_buffer = TextureBufferPy(32)
 
-        img: ImageTexture = fast_load("models/cube_texture.bmp")
+        self.rc.material_buffer.add_static((0, 0, 0), (0, 0, 0), 0)
+
+        img: ImageTexture = fast_load("models/cities/TownColor_256.bmp")
         tex_idx = self.rc.texture_buffer.add_texture(
             img.image_width, img.image_height, img.chained_data(), True, True
         )
@@ -42,16 +49,13 @@ class TexturedCubeView(TT3DViewStandAlone):
         )
 
         root = TT3DNode()
-        cube = fast_load("models/cube.obj", flip_triangles=True)
-        cube.material_id = mat_id
-        cube.local_transform = glm.rotate(
-            math.radians(35), glm.vec3(0, 1, 0)
-        ) * glm.rotate(math.radians(15), glm.vec3(1, 0, 0))
-        root.add_child(cube)
+        city = fast_load("models/cities/Town_1.obj", flip_triangles=True)
+        city.material_id = mat_id
+        root.add_child(city)
         self.rc.append_root(root)
 
-        self.camera.move_at(glm.vec3(1.0, 1.5, -3.5))
-        self.camera.point_at(glm.vec3(0.0, 0.3, 0.0))
+        self.camera.move_at(glm.vec3(3.0, 4.0, -3.0))
+        self.camera.point_at(glm.vec3(0.0, 0.0, 1.0))
 
     def update_step(self, delta_time: float):
         pass
@@ -60,14 +64,14 @@ class TexturedCubeView(TT3DViewStandAlone):
         pass
 
 
-class TexturedCubeDemoApp(App):
-    """Fullscreen textured cube view."""
+class CityBlockDemoApp(App):
+    """Fullscreen city block view."""
 
     DEFAULT_CSS = """
-    TexturedCubeDemoApp {
+    CityBlockDemoApp {
         align: center middle;
     }
     """
 
     def compose(self) -> ComposeResult:
-        yield TexturedCubeView(target_fps=0)
+        yield CityBlockScene(target_fps=0, vertex_buffer_size=8192)

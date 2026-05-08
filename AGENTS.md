@@ -18,20 +18,17 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 
 - The `source/` folder is a [Sphinx](https://www.sphinx-doc.org/) documentation project. Generated docs (e.g. `source/opcode_reference.md`) are written there so Sphinx can include them in the built site.
 
-- **Screenshots tracked in Sphinx static assets**: the triptych used in the docs is [`source/_static/screenshots/triple_panel.svg`](source/_static/screenshots/triple_panel.svg). After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate (requires a built extension once, same as demos). From the repository root prefer a shortcut that skips **`uv`’s sync step** — otherwise **`uv run tt3de-regen-doc-screenshot`** keeps reinstalling the maturin editable and can look like a full rebuild:
+- **Screenshots tracked in Sphinx static assets**: the triptych used in the docs is [`source/_static/screenshots/triple_panel.svg`](source/_static/screenshots/triple_panel.svg). After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate from the repository root:
 
   ```bash
-  uv run maturin develop       # once, or after Rust/Python binding changes
-
-  uv run --no-sync python scripts/dev_tt3de_screenshot.py \
-    -o source/_static/screenshots/triple_panel.svg --width 132 --height 28
+  uv run tt3de-regen-doc-screenshot
   ```
+
+  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width` / `--height` and output path.
 
   Other shortcuts with the same effect: **`make regen-doc-screenshot`**, **`scripts/regen_doc_screenshot.sh`**, **`scripts/regen_doc_screenshot.ps1`**.
 
-  The console script **`tt3de-regen-doc-screenshot`** ([`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py)) mirrors that command but is registered on the package; **`uv run tt3de-regen-doc-screenshot`** may sync before launch (heavy on mixed Rust/Python projects).
-
-  GitHub Actions documentation workflow regenerates this SVG **with `--no-sync`** after `maturin develop`, before **`sphinx-build`**. Commit updated SVG when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
+  GitHub Actions documentation workflow regenerates this SVG after `maturin develop`, before **`sphinx-build`**. Commit updated SVG when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
 
 ## Conventions
 

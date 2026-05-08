@@ -7,4 +7,4 @@ Set-Location $repoRoot
 $script = Join-Path $PSScriptRoot 'dev_tt3de_screenshot.py'
 uv run --no-sync python $script `
     -o source/_static/screenshots/triple_panel.svg `
-    --width 132 --height 28
+    --width 200 --height 56
