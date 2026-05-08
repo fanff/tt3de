@@ -103,7 +103,7 @@ mod tests {
         // but Instr has no "copy" trait, so we need to do it
         // with a loop ono a vec
         let mut uninit_rest: Vec<Instr> = Vec::with_capacity(256 - bytecode.len());
-        for i in 0..(256 - bytecode.len()) {
+        for _i in 0..(256 - bytecode.len()) {
             uninit_rest.push(Instr {
                 opcode: OP_RET,
                 dst: 0,

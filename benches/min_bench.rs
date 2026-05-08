@@ -1,4 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn min_with_array(a: u16, b: u16, c: u16) -> u16 {
     [a, b, c].iter().copied().min().unwrap()
