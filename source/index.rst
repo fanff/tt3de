@@ -38,7 +38,7 @@ The composite below shows two columns with TT3DE content:
 a taxi car model (3D OBJ with texture) and a city block viewed from above. Captured via
 ``uv run tt3de-regen-doc-screenshot`` (default ``TriplePanelDemoApp``).
 
-.. figure:: _static/screenshots/triple_panel.svg
+.. figure:: _static/screenshots/triple_panel.png
    :width: 100%
    :align: center
    :alt: Two TT3DE Textual panels in one terminal capture

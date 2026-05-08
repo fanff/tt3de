@@ -11,6 +11,7 @@ This is the canonical way to regenerate ``source/_static/screenshots/triple_pane
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -43,6 +44,9 @@ def main() -> None:
         "56",
         "--png",
     ]
-    subprocess.run(cmd, check=True, cwd=str(cwd))
+    env = os.environ.copy()
+    env["COLORTERM"] = "truecolor"
+    env.pop("NO_COLOR", None)
+    subprocess.run(cmd, check=True, cwd=str(cwd), env=env)
     print(f"wrote {out}")
     print(f"wrote {out.with_suffix('.png')}")

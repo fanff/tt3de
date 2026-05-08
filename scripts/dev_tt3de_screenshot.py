@@ -122,7 +122,7 @@ def svg_to_png(svg_text: str, png_path: Path, *, scale: float = 2.0) -> None:
     except ImportError as exc:
         raise SystemExit(
             "cairosvg is required for --png conversion. "
-            "Install it with: uv pip install cairosvg"
+            "Install it with: uv add --dev cairosvg"
         ) from exc
 
     png_path.parent.mkdir(parents=True, exist_ok=True)
@@ -207,6 +207,11 @@ def main(argv: list[str] | None = None) -> int:
     cwd = Path(ns.chdir).resolve() if ns.chdir else repo_root_from_script()
     if not cwd.is_dir():
         raise SystemExit(f"--chdir is not a directory: {cwd}")
+
+    # Force Rich/Textual to always render with 24-bit color regardless of
+    # how this script is invoked (direct, subprocess, CI, etc.).
+    os.environ["COLORTERM"] = "truecolor"
+    os.environ.pop("NO_COLOR", None)
 
     scripts_insert = str(scripts_dir())
     prev_cwd = Path.cwd()

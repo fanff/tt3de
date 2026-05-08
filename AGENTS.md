@@ -18,17 +18,25 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 
 - The `source/` folder is a [Sphinx](https://www.sphinx-doc.org/) documentation project. Generated docs (e.g. `source/opcode_reference.md`) are written there so Sphinx can include them in the built site.
 
-- **Screenshots tracked in Sphinx static assets**: the triptych used in the docs is [`source/_static/screenshots/triple_panel.svg`](source/_static/screenshots/triple_panel.svg). After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate from the repository root:
+- **Screenshots tracked in Sphinx static assets**: the triptych used in the docs lives under `source/_static/screenshots/`. After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate from the repository root:
 
   ```bash
   uv run tt3de-regen-doc-screenshot
   ```
 
-  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width` / `--height` and output path.
+  This produces both `triple_panel.svg` and `triple_panel.png` (via `cairosvg`). The Sphinx docs reference the PNG for broader compatibility.
+
+  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width` / `--height`, `--png`, and output path.
 
   Other shortcuts with the same effect: **`make regen-doc-screenshot`**, **`scripts/regen_doc_screenshot.sh`**, **`scripts/regen_doc_screenshot.ps1`**.
 
-  GitHub Actions documentation workflow regenerates this SVG after `maturin develop`, before **`sphinx-build`**. Commit updated SVG when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
+  GitHub Actions documentation workflow regenerates these after `maturin develop`, before **`sphinx-build`**. Commit updated screenshots when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
+
+## Dependencies
+
+- **Runtime (`[project] dependencies`)**: keep absolutely minimal — every addition here is pulled in by every user. Only add a package when there is no reasonable way to avoid it.
+- **Dev (`[dependency-groups] dev`)**: adding tooling, linters, doc-build helpers, and test utilities here is fine. Use `uv add --dev <pkg>` (never manual edits to the list).
+- When proposing a new runtime dependency, justify the need and check whether an existing dependency already covers the use case.
 
 ## Conventions
 
