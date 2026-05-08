@@ -80,6 +80,14 @@ You can create material entries dynamically via ``material_buffer``:
 2D world
 --------
 
+.. figure:: _static/screenshots/primitives_2d.svg
+   :width: 100%
+   :align: center
+   :alt: 2D primitives: points, lines, polygon, and textured unit squares
+
+   Points, lines, a triangle polygon, and unit squares with different materials
+   (:source:`source <scripts/screenshot_apps/primitives_2d.py>`).
+
 Core classes
 ^^^^^^^^^^^^
 
@@ -146,6 +154,14 @@ Use ``update_step`` to update transform/materials each frame:
 
 3D world
 --------
+
+.. figure:: _static/screenshots/primitives_3d.svg
+   :width: 100%
+   :align: center
+   :alt: 3D primitives: triangle, square, circle, gizmo lines, and loaded OBJ model
+
+   Prefab triangle, square, circle, axis gizmo, and a loaded OBJ cube
+   (:source:`source <scripts/screenshot_apps/primitives_3d.py>`).
 
 Core classes
 ^^^^^^^^^^^^

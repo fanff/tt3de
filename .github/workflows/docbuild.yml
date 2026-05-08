@@ -48,6 +48,10 @@ jobs:
           uv run --no-sync python scripts/dev_tt3de_screenshot.py \
             -o source/_static/screenshots/triple_panel.svg --width 200 --height 56
 
+      - name: Generate doc example screenshots
+        run: |
+          uv run --no-sync python scripts/gen_doc_example_screenshots.py
+
       - name: Build Sphinx HTML
         run: |
           uv run sphinx-build -b html source build/html
