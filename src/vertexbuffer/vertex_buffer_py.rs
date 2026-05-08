@@ -1,7 +1,7 @@
 use nalgebra_glm::{Mat4, Vec2, Vec3, Vec4};
 use pyo3::{
     prelude::*,
-    types::{PyFunction, PyTuple},
+    types::PyTuple,
 };
 
 use crate::{

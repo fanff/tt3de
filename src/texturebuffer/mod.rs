@@ -1,9 +1,7 @@
 use crate::utils::convert_tuple_texture_rgba;
-use nalgebra::{Const, VecStorage};
-use nalgebra_glm::Vec4;
 use pyo3::{
     pyclass, pymethods,
-    types::{PyAnyMethods, PyList, PyTuple},
+    types::{PyAnyMethods, PyList},
     Bound, Py, PyAny, Python,
 };
 
@@ -15,9 +13,7 @@ pub mod texture_buffer;
 use texture_buffer::*;
 
 pub mod toglyph_methods_py;
-use toglyph_methods_py::*;
 pub mod toglyph_methods;
-use toglyph_methods::*;
 
 #[derive(Clone, Copy)]
 pub struct RGBA {
@@ -318,7 +314,7 @@ impl TextureBufferPy {
         repeat_width: bool,
         repeat_height: bool,
     ) -> usize {
-        let pixel_iter = pixels.bind(py).downcast::<PyList>().unwrap();
+        let pixel_iter = pixels.bind(py).cast::<PyList>().unwrap();
         let texture_iter = TextureIterator::new(py, pixel_iter);
 
         self.data

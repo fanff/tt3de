@@ -51,6 +51,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     );
 }
 
+#[allow(dead_code)]
 fn barycentric_coord(
     pa: &PointInfo<f32>,
     pb: &PointInfo<f32>,
@@ -78,6 +79,7 @@ fn barycentric_coord(
 
     (w1, w2, w3)
 }
+#[allow(dead_code)]
 fn barycentric_coord_shift(
     pa: &PointInfo<f32>,
     pb: &PointInfo<f32>,

@@ -1,7 +1,5 @@
 use pyo3::{prelude::*, types::PyDict};
 
-use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
-
 #[derive(Debug, Clone, Copy)]
 pub struct GeomReferences {
     pub node_id: usize,

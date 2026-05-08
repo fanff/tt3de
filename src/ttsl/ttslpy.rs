@@ -1,9 +1,8 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
-use nalgebra_glm::{Vec2, Vec3, Vec4};
 use pyo3::{
     prelude::*,
-    types::{PyByteArray, PyBytes, PyDict, PyDictMethods, PyList, PyTuple},
+    types::{PyBytes, PyDict},
 };
 
 

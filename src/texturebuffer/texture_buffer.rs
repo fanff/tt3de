@@ -73,7 +73,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
             TextureType::Fixed(_) => (SIZE, SIZE),
             TextureType::Atlas(_) => (SIZE, SIZE),
             TextureType::Noise(_) => (SIZE, SIZE),
-            TextureType::AtlasCustom(texture_atlas) => todo!(),
+            TextureType::AtlasCustom(_texture_atlas) => todo!(),
         }
     }
     pub fn add_texture_from_iter<I: IntoIterator<Item = RGBA>>(

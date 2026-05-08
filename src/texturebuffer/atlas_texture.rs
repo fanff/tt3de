@@ -1,4 +1,4 @@
-use crate::texturebuffer::{Texture, TextureCustom, UvMapper, RGBA};
+use crate::texturebuffer::{UvMapper, RGBA};
 
 #[derive(Clone)]
 pub struct TextureAtlas<T, const SIZE: usize>

@@ -1,7 +1,7 @@
 use crate::raster;
 use raster::vertex::Vertex;
 
-use super::primitivbuffer::{PointInfo, PrimitivReferences};
+use super::primitivbuffer::PrimitivReferences;
 
 #[derive(Clone, Copy)]
 pub struct PTriangle3D {

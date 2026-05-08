@@ -2,7 +2,7 @@ use nalgebra_glm::{vec2, Vec3};
 
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
-use super::{primitivbuffer::PrimitivReferences, rect::PRect, Vertex};
+use super::rect::PRect;
 
 pub fn raster_prect<const DEPTHCOUNT: usize>(
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,

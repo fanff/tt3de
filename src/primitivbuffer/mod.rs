@@ -199,7 +199,7 @@ fn to_dict(py: Python, primitive: &PrimitiveElements) -> Py<PyDict> {
     dict.into()
 }
 
-fn into_dict(py: Python, primitive_ref: &PrimitivReferences, dict: &Bound<PyDict>) {
+fn into_dict(_py: Python, primitive_ref: &PrimitivReferences, dict: &Bound<PyDict>) {
     dict.set_item("node_id", primitive_ref.node_id).unwrap();
     dict.set_item("geometry_id", primitive_ref.geometry_id)
         .unwrap();
@@ -209,6 +209,7 @@ fn into_dict(py: Python, primitive_ref: &PrimitivReferences, dict: &Bound<PyDict
         .unwrap();
 }
 
+#[allow(dead_code)]
 fn point_info_into_dict(py: Python, pi: &PointInfo<f32>) -> Py<PyDict> {
     let dict = PyDict::new(py);
     dict.set_item("row", pi.row).unwrap();

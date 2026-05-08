@@ -1,6 +1,6 @@
 use pyo3::{
     prelude::*,
-    types::{PyFunction, PyTuple},
+    types::PyTuple,
 };
 
 use crate::{

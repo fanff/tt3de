@@ -1,5 +1,4 @@
-use nalgebra::{ArrayStorage, RawStorage};
-use nalgebra_glm::{Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
+use nalgebra_glm::{Number, TVec2};
 
 #[derive(Debug)]
 pub struct UVBuffer<UVACC: Number> {
