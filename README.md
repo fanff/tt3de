@@ -34,27 +34,22 @@ To set up a development version of this engine:
     ```bash
     git clone <repo_url>
     ```
-2. If you have Poetry, run:
+2. Install uv (if needed):
     ```bash
-    poetry install --with dev --no-root
+    pip install uv
     ```
-   This will set up the dependencies.
-3. If you don't have Poetry, follow these steps:
+3. Create the environment and install project + dev dependencies:
     ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    python -m pip install poetry
-    # Now you have Poetry in the virtual environment
-    poetry install
+    uv sync --group dev
     ```
 4. Compile the Rust version locally:
 
     ```bash
-    poetry run maturin develop --profile release
+    uv run maturin develop --profile release
     ```
 5. Check the demo:
     ```bash
-    PYTHONPATH=python poetry run python demos/3d/some_models.py
+    PYTHONPATH=python uv run python demos/3d/some_models.py
     ```
 
 6. Run the Rust unit tests:
@@ -63,7 +58,7 @@ To set up a development version of this engine:
     ```
 7. Run the Python unit tests:
     ```bash
-    poetry run pytest
+    uv run pytest
     ```
 
 

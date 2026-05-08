@@ -24,10 +24,10 @@ Run one of the demos from the project root (with ``PYTHONPATH=python`` set):
 
 .. code-block:: bash
 
-   poetry run python demos/2d/standalone.py
-   poetry run python demos/2d/material_test.py
-   poetry run python demos/3d/triangle_test.py
-   poetry run python demos/3d/some_models.py
+   uv run python demos/2d/standalone.py
+   uv run python demos/2d/material_test.py
+   uv run python demos/3d/triangle_test.py
+   uv run python demos/3d/some_models.py
 
 For a smooth experience, prefer terminals that handle high refresh well (see project README terminal notes).
 
