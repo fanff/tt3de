@@ -22,6 +22,7 @@ from tt3de.ttsl.ttsl_assembly import (
     is_operand_ssavar,
     CFGNode,
     build_cfg_from_ir,
+    ConstantPool,
 )
 
 PRELUDE_GLM_IMPORT = """
@@ -128,7 +129,7 @@ class TTSLCompilerContext:
         # place holder for later passes
         self.cfg: CFG | None = None
         self.ssa_var_definitions: Dict[SSAVarID, Set[NodeID]] = {}
-        self.const_pool: dict[int, Tuple[Any, IRType]] = {}
+        self.const_pool: ConstantPool = ConstantPool()
 
         # Predefine some variables
         for name, ty in self.always_present_variables_at_init().items():
@@ -233,11 +234,30 @@ class TTSLCompilerContext:
 
     def compile_stmt(self, node):
         if isinstance(node, ast.Assign):
-            raise NotImplementedError("Use AnnAssign for typed assignments")
+            if not len(node.targets) == 1:
+                raise CompileError(node, "Multiple assignment targets not supported")
+            target = node.targets[0]
+            value = node.value
+            value_type = self.type_of(value)
+            t = self.compile_expr(target, forced_type=value_type)
+            v = self.compile_expr(value, forced_type=value_type)
+            # emit store from v to t
+            comment = f"r{t.id}:{value_type} <- r{v.id}:{value_type}"
+            self.emit_1(OpCodes.STORE, v, t, comment=comment)
+            # raise NotImplementedError("Use AnnAssign for typed assignments")
         elif isinstance(node, ast.AnnAssign):
             target = node.target
+
             value = node.value
+            value_type = self.type_of(value)
+
             ty = type_of_annotation(node.annotation)
+
+            if not (value_type == ty):
+                raise CompileError(
+                    node,
+                    f"Type mismatch in assignment: expected {ty}, got {value_type}",
+                )
 
             t = self.compile_expr(target, forced_type=ty)
             v = self.compile_expr(value, forced_type=ty)

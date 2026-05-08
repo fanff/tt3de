@@ -153,6 +153,47 @@ class IRInstr:
             return self.dst.ty
         return None
 
+    @classmethod
+    def binop(
+        cls, op: OpCodes, dest: Temp, left: IROperand, right: IROperand
+    ) -> "IRInstr":
+        return IRInstr(
+            op=op,
+            dst=dest,
+            src1=left,
+            src2=right,
+            src3=None,
+            src4=None,
+            imm=None,
+            label=None,
+            comment=f"{op} into temp {dest.id}",
+        )
+
+    @classmethod
+    def load_const_instr(cls, dest: Temp, const_id: int) -> "IRInstr":
+        return IRInstr(
+            op=OpCodes.LOAD_CONST,
+            dst=dest,
+            src1=None,
+            src2=None,
+            src3=None,
+            src4=None,
+            imm=const_id,
+            label=None,
+            comment=f"Load const {const_id} into temp {dest.id}",
+        )
+
+
+class ConstantPool(dict[int, tuple[Any, IRType]]):
+    # Dict[int, Tuple[Any, IRType]]
+    def lookup_or_add(self, const: Any, const_type: IRType) -> int:
+        for idx, (c, t) in self.items():
+            if c == const and t == const_type:
+                return idx
+        new_idx = len(self)
+        self[new_idx] = (const, const_type)
+        return new_idx
+
 
 class IRProgram:
     instrs: list[IRInstr]
@@ -163,7 +204,7 @@ class IRProgram:
         self.instrs = []
 
         # index -> value
-        self.const_pool: dict[int, Tuple[Any, IRType]] = {}
+        self.const_pool: ConstantPool = ConstantPool()
 
         # keep track of spans that starts with a label and end with either
         # a label, or end of program, or a jump

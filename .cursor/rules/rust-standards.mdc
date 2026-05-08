@@ -1,0 +1,14 @@
+---
+description: Rust safety and performance standards for tt3de core
+globs: **/*.rs
+alwaysApply: false
+---
+
+# Rust Standards
+
+- Preserve zero-cost data paths in hot raster/geometry loops; avoid unnecessary allocations in frame-time code.
+- Keep `mod.rs` exports explicit and minimal to avoid leaking unstable internals.
+- Validate index math and buffer bounds before unsafe operations or pointer-style access.
+- Prefer small, composable functions with clear ownership/borrowing boundaries over monolithic render functions.
+- Keep Python bindings (`*_py.rs`) thin and focused on argument conversion plus error mapping.
+- Document assumptions in concise comments when math or memory layout is non-obvious.

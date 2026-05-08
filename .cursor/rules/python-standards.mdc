@@ -1,0 +1,14 @@
+---
+description: Python coding and integration standards for tt3de
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Standards
+
+- Prefer typed function signatures and explicit return types for new/edited public APIs.
+- Keep rendering/runtime logic deterministic; avoid hidden global state and side effects at import time.
+- For Python wrappers over Rust modules, keep argument names, defaults, and behavior aligned with Rust-backed implementation.
+- Reuse existing modules under `python/tt3de/` instead of creating parallel utility layers.
+- Raise specific exceptions with actionable messages; avoid broad `except Exception` unless re-raising with context.
+- For demos in `demos/`, optimize readability and stable behavior over micro-optimizations.
