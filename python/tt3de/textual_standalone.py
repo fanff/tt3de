@@ -49,6 +49,7 @@ class TT3DViewStandAlone(Container):
         material_buffer_size=256,
         # parameters for the camera
         use_left_hand_perspective=True,
+        zoom_2d: float = 1.0,
     ):
         super().__init__(
             *children, name=name, id=id, classes=classes, disabled=disabled
@@ -69,7 +70,7 @@ class TT3DViewStandAlone(Container):
             use_left_hand_perspective=use_left_hand_perspective,
         )
         self.camera.set_yaw_pitch(init_yaw, init_pitch)
-        self.camera.set_zoom_2D(1.0)
+        self.camera.set_zoom_2D(zoom_2d)
         self.rc = RustRenderContext(
             90,
             90,

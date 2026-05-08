@@ -2,6 +2,10 @@
 
 A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to render 3D objects using ASCII art.
 
+<p align="center">
+  <img src="source/_static/screenshots/triple_panel.svg" alt="TT3DE demo — taxi car and city block rendered in a terminal" width="100%">
+</p>
+
 ## Features
 
 * **Rendering Primitives**: Supports points, lines, and triangles in both 2D and 3D contexts.

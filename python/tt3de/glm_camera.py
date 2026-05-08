@@ -203,11 +203,9 @@ class GLMCamera:
 
     def point_at(self, pos: glm.vec3):
         """Point the camera at a position in 3D space."""
-        # Calculate the direction the camera is pointing
-        direction = pos - self._pos
+        direction = glm.normalize(pos - self._pos)
 
-        # Calculate the pitch and yaw angles from the direction
-        self.pitch = math.asin(-direction.y)
+        self.pitch = math.asin(max(-1.0, min(1.0, -direction.y)))
         self.yaw = math.atan2(direction.x, direction.z)
 
         self.set_yaw_pitch(self.yaw, self.pitch)

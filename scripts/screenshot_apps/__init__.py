@@ -1,0 +1,10 @@
+# -*- coding: utf-8 -*-
+"""Small Textual `App` examples for SVG screenshots (dev-only)."""
+
+EXAMPLE_APP_REFS = (
+    "screenshot_apps.triple_panel:TriplePanelDemoApp",
+    "screenshot_apps.red_triangle:TexturedCubeDemoApp",
+    "screenshot_apps.multi_triangle:TaxiModelDemoApp",
+    "screenshot_apps.city_scene:CityBlockDemoApp",
+    "screenshot_apps.with_header:CubeHeaderDemoApp",
+)
