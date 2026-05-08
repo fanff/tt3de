@@ -203,13 +203,16 @@ pub fn clip_triangle_to_plane<const INNER_SIZE: usize>(
 /// # Example
 ///
 /// ```
+/// use nalgebra_glm::{Vec4, Vec2};
+/// use tt3de::primitiv_building::triangle_clipping::{clip_triangle_to_clip_space, SmallTriangleBuffer};
+///
 /// let pa = Vec4::new(1.0, 1.0, 1.0, 1.0);
 /// let pb = Vec4::new(-1.0, -1.0, 1.0, 1.0);
 /// let pc = Vec4::new(0.0, 1.0, 1.0, 1.0);
 /// let uva = Vec2::new(0.0, 0.0);
 /// let uvb = Vec2::new(1.0, 0.0);
 /// let uvc = Vec2::new(0.5, 1.0);
-/// let mut output_buffer = TriangleBuffer::new();
+/// let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
 /// clip_triangle_to_clip_space(&pa, &pb, &pc, (&uva, &uvb, &uvc), &mut output_buffer);
 /// ```
 pub fn clip_triangle_to_clip_space(
@@ -221,12 +224,12 @@ pub fn clip_triangle_to_clip_space(
 ) {
     // defining the plane of the clipping
     let planes = [
-        (Vec4::new(0.0, 0.0, -1.0, 1.0), 1), // far
-        (Vec4::new(-1.0, 0.0, 0.0, 1.0), 1), //
-        (Vec4::new(1.0, 0.0, 0.0, 1.0), 1),  //
-        (Vec4::new(0.0, -1.0, 0.0, 1.0), 1), //
-        (Vec4::new(0.0, 1.0, 0.0, 1.0), 1),  //
-        (Vec4::new(0.0, 0.0, 1.0, 0.0), 0), // near// will use the full clipping method, generating more triangle potentially
+        (Vec4::new(0.0, 0.0, -1.0, 1.0), 0), // far:    z ≤ w
+        (Vec4::new(-1.0, 0.0, 0.0, 1.0), 0), // right:  x ≤ w
+        (Vec4::new(1.0, 0.0, 0.0, 1.0), 0),  // left:   x ≥ -w
+        (Vec4::new(0.0, -1.0, 0.0, 1.0), 0), // top:    y ≤ w
+        (Vec4::new(0.0, 1.0, 0.0, 1.0), 0),  // bottom: y ≥ -w
+        (Vec4::new(0.0, 0.0, 1.0, 0.0), 0),  // near:   z ≥ 0
     ];
 
     output_buffer.clear();
@@ -310,6 +313,7 @@ mod tests_clip_triangle_to_space {
         };
     }
     const UVACCURACY_TEST: f32 = 0.001;
+    const VERTEX_EPS: f32 = 0.001;
     use super::*;
 
     #[test]
@@ -361,42 +365,39 @@ mod tests_clip_triangle_to_space {
 
         // Expect the triangle to be clipped into 4 triangles
         let clipped_triangle = output_buffer.content[0];
-        assert_eq!(clipped_triangle[0], pa);
-        assert_eq!(clipped_triangle[1], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(0.0, 1.0, 0.0, 1.0));
-        // testing the uv calculation of  sub triangle
+        assert_eq_vec3!(clipped_triangle[0], pa, VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[1], Vec4::new(1.0, 0.0, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.0, 1.0, 0.0, 1.0), VERTEX_EPS);
         let clipped_uvs = output_buffer.uvs[0];
-        assert_eq_vec2!(clipped_uvs[0], *uvs.0, 0.001);
+        assert_eq_vec2!(clipped_uvs[0], *uvs.0, UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.666_666_7, 0.0), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.0, 0.666_666_7), UVACCURACY_TEST);
 
         // triangle 1
         let clipped_triangle = output_buffer.content[1];
-        assert_eq!(clipped_triangle[0], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[1], Vec4::new(0.0, 1.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(0.3333333, 1.0, 0.0, 1.0));
-        // testing the uv calculation of  sub triangle
+        assert_eq_vec3!(clipped_triangle[0], Vec4::new(1.0, 0.0, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[1], Vec4::new(0.0, 1.0, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.3333333, 1.0, 0.0, 1.0), VERTEX_EPS);
         let clipped_uvs = output_buffer.uvs[1];
         assert_eq_vec2!(clipped_uvs[0], Vec2::new(0.666667, 0.0), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.0, 0.666667), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.2222, 0.666667), UVACCURACY_TEST);
 
-        //triangle 2
+        // triangle 2
         let clipped_triangle = output_buffer.content[2];
-        assert_eq!(clipped_triangle[0], Vec4::new(1.0, 0.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[1], Vec4::new(1.0, 0.5, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(0.3333333, 1.0, 0.0, 1.0));
-        // testing the uv calculation of  sub triangle
+        assert_eq_vec3!(clipped_triangle[0], Vec4::new(1.0, 0.0, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[1], Vec4::new(1.0, 0.5, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.3333333, 1.0, 0.0, 1.0), VERTEX_EPS);
         let clipped_uvs = output_buffer.uvs[2];
         assert_eq_vec2!(clipped_uvs[0], Vec2::new(0.666667, 0.0), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.66667, 0.33333), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[2], Vec2::new(0.2222, 0.666667), UVACCURACY_TEST);
 
+        // triangle 3
         let clipped_triangle = output_buffer.content[3];
-        assert_eq!(clipped_triangle[0], Vec4::new(1.0, 0.5, 0.0, 1.0));
-        assert_eq!(clipped_triangle[1], Vec4::new(0.3333333, 1.0, 0.0, 1.0));
-        assert_eq!(clipped_triangle[2], Vec4::new(0.5, 1.0, 0.0, 1.0));
-        // testing the uv calculation of  sub triangle
+        assert_eq_vec3!(clipped_triangle[0], Vec4::new(1.0, 0.5, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[1], Vec4::new(0.3333333, 1.0, 0.0, 1.0), VERTEX_EPS);
+        assert_eq_vec3!(clipped_triangle[2], Vec4::new(0.5, 1.0, 0.0, 1.0), VERTEX_EPS);
         let clipped_uvs = output_buffer.uvs[3];
         assert_eq_vec2!(clipped_uvs[0], Vec2::new(0.66667, 0.33333), UVACCURACY_TEST);
         assert_eq_vec2!(clipped_uvs[1], Vec2::new(0.2222, 0.666667), UVACCURACY_TEST);
