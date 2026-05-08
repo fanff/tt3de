@@ -42,9 +42,9 @@ impl RGBA {
     pub fn mult_albedo(&self, factor: f32) -> Self {
         let f = factor.clamp(0.0, 1.0);
         RGBA {
-            r: (self.r as f32 * f) as u8,
-            g: (self.g as f32 * f) as u8,
-            b: (self.b as f32 * f) as u8,
+            r: (self.r as f32 * f).round() as u8,
+            g: (self.g as f32 * f).round() as u8,
+            b: (self.b as f32 * f).round() as u8,
             a: self.a,
         }
     }
@@ -198,12 +198,10 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
             v.clamp(0.0, 1.0)
         };
 
-        // Convert u, v to texture coordinates
-        let x = (u_val * self.width as f32) as usize;
-        let y = (v_val * self.height as f32) as usize;
+        let x = ((u_val * self.width as f32) as usize).min(self.width - 1);
+        let y = ((v_val * self.height as f32) as usize).min(self.height - 1);
 
         self.texture.data[y * self.width + x]
-        //self.texture.data[x * self.height + y]
     }
 }
 

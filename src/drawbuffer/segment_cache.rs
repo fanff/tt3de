@@ -46,7 +46,7 @@ impl SegmentCache {
     /// # Examples
     ///
     /// ```
-    /// use rtt3de::drawbuffer::segment_cache::SegmentCache;
+    /// use tt3de::drawbuffer::segment_cache::SegmentCache;
     /// let value = 200;
     /// let bit_size = 4;
     /// assert_eq!(SegmentCache::reduce_value(value, bit_size),12 );

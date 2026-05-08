@@ -13,12 +13,14 @@ use super::{primitivbuffer::PrimitivReferences, Vertex};
 ///
 /// The following ASCII diagram illustrates the vertex positions:
 ///
+/// ```text
 ///         pa
 ///         /\
 ///        /  \
 ///       /    \
 ///      /      \
 ///    pb--------pc
+/// ```
 ///
 /// # Parameters
 ///
@@ -71,12 +73,14 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
 ///
 /// The following ASCII diagram illustrates the vertex positions:
 ///
+/// ```text
 ///           pa-----------pb
 ///             \         /
 ///              \       /
 ///               \     /
 ///                \   /
 ///                  pc
+/// ```
 /// # Parameters
 ///
 /// - `drawing_buffer`: A mutable reference to the drawing buffer used for rendering.
