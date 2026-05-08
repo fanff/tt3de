@@ -723,8 +723,8 @@ let a_val = *base_v4.add(a as usize);
 
 
                 CMP_GT_F32 => {
-                    unsafe { let base_f32_ = regs.f32_.as_mut_ptr();
-let base_bool_ = regs.bool_.as_mut_ptr();
+                    unsafe { let base_bool_ = regs.bool_.as_mut_ptr();
+let base_f32_ = regs.f32_.as_mut_ptr();
 let a_val = *base_f32_.add(a as usize);
 let b_val = *base_f32_.add(b as usize);
 *base_bool_.add(dst as usize) = a_val > b_val;
@@ -734,8 +734,8 @@ let b_val = *base_f32_.add(b as usize);
 
 
                 CMP_GTE_F32 => {
-                    unsafe { let base_f32_ = regs.f32_.as_mut_ptr();
-let base_bool_ = regs.bool_.as_mut_ptr();
+                    unsafe { let base_bool_ = regs.bool_.as_mut_ptr();
+let base_f32_ = regs.f32_.as_mut_ptr();
 let a_val = *base_f32_.add(a as usize);
 let b_val = *base_f32_.add(b as usize);
 *base_bool_.add(dst as usize) = a_val >= b_val;
@@ -745,8 +745,8 @@ let b_val = *base_f32_.add(b as usize);
 
 
                 CMP_GT_I32 => {
-                    unsafe { let base_i32_ = regs.i32_.as_mut_ptr();
-let base_bool_ = regs.bool_.as_mut_ptr();
+                    unsafe { let base_bool_ = regs.bool_.as_mut_ptr();
+let base_i32_ = regs.i32_.as_mut_ptr();
 let a_val = *base_i32_.add(a as usize);
 let b_val = *base_i32_.add(b as usize);
 *base_bool_.add(dst as usize) = a_val > b_val;
@@ -756,8 +756,8 @@ let b_val = *base_i32_.add(b as usize);
 
 
                 CMP_GTE_I32 => {
-                    unsafe { let base_i32_ = regs.i32_.as_mut_ptr();
-let base_bool_ = regs.bool_.as_mut_ptr();
+                    unsafe { let base_bool_ = regs.bool_.as_mut_ptr();
+let base_i32_ = regs.i32_.as_mut_ptr();
 let a_val = *base_i32_.add(a as usize);
 let b_val = *base_i32_.add(b as usize);
 *base_bool_.add(dst as usize) = a_val >= b_val;
