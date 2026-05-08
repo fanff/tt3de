@@ -42,11 +42,9 @@ def main() -> None:
         "200",
         "--height",
         "56",
-        "--png",
     ]
     env = os.environ.copy()
     env["COLORTERM"] = "truecolor"
     env.pop("NO_COLOR", None)
     subprocess.run(cmd, check=True, cwd=str(cwd), env=env)
     print(f"wrote {out}")
-    print(f"wrote {out.with_suffix('.png')}")
