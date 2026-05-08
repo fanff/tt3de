@@ -15,7 +15,7 @@ use segment_cache::*;
 
 #[pyclass]
 pub struct DrawingBufferPy {
-    pub db: DrawBuffer<4, f32>,
+    pub db: DrawBuffer<2, f32>,
     max_row: usize,
     max_col: usize,
     layer_count: usize,
