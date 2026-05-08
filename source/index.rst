@@ -99,3 +99,4 @@ Simple example on how to use the engine:
    low_level_api
    ttsl
    ttsl_compiler
+   opcode_reference
