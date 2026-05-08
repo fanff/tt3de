@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import subprocess
 from typing import List
+
 from tt3de.ttsl.ttsl_assembly import IRType, OpCodes
 
 IRTYPE_TO_REGISTER_NAME = {
@@ -673,8 +675,14 @@ def main() -> None:
 
     # print(rust_opcode_file_content)
 
-    with open("src/ttsl/opcodes.rs", "w") as f:
+    rust_opcode_path = "src/ttsl/opcodes.rs"
+    with open(rust_opcode_path, "w") as f:
         f.write(rust_opcode_file_content)
+
+    subprocess.run(
+        ["rustfmt", rust_opcode_path],
+        check=True,
+    )
 
     op_code_definitions_statement_py = [
         f"""{form['name']} = {form['opcode_index']}""" for form in all_generated_forms
