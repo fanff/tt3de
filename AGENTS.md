@@ -8,11 +8,15 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 - **Rust check (all targets)**: `cargo check --all-targets` — use this to surface all warnings, including from tests and benchmarks.
 - **Rust tests**: `cargo test`
 - **Python tests**: `uv run pytest`
-- **Regenerate TTSL opcodes**: `uv run tt3de-gen-opcodes`
+- **Regenerate TTSL opcodes**: `uv run tt3de-gen-opcodes` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`.
 
 ## Platform Notes
 
 - On Windows/PowerShell, redirect cargo stderr with: `cmd /c "cargo check --all-targets 2> output.txt"` (PowerShell `2>&1` piping mangles cargo output).
+
+## Documentation
+
+- The `source/` folder is a [Sphinx](https://www.sphinx-doc.org/) documentation project. Generated docs (e.g. `source/opcode_reference.md`) are written there so Sphinx can include them in the built site.
 
 ## Conventions
 

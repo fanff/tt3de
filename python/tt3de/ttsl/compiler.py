@@ -1605,7 +1605,7 @@ def build_layout_with_fallthrough(cfg: CFG, rpo: List[int]) -> List[int]:
 
 class PassToByteCode(CompilationPass):
     def run(self, rar: RegisterAllocationResult) -> List[List[int]]:
-        self.all_ops = generate_all_forms()
+        self.all_ops = [f for cat in generate_all_forms() for f in cat.forms]
 
         ttsl_compiler = self.ttsl_compiler
         cfg = ttsl_compiler.cfg

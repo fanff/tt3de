@@ -6,6 +6,16 @@ Tiny Tiny Shader Language (TTSL)
 =================================
 
 
+ABI: Opcode Reference
+---------------------
+
+The TTSL virtual machine uses a fixed set of typed opcodes that form its ABI.
+The full list of opcodes with their numeric values, types, and input signatures
+is maintained in the [Opcode Reference](opcode_reference.md).
+
+This reference is auto-generated from the opcode definitions in
+`python/tt3de/ttsl/ttisa/low_level_def.py` by running `uv run tt3de-gen-opcodes`.
+
 Variables list [TODO]
 ---------------------
 
