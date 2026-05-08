@@ -1,16 +1,11 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-
 use pyo3::prelude::*;
-use pyo3::types::{PyAnyMethods, PyBool, PyDict};
-use pyo3::{BoundObject, Py, PyAny, PyRef};
 
-use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
+use pyo3::{pyclass, pymethods, Python};
 
 use crate::material::materials::Material;
 use crate::material::textured::BaseTexture;
 use crate::texturebuffer;
-use crate::texturebuffer::toglyph_methods_py::{ToGlyphMethodPy, ToGlyphMethodPyStatic};
+use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
 
 #[pyclass(subclass)]
 #[derive(Clone)]
@@ -23,7 +18,7 @@ impl MaterialPy {
     }
 }
 impl MaterialPy {
-    pub fn to_native(py: Python, mat: &MaterialPy) -> Material {
+    pub fn to_native(_py: Python, _mat: &MaterialPy) -> Material {
         Material::DoNothing {}
     }
 }

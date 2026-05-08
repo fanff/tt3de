@@ -1,4 +1,4 @@
-use nalgebra_glm::{dot, vec2, vec3, vec4, Number, Vec3, Vec4};
+use nalgebra_glm::{vec3, vec4, Number, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
 use pyo3::{pyfunction, PyRefMut};
 
@@ -7,7 +7,7 @@ use crate::{
         drawbuffer::{apply_material_on, apply_material_on_parallel, DrawBuffer},
         DrawingBufferPy,
     },
-    geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
+    geombuffer::{GeometryBuffer, GeometryBufferPy},
     material::MaterialBufferPy,
     primitiv_building::triangle_3d::polygon3d_as_primitive_triangles,
     primitivbuffer::*,
@@ -17,7 +17,7 @@ use crate::{
         transform_pack::TransformPack,
         transform_pack_py::TransformPackPy,
         uv_buffer::UVBuffer,
-        vertex_buffer::{self, TriangleBuffer, VertexBuffer},
+        vertex_buffer::{TriangleBuffer, VertexBuffer},
         vertex_buffer_py::VertexBufferPy,
     },
 };
@@ -25,7 +25,6 @@ use crate::{
 pub mod triangle_clipping;
 use triangle_clipping::*;
 pub mod tomato_triangle_clipping;
-use tomato_triangle_clipping::*;
 pub mod line_clipping_2d;
 use line_clipping_2d::*;
 pub mod point_clipping;

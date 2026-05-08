@@ -1,8 +1,4 @@
-use std::collections::HashMap;
-
-use pyo3::types::{PyAnyMethods, PyDict};
-use pyo3::{prelude::*, PyClass};
-use pyo3::{BoundObject, Py, PyAny, PyRef};
+use pyo3::prelude::*;
 
 use crate::texturebuffer::toglyph_methods::ToGlyphMethod;
 

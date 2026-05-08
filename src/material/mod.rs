@@ -1,7 +1,5 @@
 use super::texturebuffer::texture_buffer::TextureBuffer;
 use super::texturebuffer::RGBA;
-use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
-use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
 use crate::vertexbuffer::uv_buffer::UVBuffer;
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
@@ -24,10 +22,7 @@ mod noise_mat;
 use noise_mat::*;
 pub mod combo_material;
 use combo_material::*;
-use pyo3::prelude::*;
-use pyo3::types::{PyAnyMethods, PyDict};
 use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
-use pyo3::{BoundObject, Py, PyAny, PyRef};
 
 pub struct MaterialBuffer {
     pub max_size: usize,
@@ -79,6 +74,7 @@ impl MaterialBuffer {
         self.current_size - 1
     }
 
+    #[allow(dead_code)]
     fn add_noop(&mut self) -> usize {
         let retur = self.current_size;
         self.mats[self.current_size] = Material::DoNothing {};
@@ -192,7 +188,7 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
     }
 }
 
-pub fn apply_noise<T: Number>(noise: &NoiseMaterial, pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
+pub fn apply_noise<T: Number>(noise: &NoiseMaterial, _pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
     let noise = noise.make_instance();
     let noise_val = noise.get_noise_2d(u, v);
 
@@ -213,20 +209,20 @@ impl MaterialBufferPy {
             content: MaterialBuffer::new(max_size),
         }
     }
-    fn add_material(&mut self, py: Python, mat: Bound<'_, MaterialPy>) -> usize {
+    fn add_material(&mut self, _py: Python, _mat: Bound<'_, MaterialPy>) -> usize {
         panic!("Not implemented");
     }
 
-    fn set_material(&mut self, py: Python, idx: usize, mat: Bound<'_, MaterialPy>) {
+    fn set_material(&mut self, _py: Python, _idx: usize, _mat: Bound<'_, MaterialPy>) {
         panic!("Not implemented");
     }
 
-    fn add_base_texture<'py>(&mut self, py: Python<'py>, mat: &BaseTexturePy) -> usize {
+    fn add_base_texture<'py>(&mut self, _py: Python<'py>, mat: &BaseTexturePy) -> usize {
         self.content
             .add_material(Material::BaseTexture(mat.to_native()))
     }
 
-    fn add_static_color(&mut self, py: Python, mat: &StaticColorPy) -> usize {
+    fn add_static_color(&mut self, _py: Python, mat: &StaticColorPy) -> usize {
         self.content.add_material(mat.to_native())
     }
 

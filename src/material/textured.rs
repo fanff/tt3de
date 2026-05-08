@@ -1,10 +1,9 @@
-use nalgebra::Matrix1x4;
-use nalgebra_glm::{TVec4, Vec3, Vec4};
+use nalgebra_glm::Vec3;
 
 use crate::{
     drawbuffer::{
         drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
-        glyphset::{HALF_UPPER_BLOCK, SPACE},
+        glyphset::HALF_UPPER_BLOCK,
     },
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::{
@@ -129,7 +128,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
                         },
                         self.albedo_texture_subid,
                     );
-                    blend_half_upper_to_cell(cell, (&front_color), (&back_color));
+                    blend_half_upper_to_cell(cell, &front_color, &back_color);
                     return;
                 } else {
                     cell.glyph = glyphidx;
@@ -280,7 +279,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
         let normal = pixinfo.normal;
 
         // calculate alignment between camera and normal vector using a dot product
-        let shading = normal
+        let _shading = normal
             .normalize()
             .dot(&Vec3::new(0.0, 0.0, -1.0))
             .abs()
@@ -288,13 +287,13 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
             * 0.5f32
             + 0.5f32;
 
-        const zNear: f32 = 0.1f32;
-        const zFar: f32 = 100.0f32;
-        const max_distance: f32 = 20.0f32;
+        const Z_NEAR: f32 = 0.1f32;
+        const Z_FAR: f32 = 100.0f32;
+        const MAX_DISTANCE: f32 = 20.0f32;
         let distance = _depth_cell.get_depth(_depth_layer);
         let z_n: f32 = 2.0f32 * distance - 1.0f32;
-        let world_dist: f32 = 2.0f32 * zNear * zFar / (zFar + zNear - z_n * (zFar - zNear));
-        let distance_shading = 1.0f32 - (world_dist.clamp(0.0, max_distance) / max_distance);
+        let world_dist: f32 = 2.0f32 * Z_NEAR * Z_FAR / (Z_FAR + Z_NEAR - z_n * (Z_FAR - Z_NEAR));
+        let distance_shading = 1.0f32 - (world_dist.clamp(0.0, MAX_DISTANCE) / MAX_DISTANCE);
 
         let texture_color = texture_buffer
             .get_rgba_at_v(self.albedo_texture_idx, &uv, 0)

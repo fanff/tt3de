@@ -101,7 +101,7 @@ impl<
         uv_buffer: &UVBuffer<f32>,
     ) {
         match self {
-            Material::ComboMaterial(cm) => {}
+            Material::ComboMaterial(_cm) => {}
             Material::DoNothing {} => {}
             Material::Texture(t) => t.render_mat(
                 cell,
@@ -182,7 +182,7 @@ impl<
                 texture_buffer,
                 uv_buffer,
             ),
-            Material::StaticGlyph { glyph_idx } => todo!(),
+            Material::StaticGlyph { glyph_idx: _ } => todo!(),
         }
     }
 } // juste un maxi match pour l'implem

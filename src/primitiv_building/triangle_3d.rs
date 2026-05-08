@@ -1,25 +1,18 @@
-use nalgebra_glm::{dot, vec2, vec3, vec4, Number, Vec3, Vec4};
+use nalgebra_glm::{vec4, Number, Vec3, Vec4};
 
 use crate::{
-    drawbuffer::{
-        drawbuffer::{apply_material_on, apply_material_on_parallel, DrawBuffer},
-        DrawingBufferPy,
-    },
-    geombuffer::{GeometryBuffer, GeometryBufferPy, Polygon},
-    material::MaterialBufferPy,
+    drawbuffer::drawbuffer::DrawBuffer,
+    geombuffer::Polygon,
+    raster::vertex::Vertex,
     primitiv_building::{
         perspective_divide_triplet, tomato_triangle_clipping::tomato_clip_triangle_to_clip_space,
         triangle_clipping::SmallTriangleBuffer,
     },
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
-    raster::vertex::Vertex,
-    texturebuffer::TextureBufferPy,
     vertexbuffer::{
         transform_pack::TransformPack,
-        transform_pack_py::TransformPackPy,
         uv_buffer::UVBuffer,
-        vertex_buffer::{self, TriangleBuffer, VertexBuffer},
-        vertex_buffer_py::VertexBufferPy,
+        vertex_buffer::{TriangleBuffer, VertexBuffer},
     },
 };
 

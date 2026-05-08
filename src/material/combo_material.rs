@@ -5,14 +5,7 @@ use crate::{
     texturebuffer::texture_buffer::TextureBuffer,
     vertexbuffer::uv_buffer::UVBuffer,
 };
-use pyo3::{
-    prelude::*,
-    types::{PyFunction, PyInt, PyList, PyTuple},
-};
-use pyo3::{BoundObject, Py, PyAny, PyRef};
-
-use pyo3::{pyclass, pymethods, types::PyTime};
-use pyo3::{Bound, Python};
+use pyo3::{pyclass, pymethods};
 
 #[derive(Clone)]
 pub struct ComboMaterial {

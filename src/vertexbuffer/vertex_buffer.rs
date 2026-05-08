@@ -1,11 +1,6 @@
-use std::{
-    cell::{Ref, RefCell},
-    mem::MaybeUninit,
-    ops::Mul,
-};
+use std::mem::MaybeUninit;
 
-use nalgebra::{Const, Dyn, RawStorage, RawStorageMut, VecStorage};
-use nalgebra_glm::{Mat3, Mat4, Mat4x2, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
+use nalgebra_glm::{Mat3, Mat4, Vec3, Vec4};
 
 pub trait AllowedVec {
     fn zeros() -> Self;

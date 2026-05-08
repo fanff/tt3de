@@ -1,5 +1,4 @@
-use nalgebra::{ArrayStorage, RawStorage};
-use nalgebra_glm::{Mat3, Mat4, Number, TVec2, TVec4, Vec2, Vec3, Vec4};
+use nalgebra_glm::{Mat4, Vec3};
 
 pub struct TransformPack {
     pub model_transforms: Box<[Mat4]>,

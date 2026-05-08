@@ -2,8 +2,7 @@ use nalgebra_glm::{dot, Number, Vec2, Vec3, Vec4};
 
 use crate::{
     drawbuffer::drawbuffer::DrawBuffer,
-    geombuffer::{GeomReferences, Line},
-    raster::vertex::Vertex,
+    geombuffer::GeomReferences,
     vertexbuffer::{uv_buffer::UVBuffer, vertex_buffer::VertexBuffer},
 };
 
@@ -60,11 +59,11 @@ pub fn clip_line_to_clip_space(pa: &Vec4, pb: &Vec4) -> Option<(Vec4, Vec4)> {
 pub fn line3d_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
     pa: &Vec4,
     pb: &Vec4,
-    uv_triplet: (&Vec2, &Vec2, &Vec2),
+    _uv_triplet: (&Vec2, &Vec2, &Vec2),
     geom_ref: &GeomReferences,
     geometry_id: usize,
-    vertex_buffer: &VertexBuffer<Vec4>,
-    uv_array: &UVBuffer<f32>,
+    _vertex_buffer: &VertexBuffer<Vec4>,
+    _uv_array: &UVBuffer<f32>,
     drawbuffer: &DrawBuffer<PIXCOUNT, DEPTHACC>,
     primitivbuffer: &mut PrimitiveBuffer,
 ) {

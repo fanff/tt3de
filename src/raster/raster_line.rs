@@ -1,6 +1,6 @@
 use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::vertex::Vertex};
 
-use super::primitivbuffer::{PointInfo, PrimitivReferences};
+use super::primitivbuffer::PrimitivReferences;
 
 /// Raster a line between two points
 pub fn raster_line<const DEPTHCOUNT: usize>(
@@ -44,7 +44,7 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
 
     let mut current_value = pa.clone();
 
-    for i in 0..=steps {
+    for _i in 0..=steps {
         let row = current_value.pos.y as isize;
         let col = current_value.pos.x as isize;
         if row >= 0 && col >= 0 {

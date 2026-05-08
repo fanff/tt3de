@@ -1,7 +1,5 @@
 use std::borrow::BorrowMut;
 
-use nalgebra::Dyn;
-use nalgebra::VecStorage;
 use nalgebra_glm::clamp_vec;
 use nalgebra_glm::floor;
 use nalgebra_glm::max;
@@ -11,7 +9,6 @@ use nalgebra_glm::Number;
 use nalgebra_glm::TVec2;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
-use nalgebra_glm::Vec4;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::apply_material;
@@ -247,6 +244,7 @@ pub struct DrawBuffer<const DEPTH_LAYER_COUNT: usize, DepthBufferAccuracy: Numbe
     pub pixbuffer: Box<[PixInfo<f32>]>,
     pub row_count: usize,
     pub col_count: usize,
+    #[allow(dead_code)]
     size: Vec2,
     pub half_size: Vec2,
     pub flip_x: bool,

@@ -131,7 +131,7 @@ pub fn convert_glm_vec2(py: Python, values: Py<PyAny>) -> Vec2 {
 }
 
 pub fn convert_tuple_texture_rgba(py: Python, tuple: Py<PyTuple>) -> Option<RGBA> {
-    let tuple = tuple.bind(py).downcast::<PyTuple>().ok()?;
+    let tuple = tuple.bind(py).cast::<PyTuple>().ok()?;
     match tuple.len() {
         3 => {
             let (a, b, c): (u8, u8, u8) = tuple.extract().unwrap();
