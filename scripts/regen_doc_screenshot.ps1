@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Regenerate documentation screenshots (triple_panel.svg and triple_panel.png).
+    Regenerate documentation screenshot (triple_panel.svg).
 
 .DESCRIPTION
     Equivalent to running from the repository root:

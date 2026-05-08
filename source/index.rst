@@ -34,14 +34,14 @@ For a smooth experience, prefer terminals that handle high refresh well (see pro
 Screenshot examples (Textual SVG capture)
 =========================================
 
-The composite below shows two columns with TT3DE content:
-a taxi car model (3D OBJ with texture) and a city block viewed from above. Captured via
-``uv run tt3de-regen-doc-screenshot`` (default ``TriplePanelDemoApp``).
+The composite below shows three TT3DE panels in one terminal capture (textured cube,
+taxi car model, city block). Generated via ``uv run tt3de-regen-doc-screenshot``
+(default ``TriplePanelDemoApp``).
 
-.. figure:: _static/screenshots/triple_panel.png
+.. figure:: _static/screenshots/triple_panel.svg
    :width: 100%
    :align: center
-   :alt: Two TT3DE Textual panels in one terminal capture
+   :alt: Three TT3DE Textual panels in one terminal capture
 
    Regenerate with ``uv run tt3de-regen-doc-screenshot`` after editing ``scripts/screenshot_apps/`` (see Agent guidelines).
 

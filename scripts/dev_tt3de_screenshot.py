@@ -6,17 +6,11 @@ Default: one screenshot with three TT3DE demos side-by-side (see
 `screenshot_apps.triple_panel:TriplePanelDemoApp`). Use `--app` for a single App
 or any other module:Class / path.py:Class.
 
-Pass ``--png`` to also convert the SVG to a PNG sibling file (requires
-``cairosvg``).  The PNG path is derived from ``--output`` by replacing the
-extension; override with ``--png-output``.
-
 This file lives under scripts/ — it is NOT installed via the published wheel.
 
 Example:
 
     uv run python scripts/dev_tt3de_screenshot.py -o artifacts/out.svg
-
-    uv run python scripts/dev_tt3de_screenshot.py -o artifacts/out.svg --png
 
     uv run python scripts/dev_tt3de_screenshot.py -o artifacts/single.svg \\
         --app screenshot_apps.red_triangle:TexturedCubeDemoApp
@@ -115,22 +109,6 @@ async def capture_screenshot_svg(
         return app.export_screenshot(title=screenshot_title)
 
 
-def svg_to_png(svg_text: str, png_path: Path, *, scale: float = 2.0) -> None:
-    """Convert an SVG string to a PNG file using *cairosvg*."""
-    try:
-        import cairosvg
-    except ImportError as exc:
-        raise SystemExit(
-            "cairosvg is required for --png conversion. "
-            "Install it with: uv add --dev cairosvg"
-        ) from exc
-
-    png_path.parent.mkdir(parents=True, exist_ok=True)
-    png_bytes = cairosvg.svg2png(bytestring=svg_text.encode("utf-8"), scale=scale)
-    png_path.write_bytes(png_bytes)
-    print(f"wrote PNG ({len(png_bytes)} bytes, scale={scale}): {png_path.resolve()}")
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Headless Textual screenshot of a TT3DE / Textual App (SVG). Dev-only tool."
@@ -181,28 +159,8 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional working directory (defaults to tt3de repo root).",
     )
-    parser.add_argument(
-        "--png",
-        action="store_true",
-        default=False,
-        help="Also convert the SVG to PNG (requires cairosvg).",
-    )
-    parser.add_argument(
-        "--png-output",
-        type=Path,
-        default=None,
-        help="PNG output path (defaults to --output with .png extension). Implies --png.",
-    )
-    parser.add_argument(
-        "--png-scale",
-        type=float,
-        default=2.0,
-        help="Scale factor for the PNG rasterization (default: 2.0 for retina-quality).",
-    )
 
     ns = parser.parse_args(argv)
-    if ns.png_output is not None:
-        ns.png = True
 
     cwd = Path(ns.chdir).resolve() if ns.chdir else repo_root_from_script()
     if not cwd.is_dir():
@@ -238,14 +196,6 @@ def main(argv: list[str] | None = None) -> int:
     Path(ns.output).parent.mkdir(parents=True, exist_ok=True)
     Path(ns.output).write_text(svg, encoding="utf-8")
     print(f"wrote SVG ({len(svg)} bytes): {Path(ns.output).resolve()}")
-
-    if ns.png:
-        png_path = (
-            Path(ns.png_output)
-            if ns.png_output
-            else Path(ns.output).with_suffix(".png")
-        )
-        svg_to_png(svg, png_path, scale=ns.png_scale)
 
     return 0
 

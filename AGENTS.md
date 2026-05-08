@@ -24,9 +24,9 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
   uv run tt3de-regen-doc-screenshot
   ```
 
-  This produces both `triple_panel.svg` and `triple_panel.png` (via `cairosvg`). The Sphinx docs reference the PNG for broader compatibility.
+  This writes `triple_panel.svg` under `source/_static/screenshots/`. Sphinx and the README embed that SVG.
 
-  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width` / `--height`, `--png`, and output path.
+  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width`, `--height`, and output path.
 
   Other shortcuts with the same effect: **`make regen-doc-screenshot`**, **`scripts/regen_doc_screenshot.sh`**, **`scripts/regen_doc_screenshot.ps1`**.
 
