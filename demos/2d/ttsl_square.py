@@ -46,20 +46,23 @@ class TTSLSquareDemo(TT3DViewStandAlone):
         self.camera.set_zoom_2D(0.5)
         self.camera.set_viewport_scale_mode(ViewportScaleMode.FIT)
 
+        # `RustRenderContext` seeds geometry slot 0 with a sentinel point at the origin
+        # using `node_id=0` and `material_id=0`. Cleared / empty depth samples reference
+        # that geometry, so material index 0 must be a plain static fill — not the
+        # shader — or the whole canvas runs TTSL (alternating blues from animated UVs).
+        self.rc.material_buffer.add_static(
+            (0, 0, 0),
+            (0, 0, 0),
+            find_glyph_indices_py(" "),
+        )
+
         full_block_glyph = find_glyph_indices_py("█")
-        # Support both the new ShaderPy API (with default_glyph) and older
-        # installed extension builds while keeping this demo runnable.
-        try:
-            shader_mat = materials.ShaderPy(
-                self._bytecode,
-                time_f32_reg=self._time_reg,
-                default_glyph=full_block_glyph,
-            )
-        except TypeError:
-            shader_mat = materials.ShaderPy(
-                self._bytecode,
-                time_f32_reg=self._time_reg,
-            )
+        shader_mat = materials.ShaderPy(
+            self._bytecode,
+            time_f32_reg=self._time_reg,
+            default_glyph=full_block_glyph,
+            register_seed=self._reg_settings.get_register_list(),
+        )
         self._shader_mat_id = self.rc.material_buffer.add_shader(shader_mat)
 
         self.root2Dnode = TT2DNode()

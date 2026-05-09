@@ -230,9 +230,9 @@ impl MaterialBufferPy {
         self.content.add_material(mat.to_native())
     }
 
-    fn add_shader(&mut self, _py: Python, mat: &ShaderPy) -> usize {
-        self.content
-            .add_material(Material::Shader(mat.to_native()))
+    fn add_shader(&mut self, py: Python<'_>, mat: &Bound<'_, ShaderPy>) -> PyResult<usize> {
+        let native = mat.borrow().build_native(py)?;
+        Ok(self.content.add_material(Material::Shader(native)))
     }
 
     fn add_combo_material(&mut self, mat: &ComboMaterialPy) -> usize {

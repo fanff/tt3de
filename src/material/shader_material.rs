@@ -74,9 +74,12 @@ pub struct ShaderInputBinding {
 
 impl Default for ShaderInputBinding {
     fn default() -> Self {
+        // Must match `RegisterAllocatorPass` in `python/tt3de/ttsl/compiler.py`: built-in
+        // pixel vec2s are allocated V2 registers 1, 2, 3 in order for `tt_FragCoord`,
+        // `tt_TexCoord0`, `tt_TexCoord1`. PixInfo UVs belong in the latter two slots.
         Self {
-            uv_v2_reg: 0,
-            uv1_v2_reg: 1,
+            uv_v2_reg: 2,
+            uv1_v2_reg: 3,
             uv_v3_reg: 0,
             uv1_v3_reg: 1,
             primitive_id_i32_reg: 0,

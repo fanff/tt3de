@@ -6,6 +6,16 @@ import unittest
 
 from pyglm import glm
 
+from tt3de.tt3de import (
+    DrawingBufferPy,
+    MaterialBufferPy,
+    PrimitiveBufferPy,
+    TextureBufferPy,
+    VertexBufferPy,
+    apply_material_py,
+    apply_material_py_parallel,
+    materials,
+)
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
@@ -71,6 +81,76 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.25, 0.75))
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(12.0, 8.0))
+
+    def test_ttsl_square_demo_shader_time_changes_pixels_material_apply(self):
+        """
+        Same shader as ``demos/2d/ttsl_square.py``: compiled bytecode plus constant seed
+        registers, ``MaterialBufferPy.set_shader_time``, then sequential and parallel
+        ``apply_material_*`` must reflect changing ``tt_Time`` in the raster output.
+        """
+        src = dedent(
+            """
+            def my_shader(tt_TexCoord0: vec2) -> vec3:
+                phase: float = tt_Time * 4.0
+                wave_x: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.x * 18.0) + phase)
+                wave_y: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.y * 14.0) - phase * 1.2)
+                blue: float = 0.5 + 0.5 * glm.sin(
+                    phase * 0.7 + (tt_TexCoord0.x + tt_TexCoord0.y) * 8.0
+                )
+                return vec3(wave_x, wave_y, blue)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            src, "my_shader", {GLOBAL_VAR_TT_TIME: float}
+        )
+        _, time_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_TIME]
+
+        mb = MaterialBufferPy()
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                time_f32_reg=time_reg,
+                default_glyph=None,
+                register_seed=reg_settings.get_register_list(),
+            )
+        )
+
+        def sample_rgb_after_apply(time_seconds: float, apply_fn) -> tuple[int, int, int]:
+            mb.set_shader_time(mat_idx, time_seconds)
+            draw = DrawingBufferPy(4, 4)
+            draw.hard_clear(10.0)
+            draw.set_depth_content(
+                0,
+                0,
+                glm.vec3(0.0, 0.0, 1.0),
+                1.0,
+                glm.vec2(0.25, 0.75),
+                glm.vec2(0.0, 0.0),
+                0,
+                0,
+                mat_idx,
+                0,
+            )
+            apply_fn(
+                mb,
+                TextureBufferPy(4),
+                VertexBufferPy(16, 16, 16),
+                PrimitiveBufferPy(8),
+                draw,
+            )
+            cell = draw.get_canvas_cell(0, 0)
+            return (cell["f_r"], cell["f_g"], cell["f_b"])
+
+        self.assertNotEqual(
+            sample_rgb_after_apply(0.0, apply_material_py),
+            sample_rgb_after_apply(3.0, apply_material_py),
+            "shader output should depend on tt_Time (sequential apply_material path)",
+        )
+        self.assertNotEqual(
+            sample_rgb_after_apply(0.0, apply_material_py_parallel),
+            sample_rgb_after_apply(2.0, apply_material_py_parallel),
+            "shader output should depend on tt_Time (parallel apply_material path)",
+        )
 
 
 if __name__ == "__main__":
