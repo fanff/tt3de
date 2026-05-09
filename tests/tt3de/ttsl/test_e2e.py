@@ -15,7 +15,7 @@ from tt3de.tt3de import (
     apply_material_py,
     apply_material_py_parallel,
     find_glyph_indices_py,
-    materials,
+    materials, # pyright: ignore
     ttsl_run,
 )
 from tt3de.ttsl.compiler import (
