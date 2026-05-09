@@ -325,44 +325,33 @@ impl DrawingBufferPy {
         let canvas = &self.db.canvas;
         let dict = PyDict::new(py);
 
-        // create a list of rows
-        let all_rows_list = PyList::empty(py);
-        let append_row_method = all_rows_list.getattr(intern!(py, "append")).unwrap();
+        let ncols = max_x.saturating_sub(min_x);
+        let nrows = max_y.saturating_sub(min_y);
+        let mut outer_rows: Vec<Py<PyAny>> = Vec::with_capacity(nrows);
+
         for row_idx in min_y..max_y {
-            // create a list of stuff for this current row.
-            let arow_list = PyList::empty(py);
-            let append_method = arow_list.getattr(intern!(py, "append")).unwrap();
+            let mut row_segments: Vec<Py<PyAny>> = Vec::with_capacity(ncols);
+
             if row_idx < self.max_row {
-                // the row_idx is inside the screen;
-                // we can iterate on the columns
                 for col_idx in min_x..max_x {
                     if col_idx < self.max_col {
-                        // the col_idx is withing the screen
-
-                        // calculate a linear index
                         let idx = row_idx * self.max_col + col_idx;
-                        // get the cell
                         let cell = &canvas[idx];
 
-                        // calculate the reduced pixel values
                         let reduced_hash = self.seg_cache.get_reduced(
                             &cell.front_color,
                             &cell.back_color,
                             cell.glyph,
                         );
-                        // calculate the hash
                         let hash_value = self.seg_cache.reduced_tuple_to_int(reduced_hash);
 
-                        // find in the cache the Segment
                         match self.seg_cache.get_with_hash(hash_value) {
                             Some(value) => {
-                                // we have a segment; so let insert in the current row
-                                append_method.call1((&value.clone_ref(py),)).unwrap();
+                                row_segments.push(value.clone_ref(py));
                             }
                             None => {
                                 let (front_col, back_col, glyph) =
                                     self.seg_cache.reduced_to_triplet(reduced_hash);
-                                // we don't have a segment, we should create it.
                                 let f_triplet = self
                                     .color_triplet_class
                                     .call1(py, (front_col[0], front_col[1], front_col[2]))
@@ -400,32 +389,26 @@ impl DrawingBufferPy {
                                     )
                                     .unwrap();
 
-                                // store segment in the cache.
                                 self.seg_cache
                                     .insert_with_hash(hash_value, anewseg.clone_ref(py));
-                                // add the segment to the current line
-                                append_method.call1((anewseg.clone_ref(py),)).unwrap();
+                                row_segments.push(anewseg.clone_ref(py));
                             }
                         }
                     } else {
-                        // we are outbound ; we need to feed some extra segments
-                        let seg = &self.default_segment;
-                        append_method.call1((seg.clone_ref(py),)).unwrap();
+                        row_segments.push(self.default_segment.clone_ref(py));
                     }
                 }
-                append_row_method.call1((&arow_list,)).unwrap();
             } else {
-                // we are outbound ; we need to feed extra line with the good number of columns
-                // requested line count
-                //let seg = self.seg_cache.get_with_hash(0).unwrap();
-                let seg = &self.default_segment;
-                for _col_idx in min_x..max_x {
-                    append_method.call1((seg.clone_ref(py),)).unwrap();
-                }
-                append_row_method.call1((&arow_list,)).unwrap();
+                row_segments.extend(
+                    std::iter::repeat_with(|| self.default_segment.clone_ref(py)).take(ncols),
+                );
             }
+
+            let row_list = PyList::new(py, row_segments).unwrap();
+            outer_rows.push(row_list.into_any().unbind());
         }
-        all_rows_list.into()
+
+        PyList::new(py, outer_rows).unwrap().into()
     }
 }
 

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use pyo3::{
     intern,
@@ -9,7 +9,7 @@ use pyo3::{
 use super::{Color, GLYPH_STATIC_STR};
 
 pub struct SegmentCache {
-    data: BTreeMap<u64, Py<PyAny>>,
+    data: HashMap<u64, Py<PyAny>>,
     bit_size_front: [u8; 3],
     bit_size_back: [u8; 3],
 }
@@ -17,7 +17,7 @@ pub struct SegmentCache {
 impl SegmentCache {
     pub fn new(bit_size_front: [u8; 3], bit_size_back: [u8; 3]) -> Self {
         SegmentCache {
-            data: BTreeMap::new(),
+            data: HashMap::new(),
             bit_size_front,
             bit_size_back,
         }
@@ -27,19 +27,19 @@ impl SegmentCache {
     }
     pub fn new_iso(bit_size: u8) -> Self {
         SegmentCache {
-            data: BTreeMap::new(),
+            data: HashMap::new(),
             bit_size_front: [bit_size; 3],
             bit_size_back: [bit_size; 3],
         }
     }
     pub fn set_bit_size_front(&mut self, r: u8, g: u8, b: u8) {
         self.bit_size_front = [r, g, b];
-        self.data = BTreeMap::new()
+        self.data = HashMap::new()
     }
 
     pub fn set_bit_size_back(&mut self, r: u8, g: u8, b: u8) {
         self.bit_size_back = [r, g, b];
-        self.data = BTreeMap::new()
+        self.data = HashMap::new()
     }
     ///
     ///
