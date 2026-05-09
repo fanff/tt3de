@@ -12,4 +12,4 @@ alwaysApply: false
 - For Python wrappers over Rust modules, keep argument names, defaults, and behavior aligned with Rust-backed implementation.
 - Reuse existing modules under `python/tt3de/` instead of creating parallel utility layers.
 - Raise specific exceptions with actionable messages; avoid broad `except Exception` unless re-raising with context.
-- For demos in `demos/`, optimize readability and stable behavior over micro-optimizations.
+- For demos in `demos/`, optimize readability and stable behavior over micro-optimizations; layout, TT3DViewStandAlone, ShaderPy wiring, and demo checklists: `.cursor/rules/demos-standards.mdc`.

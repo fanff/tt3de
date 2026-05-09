@@ -1,0 +1,84 @@
+---
+description: Technical standards for tt3de runnable demos under demos/
+globs: demos/**/*.py
+alwaysApply: false
+---
+
+# Demos standards
+
+Applies to scripts under `demos/`. General Python rules: [.cursor/rules/python-standards.mdc](python-standards.mdc). TTSL semantics and compiler depth: [.cursor/skills/ttsl-implementation/SKILL.md](../skills/ttsl-implementation/SKILL.md), `source/ttsl.md`, `source/ttsl_compiler.md`.
+
+## Layout and naming
+
+- Put new demos in `demos/2d/` or `demos/3d/` unless the demo is a **shader playground**—the large Textual editor lives in `demos/ttsl.py`.
+- Prefer `SHADER_SRC = dedent("""...""")` with `from textwrap import dedent` for TTSL strings; keep the entry function name stable and pass it to `all_passes_compilation`.
+
+## Shaders: compile first
+
+- **Preferred path for shaders**: write TTSL as source, then **`all_passes_compilation`** → **`materials.ShaderPy`**. Use this for the demo’s main effects, animation-driven shading, and anything that benefits from TTSL expressiveness.
+- **Built-in / non-TTSL materials** (for example `materials.StaticColorPy`, `materials.BaseTexturePy`, and other helpers that do **not** wrap compiled bytecode) **remain valid**. Reserve them for **background fills**, **static texturing**, slot-0 sentinel / cleared-sample behavior, and other baseline surfaces—not as a substitute for TTSL when the showcase is custom shading logic.
+
+## Module docstring and comments
+
+- **Module docstring** (triple quotes at top): what the demo proves, main APIs or TTSL entry, asset paths if any, and a **Run:** block (`uv run python demos/...` from repo root).
+- **`#` comments** in Python: explain **why** for non-obvious steps (material slot 0, time uniform wiring, transform order)—avoid commenting every line.
+- **Inside TTSL** (`SHADER_SRC`): short `#` comments where they clarify coordinates or effect.
+
+## App skeleton
+
+1. Subclass **`TT3DViewStandAlone`** from `tt3de.textual_standalone` for the embedded render widget.
+2. Wrap it in **`textual.app.App`** with `yield Header()` and the demo widget in `compose()`.
+3. Lifecycle on the standalone widget:
+   - **`initialize()`** — camera, materials, scene roots (`RustRenderContext`).
+   - **`update_step(delta_time)`** — animation / logic.
+   - **`before_render_step()` / `post_render_step()`** — per-frame hooks (e.g. `tt_Time` via material buffer).
+4. **`if __name__ == "__main__"`**: instantiate `App`, set `app._disable_tooltips = True`, call `app.run()`.
+
+## Imports
+
+- **GLM**: `from pyglm import glm` only.
+- **Compiler**: `from tt3de.ttsl.compiler import all_passes_compilation`; use `GLOBAL_VAR_TT_TIME` when the shader uses `tt_Time`.
+- **Materials / glyphs**: `from tt3de.tt3de import find_glyph_indices_py, materials` (type checker may need `# type: ignore[reportMissingImports]` like existing demos).
+- **2D**: `tt3de.tt_2dnodes` (`TT2DNode`, `TT2DUnitSquare`, etc.).
+- **3D**: `tt3de.tt_3dnodes.TT3DNode`, `tt3de.prefab3d.Prefab3D` for primitives.
+- **Camera**: `tt3de.glm_camera.ViewportScaleMode`, methods on `self.camera`.
+
+## Shader materials (ShaderPy)
+
+Compiled TTSL materials (see **Shaders: compile first** above).
+
+1. **`bytecode, reg_settings = all_passes_compilation(SHADER_SRC, "<entry_fn>", globals_dict)`** — include `GLOBAL_VAR_TT_TIME: float` when the shader uses `tt_Time`.
+2. **Reserve material slot 0 for static fill** — same pattern as `demos/2d/ttsl_square.py`: `self.rc.material_buffer.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))` so sentinel / cleared samples do not run TTSL across the full framebuffer.
+3. **`materials.ShaderPy(bytecode, default_glyph=find_glyph_indices_py("█"), register_seed=reg_settings.get_register_list(), ...)`** — pass `time_f32_reg` when animating time; in `before_render_step`, call `material_buffer.set_shader_time(material_id, float(self.time_since_start()))` when needed.
+4. Attach the material id to **2D** nodes (`TT2DUnitSquare(..., material_id=...)`) or **3D** meshes (`prefab.material_id = ...`).
+
+## Scene graph
+
+- **2D**: `TT2DNode()`, children, `self.rc.append_root(...)` (match naming in nearest demo).
+- **3D**: `TT3DNode()`, `Prefab3D` or custom nodes, `self.rc.append_root(...)`.
+- **Transforms**: `pyglm` matrices; update in `update_step` for motion.
+
+## Textures
+
+- Load with **`tt3de.asset_fastloader.fast_load`** and **`tt3de.richtexture.ImageTexture`** (see `demos/3d/ttsl_texture_cube.py`).
+- Resolve paths with `Path(__file__).resolve().parents[...]` toward repo `models/` or other tracked assets.
+- Register via **`self.rc.texture_buffer.add_texture(...)`** before `tt_texture` in TTSL.
+
+## Textual shader lab (`demos/ttsl.py`)
+
+Dual-pane compiler explorer (editor, AST/IR/logs). Prefer **standalone viewer demos** in `demos/2d/` or `demos/3d/` for simple showcases; extend `demos/ttsl.py` only for IDE-like compile inspection. Textual widgets: [.cursor/rules/textual-ui-helper.mdc](textual-ui-helper.mdc).
+
+## Verification
+
+- Run **`uv run python <path>`** from repo root; use **`uv run maturin develop`** when bindings changed.
+- Avoid new **`pyproject.toml`** runtime dependencies unless unavoidable.
+
+## Checklist (new or heavily edited demo)
+
+- [ ] Module docstring with showcase goal and **Run:**
+- [ ] Expressive `#` comments where logic is non-obvious
+- [ ] Primary shading via compiled TTSL (`ShaderPy`) when showcasing shader behavior; built-in materials only where appropriate (background / static texturing / sentinel slot)
+- [ ] Slot-0 static material when using `ShaderPy`
+- [ ] Correct `globals_dict` / `set_shader_time` if using `tt_Time`
+- [ ] `app._disable_tooltips = True` in `__main__`
+- [ ] Asset paths stable regardless of cwd (`Path(__file__)`)

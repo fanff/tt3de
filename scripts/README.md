@@ -20,13 +20,13 @@ Equivalent: **`make gen-opcodes`** (runs `bash scripts/gen_opcodes.sh`).
 
 Headless SVG snapshot using Textual’s **`run_test`** / **`export_screenshot`**.
 
-**Default behavior:** a **single SVG** that shows **three** TT3DE-style panels in one terminal: textured cube | taxi car model | city block (`screenshot_apps.triple_panel:TriplePanelDemoApp`). Default `--width` 200, `--height` 56.
+**Default behavior:** a **single SVG** that shows **two** TT3DE-style panels in one terminal: taxi car model | city block (`screenshot_apps.dual_panel:DualPanelDemoApp`). Default `--width` 200, `--height` 56.
 
 ```text
-uv run python scripts/dev_tt3de_screenshot.py -o artifacts/triptych.svg --height 30
+uv run python scripts/dev_tt3de_screenshot.py -o artifacts/dual_panel.svg --height 30
 ```
 
-Committed SVG shown in Sphinx lives at [`source/_static/screenshots/triple_panel.svg`](../source/_static/screenshots/triple_panel.svg); refresh whenever you edit `triple_panel` or related widgets.
+Committed SVG shown in Sphinx lives at [`source/_static/screenshots/dual_panel.svg`](../source/_static/screenshots/dual_panel.svg); refresh whenever you edit `dual_panel` or related widgets.
 
 **Recommended shortcuts** (skip `uv sync` / maturin reinstall churn):
 
@@ -46,10 +46,10 @@ Equivalent one-liner (repo root):
 
 ```text
 uv run --no-sync python scripts/dev_tt3de_screenshot.py ^
-  -o source/_static/screenshots/triple_panel.svg --width 200 --height 56
+  -o source/_static/screenshots/dual_panel.svg --width 200 --height 56
 ```
 
-Optional: `uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
+Optional: `uv run --no-sync python scripts/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
 
 ### Packaged examples (`screenshot_apps/`)
 
@@ -59,7 +59,7 @@ Individual apps (use with `--app` when you want **one** scene per run):
 
 | `--app` | Description |
 |---------|-------------|
-| `screenshot_apps.triple_panel:TriplePanelDemoApp` | **Default** — triptych columns only |
+| `screenshot_apps.dual_panel:DualPanelDemoApp` | **Default** — two side-by-side columns (taxi + city block) |
 | `screenshot_apps.red_triangle:TexturedCubeDemoApp` | Textured cube (OBJ + BMP) |
 | `screenshot_apps.multi_triangle:TaxiModelDemoApp` | Taxi car 3D model |
 | `screenshot_apps.city_scene:CityBlockDemoApp` | City block, top-down |
@@ -82,7 +82,7 @@ Extra wait in seconds after paint stabilization before **`export_screenshot`**.
 ### Other flags
 
 - **`--title`**: title string passed to `export_screenshot` (default `tt3de_dev_screenshot`).
-- **`--width` / `--height`**: synthetic terminal size (defaults **264 × 56** for the triptych).
+- **`--width` / `--height`**: synthetic terminal size (defaults **200 × 56** for the dual-panel app).
 
 ### Release artifact check
 

@@ -2,8 +2,8 @@
 """
 Dev-only helper: capture Textual Apps as SVG via headless run_test.
 
-Default: one screenshot with three TT3DE demos side-by-side (see
-`screenshot_apps.triple_panel:TriplePanelDemoApp`). Use `--app` for a single App
+Default: one screenshot with two TT3DE demos side-by-side (see
+`screenshot_apps.dual_panel:DualPanelDemoApp`). Use `--app` for a single App
 or any other module:Class / path.py:Class.
 
 This file lives under scripts/ — it is NOT installed via the published wheel.
@@ -31,7 +31,7 @@ from pathlib import Path
 from textual.app import App
 
 
-DEFAULT_APP_REF = "screenshot_apps.triple_panel:TriplePanelDemoApp"
+DEFAULT_APP_REF = "screenshot_apps.dual_panel:DualPanelDemoApp"
 
 
 # JetBrains Mono webfonts are served by jsDelivr (cdnjs does not host this
@@ -192,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         "--width",
         type=int,
         default=200,
-        help="Synthetic terminal width (cols); default 200 fits the triptych default app.",
+        help="Synthetic terminal width (cols); default 200 fits the dual-panel default app.",
     )
     parser.add_argument(
         "--height",

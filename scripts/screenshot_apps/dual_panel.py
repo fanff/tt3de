@@ -14,19 +14,19 @@ from screenshot_apps.city_scene import CityBlockScene
 from screenshot_apps.multi_triangle import TaxiModelScene
 
 
-class TriplePanelDemoApp(App):
+class DualPanelDemoApp(App):
     """Two-column layout; each column uses a dark tint and a matching title bar."""
 
-    TITLE = "TT3DE doc triptych"
+    TITLE = "TT3DE doc dual panel"
 
     DEFAULT_CSS = """
-    TriplePanelDemoApp {
+    DualPanelDemoApp {
         width: 100%;
         height: 100%;
         background: $surface;
     }
 
-    TriplePanelDemoApp Screen {
+    DualPanelDemoApp Screen {
         background: $surface;
     }
 

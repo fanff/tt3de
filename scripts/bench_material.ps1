@@ -19,4 +19,4 @@ uv run --no-sync pytest `
     --benchmark-only -q `
     "--benchmark-json=$jsonOut"
 
-uv run --no-sync python python/tt3de/dev_material_bench_report.py $jsonOut
+uv run --no-sync python scripts/dev_material_bench_report.py $jsonOut

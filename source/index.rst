@@ -34,14 +34,14 @@ For a smooth experience, prefer terminals that handle high refresh well (see pro
 Screenshot examples (Textual SVG capture)
 =========================================
 
-The composite below shows three TT3DE panels in one terminal capture (textured cube,
-taxi car model, city block). Generated via ``make regen-doc-screenshot`` or
-``bash scripts/regen_doc_screenshot.sh`` (default ``TriplePanelDemoApp``).
+The composite below shows two TT3DE panels in one terminal capture (taxi car
+model and city block, top-down). Generated via ``make regen-doc-screenshot`` or
+``bash scripts/regen_doc_screenshot.sh`` (default ``DualPanelDemoApp``).
 
-.. figure:: _static/screenshots/triple_panel.svg
+.. figure:: _static/screenshots/dual_panel.svg
    :width: 100%
    :align: center
-   :alt: Three TT3DE Textual panels in one terminal capture
+   :alt: Two TT3DE Textual panels in one terminal capture
 
    Regenerate with ``make regen-doc-screenshot`` or ``bash scripts/regen_doc_screenshot.sh`` after editing ``scripts/screenshot_apps/`` (see Agent guidelines).
 

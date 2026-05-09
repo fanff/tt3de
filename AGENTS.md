@@ -35,15 +35,15 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 
 - The `source/` folder is a [Sphinx](https://www.sphinx-doc.org/) documentation project. Generated docs (e.g. `source/opcode_reference.md`) are written there so Sphinx can include them in the built site.
 
-- **Screenshots tracked in Sphinx static assets**: the triptych used in the docs lives under `source/_static/screenshots/`. After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate from the repository root:
+- **Screenshots tracked in Sphinx static assets**: the dual-panel composite used in the docs lives under `source/_static/screenshots/`. After changing [`scripts/screenshot_apps/dual_panel.py`](scripts/screenshot_apps/dual_panel.py) or dependencies it renders, regenerate from the repository root:
 
-  **`make regen-doc-screenshot`**, **`bash scripts/regen_doc_screenshot.sh`**, or **`powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1`**.
+ **`make regen-doc-screenshot`**, **`bash scripts/regen_doc_screenshot.sh`**, or **`powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1`**.
 
-  These invoke [`scripts/dev_tt3de_screenshot.py`](scripts/dev_tt3de_screenshot.py) with `--width 200`, `--height 56`, and write `triple_panel.svg` under `source/_static/screenshots/`. Sphinx and the README embed that SVG.
+ These invoke [`scripts/dev_tt3de_screenshot.py`](scripts/dev_tt3de_screenshot.py) with `--width 200`, `--height 56`, and write `dual_panel.svg` under `source/_static/screenshots/`. Sphinx and the README embed that SVG.
 
-  Optional: `uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
+ Optional: `uv run --no-sync python scripts/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
 
-  GitHub Actions documentation workflow regenerates these after `maturin develop`, before **`sphinx-build`**. Commit updated screenshots when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
+ GitHub Actions documentation workflow regenerates these after `maturin develop`, before **`sphinx-build`**. Commit updated screenshots when you touch the dual-panel app so local **`sphinx-build`** stays accurate offline too.
 
 ## Dependencies
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Regenerate the Sphinx static triptych SVG (development; run from repository root only).
+Regenerate the Sphinx static dual-panel SVG (development; run from repository root only).
 
 Prefer ``make regen-doc-screenshot``, ``bash scripts/regen_doc_screenshot.sh``, or
 ``powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1``.
 
 Optional Python entry (sets ``COLORTERM`` for export)::
 
-    uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py
+    uv run --no-sync python scripts/dev_regen_doc_screenshot.py
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_REL_OUT = Path("source") / "_static" / "screenshots" / "triple_panel.svg"
+DEFAULT_REL_OUT = Path("source") / "_static" / "screenshots" / "dual_panel.svg"
 
 
 def main() -> None:

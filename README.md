@@ -3,7 +3,7 @@
 A minimalistic 2D/3D engine implemented in Rust and bound to Python, designed to render 3D objects using ASCII art.
 
 <p align="center">
-  <img src="source/_static/screenshots/triple_panel.svg" alt="TT3DE demo — taxi car and city block rendered in a terminal" width="100%">
+  <img src="source/_static/screenshots/dual_panel.svg" alt="TT3DE demo — taxi car and city block rendered in a terminal" width="100%">
 </p>
 
 ## Features
@@ -85,7 +85,7 @@ To set up a development version of this engine:
     PYTHONPATH=python uv run pytest \
       tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
       --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
-    uv run --no-sync python python/tt3de/dev_material_bench_report.py benchmarks/material_apply.json
+    uv run --no-sync python scripts/dev_material_bench_report.py benchmarks/material_apply.json
     ```
 
 9. Regenerate TTSL opcode/ABI files after opcode definition changes:
