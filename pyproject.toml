@@ -16,11 +16,12 @@ dev = [
   "pytest-benchmark>=4.0.0",
   "pytest>=8.2.1",
   "requests>=2.32.3",
+  "rich>=15.0.0",
   "ruff>=0.9.9",
   "setuptools>=80.9.0",
   "sphinx-book-theme>=1.1.4",
   "sphinx-rtd-theme>=3.0.2",
-  "sphinx>=8.2.3"
+  "sphinx>=8.2.3",
 ]
 
 [project]
@@ -33,6 +34,7 @@ version = "0.1.2"
 
 [project.scripts]
 tt3de-gen-opcodes = "tt3de.ttsl.ttisa.low_level_def:main"
+tt3de-material-bench-report = "tt3de.dev_material_bench_report:main"
 tt3de-regen-doc-screenshot = "tt3de.dev_regen_doc_screenshot:main"
 
 [tool.maturin]

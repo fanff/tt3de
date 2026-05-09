@@ -64,7 +64,31 @@ To set up a development version of this engine:
     ```bash
     uv run pytest
     ```
-8. Regenerate TTSL opcode/ABI files after opcode definition changes:
+8. **Material shading threading benchmark** (`test_bench_material_apply`): captures serial vs Rayon (1/2/4/8 threads) over several canvas sizes, writes `benchmarks/material_apply.json`, and prints a compact Rich KPI report (~100-column friendly). From the repository root:
+
+    ```bash
+    ./scripts/bench_material.sh
+    ```
+
+    On Windows PowerShell:
+
+    ```powershell
+    .\scripts\bench_material.ps1
+    ```
+
+    The report summarizes **speedup vs serial** (`×ser`), **per-thread efficiency** (`η/T`), **scaling loss** vs ideal linear speedup (`loss`), and a **throughput bar** per configuration. Expect roughly one minute on a typical CPU.
+
+    Equivalent manual invocation:
+
+    ```bash
+    mkdir -p benchmarks
+    PYTHONPATH=python uv run pytest \
+      tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
+      --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
+    uv run tt3de-material-bench-report benchmarks/material_apply.json
+    ```
+
+9. Regenerate TTSL opcode/ABI files after opcode definition changes:
     ```bash
     uv run tt3de-gen-opcodes
     ```

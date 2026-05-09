@@ -11,6 +11,17 @@ Example::
 
     uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v
 
+Export JSON and render a terminal KPI report (Rich; see README)::
+
+    ./scripts/bench_material.sh
+
+    # or (repository root):
+
+    mkdir -p benchmarks
+    PYTHONPATH=python uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \\
+      --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
+    uv run tt3de-material-bench-report benchmarks/material_apply.json
+
 Group timings by canvas size (``n``)::
 
     uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v \\

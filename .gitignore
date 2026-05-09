@@ -59,6 +59,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Local pytest-benchmark JSON exports (see README)
+benchmarks/*.json
+
 # Translations
 *.mo
 *.pot
