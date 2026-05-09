@@ -45,26 +45,28 @@ ALLOWED_IR_TYPES = {
 
 VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
-GLOBAL_VAR_TTSL_TIME = "ttsl_time"
-PIXELVAR_TTSL_UV0: str = "ttsl_uv0"
-PIXELVAR_TTSL_UV1: str = "ttsl_uv1"
-ON_SCREEN_POSITION_VAR_NAME: str = "pos"
+# Built-in TTSL variables follow the OpenGL/GLSL convention `gl_<CamelCase>`,
+# transposed to `tt_<CamelCase>`. Keep these names in sync with `source/ttsl.md`.
+GLOBAL_VAR_TT_TIME: str = "tt_Time"
+PIXELVAR_TT_FRAGCOORD: str = "tt_FragCoord"
+PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
+PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
 
 GLOBAL_VAR_SET = {
-    GLOBAL_VAR_TTSL_TIME,
-    PIXELVAR_TTSL_UV0,
-    PIXELVAR_TTSL_UV1,
-    ON_SCREEN_POSITION_VAR_NAME,
+    GLOBAL_VAR_TT_TIME,
+    PIXELVAR_TT_FRAGCOORD,
+    PIXELVAR_TT_TEXCOORD0,
+    PIXELVAR_TT_TEXCOORD1,
 }
 
 GLOBAL_VARIABLES_STR_TYPE = {
-    GLOBAL_VAR_TTSL_TIME: IRType.F32,
+    GLOBAL_VAR_TT_TIME: IRType.F32,
 }
 
 PIXEL_VARIABLES_STR_TYPE = {
-    PIXELVAR_TTSL_UV0: IRType.V2,
-    PIXELVAR_TTSL_UV1: IRType.V2,
-    ON_SCREEN_POSITION_VAR_NAME: IRType.V2,
+    PIXELVAR_TT_FRAGCOORD: IRType.V2,
+    PIXELVAR_TT_TEXCOORD0: IRType.V2,
+    PIXELVAR_TT_TEXCOORD1: IRType.V2,
 }
 
 NATIVE_UNI_OPS_TYPE = {

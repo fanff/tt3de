@@ -9,19 +9,21 @@ from textual.binding import Binding
 default_shader_code = """\
 
 # this is the default shader code.
+# Built-in inputs follow the GLSL `gl_*` convention as `tt_*`
+# (see `source/ttsl.md` for the spec).
 
 @ttsl(globals={"time": float, "position": glm.vec3})
-def my_shader(pos: glm.vec2) -> glm.vec3:
+def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:
     # accessing variables coming from the fragment:
-    uv0: glm.vec2 = ttsl_uv0
-    uv1: glm.vec2 = ttsl_uv1
+    uv0: glm.vec2 = tt_TexCoord0
+    uv1: glm.vec2 = tt_TexCoord1
 
     if uv0.x < 0.5:
         return glm.vec3(1.0, -2.0, 0.0)
     else:
         return glm.vec3(
-            abs(glm.sin(pos.x * 10.0 + ttsl_time / 2.0)),
-            abs(glm.sin(pos.y * 10.0 + ttsl_time / 2.0)),
+            abs(glm.sin(tt_FragCoord.x * 10.0 + tt_Time / 2.0)),
+            abs(glm.sin(tt_FragCoord.y * 10.0 + tt_Time / 2.0)),
             0.5,
         )
 

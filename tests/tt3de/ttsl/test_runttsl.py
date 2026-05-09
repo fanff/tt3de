@@ -6,7 +6,7 @@ from textwrap import dedent
 import unittest
 
 from tt3de.ttsl.compiler import (
-    PIXELVAR_TTSL_UV0,
+    PIXELVAR_TT_TEXCOORD0,
     PassSSARenamer,
     compile_ttsl,
     PassPhiNodeLowering,
@@ -129,15 +129,15 @@ class Test_RunTTSL(unittest.TestCase):
 
         shader_code = dedent(
             """
-        def frag(pos: vec2) -> vec3:
-            return vec3(ttsl_uv0.x, ttsl_uv0.y, 0.0)
+        def frag(tt_FragCoord: vec2) -> vec3:
+            return vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
         """
         )
         bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
-        # reg_settings.set_variable(GLOBAL_VAR_TTSL_TIME, 1221.1)
-        reg_settings.set_variable(PIXELVAR_TTSL_UV0, glm.vec2(0.5, 0.5))
-        # reg_settings.set_variable(PIXELVAR_TTSL_UV1, glm.vec2(0.5, 0.5))
-        # reg_settings.set_variable(ON_SCREEN_POSITION_VAR_NAME, glm.vec2(0.5, 0.5))
+        # reg_settings.set_variable(GLOBAL_VAR_TT_TIME, 1221.1)
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
+        # reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.5, 0.5))
+        # reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.5, 0.5))
 
         # from the rar, prepare the registers
         regs = reg_settings.get_register_list()

@@ -11,7 +11,7 @@ from tt3de.ttsl.compiler import (
 )
 from pyglm import glm
 
-from tt3de.ttsl.decorator import ttsl, ttsl_time, ttsl_uv0, ttsl_uv1
+from tt3de.ttsl.decorator import ttsl, tt_Time, tt_TexCoord0, tt_TexCoord1
 from tt3de.ttsl.enrich import (
     PassPrintConsole,
 )
@@ -24,27 +24,27 @@ console = Console()
 
 
 @ttsl(globals={"time": float, "position": glm.vec3})
-def my_shader(pos: glm.vec2) -> glm.vec3:
+def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:
     # accessing variables coming from the fragment:
-    uv0: glm.vec2 = ttsl_uv0
-    uv1: glm.vec2 = ttsl_uv1  # noqa
+    uv0: glm.vec2 = tt_TexCoord0
+    uv1: glm.vec2 = tt_TexCoord1  # noqa
 
     if uv0.x < 0.5:
         return glm.vec3(1.0, -2.0, 0.0)
     else:
         return glm.vec3(
-            abs(glm.sin(pos.x * 10.0 + ttsl_time / 2.0)),
-            abs(glm.sin(pos.y * 10.0 + ttsl_time / 2.0)),
+            abs(glm.sin(tt_FragCoord.x * 10.0 + tt_Time / 2.0)),
+            abs(glm.sin(tt_FragCoord.y * 10.0 + tt_Time / 2.0)),
             0.5,
         )
 
 
 @ttsl(globals={"time": float, "position": glm.vec3})
-def my_shader(pos: glm.vec2) -> glm.vec3:  # noqa: F811
+def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:  # noqa: F811
     # accessing variables coming from the fragment:
     c: float = 0.0  # noqa
 
-    if ttsl_uv0.x < 0.5:
+    if tt_TexCoord0.x < 0.5:
         # c: float = 2.0
         a: float = 2.0  # noqa
         b: float = 1.0
@@ -53,18 +53,18 @@ def my_shader(pos: glm.vec2) -> glm.vec3:  # noqa: F811
         b: float = 1.0
 
     return glm.vec3(
-        abs(glm.sin(ttsl_time / b)),
-        abs(glm.sin(ttsl_time / b)),
+        abs(glm.sin(tt_Time / b)),
+        abs(glm.sin(tt_Time / b)),
         0.5,
     )
 
 
 @ttsl(globals={})
-def my_shader(pos: glm.vec2) -> glm.vec3:  # noqa: F811
-    # calculate a skybox background based on pos (from -1 to 1)
+def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:  # noqa: F811
+    # calculate a skybox background based on tt_FragCoord (from -1 to 1)
     color_sky: glm.vec3 = glm.vec3(0.2, 0.4, 0.8)
     color_horizon: glm.vec3 = glm.vec3(0.8, 0.9, 1.0)
-    t: float = (pos.y + 1.0) / 2.0
+    t: float = (tt_FragCoord.y + 1.0) / 2.0
     mixed: glm.vec3 = glm.mix(color_sky, color_horizon, t)  # noqa
 
     return mixed

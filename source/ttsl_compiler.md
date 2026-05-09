@@ -3,6 +3,28 @@
 This project contains a full compiler pipeline for Tiny Tiny Shader Language (TTSL).
 The main implementation is in `python/tt3de/ttsl/compiler.py`, and the IR/CFG data model is in `python/tt3de/ttsl/ttsl_assembly.py`.
 
+## Example TTSL source
+
+Built-in inputs follow the OpenGL/GLSL `gl_<CamelCase>` convention,
+transposed to `tt_<CamelCase>` (see [TTSL spec](ttsl.md) for the full table):
+
+- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`)
+- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates
+- `tt_Time` (`float`) — engine time uniform
+
+The shader function takes `tt_FragCoord` as its parameter; other built-ins are
+implicitly available globals:
+
+```python
+def shade(tt_FragCoord: vec2) -> vec3:
+    pulse: float = sin(tt_Time)
+    color: vec3 = glm.vec3(tt_TexCoord0.x, tt_TexCoord0.y, pulse)
+    if tt_TexCoord0.x > tt_TexCoord0.y:
+        return color
+    else:
+        return glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
+```
+
 ## Where compilation starts
 
 The public entry point is:
@@ -26,6 +48,40 @@ The compiler transforms Python-like TTSL source in several stages:
 6. Allocate typed virtual-machine registers (`RegisterAllocatorPass`)
 7. Normalize terminators / block layout
 8. Encode IR into final bytecode (`PassToByteCode`)
+
+## Pipeline diagram
+
+```{mermaid}
+flowchart TD
+    A[TTSL source string] --> B[Parse and front-end IR build<br/>compile_ttsl / compile_ttsl_function]
+    B --> C[CFG construction<br/>build_cfg_from_ir]
+    C --> D[SSA conversion<br/>PassSSARenamer]
+    D --> E[Phi lowering<br/>PassPhiNodeLowering]
+    E --> F[CFG cleanup<br/>CFGSimplifyPass]
+    F --> G[Register allocation<br/>RegisterAllocatorPass]
+    G --> H[Terminator normalization<br/>PassNormalizeTerminators]
+    H --> I[Bytecode emission<br/>PassToByteCode]
+    I --> J[bytes + RegisterSettings]
+```
+
+## Stage-to-source references
+
+- Pipeline orchestrator: `python/tt3de/ttsl/compiler.py` (`all_passes_compilation(...)`)
+- Front-end parsing/AST cleanup and IR generation:
+  - `python/tt3de/ttsl/compiler.py` (`compile_ttsl(...)`, `compile_ttsl_function(...)`)
+  - `python/tt3de/ttsl/compiler.py` (`CleanPythonTreePass`, `TTSLCompilerContext.compile_stmt(...)`, `TTSLCompilerContext.compile_expr(...)`, `TTSLCompilerContext.type_of(...)`)
+- CFG construction:
+  - `python/tt3de/ttsl/ttsl_assembly.py` (`build_cfg_from_ir(...)`)
+- SSA conversion:
+  - `python/tt3de/ttsl/compiler.py` (`PassSSARenamer`, `SSARenamer`)
+- Phi lowering:
+  - `python/tt3de/ttsl/compiler.py` (`PassPhiNodeLowering`)
+- Register allocation:
+  - `python/tt3de/ttsl/compiler.py` (`RegisterAllocatorPass`)
+- Terminator normalization:
+  - `python/tt3de/ttsl/compiler.py` (`PassNormalizeTerminators`)
+- Bytecode lowering:
+  - `python/tt3de/ttsl/compiler.py` (`PassToByteCode`)
 
 ## Front-end: AST to IR
 
