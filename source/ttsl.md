@@ -76,10 +76,12 @@ From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
   - The shader is executed at material-application time and its return payload
     (`front`, `back`, `glyph`) drives final cell output.
   - Python API:
-    - `materials.ShaderPy(bytecode: bytes, time_f32_reg: Optional[int])`
+    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_Frame`).
     - `MaterialBufferPy.add_shader(shader)`
-    - `MaterialBufferPy.set_shader_time(material_idx, time_seconds)` for
-      in-place per-frame time updates without rebuilding materials.
+    - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
+      `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`.
+      These update **seed / uniform** registers only (same cadence as `tt_Time`), not per-pixel inputs such as `tt_FragCoord`.
+    - After `all_passes_compilation(...)`, copy `RegisterSettings` into `ShaderPy` fields and/or `register_seed` so bytecode literals and uniform slots agree with what the runtime writes (see [TTSL Compiler](ttsl_compiler.md)).
 - Debug helpers (`add_debug_depth`, `add_debug_uv`)
   - Depth and UV visualization materials exposed by Rust bindings.
 
@@ -104,28 +106,33 @@ The TTSL compiler requires the shader to ``return`` a 3-tuple ``(front, back, gl
 with types ``(vec3, vec3, int)``, matching ``OP_RET`` above. Annotate as
 ``tuple[vec3, vec3, int]`` (or ``typing.Tuple[...]``). See the [TTSL Compiler](ttsl_compiler.md) example.
 
-Variables list [TODO]
----------------------
+Built-in variables
+------------------
 
+Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_PrimitiveID`) are always known to the compiler. Engine uniforms (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`) are declared only when listed in `globals_dict` with the types below.
 
-| Name               | Type  | Range / Units                          | Description |
-|--------------------|-------|----------------------------------------|-------------|
-| tt_FragCoord       | vec2  | x:[0..res.x-1], y:[0..res.y-1]         | Window-space cell coordinate of the current shaded cell. Equivalent to gl_FragCoord.xy (cell-level, integer-like). |
-| tt_FragPos         | vec2  | [-1..1]                                | Normalized device-space position of the cell center. Equivalent to gl_Position → NDC mapping for fragments. |
-| tt_Resolution      | vec2  | (width_cells, height_cells)            | Size of the render target in cells. Analogous to framebuffer resolution queries. |
-| tt_PrimitiveID     | int   | [0..N-1]                               | ID of the primitive that generated this cell. Mirrors gl_PrimitiveID. |
-| tt_FrontFacing     | bool  | true / false                           | True if the primitive is front-facing under current winding rules. Mirrors gl_FrontFacing. |
-| tt_TexCoord0       | vec2  | typically [0..1] (convention-defined)  | First interpolated texture coordinate set. Equivalent to a user-defined in vec2 or legacy gl_TexCoord[0]. |
-| tt_TexCoord1       | vec2  | typically [0..1] (convention-defined)  | Second interpolated texture coordinate set. Equivalent to gl_TexCoord[1] / multi-UV workflows. |
-| tt_Time            | float | seconds (>= 0)                         | Elapsed time since start. Common engine uniform, analogous to user-defined time uniforms in GLSL. |
-| tt_DeltaTime       | float | seconds (>= 0)                         | Time between frames. Not a GLSL built-in, but standard real-time shader uniform. |
-| tt_Frame           | int   | [0..]                                  | Frame counter. Analogous to application-provided frame index uniforms. |
-| tt_PointCoord      | vec2  | [0..1]                                 | Coordinates within a rasterized point sprite. Mirrors gl_PointCoord. Only valid for point primitives. |
-| tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. GLSL-adjacent (no direct built-in), but follows naming conventions. |
-| tt_FragDepth       | float | [0..1] or [-1..1] (engine-defined)     | Depth value of the current cell. Mirrors gl_FragDepth semantics (read-only unless you allow writes). |
+The **Status** column tracks what the project ships today vs names reserved for future parity.
+
+| Status   | Name               | Type  | Range / Units                          | Description |
+|----------|--------------------|-------|----------------------------------------|-------------|
+| Shipped  | tt_FragCoord       | vec2  | x:[0..res.x-1], y:[0..res.y-1]         | Window-space cell coordinate of the current shaded cell. Equivalent to gl_FragCoord.xy (cell-level, integer-like). |
+| Shipped  | tt_FragPos         | vec2  | [-1..1]                                | Normalized device-space position of the cell center. Equivalent to gl_Position → NDC mapping for fragments. |
+| Shipped  | tt_Resolution      | vec2  | (width_cells, height_cells)            | Size of the render target in cells. Pass ``'tt_Resolution': glm.vec2`` in ``globals_dict`` when referenced. Compiler seeds ``(1, 1)`` until the host writes via ``register_seed`` / ``ShaderPy.resolution_v2_reg`` or ``MaterialBufferPy.set_shader_resolution``. Non-positive dimensions are clamped to 1 in the Rust setter. On resize, ``tt_FragCoord`` and ``tt_Resolution`` may briefly disagree unless the host refreshes both together. |
+| Shipped  | tt_PrimitiveID     | int   | [0..N-1]                               | Index of the primitive that generated this cell (depth winner). Mirrors gl_PrimitiveID. |
+| Shipped  | tt_FrontFacing     | bool  | true / false                           | Front-facing under current winding rules. Mirrors gl_FrontFacing; optional ``ShaderPy.front_facing_bool_reg`` binds the VM bool the runtime fills each pixel. |
+| Shipped  | tt_TexCoord0       | vec2  | typically [0..1] (convention-defined)  | First interpolated texture coordinate set. Equivalent to a user-defined in vec2 or legacy gl_TexCoord[0]. |
+| Shipped  | tt_TexCoord1       | vec2  | typically [0..1] (convention-defined)  | Second interpolated texture coordinate set. Equivalent to gl_TexCoord[1] / multi-UV workflows. |
+| Shipped  | tt_Time            | float | seconds (>= 0)                         | Elapsed engine time. Pass ``'tt_Time': float`` in ``globals_dict`` when referenced; host updates via ``MaterialBufferPy.set_shader_time`` (and ``ShaderPy.time_f32_reg`` from compilation). |
+| Shipped  | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. |
+| Shipped  | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). |
+| Planned  | tt_PointCoord      | vec2  | [0..1]                                 | Coordinates within a rasterized point sprite. Mirrors gl_PointCoord. Not wired in compiler/runtime yet. |
+| Planned  | tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. Not wired yet. |
+| Planned  | tt_FragDepth       | float | [0..1] or [-1..1] (engine-defined)     | Depth of the current cell. Not wired yet. |
 
 
 ## Primitives
+
+The table below is the intended GLSL-style surface. Only a small subset is recognized by the TTSL compiler today; see [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
 
 
 | Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |

@@ -160,4 +160,26 @@ mod tests {
         assert_eq!(instrs[0].c, 6);
         assert_eq!(instrs[255].opcode, OP_RET);
     }
+
+    /// Minimal branch (no phi merge): documents ``OP_JMP_IF_FALSE`` + dual ``OP_RET`` semantics.
+    #[test]
+    fn jmp_if_false_routes_to_else_ret_without_phi() {
+        let mut regs = Registers::new();
+        regs.v3[1] = Vec3::new(1.0, 0.0, 0.0);
+        regs.v3[2] = Vec3::new(0.0, 1.0, 0.0);
+
+        let instrs = decode_instrs_256(&[
+            OP_JMP_IF_FALSE, 2, 5, 0, 0, 0,
+            OP_RET, 0, 1, 1, 0, 0,
+            OP_RET, 0, 2, 2, 0, 0,
+        ]);
+
+        regs.bool_[5] = true;
+        let out_t = run_ttsl(&instrs, &mut regs);
+        assert_eq!(out_t.0, Vec3::new(1.0, 0.0, 0.0));
+
+        regs.bool_[5] = false;
+        let out_f = run_ttsl(&instrs, &mut regs);
+        assert_eq!(out_f.0, Vec3::new(0.0, 1.0, 0.0));
+    }
 }

@@ -180,6 +180,34 @@ class MaterialBufferPy:
         """
         ...
 
+    def set_shader_delta_time(self, material_idx: int, dt_seconds: float) -> None:
+        """
+        Updates a shader material ``tt_DeltaTime`` uniform in place (frame delta, seconds).
+
+        Args:
+            material_idx (int): Index returned by `add_shader`.
+            dt_seconds (float): Elapsed time since the previous frame.
+        """
+        ...
+
+    def set_shader_frame(self, material_idx: int, frame: int) -> None:
+        """
+        Updates a shader material ``tt_Frame`` uniform in place.
+
+        Values are non-negative frame counters and saturate to the TTSL ``i32`` maximum.
+        """
+        ...
+
+    def set_shader_resolution(
+        self, material_idx: int, width_cells: float, height_cells: float
+    ) -> None:
+        """
+        Updates a shader material ``tt_Resolution`` uniform ``(width_cells, height_cells)`` in place.
+
+        Non-positive dimensions are normalized to ``1.0`` (same default as compile-time seeding).
+        """
+        ...
+
     def add_textured(self, albedo_texture_idx: int, glyph_idx: int) -> int:
         """
         Adds a textured material to the buffer.
@@ -749,6 +777,7 @@ class DrawingBufferPy:
         geom_id: int,
         material_id: int,
         primitive_id: int,
+        front_facing: bool = True,
     ) -> None:
         """
         Sets the depth content for a specific cell in the drawing buffer.
@@ -763,6 +792,7 @@ class DrawingBufferPy:
             geom_id (int): The geometry ID.
             material_id (int): The material ID.
             primitive_id (int): The primitive ID.
+            front_facing (bool): Per-cell face orientation flag (default ``True``).
         """
         ...
 

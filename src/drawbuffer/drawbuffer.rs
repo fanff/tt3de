@@ -17,6 +17,36 @@ use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::RGBA;
 use crate::vertexbuffer::uv_buffer::UVBuffer;
 
+/// Twice the signed area of triangle `(a,b,c)` in the plane with **X = column**, **Y = row**
+/// (same axes as vertex `pos.x` / `pos.y` during rasterization).
+///
+/// Positive ⇒ walking `a → b → c` is **counter-clockwise** in standard math with **Y increasing downward**
+/// (typical image / row index coordinates).
+#[inline]
+pub fn oriented_area_2d_xy(ax: f32, ay: f32, bx: f32, by: f32, cx: f32, cy: f32) -> f32 {
+    (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+}
+
+/// Winding rule for [`PixInfo::front_facing`] on **triangles**: `true` iff
+/// [`oriented_area_2d_xy`] for `(pa,pb,pc)` in **submission order**, using projected
+/// screen positions, is strictly positive.
+///
+/// Vertex positions must already be in the same space as the rasterizer (`pos.x`, `pos.y`
+/// after [`DrawBuffer::ndc_to_screen_floating`]). Because that mapping applies
+/// [`DrawBuffer::scale`] from flip flags, this handedness **tracks buffer flip_x / flip_y**
+/// without an extra special case.
+#[inline]
+pub fn triangle_front_facing_submission_order_xy(
+    ax: f32,
+    ay: f32,
+    bx: f32,
+    by: f32,
+    cx: f32,
+    cy: f32,
+) -> bool {
+    oriented_area_2d_xy(ax, ay, bx, by, cx, cy) > 0.0
+}
+
 /// Represents information about a pixel with variable accuracy.
 ///
 /// # Type Parameters
@@ -31,11 +61,17 @@ use crate::vertexbuffer::uv_buffer::UVBuffer;
 /// - `primitive_id`: An identifier for the primitive (e.g., a geometric primitive like a triangle or sphere).
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
 /// - `geometry_id`: An identifier for the geometry, which could refer to a specific geometric object or model.
+/// - `frag_pos`: Cell-center position in normalized device coordinates [-1, 1] (see [`DrawBuffer::cell_center_to_ndc`]).
+/// - `front_facing`: Per-cell flag from rasterization; triangles use winding in projected screen space
+///   (see [`triangle_front_facing_submission_order`]). Non-triangle paths use an engine-defined
+///   deterministic default (`true`).
 #[derive(Clone, Copy, Debug)]
 pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub uv: TVec2<InfoAccuracy>,
     pub uv_1: TVec2<InfoAccuracy>,
+    pub frag_pos: Vec2,
     pub normal: Vec3,
+    pub front_facing: bool,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -53,7 +89,9 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         PixInfo {
             uv: TVec2::zeros(),
             uv_1: TVec2::zeros(),
+            frag_pos: Vec2::zeros(),
             normal: Vec3::new(0.0, 0.0, 1.0),
+            front_facing: true,
             material_id: 0,
             primitive_id: 0,
             node_id: 0,
@@ -65,6 +103,7 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         self.primitive_id = 0;
         self.node_id = 0;
         self.geometry_id = 0;
+        self.front_facing = true;
     }
     pub fn set_uv(&mut self, uv: TVec2<T>) {
         self.uv = uv;
@@ -132,6 +171,140 @@ mod test_drawbuffer_color {
         assert_eq!(color.g, 0);
         assert_eq!(color.b, 0);
         assert_eq!(color.a, 255);
+    }
+}
+
+#[cfg(test)]
+mod test_frag_pos_ndc {
+    use super::*;
+
+    #[test]
+    fn cell_center_ndc_matches_inverse_of_ndc_to_screen() {
+        let db = DrawBuffer::<2, f32>::new(10, 20, 1.0, false, false);
+        for col in [0usize, 5, 9] {
+            for row in [0usize, 10, 19] {
+                let ndc = db.cell_center_to_ndc(col, row);
+                let back = db.ndc_to_screen_floating(&ndc);
+                assert!((back.x - (col as f32 + 0.5)).abs() < 1e-4);
+                assert!((back.y - (row as f32 + 0.5)).abs() < 1e-4);
+            }
+        }
+    }
+
+    #[test]
+    fn set_depth_content_sets_pix_frag_pos_ndc() {
+        let mut db = DrawBuffer::<1, f32>::new(4, 4, 9999.0, false, false);
+        db.set_depth_content(
+            1,
+            2,
+            0.5,
+            Vec3::new(0.0, 0.0, 1.0),
+            vec2(0.0, 0.0),
+            vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+            true,
+        );
+        let p = db.get_pix_buffer_content_at_row_col(1, 2, 0);
+        let expected = db.cell_center_to_ndc(2, 1);
+        assert!((p.frag_pos.x - expected.x).abs() < 1e-4);
+        assert!((p.frag_pos.y - expected.y).abs() < 1e-4);
+    }
+}
+
+#[cfg(test)]
+mod test_front_facing_winding {
+    //! Documents the engine winding convention for [`super::triangle_front_facing_submission_order_xy`]:
+    //! submission-order winding in **screen space** (after [`super::DrawBuffer::ndc_to_screen_floating`])
+    //! matches NDC winding up to the sign of `scale.x * scale.y` from flip flags.
+
+    use nalgebra_glm::vec2;
+
+    use super::{
+        oriented_area_2d_xy, triangle_front_facing_submission_order_xy, DrawBuffer,
+    };
+
+    /// CCW triangle in NDC when **Y increases upward** (standard math view of clip XY).
+    fn ndc_ccw_triangle() -> [(f32, f32); 3] {
+        [
+            (-0.5, -0.5),
+            (0.5, -0.5),
+            (0.0, 0.5),
+        ]
+    }
+
+    #[test]
+    fn ndc_ccw_has_positive_xy_area_in_ndc_plane() {
+        let [(ax, ay), (bx, by), (cx, cy)] = ndc_ccw_triangle();
+        let ndc_cross = oriented_area_2d_xy(ax, ay, bx, by, cx, cy);
+        assert!(
+            ndc_cross > 0.0,
+            "reference triangle must be CCW in NDC with Y-up interpretation (cross_z > 0)"
+        );
+    }
+
+    #[test]
+    fn screen_space_area_sign_matches_scale_x_times_scale_y_times_ndc() {
+        let [(ax, ay), (bx, by), (cx, cy)] = ndc_ccw_triangle();
+        let ndc_cross = oriented_area_2d_xy(ax, ay, bx, by, cx, cy);
+
+        for (flip_x, flip_y) in [(false, false), (false, true), (true, false), (true, true)] {
+            let db = DrawBuffer::<1, f32>::new(16, 16, 1.0, flip_x, flip_y);
+            let sa = db.ndc_to_screen_floating(&vec2(ax, ay));
+            let sb = db.ndc_to_screen_floating(&vec2(bx, by));
+            let sc = db.ndc_to_screen_floating(&vec2(cx, cy));
+            let screen_cross = oriented_area_2d_xy(sa.x, sa.y, sb.x, sb.y, sc.x, sc.y);
+            let expected_sign = ndc_cross * db.scale.x * db.scale.y;
+            assert!(
+                screen_cross * expected_sign > 0.0,
+                "flip_x={flip_x} flip_y={flip_y}: screen_cross={screen_cross} expected_sign={expected_sign}"
+            );
+            assert_eq!(
+                triangle_front_facing_submission_order_xy(sa.x, sa.y, sb.x, sb.y, sc.x, sc.y),
+                screen_cross > 0.0
+            );
+        }
+    }
+
+    #[test]
+    fn flip_y_default_buffer_negates_area_sign_vs_no_flip() {
+        let [(ax, ay), (bx, by), (cx, cy)] = ndc_ccw_triangle();
+        let db_no = DrawBuffer::<1, f32>::new(16, 16, 1.0, false, false);
+        let db_flipy = DrawBuffer::<1, f32>::new(16, 16, 1.0, false, true);
+        let sa_n = db_no.ndc_to_screen_floating(&vec2(ax, ay));
+        let sb_n = db_no.ndc_to_screen_floating(&vec2(bx, by));
+        let sc_n = db_no.ndc_to_screen_floating(&vec2(cx, cy));
+        let sa_f = db_flipy.ndc_to_screen_floating(&vec2(ax, ay));
+        let sb_f = db_flipy.ndc_to_screen_floating(&vec2(bx, by));
+        let sc_f = db_flipy.ndc_to_screen_floating(&vec2(cx, cy));
+        let cross_no = oriented_area_2d_xy(sa_n.x, sa_n.y, sb_n.x, sb_n.y, sc_n.x, sc_n.y);
+        let cross_flipy = oriented_area_2d_xy(sa_f.x, sa_f.y, sb_f.x, sb_f.y, sc_f.x, sc_f.y);
+        assert!(cross_no * cross_flipy < 0.0);
+        assert_ne!(
+            triangle_front_facing_submission_order_xy(sa_n.x, sa_n.y, sb_n.x, sb_n.y, sc_n.x, sc_n.y),
+            triangle_front_facing_submission_order_xy(sa_f.x, sa_f.y, sb_f.x, sb_f.y, sc_f.x, sc_f.y)
+        );
+    }
+
+    #[test]
+    fn set_depth_content_records_front_facing_flag() {
+        let mut db = DrawBuffer::<1, f32>::new(4, 4, 9.0, false, false);
+        db.set_depth_content(
+            0,
+            1,
+            0.1,
+            nalgebra_glm::Vec3::new(0.0, 0.0, 1.0),
+            vec2(0.0, 0.0),
+            vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+            false,
+        );
+        assert!(!db.get_pix_buffer_content_at_row_col(0, 1, 0).front_facing);
     }
 }
 
@@ -324,6 +497,18 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         }
     }
 
+    /// Cell-center `(col + 0.5, row + 0.5)` as normalized device coordinates [-1, 1].
+    /// Inverse of [`Self::ndc_to_screen_floating`] for that convention, honoring [`Self::scale`].
+    pub fn cell_center_to_ndc(&self, col: usize, row: usize) -> Vec2 {
+        let screen = vec2(col as f32 + 0.5, row as f32 + 0.5);
+        let h = self.half_size;
+        let s = self.scale;
+        vec2(
+            (screen.x / h.x - 1.0) / s.x,
+            (screen.y / h.y - 1.0) / s.y,
+        )
+    }
+
     /// Converts a normalized device coordinate (NDC) to a screen coordinate. (col, row)
     /// This does NOT apply clamping to the screen boundaries.
     pub fn ndc_to_screen_floating(&self, v: &Vec2) -> Vec2 {
@@ -417,7 +602,9 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         geom_id: usize,
         material_id: usize,
         primitive_id: usize,
+        front_facing: bool,
     ) {
+        let frag_pos_ndc = self.cell_center_to_ndc(col, row);
         let the_point = row * self.col_count + col;
         let mut the_layer = 0; // starting at layer 0
 
@@ -449,6 +636,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     let pix_info_dest = &mut (self.pixbuffer[last_pix_index]);
                     the_cell.depth[the_layer] = depth; // Set the depth
                     pix_info_dest.normal = normal;
+                    pix_info_dest.front_facing = front_facing;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -457,6 +645,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // Store the vectors
                     pix_info_dest.uv = uv;
                     pix_info_dest.uv_1 = uv_1;
+                    pix_info_dest.frag_pos = frag_pos_ndc;
 
                     return;
                 } else {
@@ -464,6 +653,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     the_cell.depth[the_layer] = depth; // Set the depth
                     let pix_info_dest = (self.pixbuffer[the_cell.pixinfo[the_layer]]).borrow_mut();
                     pix_info_dest.normal = normal;
+                    pix_info_dest.front_facing = front_facing;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -472,6 +662,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     // Store the vectors
                     pix_info_dest.uv = uv;
                     pix_info_dest.uv_1 = uv_1;
+                    pix_info_dest.frag_pos = frag_pos_ndc;
 
                     return;
                 }

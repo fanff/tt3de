@@ -1,6 +1,8 @@
 use nalgebra_glm::TVec2;
 
-use crate::drawbuffer::drawbuffer::DrawBuffer;
+use crate::drawbuffer::drawbuffer::{
+    triangle_front_facing_submission_order_xy, DrawBuffer,
+};
 
 use super::{primitivbuffer::PrimitivReferences, Vertex};
 
@@ -43,6 +45,7 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
     pa: &Vertex,
     pb: &Vertex,
     pc: &Vertex,
+    front_facing: bool,
 ) {
     // calculate dVertex / d row
     let delta_row = pc.pos.y - pa.pos.y;
@@ -61,6 +64,7 @@ pub fn draw_flat_bottom_triangle<const DEPTHCOUNT: usize>(
         dit0,
         dit1,
         &mut it_edge1,
+        front_facing,
     );
 }
 
@@ -102,6 +106,7 @@ pub fn draw_flat_top_triangle<const DEPTHCOUNT: usize>(
     pa: &Vertex,
     pb: &Vertex,
     pc: &Vertex,
+    front_facing: bool,
 ) {
     // calculate dVertex / d row
     let delta_row = pc.pos.y - pa.pos.y;
@@ -120,6 +125,7 @@ pub fn draw_flat_top_triangle<const DEPTHCOUNT: usize>(
         dit0,
         dit1,
         &mut it_edge1,
+        front_facing,
     );
 }
 
@@ -169,6 +175,7 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
     left_edge_step: Vertex,
     right_edge_step: Vertex,
     right_edge_interpolant: &mut Vertex,
+    front_facing: bool,
 ) {
     // Create an interpolant for the left edge, starting at the apex (pa).
     let mut left_edge_interpolant = *pa;
@@ -251,6 +258,7 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 prim_ref.geometry_id,
                 prim_ref.material_id,
                 prim_ref.primitive_id,
+                front_facing,
             );
             // Step the scanline interpolant to the next column by adding the horizontal interpolation step.
             // This updates `i_line` so that it correctly represents the vertex attributes for the next pixel.
@@ -276,6 +284,15 @@ pub fn tomato_draw_triangle<const DEPTHCOUNT: usize>(
     pb: &Vertex,
     pc: &Vertex,
 ) {
+    let front_facing = triangle_front_facing_submission_order_xy(
+        pa.pos.x,
+        pa.pos.y,
+        pb.pos.x,
+        pb.pos.y,
+        pc.pos.x,
+        pc.pos.y,
+    );
+
     // sorting vertices by y (row)
     let mut p0 = pa;
     let mut p1 = pb;
@@ -319,7 +336,7 @@ pub fn tomato_draw_triangle<const DEPTHCOUNT: usize>(
             std::mem::swap(&mut p0, &mut p1);
         }
 
-        draw_flat_top_triangle(drawing_buffer, prim_ref, p0, p1, p2);
+        draw_flat_top_triangle(drawing_buffer, prim_ref, p0, p1, p2, front_facing);
     } else if p1.pos.y == p2.pos.y {
         // flat bottom
         // For the flat bottom triangle (when p1.pos.y == p2.pos.y):
@@ -328,7 +345,7 @@ pub fn tomato_draw_triangle<const DEPTHCOUNT: usize>(
         if p2.pos.x < p1.pos.x {
             std::mem::swap(&mut p1, &mut p2);
         }
-        draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, p1, p2);
+        draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, p1, p2, front_facing);
     } else {
         // general case where we need to split the triangle in 2
         // and draw the top and bottom triangles separately
@@ -349,12 +366,12 @@ pub fn tomato_draw_triangle<const DEPTHCOUNT: usize>(
             {
                 println!("flat bottom  (a,b,split), then flat top (b , split , c");
             }
-            draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, p1, &p_split);
-            draw_flat_top_triangle(drawing_buffer, prim_ref, p1, &p_split, p2);
+            draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, p1, &p_split, front_facing);
+            draw_flat_top_triangle(drawing_buffer, prim_ref, p1, &p_split, p2, front_facing);
         } else {
             // major left
-            draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, &p_split, p1);
-            draw_flat_top_triangle(drawing_buffer, prim_ref, &p_split, p1, p2);
+            draw_flat_bottom_triangle(drawing_buffer, prim_ref, p0, &p_split, p1, front_facing);
+            draw_flat_top_triangle(drawing_buffer, prim_ref, &p_split, p1, p2, front_facing);
         }
     }
 }
@@ -368,6 +385,7 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
     left_edge_step: Vertex,
     right_edge_step: Vertex,
     right_edge_interpolant: &mut Vertex,
+    front_facing: bool,
 ) {
     // --- Edge Interpolant Initialization ---
     // Create an interpolant for the left edge, starting at the apex (pa).
@@ -471,6 +489,7 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
                 prim_ref.geometry_id,
                 prim_ref.material_id,
                 prim_ref.primitive_id,
+                front_facing,
             );
 
             // Advance the horizontal interpolants to the next column.

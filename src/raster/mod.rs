@@ -48,6 +48,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
         prim_ref.geometry_id,
         prim_ref.material_id,
         prim_ref.primitive_id,
+        true,
     );
 }
 

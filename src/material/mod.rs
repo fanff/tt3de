@@ -294,4 +294,57 @@ impl MaterialBufferPy {
             )),
         }
     }
+
+    fn set_shader_delta_time(&mut self, material_idx: usize, dt_seconds: f32) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_delta_time_seconds(dt_seconds);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
+    }
+
+    fn set_shader_frame(&mut self, material_idx: usize, frame: u32) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_frame_counter(frame);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
+    }
+
+    fn set_shader_resolution(
+        &mut self,
+        material_idx: usize,
+        width_cells: f32,
+        height_cells: f32,
+    ) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_resolution_cells(width_cells, height_cells);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
+    }
 }

@@ -80,6 +80,10 @@ class BaseTexturePy(MaterialPy):
 class ShaderPy(MaterialPy):
     bytecode: bytes
     time_f32_reg: int | None
+    delta_time_f32_reg: int | None
+    frame_i32_reg: int | None
+    resolution_v2_reg: int | None
+    front_facing_bool_reg: int | None
     default_glyph: int | None
     register_seed: list[dict[int, object]] | None
 
@@ -87,6 +91,10 @@ class ShaderPy(MaterialPy):
         self,
         bytecode: bytes,
         time_f32_reg: int | None = ...,
+        delta_time_f32_reg: int | None = ...,
+        resolution_v2_reg: int | None = ...,
+        front_facing_bool_reg: int | None = ...,
         default_glyph: int | None = ...,
         register_seed: list[dict[int, object]] | None = ...,
+        frame_i32_reg: int | None = ...,
     ) -> "ShaderPy": ...

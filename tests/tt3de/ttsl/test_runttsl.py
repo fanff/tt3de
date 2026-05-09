@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
-from tt3de.ttsl.ttisa.ttisa_opcodes import OP_RET, OP_JMP
+from tt3de.ttsl.ttisa.ttisa_opcodes import OP_JMP_IF_FALSE, OP_RET, OP_JMP
 from tests.benchs.ttsl.test_bench_ttsl import SHADER_CODE
 from tt3de.ttsl.enrich import PassPrintConsole
 from textwrap import dedent
 import unittest
 
 from tt3de.ttsl.compiler import (
+    GLOBAL_VAR_TT_FRAME,
+    GLOBAL_VAR_TT_RESOLUTION,
+    PIXELVAR_TT_FRAGPOS,
+    PIXELVAR_TT_FRONT_FACING,
+    PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
     PassSSARenamer,
     compile_ttsl,
@@ -150,3 +155,129 @@ class Test_RunTTSL(unittest.TestCase):
         assert front == glm.vec3(0.5, 0.5, 0.0)
         assert back == glm.vec3(0.5, 0.5, 0.0)
         assert glyphidx == 0
+
+    def test_with_compiled_code_tt_FragPos_register(self):
+        shader_code = dedent(
+            """
+        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            c: vec3 = vec3(tt_FragPos.x, tt_FragPos.y, 0.0)
+            return (c, c, 0)
+        """
+        )
+        bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.0, 0.0))
+        reg_settings.set_variable(PIXELVAR_TT_FRAGPOS, glm.vec2(0.25, -0.5))
+
+        regs = reg_settings.get_register_list()
+        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        assert front == glm.vec3(0.25, -0.5, 0.0)
+        assert back == glm.vec3(0.25, -0.5, 0.0)
+        assert glyphidx == 0
+
+    def test_with_compiled_code_tt_Resolution_uniform(self):
+        shader_code = dedent(
+            """
+        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            s: float = 0.1
+            c: vec3 = vec3(tt_Resolution.x * s, tt_Resolution.y * s, 0.0)
+            return (c, c, 0)
+        """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            shader_code, "frag", {GLOBAL_VAR_TT_RESOLUTION: glm.vec2}
+        )
+        reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(10.0, 20.0))
+        regs = reg_settings.get_register_list()
+        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        assert front == glm.vec3(1.0, 2.0, 0.0)
+        assert back == glm.vec3(1.0, 2.0, 0.0)
+        assert glyphidx == 0
+
+    def test_with_compiled_code_tt_Frame_uniform(self):
+        shader_code = dedent(
+            """
+        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_Frame)
+        """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            shader_code, "frag", {GLOBAL_VAR_TT_FRAME: int}
+        )
+        reg_settings.set_variable(GLOBAL_VAR_TT_FRAME, 17)
+        regs = reg_settings.get_register_list()
+        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        assert front == glm.vec3(0.0, 0.0, 0.0)
+        assert back == glm.vec3(0.0, 0.0, 0.0)
+        assert glyphidx == 17
+
+    def test_with_compiled_code_tt_PrimitiveID_in_glyph(self):
+        """``tt_PrimitiveID`` is an always-present i32 pixel input; setting its register seed
+        feeds the VM the same value ``ShaderMaterial`` would write per pixel from
+        ``PixInfo::primitive_id``. Returning it as the glyph proves end-to-end plumbing."""
+        shader_code = dedent(
+            """
+        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_PrimitiveID)
+        """
+        )
+        bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
+        reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 11)
+        regs = reg_settings.get_register_list()
+        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        assert front == glm.vec3(0.0, 0.0, 0.0)
+        assert back == glm.vec3(0.0, 0.0, 0.0)
+        assert glyphidx == 11
+
+        reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 200)
+        regs = reg_settings.get_register_list()
+        _, _, glyphidx2 = ttsl_run(*regs, bytecode)
+        assert glyphidx2 == 200
+
+    def test_tt_FrontFacing_bool_register_minimal_branch_bytecode(self):
+        """Branch on ``tt_FrontFacing`` without TTSL ``if`` codegen (phi lowering gap).
+
+        Uses the compiler only to resolve the allocated bool register for
+        ``tt_FrontFacing``, then hand-written jump bytecode (same shape as
+        ``ttsl::tests::jmp_if_false_routes_to_else_ret_without_phi``).
+        """
+        seed_src = dedent(
+            """
+        def seed(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        """
+        )
+        _, reg_settings = all_passes_compilation(seed_src, "seed", {})
+        _, ff_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
+        red_v3_reg = 10
+        green_v3_reg = 11
+        bytecode = bytes(
+            [
+                OP_JMP_IF_FALSE,
+                2,
+                ff_reg,
+                0,
+                0,
+                0,
+                OP_RET,
+                0,
+                red_v3_reg,
+                red_v3_reg,
+                0,
+                0,
+                OP_RET,
+                0,
+                green_v3_reg,
+                green_v3_reg,
+                0,
+                0,
+            ]
+        )
+        regs = [{}, {}, {}, {}, {}, {}]
+        regs[4][red_v3_reg] = glm.vec3(1.0, 0.0, 0.0)
+        regs[4][green_v3_reg] = glm.vec3(0.0, 1.0, 0.0)
+        regs[0][ff_reg] = True
+        front, _back, _g = ttsl_run(*regs, bytecode)
+        assert front.x > 0.99 and front.y < 0.01
+        regs[0][ff_reg] = False
+        front, _back, _g = ttsl_run(*regs, bytecode)
+        assert front.x < 0.01 and front.y > 0.99

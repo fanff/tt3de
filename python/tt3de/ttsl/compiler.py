@@ -47,17 +47,28 @@ ALLOWED_IR_TYPES = {
 VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
 # TTSL names follow the OpenGL/GLSL convention `gl_<CamelCase>` as `tt_<CamelCase>`.
-# Pixel inputs (`PIXEL_VARIABLES_STR_TYPE`) are always predeclared; `GLOBAL_VAR_TT_TIME`
-# is only bound when passed in `globals_dict`. Keep names in sync with `source/ttsl.md`.
+# Pixel inputs (`PIXEL_VARIABLES_STR_TYPE`) are always predeclared; engine uniforms such as
+# `GLOBAL_VAR_TT_TIME`, `GLOBAL_VAR_TT_DELTA_TIME`, `GLOBAL_VAR_TT_FRAME`, and
+# `GLOBAL_VAR_TT_RESOLUTION` are only
+# bound when passed in `globals_dict`. Keep names in sync with `source/ttsl.md`.
 GLOBAL_VAR_TT_TIME: str = "tt_Time"
+GLOBAL_VAR_TT_DELTA_TIME: str = "tt_DeltaTime"
+GLOBAL_VAR_TT_FRAME: str = "tt_Frame"
+GLOBAL_VAR_TT_RESOLUTION: str = "tt_Resolution"
 PIXELVAR_TT_FRAGCOORD: str = "tt_FragCoord"
 PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
 PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
+PIXELVAR_TT_FRAGPOS: str = "tt_FragPos"
+PIXELVAR_TT_FRONT_FACING: str = "tt_FrontFacing"
+PIXELVAR_TT_PRIMITIVE_ID: str = "tt_PrimitiveID"
 
 PIXEL_VARIABLES_STR_TYPE = {
     PIXELVAR_TT_FRAGCOORD: IRType.V2,
     PIXELVAR_TT_TEXCOORD0: IRType.V2,
     PIXELVAR_TT_TEXCOORD1: IRType.V2,
+    PIXELVAR_TT_FRAGPOS: IRType.V2,
+    PIXELVAR_TT_FRONT_FACING: IRType.BOOL,
+    PIXELVAR_TT_PRIMITIVE_ID: IRType.I32,
 }
 
 NATIVE_UNI_OPS_TYPE = {
@@ -143,8 +154,12 @@ class TTSLCompilerContext:
 
     @classmethod
     def always_present_variables(cls) -> Dict[str, IRType]:
-        """Per-cell inputs only. Engine uniforms such as ``tt_Time`` must be passed via
-        ``globals_dict`` (e.g. ``{GLOBAL_VAR_TT_TIME: float}``) when the shader references them."""
+        """Per-cell inputs only (including ``tt_FrontFacing`` as ``bool``, winding-based,
+        and ``tt_PrimitiveID`` as ``int``: per-pixel index of the depth-winning primitive,
+        ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL ``gl_PrimitiveID``).
+        Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
+        (``int``), and ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells) must be
+        passed via ``globals_dict`` when referenced."""
         return dict(PIXEL_VARIABLES_STR_TYPE)
 
     def comment(self, text: str):
@@ -1032,8 +1047,12 @@ class SSARenamer:
         Returns list of variables pushed (so we can pop when leaving the block).
         """
         pushed_vars: List[SSAVarID] = []
-        if instr.op == OpCodes.JMP or instr.op == OpCodes.JMP_IF_FALSE:
-            # Jump targets are not rewritten here
+        if instr.op == OpCodes.JMP:
+            # Jump destination is patched later as a block label; no SSA operands.
+            return pushed_vars
+        if instr.op == OpCodes.JMP_IF_FALSE:
+            # Condition register must use the current SSA version; jump target stays symbolic.
+            instr.src1 = self.rewrite_use(instr.src1)
             return pushed_vars
         # Rewrite uses first
         instr.src1 = self.rewrite_use(instr.src1)
@@ -1467,6 +1486,19 @@ class RegisterAllocatorPass(CompilationPass):
         }
         allocated_registers: Dict[IRType, Set[int]] = {}
 
+        # ``ShaderInputBinding`` defaults in ``shader_material.rs`` write PixInfo UVs into
+        # ``regs.v3[0]`` and ``regs.v3[1]`` before ``run_ttsl``. Reserve those indices so
+        # shader temps (e.g. ``vec3`` locals / ``OP_RET`` payloads) never alias them.
+        allocated_registers[IRType.V3] = {0, 1}
+        # Mirror ``ShaderInputBinding::default()`` in ``shader_material.rs``: per-pixel
+        # ``tt_PrimitiveID`` is pinned (below) to ``regs.i32_[0]`` so the Rust side can write
+        # ``PixInfo::primitive_id`` into a fixed slot. The remaining shadow PixInfo i32 IDs
+        # (``material_id`` / ``node_id`` / ``geometry_id``) are not yet TTSL-named and live in
+        # ``regs.i32_[1]`` / ``[2]`` / ``[3]``. Reserve those slots so user temps / globals never
+        # alias them. ``tt_PrimitiveID``'s slot (``0``) is reserved explicitly when the variable
+        # is encountered in ``named_variables`` below (see ``PIXELVAR_TT_PRIMITIVE_ID`` branch).
+        allocated_registers[IRType.I32] = {1, 2, 3}
+
         def next_free_register(ty: IRType) -> int:
             used = allocated_registers.setdefault(ty, set())
             for reg_id in range(1, register_counts[ty] + 1):
@@ -1487,7 +1519,17 @@ class RegisterAllocatorPass(CompilationPass):
             assert isinstance(temp.ty, IRType)
             assert isinstance(var_name, str)
 
-            idx = next_free_register(temp.ty)
+            if var_name == PIXELVAR_TT_PRIMITIVE_ID:
+                # Pin to ``regs.i32_[0]`` so ``ShaderInputBinding::primitive_id_i32_reg`` (default
+                # ``0``) and ``ShaderMaterial::render_mat`` write ``PixInfo::primitive_id`` into the
+                # exact register the bytecode reads from.
+                assert temp.ty == IRType.I32, (
+                    "tt_PrimitiveID must be IRType.I32 (declared in PIXEL_VARIABLES_STR_TYPE)"
+                )
+                idx = 0
+                allocated_registers.setdefault(IRType.I32, set()).add(0)
+            else:
+                idx = next_free_register(temp.ty)
             var_names_to_registers[var_name] = (temp.ty, idx)
             tempids_to_registers[temp.id] = (temp.ty, idx)
 
@@ -1920,6 +1962,32 @@ class RegisterSettings:
         return regs
 
 
+def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> None:
+    """Seed registers for globals / always-present builtins that have a documented default.
+
+    ``tt_Frame`` defaults to ``0`` until the host writes a frame counter. ``tt_Resolution``
+    defaults to ``(1, 1)`` cells when the host has not written a size yet; components ``<= 0``
+    are treated as invalid by the Rust setter and replaced with ``1``.
+
+    ``tt_FrontFacing`` defaults to ``True``, matching ``PixInfo`` initialization and non-triangle
+    raster paths (2D / point sampling). ``ShaderMaterial`` overwrites the bound bool register
+    each pixel from ``PixInfo::front_facing`` when ``ShaderPy.front_facing_bool_reg`` is set.
+
+    ``tt_PrimitiveID`` defaults to ``0`` so VM-only harnesses (no ``ShaderMaterial`` per-pixel
+    write) see the same value ``PixInfo::primitive_id`` initializes to; ``ShaderMaterial``
+    overwrites it each pixel from ``PixInfo::primitive_id``.
+    """
+    names = reg_settings.var_name_to_registers
+    if GLOBAL_VAR_TT_FRAME in names:
+        reg_settings.set_variable(GLOBAL_VAR_TT_FRAME, 0)
+    if GLOBAL_VAR_TT_RESOLUTION in names:
+        reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(1.0, 1.0))
+    if PIXELVAR_TT_FRONT_FACING in names:
+        reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, True)
+    if PIXELVAR_TT_PRIMITIVE_ID in names:
+        reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 0)
+
+
 @dataclass
 class CompilationStateResult:
     ast_module: Optional[ast.Module] = None
@@ -2004,6 +2072,7 @@ def all_passes_compilation_with_state(
         reg_settings = RegisterSettings(result.register_allocation.var_names_to_registers)
         for (ty, reg_id), value in result.register_allocation.const_id_to_registers.values():
             reg_settings.set_register(ty, reg_id, value)
+        apply_engine_uniform_register_defaults(reg_settings)
         result.register_settings = reg_settings
 
         all_bytecode_instrs = []
@@ -2036,6 +2105,7 @@ def all_passes_compilation(
     reg_settings = RegisterSettings(rar.var_names_to_registers)
     for (ty, reg_id), value in rar.const_id_to_registers.values():
         reg_settings.set_register(ty, reg_id, value)
+    apply_engine_uniform_register_defaults(reg_settings)
 
     all_bytecode_instrs = []
     for bytecode_instr in final_byte_code:

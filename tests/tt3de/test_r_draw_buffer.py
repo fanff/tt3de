@@ -10,6 +10,9 @@ from pyglm import glm
 from tt3de.tt3de import VertexBufferPy, TransformPackPy
 from tt3de.tt3de import PrimitiveBufferPy
 
+# Cell (row=0, col=0) center NDC on a 32×32 buffer with default flip flags (see ``cell_center_to_ndc``).
+_FRAG_POS_NDC_32_R0_C0: list[float] = [-0.96875, 0.96875]
+
 
 class Test_DrawBuffer(unittest.TestCase):
     def test_create_verybig(self):
@@ -24,10 +27,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": layer,
                 "uv": [0.0, 0.0],
                 "uv_1": [0.0, 0.0],
+                "frag_pos": [0.0, 0.0],
                 "material_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
                 "primitive_id": 0,
+                "front_facing": True,
             },
         )
 
@@ -40,10 +45,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": layer,
                 "uv": [0.0, 0.0],
                 "uv_1": [0.0, 0.0],
+                "frag_pos": [0.0, 0.0],
                 "material_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
                 "primitive_id": 0,
+                "front_facing": True,
             },
         )
 
@@ -53,11 +60,13 @@ class Test_DrawBuffer(unittest.TestCase):
                 {
                     "uv": [0.0, 0.0],
                     "uv_1": [0.0, 0.0],
+                    "frag_pos": [0.0, 0.0],
                     "primitive_id": 0,
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
+                    "front_facing": True,
                 },
             )
 
@@ -104,10 +113,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": layer,
                 "uv": [0.0, 0.0],
                 "uv_1": [0.0, 0.0],
+                "frag_pos": [0.0, 0.0],
                 "material_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
                 "primitive_id": 0,
+                "front_facing": True,
             },
         )
 
@@ -120,10 +131,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": layer,
                 "uv": [0.0, 0.0],
                 "uv_1": [0.0, 0.0],
+                "frag_pos": [0.0, 0.0],
                 "material_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
                 "primitive_id": 0,
+                "front_facing": True,
             },
         )
 
@@ -133,11 +146,13 @@ class Test_DrawBuffer(unittest.TestCase):
                 {
                     "uv": [0.0, 0.0],
                     "uv_1": [0.0, 0.0],
+                    "frag_pos": [0.0, 0.0],
                     "primitive_id": 0,
                     "geometry_id": 0,
                     "node_id": 0,
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
+                    "front_facing": True,
                 },
             )
 
@@ -268,10 +283,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 1,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": primitiv_id,
                 "geometry_id": geom_id,
                 "node_id": node_id,
                 "material_id": material_id,
+                "front_facing": True,
             },
         )
 
@@ -284,10 +301,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 0,
                 "uv": [0.0, 0.0],
                 "uv_1": [0.0, 0.0],
+                "frag_pos": [0.0, 0.0],
                 "primitive_id": 0,
                 "geometry_id": 0,
                 "node_id": 0,
                 "material_id": 0,
+                "front_facing": True,
             },
         )
         mind, maxd = drawbuffer.get_min_max_depth(layer=0)
@@ -298,6 +317,35 @@ class Test_DrawBuffer(unittest.TestCase):
         mind, maxd = drawbuffer.get_min_max_depth(layer=1)
         self.assertEqual(mind, 10.0)
         self.assertEqual(maxd, 10.0)
+
+    def test_set_depth_content_frag_pos_matches_cell_center_ndc(self):
+        """``frag_pos`` is cell-center NDC (feeds TTSL ``tt_FragPos`` in ``ShaderMaterial``)."""
+        w, h = 32, 32
+        drawbuffer = DrawingBufferPy(w, h)
+        drawbuffer.hard_clear(10.0)
+        row, col = 0, 0
+        payload = [
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+        ]
+        drawbuffer.set_depth_content(row, col, *payload)
+        pix = drawbuffer.get_pix_info_element(1)
+        half_x = w / 2.0
+        half_y = h / 2.0
+        sx = 1.0
+        sy = -1.0
+        cx = col + 0.5
+        cy = row + 0.5
+        exp_x = (cx / half_x - 1.0) / sx
+        exp_y = (cy / half_y - 1.0) / sy
+        self.assertAlmostEqual(pix["frag_pos"][0], exp_x, places=5)
+        self.assertAlmostEqual(pix["frag_pos"][1], exp_y, places=5)
 
     def test_set_depth_movelayer_diffent_depth(self):
         w, h = 32, 32
@@ -341,10 +389,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 1,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
+                "front_facing": True,
             },
         )
 
@@ -383,10 +433,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 0,
                 "uv": [20.0, 30.0],
                 "uv_1": [50.0, 60.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _1_primitiv_id,
                 "geometry_id": _1_geom_id,
                 "node_id": _1_node_id,
                 "material_id": _1_material_id,
+                "front_facing": True,
             },
         )
 
@@ -399,10 +451,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 1,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
+                "front_facing": True,
             },
         )
 
@@ -447,10 +501,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 1,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
+                "front_facing": True,
             },
         )
 
@@ -489,10 +545,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 1,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _0_primitiv_id,
                 "geometry_id": _0_geom_id,
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
+                "front_facing": True,
             },
         )
 
@@ -504,10 +562,12 @@ class Test_DrawBuffer(unittest.TestCase):
                 "pix_info": 0,
                 "uv": [20.0, 30.0],
                 "uv_1": [50.0, 60.0],
+                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
                 "primitive_id": _1_primitiv_id,
                 "geometry_id": _1_geom_id,
                 "node_id": _1_node_id,
                 "material_id": _1_material_id,
+                "front_facing": True,
             },
         )
 

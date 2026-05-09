@@ -5,18 +5,26 @@ The main implementation is in `python/tt3de/ttsl/compiler.py`, and the IR/CFG da
 
 ## Example TTSL source
 
-Built-in inputs follow the OpenGL/GLSL `gl_<CamelCase>` convention,
-transposed to `tt_<CamelCase>` (see [TTSL spec](ttsl.md) for the full table):
+Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelCase>`
+(see [TTSL spec](ttsl.md), including **Shipped** vs **Planned** rows).
 
-- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`);
-  passed as the shader function parameter (may be renamed).
-- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates; always
-  predeclared for every shader.
-- `tt_Time` (`float`) — engine time uniform; **not** predeclared. Pass it via
-  `globals_dict`, e.g. `globals_dict={"tt_Time": float}`, when the shader reads `tt_Time`.
+**Always predeclared** (per-cell inputs; do not list in `globals_dict`):
 
-User uniforms (any name, including e.g. `"position"`) are also declared only through
-`globals_dict`.
+- `tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1` (`vec2`)
+- `tt_FrontFacing` (`bool`)
+- `tt_PrimitiveID` (`int`)
+
+The shader entry function may still declare `tt_FragCoord` (or other builtins) as parameters;
+that replaces the default slot for those names in the register map.
+
+**Engine uniforms** — only bound when passed in `globals_dict` if the shader references them:
+
+- `tt_Time` → `globals_dict={"tt_Time": float}`; runtime: `MaterialBufferPy.set_shader_time`, `ShaderPy.time_f32_reg`
+- `tt_DeltaTime` → `{"tt_DeltaTime": float}`; `set_shader_delta_time`, `delta_time_f32_reg`
+- `tt_Frame` → `{"tt_Frame": int}`; compiler seeds `0`; `set_shader_frame`, `frame_i32_reg` (saturates at `i32::MAX`)
+- `tt_Resolution` → `{"tt_Resolution": glm.vec2}`; seeds `(1, 1)`; `set_shader_resolution`, `resolution_v2_reg`
+
+User uniforms (any other name, e.g. `"position"`) are also declared only through `globals_dict`.
 
 Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec3, vec3, int)`:
 front/back are RGB triples (or any per-channel `vec3` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec3, vec3, int]` or `typing.Tuple[vec3, vec3, int]`.
@@ -28,11 +36,13 @@ def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
     if tt_TexCoord0.x > tt_TexCoord0.y:
         return (color, color, 0)
     else:
-        mixed: vec3 = glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
-        return (mixed, mixed, 0)
+        dark: vec3 = glm.vec3(color.x * 0.75, color.y * 0.75, color.z * 0.75)
+        return (dark, dark, 0)
 ```
 
 Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
+
+Note: `glm.mix` is not yet typable in `type_of(...)`, so prefer arithmetic or other supported ops until mix is wired end-to-end.
 
 ## Where compilation starts
 
@@ -105,9 +115,11 @@ The current implementation supports a focused shader-style subset:
 - conditionals (`if` / `else`)
 - returns (must be a 3-tuple `(vec3, vec3, int)`; see example above)
 - vector constructors (`vec2`, `vec3`, `vec4`, including `glm.vec*`)
-- selected math calls (`sin`, `cos`, `abs`, unary `-`)
-- selected glm tools (`mix`, and some typed dispatch helpers)
+- unary `-` on numeric / vector types
+- math calls: bare `sin`, `abs`; `glm.sin` (VM `SIN_*` / `ABS_*`). Bare `cos` / `glm.cos` fail at codegen today (`opcode_for_uniop` only maps `sin` and `abs`), though unary `COS_*` opcodes exist in the VM.
 - vector component reads (`.x`, `.y`, `.z`, `.w`)
+
+`compile_glm_tool_call` can lower `glm.mix` to `MIX_*`, but `glm.mix(...)` does not type-check yet because `type_of` does not handle the `mix` attribute path—use other expressions until that is fixed.
 
 When unsupported syntax is encountered, the compiler raises `CompileError` or `NotImplementedError`.
 
@@ -128,8 +140,9 @@ This gives a cleaner representation for optimization/lowering and for determinis
 `PassPhiNodeLowering` removes SSA phi instructions by inserting edge copies.
 It handles critical edges by splitting them when needed.
 
-`RegisterAllocatorPass` then maps each typed temp to a finite typed register file
-(32 registers per IR type in current code).
+`RegisterAllocatorPass` then maps each typed temp to the VM’s typed register banks
+(`[T; 256]` per kind in Rust; the allocator walks indices `1..255` and reserves slots that
+must not alias material-bridge inputs such as default UV extrusion `v3` indices).
 
 Constants are also assigned registers, because final opcodes carry register ids rather than literal payloads.
 

@@ -33,6 +33,7 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 prim_ref.geometry_id,
                 prim_ref.material_id,
                 prim_ref.primitive_id,
+                true,
             );
         }
         return;
@@ -63,6 +64,7 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 prim_ref.geometry_id,
                 prim_ref.material_id,
                 prim_ref.primitive_id,
+                true,
             );
         }
         current_value = current_value + step_interpolent;

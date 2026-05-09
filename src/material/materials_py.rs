@@ -185,6 +185,10 @@ impl StaticColorPy {
 pub struct ShaderPy {
     pub bytecode: Vec<u8>,
     pub time_f32_reg: Option<usize>,
+    pub delta_time_f32_reg: Option<usize>,
+    pub frame_i32_reg: Option<usize>,
+    pub resolution_v2_reg: Option<usize>,
+    pub front_facing_bool_reg: Option<usize>,
     pub default_glyph: Option<u8>,
     /// Same layout as ``RegisterSettings.get_register_list()`` (list of 6 dicts), or ``None``.
     #[pyo3(get, set)]
@@ -227,6 +231,10 @@ impl ShaderPy {
 
         let mut mat = ShaderMaterial::from_bytecode(&self.bytecode)
             .with_time_f32_reg(self.time_f32_reg)
+            .with_delta_time_f32_reg(self.delta_time_f32_reg)
+            .with_frame_i32_reg(self.frame_i32_reg)
+            .with_resolution_v2_reg(self.resolution_v2_reg)
+            .with_front_facing_bool_reg(self.front_facing_bool_reg)
             .with_default_glyph(self.default_glyph);
         if let Some(regs) = seed_registers {
             mat = mat.with_seed_registers(ShaderSeedRegisters::from_registers(regs));
@@ -238,18 +246,26 @@ impl ShaderPy {
 #[pymethods]
 impl ShaderPy {
     #[new]
-    #[pyo3(signature = (bytecode, time_f32_reg=None, default_glyph=None, register_seed=None))]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None))]
     fn new(
         bytecode: &Bound<'_, PyBytes>,
         time_f32_reg: Option<usize>,
+        delta_time_f32_reg: Option<usize>,
+        resolution_v2_reg: Option<usize>,
+        front_facing_bool_reg: Option<usize>,
         default_glyph: Option<u8>,
         register_seed: Option<Py<PyAny>>,
+        frame_i32_reg: Option<usize>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
         let bytes = bytecode.as_bytes();
         PyClassInitializer::from(parent).add_subclass(ShaderPy {
             bytecode: bytes.to_vec(),
             time_f32_reg,
+            delta_time_f32_reg,
+            frame_i32_reg,
+            resolution_v2_reg,
+            front_facing_bool_reg,
             default_glyph,
             register_seed,
         })
@@ -273,6 +289,46 @@ impl ShaderPy {
     #[setter]
     fn set_time_f32_reg(&mut self, value: Option<usize>) {
         self.time_f32_reg = value;
+    }
+
+    #[getter]
+    fn delta_time_f32_reg(&self) -> Option<usize> {
+        self.delta_time_f32_reg
+    }
+
+    #[setter]
+    fn set_delta_time_f32_reg(&mut self, value: Option<usize>) {
+        self.delta_time_f32_reg = value;
+    }
+
+    #[getter]
+    fn frame_i32_reg(&self) -> Option<usize> {
+        self.frame_i32_reg
+    }
+
+    #[setter]
+    fn set_frame_i32_reg(&mut self, value: Option<usize>) {
+        self.frame_i32_reg = value;
+    }
+
+    #[getter]
+    fn resolution_v2_reg(&self) -> Option<usize> {
+        self.resolution_v2_reg
+    }
+
+    #[setter]
+    fn set_resolution_v2_reg(&mut self, value: Option<usize>) {
+        self.resolution_v2_reg = value;
+    }
+
+    #[getter]
+    fn front_facing_bool_reg(&self) -> Option<usize> {
+        self.front_facing_bool_reg
+    }
+
+    #[setter]
+    fn set_front_facing_bool_reg(&mut self, value: Option<usize>) {
+        self.front_facing_bool_reg = value;
     }
 
     #[getter]

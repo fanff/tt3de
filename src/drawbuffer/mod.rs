@@ -174,6 +174,7 @@ impl DrawingBufferPy {
         tt.into()
     }
 
+    #[pyo3(signature = (row, col, normal_py, depth, uv_py, uv_1_py, node_id, geom_id, material_id, primitive_id, front_facing=true))]
     fn set_depth_content(
         &mut self,
         py: Python,
@@ -187,6 +188,7 @@ impl DrawingBufferPy {
         geom_id: usize,
         material_id: usize,
         primitive_id: usize,
+        front_facing: bool,
     ) {
         let uv: Vec2 = convert_glm_vec2(py, uv_py);
         let uv_1: Vec2 = convert_glm_vec2(py, uv_1_py);
@@ -204,6 +206,7 @@ impl DrawingBufferPy {
             geom_id,
             material_id,
             primitive_id,
+            front_facing,
         )
     }
 
@@ -215,6 +218,8 @@ impl DrawingBufferPy {
         let w_1_slice = pix_info_element.uv_1.as_slice();
         dict.set_item("uv", wslice).unwrap();
         dict.set_item("uv_1", w_1_slice).unwrap();
+        dict.set_item("frag_pos", pix_info_element.frag_pos.as_slice())
+            .unwrap();
         dict.set_item("normal", pix_info_element.normal.as_slice())
             .unwrap();
 
@@ -224,6 +229,8 @@ impl DrawingBufferPy {
             .unwrap();
         dict.set_item("node_id", pix_info_element.node_id).unwrap();
         dict.set_item("geometry_id", pix_info_element.geometry_id)
+            .unwrap();
+        dict.set_item("front_facing", pix_info_element.front_facing)
             .unwrap();
         dict.into()
     }
@@ -248,12 +255,17 @@ impl DrawingBufferPy {
         dict.set_item("uv_1", pix_info_element.uv_1.as_slice())
             .unwrap();
 
+        dict.set_item("frag_pos", pix_info_element.frag_pos.as_slice())
+            .unwrap();
+
         dict.set_item("material_id", pix_info_element.material_id)
             .unwrap();
         dict.set_item("primitive_id", pix_info_element.primitive_id)
             .unwrap();
         dict.set_item("node_id", pix_info_element.node_id).unwrap();
         dict.set_item("geometry_id", pix_info_element.geometry_id)
+            .unwrap();
+        dict.set_item("front_facing", pix_info_element.front_facing)
             .unwrap();
         dict.into()
     }
