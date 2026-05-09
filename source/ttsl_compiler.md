@@ -52,16 +52,25 @@ The compiler transforms Python-like TTSL source in several stages:
 ## Pipeline diagram
 
 ```{mermaid}
-flowchart TD
-    A[TTSL source string] --> B[Parse and front-end IR build<br/>compile_ttsl / compile_ttsl_function]
-    B --> C[CFG construction<br/>build_cfg_from_ir]
-    C --> D[SSA conversion<br/>PassSSARenamer]
-    D --> E[Phi lowering<br/>PassPhiNodeLowering]
-    E --> F[CFG cleanup<br/>CFGSimplifyPass]
-    F --> G[Register allocation<br/>RegisterAllocatorPass]
-    G --> H[Terminator normalization<br/>PassNormalizeTerminators]
-    H --> I[Bytecode emission<br/>PassToByteCode]
-    I --> J[bytes + RegisterSettings]
+flowchart LR
+    subgraph topRow ["Stage Line 1"]
+        direction LR
+        srcInput["TTSL source code string"] --> parseAst["Parse source into Python AST"]
+        parseAst --> frontendIr["Front-end typing and IR emission (compile_ttsl_function)"]
+        frontendIr --> cfgBuild["Build control-flow graph from IR (build_cfg_from_ir)"]
+        cfgBuild --> ssaPass["Insert phi and rename variables to SSA (PassSSARenamer)"]
+    end
+
+    subgraph bottomRow ["Stage Line 2"]
+        direction LR
+        phiLower["Lower phi nodes into edge copies (PassPhiNodeLowering)"] --> cfgCleanup["Simplify CFG after lowering (CFGSimplifyPass)"]
+        cfgCleanup --> regAlloc["Allocate typed VM registers (RegisterAllocatorPass)"]
+        regAlloc --> normalizeTerms["Normalize block terminators (PassNormalizeTerminators)"]
+        normalizeTerms --> emitBytecode["Encode final instructions to bytecode (PassToByteCode)"]
+        emitBytecode --> outputs["Compiler outputs: bytecode bytes and RegisterSettings"]
+    end
+
+    ssaPass --> phiLower
 ```
 
 ## Stage-to-source references

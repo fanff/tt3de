@@ -69,6 +69,28 @@ To set up a development version of this engine:
     uv run tt3de-gen-opcodes
     ```
 
+## Build Documentation
+
+From the repository root, regenerate the Sphinx HTML docs with:
+
+```bash
+uv run sphinx-build -b html source source/_build/html
+```
+
+For a fully clean rebuild:
+
+```bash
+rm -rf source/_build
+uv run sphinx-build -b html source source/_build/html
+```
+
+On Windows PowerShell, use:
+
+```powershell
+Remove-Item -Recurse -Force source\_build
+uv run sphinx-build -b html source source/_build/html
+```
+
 
 
 ### Tips for Python Path in VSCode
