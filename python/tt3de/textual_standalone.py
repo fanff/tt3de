@@ -153,6 +153,9 @@ class TT3DViewStandAlone(Container):
     def post_render_step(self):
         pass
 
+    def before_render_step(self):
+        pass
+
     def update_frame(self):
         if self.is_debugged():
             self.update_frame_debugged()
@@ -162,6 +165,7 @@ class TT3DViewStandAlone(Container):
                 min(ts - self.last_frame_time, 0.5)
             )  # time since last frame
 
+            self.before_render_step()
             self.rc.clear_canvas()
 
             self.rc.render(self.camera)
@@ -178,6 +182,7 @@ class TT3DViewStandAlone(Container):
             )  # time since last frame
             self.frame_timings.update_duration = time() - ts
 
+            self.before_render_step()
             self.rc.clear_canvas()
             self.rc.render(self.camera)
             self.frame_timings.render_duration = (

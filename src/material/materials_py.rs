@@ -1,8 +1,13 @@
 use pyo3::prelude::*;
 
-use pyo3::{pyclass, pymethods, Python};
+use pyo3::{
+    pyclass, pymethods,
+    types::PyBytes,
+    Bound, Python,
+};
 
 use crate::material::materials::Material;
+use crate::material::shader_material::ShaderMaterial;
 use crate::material::textured::BaseTexture;
 use crate::texturebuffer;
 use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
@@ -171,6 +176,41 @@ impl StaticColorPy {
             },
             glyph_idx: self.glyph_idx,
         }
+    }
+}
+
+#[pyclass(extends=MaterialPy)]
+#[derive(Clone)]
+pub struct ShaderPy {
+    pub bytecode: Vec<u8>,
+    pub time_f32_reg: Option<usize>,
+    pub default_glyph: Option<u8>,
+}
+
+impl ShaderPy {
+    pub fn to_native(&self) -> ShaderMaterial {
+        ShaderMaterial::from_bytecode(&self.bytecode)
+            .with_time_f32_reg(self.time_f32_reg)
+            .with_default_glyph(self.default_glyph)
+    }
+}
+
+#[pymethods]
+impl ShaderPy {
+    #[new]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, default_glyph=None))]
+    fn new(
+        bytecode: &Bound<'_, PyBytes>,
+        time_f32_reg: Option<usize>,
+        default_glyph: Option<u8>,
+    ) -> PyClassInitializer<Self> {
+        let parent = MaterialPy::new();
+        let bytes = bytecode.as_bytes();
+        PyClassInitializer::from(parent).add_subclass(ShaderPy {
+            bytecode: bytes.to_vec(),
+            time_f32_reg,
+            default_glyph,
+        })
     }
 }
 

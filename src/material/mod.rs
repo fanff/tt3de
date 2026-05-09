@@ -15,6 +15,8 @@ pub mod materials_py;
 use materials_py::*;
 mod materials;
 use materials::*;
+mod shader_material;
+use shader_material::*;
 mod textured;
 
 use textured::*;
@@ -22,7 +24,9 @@ mod noise_mat;
 use noise_mat::*;
 pub mod combo_material;
 use combo_material::*;
-use pyo3::{pyclass, pymethods, types::PyTuple, Bound, Python};
+use pyo3::{
+    exceptions::PyValueError, pyclass, pymethods, types::PyTuple, Bound, PyResult, Python,
+};
 
 pub struct MaterialBuffer {
     pub max_size: usize,
@@ -226,6 +230,11 @@ impl MaterialBufferPy {
         self.content.add_material(mat.to_native())
     }
 
+    fn add_shader(&mut self, _py: Python, mat: &ShaderPy) -> usize {
+        self.content
+            .add_material(Material::Shader(mat.to_native()))
+    }
+
     fn add_combo_material(&mut self, mat: &ComboMaterialPy) -> usize {
         return self
             .content
@@ -268,5 +277,21 @@ impl MaterialBufferPy {
 
     fn add_debug_uv(&mut self, _py: Python, glyph_idx: u8) -> usize {
         self.content.add_debug_uv(glyph_idx)
+    }
+
+    fn set_shader_time(&mut self, material_idx: usize, time_seconds: f32) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_time_seconds(time_seconds);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
     }
 }
