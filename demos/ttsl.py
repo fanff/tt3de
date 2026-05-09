@@ -12,7 +12,7 @@ default_shader_code = """\
 # Built-in inputs follow the GLSL `gl_*` convention as `tt_*`
 # (see `source/ttsl.md` for the spec).
 
-@ttsl(globals={"time": float, "position": glm.vec3})
+@ttsl(globals={"tt_Time": float, "position": glm.vec3})
 def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:
     # accessing variables coming from the fragment:
     uv0: glm.vec2 = tt_TexCoord0

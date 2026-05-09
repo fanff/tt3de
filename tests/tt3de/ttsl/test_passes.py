@@ -12,7 +12,6 @@ from tt3de.ttsl.compiler import (
     PassNormalizeTerminators,
     PassToByteCode,
     all_passes_compilation,
-    GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
     PIXELVAR_TT_TEXCOORD0,
     PIXELVAR_TT_TEXCOORD1,
@@ -54,7 +53,7 @@ class Test_SampleCompilation(unittest.TestCase):
             """
         )
         func_name = "my_shader"
-        globals_dict = {"time": float}
+        globals_dict = {}
         ttsl_cc = compile_ttsl(src, func_name, globals_dict)
         build_cfg_from_ir(ttsl_cc)
         PassSSARenamer(ttsl_cc).run()
@@ -81,12 +80,10 @@ class Test_SampleCompilation(unittest.TestCase):
             """
         )
         func_name = "my_shader"
-        globals_dict = {"time": float}
+        globals_dict = {}
         _final_byte_code, reg_settings = all_passes_compilation(
             src, func_name, globals_dict
         )
-        reg_settings.set_variable(GLOBAL_VAR_TT_TIME, 1221.1)
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.5, 0.5))
-        reg_settings.set_variable("time", 1221.1)
