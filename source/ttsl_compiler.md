@@ -8,12 +8,15 @@ The main implementation is in `python/tt3de/ttsl/compiler.py`, and the IR/CFG da
 Built-in inputs follow the OpenGL/GLSL `gl_<CamelCase>` convention,
 transposed to `tt_<CamelCase>` (see [TTSL spec](ttsl.md) for the full table):
 
-- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`)
-- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates
-- `tt_Time` (`float`) — engine time uniform
+- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`);
+  passed as the shader function parameter (may be renamed).
+- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates; always
+  predeclared for every shader.
+- `tt_Time` (`float`) — engine time uniform; **not** predeclared. Pass it via
+  `globals_dict`, e.g. `globals_dict={"tt_Time": float}`, when the shader reads `tt_Time`.
 
-The shader function takes `tt_FragCoord` as its parameter; other built-ins are
-implicitly available globals:
+User uniforms (any name, including e.g. `"position"`) are also declared only through
+`globals_dict`.
 
 ```python
 def shade(tt_FragCoord: vec2) -> vec3:
@@ -24,6 +27,8 @@ def shade(tt_FragCoord: vec2) -> vec3:
     else:
         return glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
 ```
+
+Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
 
 ## Where compilation starts
 

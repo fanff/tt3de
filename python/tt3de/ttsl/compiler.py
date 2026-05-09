@@ -45,23 +45,13 @@ ALLOWED_IR_TYPES = {
 
 VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
-# Built-in TTSL variables follow the OpenGL/GLSL convention `gl_<CamelCase>`,
-# transposed to `tt_<CamelCase>`. Keep these names in sync with `source/ttsl.md`.
+# TTSL names follow the OpenGL/GLSL convention `gl_<CamelCase>` as `tt_<CamelCase>`.
+# Pixel inputs (`PIXEL_VARIABLES_STR_TYPE`) are always predeclared; `GLOBAL_VAR_TT_TIME`
+# is only bound when passed in `globals_dict`. Keep names in sync with `source/ttsl.md`.
 GLOBAL_VAR_TT_TIME: str = "tt_Time"
 PIXELVAR_TT_FRAGCOORD: str = "tt_FragCoord"
 PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
 PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
-
-GLOBAL_VAR_SET = {
-    GLOBAL_VAR_TT_TIME,
-    PIXELVAR_TT_FRAGCOORD,
-    PIXELVAR_TT_TEXCOORD0,
-    PIXELVAR_TT_TEXCOORD1,
-}
-
-GLOBAL_VARIABLES_STR_TYPE = {
-    GLOBAL_VAR_TT_TIME: IRType.F32,
-}
 
 PIXEL_VARIABLES_STR_TYPE = {
     PIXELVAR_TT_FRAGCOORD: IRType.V2,
@@ -132,6 +122,8 @@ class TTSLCompilerContext:
         self.cfg: CFG | None = None
         self.ssa_var_definitions: Dict[SSAVarID, Set[NodeID]] = {}
         self.const_pool: ConstantPool = ConstantPool()
+        # Filled in `parse_args`: names live at function entry (pixel inputs, uniforms, params).
+        self.ssa_entry_seed_names: frozenset[SSAVarID] = frozenset()
 
         # Predefine some variables
         for name, ty in self.always_present_variables_at_init().items():
@@ -150,10 +142,9 @@ class TTSLCompilerContext:
 
     @classmethod
     def always_present_variables(cls) -> Dict[str, IRType]:
-        d = {}
-        d.update(PIXEL_VARIABLES_STR_TYPE)
-        d.update(GLOBAL_VARIABLES_STR_TYPE)
-        return d
+        """Per-cell inputs only. Engine uniforms such as ``tt_Time`` must be passed via
+        ``globals_dict`` (e.g. ``{GLOBAL_VAR_TT_TIME: float}``) when the shader references them."""
+        return dict(PIXEL_VARIABLES_STR_TYPE)
 
     def comment(self, text: str):
         instr = IRInstr(
@@ -229,6 +220,15 @@ class TTSLCompilerContext:
                 return temp
         raise RuntimeError(f"TempID {tempid} not found")
 
+    def _last_meaningful_ir_op(self) -> Optional[OpCodes]:
+        """Last opcode in the IR stream, ignoring span bookkeeping (LABEL / COMMENT)."""
+        skip = {OpCodes.COMMENT, OpCodes.LABEL}
+        for instr in reversed(self.code.instrs):
+            if instr.op in skip:
+                continue
+            return instr.op
+        return None
+
     def compile_block(self, stmts: list[ast.stmt]):
         with self.code.block() as _block:
             for s in stmts:
@@ -292,7 +292,11 @@ class TTSLCompilerContext:
                     self.named_variables[node.id] = reg
                 else:
                     raise CompileError(
-                        node, f"Undefined variable Type '{node.id}'. Type not known."
+                        node,
+                        (
+                            f"Unknown variable '{node.id}': not declared "
+                            "(use an annotated assignment or globals_dict)."
+                        ),
                     )
             in_env = self.named_variables[node.id]
             if forced_type is not None and in_env.ty != forced_type:
@@ -584,8 +588,11 @@ class TTSLCompilerContext:
         # 3. then block
         self.compile_block(node.body)
 
-        # 4. jump to end (skip else)
-        jmp_end_pos = self.emit_2(OpCodes.JMP, None, None, None)  # target to fill later
+        # 4. jump to end (skip else) — skip when the then-branch already ends in RET,
+        #    otherwise we emit dead IR after RET that breaks CFG construction.
+        jmp_end_pos: Optional[int] = None
+        if self._last_meaningful_ir_op() != OpCodes.RET:
+            jmp_end_pos = self.emit_2(OpCodes.JMP, None, None, None)
 
         # 5. else block
         else_start = self.code.instructions_count()
@@ -594,15 +601,10 @@ class TTSLCompilerContext:
         # 6. patch false jump to else start
         self.code.patch_target(jmp_false_pos, else_start)
 
-        # 7. patch jump to end
-        end_pos = self.code.instructions_count()
-        # self.emit_1(
-        #    OpCodes.COMMENT,
-        #    None,
-        #    None,
-        #    comment="End of if-else",
-        # )
-        self.code.patch_target(jmp_end_pos, end_pos)
+        # 7. patch jump to end (if we emitted one)
+        if jmp_end_pos is not None:
+            end_pos = self.code.instructions_count()
+            self.code.patch_target(jmp_end_pos, end_pos)
 
     def compile_while(self, node: ast.While):
         loop_start = len(self.code)
@@ -634,6 +636,12 @@ class TTSLCompilerContext:
             # Allocate a temp for this argument
             arg_temp = self.alloc_temp_for_type(arg_type)
             self.named_variables[arg_name] = arg_temp
+
+        self.ssa_entry_seed_names = frozenset(
+            set(self.always_present_variables().keys())
+            | set(self.globals.keys())
+            | {a.arg for a in fn_node.args.args}
+        )
 
     def type_of(self, node: ast.expr, type_args=None) -> IRType:
         if isinstance(node, ast.Constant):
@@ -680,12 +688,17 @@ class TTSLCompilerContext:
                     )
                 elif node.id in PIXEL_VARIABLES_STR_TYPE:  #
                     return PIXEL_VARIABLES_STR_TYPE[node.id]
-                elif node.id in GLOBAL_VARIABLES_STR_TYPE:  #
-                    return GLOBAL_VARIABLES_STR_TYPE[node.id]
                 elif node.id in STR_TO_IRTYPE:  #
                     return STR_TO_IRTYPE[node.id]
 
-            raise RuntimeError(f"Cannot determine type of name'{node.id}'")
+            raise CompileError(
+                node,
+                (
+                    f"Unknown variable '{node.id}': not a TTSL built-in, "
+                    "shader parameter, or globals_dict uniform "
+                    "(check spelling; built-ins use tt_<CamelCase>)."
+                ),
+            )
         elif isinstance(node, ast.Attribute):
             if node.attr in ("x", "y", "z", "w"):
                 value_type = self.type_of(node.value)
@@ -767,7 +780,10 @@ def compile_ttsl_function(
     typed_globals = {}
     for k, pytype in globals_dict.items():
         if pytype not in ALLOWED_IR_TYPES:
-            raise RuntimeError(f"Unsupported global variable type: {pytype}")
+            raise CompileError(
+                fn_node,
+                f"Unsupported global variable type for '{k}': {pytype}",
+            )
         typed_globals[k] = ALLOWED_IR_TYPES[pytype]
 
     sc = TTSLCompilerContext(typed_globals)
@@ -1075,18 +1091,25 @@ class PassSSARenamer(CompilationPass):
         # 2) Run renaming
         renamer = SSARenamer(cfg, ttsl_compiler, dom_tree, entry_idx=cfg.init_idx)
 
-        # IMPORTANT: Seed stacks for variables that exist at entry (params/globals)
-        # If params/globals are referenced as VarRef("uv"), VarRef("time"), etc.,
-        # We must push an initial version for each, pointing to their existing temp/register temp.
-        for name, ty in ttsl_compiler.always_present_variables_at_init().items():
+        # Seed stacks for all variables live at function entry (pixel inputs, globals_dict
+        # uniforms, and shader parameters).
+        for name in ttsl_compiler.ssa_entry_seed_names:
             existing_temp = ttsl_compiler.named_variables[name]
-            # console.print(
-            #     f"Seeding variable {name!r} at entry with existing temp id {existing_temp.id}"
-            # )
             renamer.push(name, existing_temp.id)
-        # renamer.push("time", existing_time_tempid)
 
         renamer.rename()
+
+        # Blocks that never appear in the dominator-tree walk (e.g. `_END_`) can still
+        # receive Cytron-inserted phis. Operand TempIDs are filled by fill_phi_operands,
+        # but define_phi_dsts never ran, so phi.dst stays an SSAVarID string — fix that.
+        for node_id in cfg.all_nodes():
+            node = cfg.nodes[node_id]
+            if node is None or not node.phis:
+                continue
+            for var, phi in node.phis.items():
+                if phi.op == OpCodes.PHI and isinstance(phi.dst, str):
+                    temp = renamer.new_temp(ttsl_compiler.named_variables[var].ty)
+                    phi.dst = temp
 
 
 # post optimization passes
