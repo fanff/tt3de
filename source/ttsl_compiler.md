@@ -8,12 +8,15 @@ The main implementation is in `python/tt3de/ttsl/compiler.py`, and the IR/CFG da
 Built-in inputs follow the OpenGL/GLSL `gl_<CamelCase>` convention,
 transposed to `tt_<CamelCase>` (see [TTSL spec](ttsl.md) for the full table):
 
-- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`)
-- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates
-- `tt_Time` (`float`) — engine time uniform
+- `tt_FragCoord` (`vec2`) — window-space cell coordinate (analogous to `gl_FragCoord.xy`);
+  passed as the shader function parameter (may be renamed).
+- `tt_TexCoord0`, `tt_TexCoord1` (`vec2`) — interpolated texture coordinates; always
+  predeclared for every shader.
+- `tt_Time` (`float`) — engine time uniform; **not** predeclared. Pass it via
+  `globals_dict`, e.g. `globals_dict={"tt_Time": float}`, when the shader reads `tt_Time`.
 
-The shader function takes `tt_FragCoord` as its parameter; other built-ins are
-implicitly available globals:
+User uniforms (any name, including e.g. `"position"`) are also declared only through
+`globals_dict`.
 
 ```python
 def shade(tt_FragCoord: vec2) -> vec3:
@@ -24,6 +27,8 @@ def shade(tt_FragCoord: vec2) -> vec3:
     else:
         return glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
 ```
+
+Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
 
 ## Where compilation starts
 
@@ -48,30 +53,6 @@ The compiler transforms Python-like TTSL source in several stages:
 6. Allocate typed virtual-machine registers (`RegisterAllocatorPass`)
 7. Normalize terminators / block layout
 8. Encode IR into final bytecode (`PassToByteCode`)
-
-## Pipeline diagram
-
-```{mermaid}
-flowchart LR
-    subgraph topRow ["Stage Line 1"]
-        direction LR
-        srcInput["TTSL source code string"] --> parseAst["Parse source into Python AST"]
-        parseAst --> frontendIr["Front-end typing and IR emission (compile_ttsl_function)"]
-        frontendIr --> cfgBuild["Build control-flow graph from IR (build_cfg_from_ir)"]
-        cfgBuild --> ssaPass["Insert phi and rename variables to SSA (PassSSARenamer)"]
-    end
-
-    subgraph bottomRow ["Stage Line 2"]
-        direction LR
-        phiLower["Lower phi nodes into edge copies (PassPhiNodeLowering)"] --> cfgCleanup["Simplify CFG after lowering (CFGSimplifyPass)"]
-        cfgCleanup --> regAlloc["Allocate typed VM registers (RegisterAllocatorPass)"]
-        regAlloc --> normalizeTerms["Normalize block terminators (PassNormalizeTerminators)"]
-        normalizeTerms --> emitBytecode["Encode final instructions to bytecode (PassToByteCode)"]
-        emitBytecode --> outputs["Compiler outputs: bytecode bytes and RegisterSettings"]
-    end
-
-    ssaPass --> phiLower
-```
 
 ## Stage-to-source references
 
