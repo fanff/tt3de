@@ -49,30 +49,6 @@ The compiler transforms Python-like TTSL source in several stages:
 7. Normalize terminators / block layout
 8. Encode IR into final bytecode (`PassToByteCode`)
 
-## Pipeline diagram
-
-```{mermaid}
-flowchart LR
-    subgraph topRow ["Stage Line 1"]
-        direction LR
-        srcInput["TTSL source code string"] --> parseAst["Parse source into Python AST"]
-        parseAst --> frontendIr["Front-end typing and IR emission (compile_ttsl_function)"]
-        frontendIr --> cfgBuild["Build control-flow graph from IR (build_cfg_from_ir)"]
-        cfgBuild --> ssaPass["Insert phi and rename variables to SSA (PassSSARenamer)"]
-    end
-
-    subgraph bottomRow ["Stage Line 2"]
-        direction LR
-        phiLower["Lower phi nodes into edge copies (PassPhiNodeLowering)"] --> cfgCleanup["Simplify CFG after lowering (CFGSimplifyPass)"]
-        cfgCleanup --> regAlloc["Allocate typed VM registers (RegisterAllocatorPass)"]
-        regAlloc --> normalizeTerms["Normalize block terminators (PassNormalizeTerminators)"]
-        normalizeTerms --> emitBytecode["Encode final instructions to bytecode (PassToByteCode)"]
-        emitBytecode --> outputs["Compiler outputs: bytecode bytes and RegisterSettings"]
-    end
-
-    ssaPass --> phiLower
-```
-
 ## Stage-to-source references
 
 - Pipeline orchestrator: `python/tt3de/ttsl/compiler.py` (`all_passes_compilation(...)`)
