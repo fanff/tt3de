@@ -61,6 +61,8 @@ PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
 PIXELVAR_TT_FRAGPOS: str = "tt_FragPos"
 PIXELVAR_TT_FRONT_FACING: str = "tt_FrontFacing"
 PIXELVAR_TT_FRAG_DEPTH: str = "tt_FragDepth"
+PIXELVAR_TT_LINE_COORD: str = "tt_LineCoord"
+PIXELVAR_TT_POINT_COORD: str = "tt_PointCoord"
 PIXELVAR_TT_PRIMITIVE_ID: str = "tt_PrimitiveID"
 
 PIXEL_VARIABLES_STR_TYPE = {
@@ -68,8 +70,10 @@ PIXEL_VARIABLES_STR_TYPE = {
     PIXELVAR_TT_TEXCOORD0: IRType.V2,
     PIXELVAR_TT_TEXCOORD1: IRType.V2,
     PIXELVAR_TT_FRAGPOS: IRType.V2,
+    PIXELVAR_TT_POINT_COORD: IRType.V2,
     PIXELVAR_TT_FRONT_FACING: IRType.BOOL,
     PIXELVAR_TT_FRAG_DEPTH: IRType.F32,
+    PIXELVAR_TT_LINE_COORD: IRType.F32,
     PIXELVAR_TT_PRIMITIVE_ID: IRType.I32,
 }
 
@@ -158,8 +162,10 @@ class TTSLCompilerContext:
     def always_present_variables(cls) -> Dict[str, IRType]:
         """Per-cell inputs only (including ``tt_FrontFacing`` as ``bool``, winding-based,
         ``tt_FragDepth`` as ``float`` (depth value for the shaded depth layer from the
-        depth buffer), and ``tt_PrimitiveID`` as ``int``: per-pixel index of the
-        depth-winning primitive,
+        depth buffer), ``tt_LineCoord`` as ``float`` (parametric coordinate along rasterized
+        line segments, ``0.0`` when not a line), ``tt_PointCoord`` as ``glm.vec2`` (coordinates
+        within a point sprite, ``(0, 0)`` when not a point), and ``tt_PrimitiveID`` as ``int``: per-pixel
+        index of the depth-winning primitive,
         ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL ``gl_PrimitiveID``).
         Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
         (``int``), and ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells) must be
@@ -1520,7 +1526,14 @@ RegisterAddress = Tuple[IRType, int]  # (type, register_id)
 class RegisterAllocationResult:
     var_names_to_registers: Dict[str, RegisterAddress]
     tempids_to_registers: Dict[TempID, RegisterAddress]
-    const_id_to_registers: Dict[int, Tuple[RegisterAddress, Any]]
+    # Keyed by (const_id, dst_temp_id) so that every distinct ``LOAD_CONST`` Temp's
+    # allocated register is recorded — not just the last temp keyed by ``const_id``.
+    # The front-end may emit multiple ``LOAD_CONST`` for the same constant pool index,
+    # each with its own ``dst`` Temp; the register allocator gives each Temp a distinct
+    # physical register, and **all** of them must be seeded with the constant value
+    # (``LOAD_CONST`` is dropped during bytecode emission, so any unseeded register
+    # would read as ``0`` at runtime).
+    const_id_to_registers: Dict[Tuple[int, TempID], Tuple[RegisterAddress, Any]]
 
 
 class RegisterAllocatorPass(CompilationPass):
@@ -1591,21 +1604,25 @@ class RegisterAllocatorPass(CompilationPass):
         # Then allocate registers for constants (because OpCode can't carry the constant value)
         const_pool = ttsl_compiler.const_pool
         assert const_pool is not None
-        const_id_to_registers: Dict[int, Tuple[RegisterAddress, Any]] = {}
+        const_id_to_registers: Dict[
+            Tuple[int, TempID], Tuple[RegisterAddress, Any]
+        ] = {}
 
-        # seek LoadConst Instructions and map their temps to the allocated registers
+        # Seek LOAD_CONST instructions and map their dst temps to the allocated registers.
+        # The same ``const_id`` may appear in multiple LOAD_CONST instructions (each with
+        # its own ``dst`` Temp); every distinct (const_id, dst_temp_id) pair must be
+        # recorded so the seeding loop downstream writes the literal value into **every**
+        # register that bytecode operands later reference. Keying by ``const_id`` alone
+        # would lose all but the last ``dst`` register, leaving the others at ``0`` at
+        # runtime (since LOAD_CONST is dropped during bytecode emission).
         for node_id, node in cfg.node_items():
             for instr in node.instrs():
                 assert instr.byte_code is not None
                 assert len(instr.byte_code) == 6
 
                 if instr.op == OpCodes.LOAD_CONST:
-                    # Then rewrite the LOADCONST opcode into a STORE to the allocated register
                     const_id = instr.imm
                     assert isinstance(const_id, int)
-                    if const_id in const_id_to_registers:
-                        pass
-                    # reg_id, const_ty, pyvalue = const_id_to_registers[const_id]
                     constant_dst_temp = instr.dst
                     assert isinstance(constant_dst_temp, Temp)
                     assert const_id in const_pool
@@ -1625,12 +1642,10 @@ class RegisterAllocatorPass(CompilationPass):
                             next_reg_id,
                         )
 
-                    const_id_to_registers[const_id] = (
+                    const_id_to_registers[(const_id, const_temp_id)] = (
                         tempids_to_registers[const_temp_id],
                         pyvalue,
                     )
-
-                    # now all necessary constants have assigned registers
 
         # Then simple register allocation: map each Temp to a unique register ID
         for node_id, node in cfg.node_items():
@@ -2032,9 +2047,17 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
     write) see the same value ``PixInfo::primitive_id`` initializes to; ``ShaderMaterial``
     overwrites it each pixel from ``PixInfo::primitive_id``.
 
-    ``tt_FragDepth`` defaults to ``0.0`` for standalone VM runs; ``ShaderMaterial`` writes
+        ``tt_FragDepth`` defaults to ``0.0`` for standalone VM runs; ``ShaderMaterial`` writes
     the bound ``f32`` register each pixel from the active depth layer when
     ``ShaderPy.frag_depth_f32_reg`` is set.
+
+    ``tt_LineCoord`` defaults to ``0.0`` (non-line primitives and standalone VM runs);
+    ``ShaderMaterial`` writes ``PixInfo::line_coord`` when ``ShaderPy.line_coord_f32_reg`` is set
+    (line rasterization supplies ``0.0``..``1.0`` along the segment).
+
+    ``tt_PointCoord`` defaults to ``(0, 0)`` (non-point primitives and standalone VM runs);
+    ``ShaderMaterial`` writes ``PixInfo::point_coord`` when ``ShaderPy.point_coord_v2_reg`` is set
+    (point rasterization supplies ``(0.5, 0.5)`` for the single-cell sprite path).
     """
     names = reg_settings.var_name_to_registers
     if GLOBAL_VAR_TT_FRAME in names:
@@ -2045,6 +2068,10 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
         reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, True)
     if PIXELVAR_TT_FRAG_DEPTH in names:
         reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, 0.0)
+    if PIXELVAR_TT_LINE_COORD in names:
+        reg_settings.set_variable(PIXELVAR_TT_LINE_COORD, 0.0)
+    if PIXELVAR_TT_POINT_COORD in names:
+        reg_settings.set_variable(PIXELVAR_TT_POINT_COORD, glm.vec2(0.0, 0.0))
     if PIXELVAR_TT_PRIMITIVE_ID in names:
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 0)
 

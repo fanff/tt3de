@@ -16,10 +16,12 @@ from tt3de.tt3de import (
     apply_material_py_parallel,
     find_glyph_indices_py,
     materials,
+    ttsl_run,
 )
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
+    PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_TEXCOORD0,
     PIXELVAR_TT_TEXCOORD1,
     all_passes_compilation,
@@ -219,6 +221,91 @@ class Test_EndToEndCompilation(unittest.TestCase):
             self.assertLess(g, 80, msg=f"expected low green ({apply_fn})")
             self.assertGreater(b, 40, msg=f"expected blue channel from texture ({apply_fn})")
             self.assertLess(b, 120, msg=f"expected bounded blue ({apply_fn})")
+
+
+    def test_duplicate_float_constant_seeded_in_all_allocated_registers(self):
+        """Regression: when the front-end emits two ``LOAD_CONST`` for the same
+        constant pool index, register allocation gives each ``LOAD_CONST``'s ``dst``
+        Temp its own physical register, but seeding must populate **every** such
+        register — not only the last one keyed by ``const_id``. Two reads of the
+        literal ``7.0`` in independent sub-expressions must both be ``7.0`` at
+        runtime."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                a: float = 7.0 + tt_FragDepth
+                b: float = 7.0 - tt_FragDepth
+                out: float = a + b
+                return (vec3(out, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, 0.5)
+        reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.0, 0.0))
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.0, 0.0))
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
+        regs = reg_settings.get_register_list()
+
+        front, _back, _glyph = ttsl_run(*regs, bytecode)
+        self.assertAlmostEqual(
+            front.x, 14.0, places=4,
+            msg=(
+                f"both occurrences of literal 7.0 must seed their allocated "
+                f"f32 registers (got {front.x}; if ~7.0 only one literal was seeded)"
+            ),
+        )
+
+    def test_depth_floor_shader_vm_vs_python_reference(self):
+        """Compile depth_floor shader, run via ttsl_run with several tt_FragDepth
+        values, and compare against a pure-Python reference to catch compiler/VM
+        divergence."""
+        src = dedent(
+            """
+            def depth_floor(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                ndc: float = tt_FragDepth
+                denom: float = 100.0 - ndc * 99.9
+                d: float = 10.0 / denom
+                t: float = 30.0 / (d + 30.0)
+                rgb: vec3 = vec3(0.42 * t, 0.36 * t, 0.30 * t)
+                return (rgb, vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "depth_floor", {})
+
+        def python_reference(ndc: float) -> glm.vec3:
+            denom = 100.0 - ndc * 99.9
+            d = 10.0 / denom
+            t = 30.0 / (d + 30.0)
+            return glm.vec3(0.42 * t, 0.36 * t, 0.30 * t)
+
+        test_depths = [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0]
+        for ndc in test_depths:
+            reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, ndc)
+            reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(5.0, 5.0))
+            reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.0, 0.0))
+            reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
+            regs = reg_settings.get_register_list()
+
+            front, back, glyph = ttsl_run(*regs, bytecode)
+            expected = python_reference(ndc)
+
+            self.assertAlmostEqual(
+                front.x, expected.x, places=4,
+                msg=f"front.x mismatch at ndc={ndc}: VM={front.x}, python={expected.x}",
+            )
+            self.assertAlmostEqual(
+                front.y, expected.y, places=4,
+                msg=f"front.y mismatch at ndc={ndc}: VM={front.y}, python={expected.y}",
+            )
+            self.assertAlmostEqual(
+                front.z, expected.z, places=4,
+                msg=f"front.z mismatch at ndc={ndc}: VM={front.z}, python={expected.z}",
+            )
+            self.assertEqual(
+                back, glm.vec3(0.0, 0.0, 0.0),
+                msg=f"back should be black at ndc={ndc}",
+            )
+            self.assertEqual(glyph, 0, msg=f"glyph should be 0 at ndc={ndc}")
 
 
 if __name__ == "__main__":
