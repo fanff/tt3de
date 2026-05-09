@@ -9,7 +9,7 @@ if [[ ! -f "${root}/pyproject.toml" ]]; then
   echo "bench_material.sh: expected pyproject.toml under ${root}" >&2
   exit 1
 fi
-run_timestamp="$(date --iso-8601=seconds)"
+run_timestamp="$(date +%s)"
 json_out="${root}/benchmarks/material_apply_${run_timestamp}.json"
 mkdir -p "${root}/benchmarks"
 export PYTHONPATH="${root}/python"
