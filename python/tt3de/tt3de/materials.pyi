@@ -76,3 +76,17 @@ class BaseTexturePy(MaterialPy):
         back_uv_0: bool = True,
         glyph_method: "ToGlyphMethodPy" = ...,
     ) -> "BaseTexturePy": ...
+
+class ShaderPy(MaterialPy):
+    bytecode: bytes
+    time_f32_reg: int | None
+    default_glyph: int | None
+    register_seed: list[dict[int, object]] | None
+
+    def __init__(
+        self,
+        bytecode: bytes,
+        time_f32_reg: int | None = ...,
+        default_glyph: int | None = ...,
+        register_seed: list[dict[int, object]] | None = ...,
+    ) -> "ShaderPy": ...

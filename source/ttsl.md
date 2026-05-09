@@ -16,6 +16,88 @@ is maintained in the [Opcode Reference](opcode_reference.md).
 This reference is auto-generated from the opcode definitions in
 `python/tt3de/ttsl/ttisa/low_level_def.py` by running `uv run tt3de-gen-opcodes`.
 
+Low-Level Runtime/Material Bridge
+---------------------------------
+
+This section documents how TTSL VM output is consumed by the Rust renderer.
+
+### VM return contract (`OP_RET`)
+
+At bytecode level, `OP_RET` returns **three values**:
+
+- `front: vec3`
+- `back: vec3`
+- `glyph: i32`
+
+The Rust VM implementation (`src/ttsl/opcodes.rs`) reads these from register files
+as `v3[a]`, `v3[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
+
+```python
+front_vec3, back_vec3, glyph_idx = ttsl_run(*regs, bytecode)
+```
+
+In practice today, most demos use `front_vec3` as the generated color and then
+write a material (often static color) into `MaterialBufferPy` each frame.
+
+### How rendering applies materials
+
+Material application happens after rasterization:
+
+1. raster stage writes per-pixel `PixInfo` (`uv`, `uv_1`, normal, `material_id`, etc.)
+2. draw stage resolves each pixel layer and calls `apply_material(...)`
+3. material writes `CanvasCell` output (`front_color`, `back_color`, `glyph`)
+
+The final terminal cell is produced by material logic. In particular, when the
+material mode is `Shader`, the material owns compiled TTSL bytecode and executes
+it during material application so shader output directly drives final cell
+channels (`front_color`, `back_color`, `glyph`).
+
+### Material modes currently available
+
+From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
+
+- `StaticColor` / `materials.StaticColorPy`
+  - Writes any subset of front color, back color, and glyph through booleans:
+    `front`, `back`, `glyph`.
+- `BaseTexture` / `materials.BaseTexturePy`
+  - Texture-driven shading with explicit channel toggles:
+    `front`, `back`, `glyph`.
+  - UV source selection per channel:
+    `front_uv_0`, `back_uv_0`, `glyph_uv_0` (choose between `uv` and `uv_1`).
+  - Texture selection:
+    `albedo_texture_idx(+subid)` and `glyph_texture_idx(+subid)`.
+- `Textured` (legacy fast path, via `MaterialBufferPy.add_textured`)
+  - Uses one albedo texture and a fixed glyph index.
+- `ComboMaterial` / `materials.ComboMaterialPy`
+  - Applies up to 5 materials in sequence; later materials can overwrite earlier
+    front/back/glyph outputs.
+- `Shader`
+  - Material mode backed by compiled TTSL bytecode.
+  - The shader is executed at material-application time and its return payload
+    (`front`, `back`, `glyph`) drives final cell output.
+  - Python API:
+    - `materials.ShaderPy(bytecode: bytes, time_f32_reg: Optional[int])`
+    - `MaterialBufferPy.add_shader(shader)`
+    - `MaterialBufferPy.set_shader_time(material_idx, time_seconds)` for
+      in-place per-frame time updates without rebuilding materials.
+- Debug helpers (`add_debug_depth`, `add_debug_uv`)
+  - Depth and UV visualization materials exposed by Rust bindings.
+
+Rust also defines additional variants (`Noise`, `StaticGlyph`, `Custom`) but these
+are not all fully surfaced/implemented in the high-level Python API.
+
+### Glyph mapping modes for `BaseTexture`
+
+`BaseTexturePy.glyph_method` controls how glyph index is derived:
+
+- `toglyphmethod.ToGlyphMethodPyStatic(g)`:
+  always use glyph `g`.
+- `toglyphmethod.ToGlyphMethodPyMap4Luminance((g0, g1, g2, g3))`:
+  compute luminance from sampled glyph texture and map to 4 buckets.
+
+Note: Rust has additional `ToGlyphMethod` variants (`FromAlpha`, `Map4Color`) but
+current Python wrapper only exposes Static and Map4Luminance constructors.
+
 Variables list [TODO]
 ---------------------
 

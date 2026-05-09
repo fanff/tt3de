@@ -7,7 +7,7 @@ use pyo3::{
 
 
 use crate::{
-    ttsl::{opcodes::OP_RET, Instr, Registers, TTPU},
+    ttsl::{decode_instrs_256, run_ttsl as run_ttsl_vm, Registers},
     utils::{from_pydict_int_v2, from_pydict_int_v3, from_pydict_int_v4, vec3_to_pyglm},
 };
 
@@ -50,29 +50,6 @@ pub fn convert_and_fill_register(
     }
 }
 
-pub fn to_instrs(bytes: &[u8]) -> [Instr; 256] {
-    let mut instrs: Vec<Instr> = Vec::new();
-    let mut i = 0;
-    while i + 6 <= bytes.len() && instrs.len() < 256 {
-        let instr_bytes = &bytes[i..i + 6];
-        let instr = Instr::from_bytes(instr_bytes);
-        instrs.push(instr);
-        i += 6;
-    }
-    // fill the rest with NOPs
-    while instrs.len() < 256 {
-        instrs.push(Instr {
-            opcode: OP_RET,
-            dst: 0,
-            a: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-        });
-    }
-    instrs.try_into().unwrap()
-}
-
 #[pyfunction]
 pub fn ttsl_run(
     py: Python,
@@ -84,17 +61,17 @@ pub fn ttsl_run(
     regv4: Py<PyDict>,
     bytecode: Py<PyBytes>, // the bytes drirectly from python.
 ) -> (Py<PyAny>, Py<PyAny>, i32) {
-    // setup TTPU
-    let mut ttpu = TTPU::new();
-    let regs = &mut ttpu.regs;
+    let mut regs = Registers::new();
     // load regsetup into regs
-    convert_and_fill_register(regs, regbool, regf32, regi32, regv2, regv3, regv4, py);
+    convert_and_fill_register(
+        &mut regs, regbool, regf32, regi32, regv2, regv3, regv4, py,
+    );
 
     // load bytes &[u8] from bytecode
     let bytes: &[u8] = bytecode.extract(py).unwrap();
-    let instrs = to_instrs(bytes);
+    let instrs = decode_instrs_256(bytes);
 
-    let (v3a, v3b, iret) = ttpu.run(&instrs);
+    let (v3a, v3b, iret) = run_ttsl_vm(&instrs, &mut regs);
     let a = vec3_to_pyglm(py, v3a);
     let b = vec3_to_pyglm(py, v3b);
     let c = iret;

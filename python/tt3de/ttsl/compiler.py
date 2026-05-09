@@ -1373,14 +1373,15 @@ class RegisterAllocatorPass(CompilationPass):
         cfg = ttsl_compiler.cfg
         assert isinstance(cfg, CFG)
 
-        # count of registers per type
+        # count of registers per type (must stay within VM banks: [T; 256], indices 0..255;
+        # allocator uses 1..=count; reg 0 reserved for default_vars_to_registers bindings)
         register_counts: dict[IRType, int] = {
-            IRType.BOOL: 32,
-            IRType.I32: 32,
-            IRType.F32: 32,
-            IRType.V2: 32,
-            IRType.V3: 32,
-            IRType.V4: 32,
+            IRType.BOOL: 255,
+            IRType.I32: 255,
+            IRType.F32: 255,
+            IRType.V2: 255,
+            IRType.V3: 255,
+            IRType.V4: 255,
         }
         allocated_registers: Dict[IRType, Set[int]] = {}
 

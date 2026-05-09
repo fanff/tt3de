@@ -1,8 +1,15 @@
 use pyo3::prelude::*;
 
-use pyo3::{pyclass, pymethods, Python};
+use pyo3::{
+    exceptions::PyValueError,
+    pyclass, pymethods,
+    types::{PyBytes, PyDict, PyList},
+    Bound, Py, PyResult, Python,
+};
 
 use crate::material::materials::Material;
+use crate::material::shader_material::{ShaderMaterial, ShaderSeedRegisters};
+use crate::ttsl::{ttslpy::convert_and_fill_register, Registers};
 use crate::material::textured::BaseTexture;
 use crate::texturebuffer;
 use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
@@ -171,6 +178,111 @@ impl StaticColorPy {
             },
             glyph_idx: self.glyph_idx,
         }
+    }
+}
+
+#[pyclass(extends=MaterialPy)]
+pub struct ShaderPy {
+    pub bytecode: Vec<u8>,
+    pub time_f32_reg: Option<usize>,
+    pub default_glyph: Option<u8>,
+    /// Same layout as ``RegisterSettings.get_register_list()`` (list of 6 dicts), or ``None``.
+    #[pyo3(get, set)]
+    pub register_seed: Option<Py<PyAny>>,
+}
+
+impl ShaderPy {
+    pub fn build_native(&self, py: Python<'_>) -> PyResult<ShaderMaterial> {
+        let seed_registers: Option<Registers> = if let Some(seed) = &self.register_seed {
+            let seq = seed.bind(py);
+            let list = seq.cast::<PyList>().map_err(|_| {
+                PyValueError::new_err("register_seed must be a list of 6 dicts")
+            })?;
+            if list.len() != 6 {
+                return Err(PyValueError::new_err(
+                    "register_seed must be a sequence of exactly 6 dicts (bool, f32, i32, v2, v3, v4 banks)",
+                ));
+            }
+            let mut regs = Registers::new();
+            let d0: Py<PyDict> = list.get_item(0)?.extract()?;
+            let d1: Py<PyDict> = list.get_item(1)?.extract()?;
+            let d2: Py<PyDict> = list.get_item(2)?.extract()?;
+            let d3: Py<PyDict> = list.get_item(3)?.extract()?;
+            let d4: Py<PyDict> = list.get_item(4)?.extract()?;
+            let d5: Py<PyDict> = list.get_item(5)?.extract()?;
+            convert_and_fill_register(
+                &mut regs,
+                d0.clone_ref(py),
+                d1.clone_ref(py),
+                d2.clone_ref(py),
+                d3.clone_ref(py),
+                d4.clone_ref(py),
+                d5.clone_ref(py),
+                py,
+            );
+            Some(regs)
+        } else {
+            None
+        };
+
+        let mut mat = ShaderMaterial::from_bytecode(&self.bytecode)
+            .with_time_f32_reg(self.time_f32_reg)
+            .with_default_glyph(self.default_glyph);
+        if let Some(regs) = seed_registers {
+            mat = mat.with_seed_registers(ShaderSeedRegisters::from_registers(regs));
+        }
+        Ok(mat)
+    }
+}
+
+#[pymethods]
+impl ShaderPy {
+    #[new]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, default_glyph=None, register_seed=None))]
+    fn new(
+        bytecode: &Bound<'_, PyBytes>,
+        time_f32_reg: Option<usize>,
+        default_glyph: Option<u8>,
+        register_seed: Option<Py<PyAny>>,
+    ) -> PyClassInitializer<Self> {
+        let parent = MaterialPy::new();
+        let bytes = bytecode.as_bytes();
+        PyClassInitializer::from(parent).add_subclass(ShaderPy {
+            bytecode: bytes.to_vec(),
+            time_f32_reg,
+            default_glyph,
+            register_seed,
+        })
+    }
+
+    #[getter]
+    fn bytecode<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
+        PyBytes::new(py, &self.bytecode)
+    }
+
+    #[setter]
+    fn set_bytecode(&mut self, value: &Bound<'_, PyBytes>) {
+        self.bytecode = value.as_bytes().to_vec();
+    }
+
+    #[getter]
+    fn time_f32_reg(&self) -> Option<usize> {
+        self.time_f32_reg
+    }
+
+    #[setter]
+    fn set_time_f32_reg(&mut self, value: Option<usize>) {
+        self.time_f32_reg = value;
+    }
+
+    #[getter]
+    fn default_glyph(&self) -> Option<u8> {
+        self.default_glyph
+    }
+
+    #[setter]
+    fn set_default_glyph(&mut self, value: Option<u8>) {
+        self.default_glyph = value;
     }
 }
 

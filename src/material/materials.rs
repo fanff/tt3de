@@ -8,7 +8,7 @@ use crate::vertexbuffer::uv_buffer::UVBuffer;
 
 use super::super::texturebuffer::RGBA;
 
-use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, Textured};
+use super::{apply_noise, noise_mat::*, DebugDepth, DebugUV, ShaderMaterial, Textured};
 
 #[derive(Clone)]
 pub enum Material<T = ()> {
@@ -34,6 +34,7 @@ pub enum Material<T = ()> {
 
     DebugDepth(DebugDepth),
     DebugUV(DebugUV),
+    Shader(ShaderMaterial),
     ComboMaterial(ComboMaterial),
     Custom(T),
 }
@@ -138,6 +139,15 @@ impl<
                 uv_buffer,
             ),
             Material::DebugUV(m) => m.render_mat(
+                cell,
+                depth_cell,
+                depth_layer,
+                pixinfo,
+                primitive_element,
+                texture_buffer,
+                uv_buffer,
+            ),
+            Material::Shader(m) => m.render_mat(
                 cell,
                 depth_cell,
                 depth_layer,

@@ -49,6 +49,7 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     submodule.add_class::<ComboMaterialPy>()?;
     submodule.add_class::<MaterialPy>()?;
     submodule.add_class::<BaseTexturePy>()?;
+    submodule.add_class::<ShaderPy>()?;
     submodule.add_class::<StaticColorPy>()?;
     submodule.add_class::<StaticGlyphPy>()?;
     m.add_submodule(&submodule)?;

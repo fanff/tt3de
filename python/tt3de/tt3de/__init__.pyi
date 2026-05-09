@@ -4,6 +4,7 @@ from pyglm import glm
 
 from tt3de.tt3de.materials import (
     BaseTexturePy,
+    ShaderPy,
     StaticColorPy,
 )
 
@@ -151,6 +152,31 @@ class MaterialBufferPy:
 
         Returns:
             int: The index of the material.
+        """
+        ...
+
+    def add_shader(
+        self,
+        mat: ShaderPy,
+    ) -> int:
+        """
+        Adds a shader material to the buffer.
+
+        Args:
+            mat (ShaderPy): Shader material wrapping compiled TTSL bytecode.
+
+        Returns:
+            int: The index of the material.
+        """
+        ...
+
+    def set_shader_time(self, material_idx: int, time_seconds: float) -> None:
+        """
+        Updates a shader material `tt_Time` uniform in place.
+
+        Args:
+            material_idx (int): Index returned by `add_shader`.
+            time_seconds (float): Seconds since app start.
         """
         ...
 
