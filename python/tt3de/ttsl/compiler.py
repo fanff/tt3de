@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from collections import defaultdict
 import ast
+import traceback
 from typing import Any, Dict, List, Optional, Tuple, Set
 
 from pyglm import glm
@@ -741,20 +742,7 @@ class TTSLCompilerContext:
 
 
 def compile_ttsl(src, function_name, globals_dict: Dict) -> TTSLCompilerContext:
-    # Parse it into an AST
-    tree = ast.parse(src)
-
-    # 3. Find the FunctionDef node corresponding to `fn`
-    # `ast.parse` returns a Module with .body list
-    fn_node = None
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == function_name:
-            fn_node = node
-            break
-
-    if fn_node is None:
-        raise RuntimeError("Could not find function node in AST")
-
+    _, fn_node = parse_ttsl_source(src, function_name)
     return compile_ttsl_function(fn_node, globals_dict)
 
 
@@ -775,6 +763,18 @@ def compile_ttsl_function(
     sc.compile_block(tree.body)
     sc.code.fix_jump_targets()
     return sc
+
+
+def parse_ttsl_source(src: str, function_name: str) -> Tuple[ast.Module, ast.FunctionDef]:
+    tree = ast.parse(src)
+    fn_node: Optional[ast.FunctionDef] = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == function_name:
+            fn_node = node
+            break
+    if fn_node is None:
+        raise RuntimeError("Could not find function node in AST")
+    return tree, fn_node
 
 
 def type_of_annotation(arg_annotation) -> IRType:
@@ -1803,6 +1803,105 @@ class RegisterSettings:
         for ty in reg_types:
             regs.append(self.regs[ty])
         return regs
+
+
+@dataclass
+class CompilationStateResult:
+    ast_module: Optional[ast.Module] = None
+    ast_function: Optional[ast.FunctionDef] = None
+    context: Optional[TTSLCompilerContext] = None
+    last_completed_stage: str = "start"
+    register_allocation: Optional[RegisterAllocationResult] = None
+    final_byte_code: Optional[List[List[int]]] = None
+    byte_array: Optional[bytes] = None
+    register_settings: Optional[RegisterSettings] = None
+    error: Optional[Exception] = None
+    traceback_text: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.error is None
+
+
+def all_passes_compilation_with_state(
+    src: str, func_name: str, globals_dict: Dict[str, Any]
+) -> CompilationStateResult:
+    result = CompilationStateResult()
+    try:
+        ast_module, fn_node = parse_ttsl_source(src, func_name)
+        result.ast_module = ast_module
+        result.ast_function = fn_node
+        result.last_completed_stage = "parse"
+    except Exception as exc:
+        result.error = exc
+        result.traceback_text = traceback.format_exc()
+        return result
+
+    try:
+        cc = compile_ttsl_function(fn_node, globals_dict)
+        result.context = cc
+        result.last_completed_stage = "ir"
+    except Exception as exc:
+        result.error = exc
+        result.traceback_text = traceback.format_exc()
+        return result
+
+    assert result.context is not None
+    cc = result.context
+    stages = [
+        ("cfg", lambda: build_cfg_from_ir(cc)),
+        ("ssa", lambda: PassSSARenamer(cc).run()),
+        ("phi_lower", lambda: PassPhiNodeLowering(cc).run()),
+        ("cfg_simplify", lambda: CFGSimplifyPass(cc).run()),
+    ]
+
+    for stage_name, stage_fn in stages:
+        try:
+            stage_fn()
+            result.last_completed_stage = stage_name
+        except Exception as exc:
+            result.error = exc
+            result.traceback_text = traceback.format_exc()
+            return result
+
+    try:
+        rar = RegisterAllocatorPass(cc).run()
+        result.register_allocation = rar
+        result.last_completed_stage = "reg_alloc"
+    except Exception as exc:
+        result.error = exc
+        result.traceback_text = traceback.format_exc()
+        return result
+
+    try:
+        PassNormalizeTerminators(cc).run()
+        result.last_completed_stage = "normalize_terms"
+    except Exception as exc:
+        result.error = exc
+        result.traceback_text = traceback.format_exc()
+        return result
+
+    assert result.register_allocation is not None
+    try:
+        final_byte_code = PassToByteCode(cc).run(result.register_allocation)
+        result.final_byte_code = final_byte_code
+
+        reg_settings = RegisterSettings(result.register_allocation.var_names_to_registers)
+        for (ty, reg_id), value in result.register_allocation.const_id_to_registers.values():
+            reg_settings.set_register(ty, reg_id, value)
+        result.register_settings = reg_settings
+
+        all_bytecode_instrs = []
+        for bytecode_instr in final_byte_code:
+            all_bytecode_instrs.extend(bytecode_instr)
+        result.byte_array = bytes(all_bytecode_instrs)
+        result.last_completed_stage = "bytecode"
+    except Exception as exc:
+        result.error = exc
+        result.traceback_text = traceback.format_exc()
+        return result
+
+    return result
 
 
 def all_passes_compilation(
