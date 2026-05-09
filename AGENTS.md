@@ -7,12 +7,29 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 - **Compile locally**: `uv run maturin develop` (dev profile) or `uv run maturin develop --profile release`
 - **Rust check (all targets)**: `cargo check --all-targets` — use this to surface all warnings, including from tests and benchmarks.
 - **Rust tests**: `cargo test`
-- **Python tests**: `uv run pytest`
-- **Regenerate TTSL opcodes**: `uv run tt3de-gen-opcodes` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`.
+- **Python tests**: `uv run pytest` — see [Testing](#testing) for `PYTHONPATH` when running pytest directly.
+- **Regenerate TTSL opcodes**: `uv run tt3de-gen-opcodes` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. This script is defined in `pyproject.toml` for **development only**; it must not be deployed or shipped inside released packages.
 
 ## Platform Notes
 
 - On Windows/PowerShell, redirect cargo stderr with: `cmd /c "cargo check --all-targets 2> output.txt"` (PowerShell `2>&1` piping mangles cargo output).
+- Detect or confirm the operating system before suggesting or running commands. Use PowerShell syntax on Windows and bash/zsh on macOS or Linux; do not assume one shell works everywhere.
+
+## Testing
+
+When running pytest directly (not via a wrapper that already sets paths), set `PYTHONPATH` to the repository root so imports like `tests.*` resolve correctly.
+
+- **Windows (PowerShell)**:
+
+```powershell
+$env:PYTHONPATH='.'; uv run pytest <test-path-or-args>
+```
+
+- **macOS/Linux (bash/zsh)**:
+
+```bash
+PYTHONPATH=. uv run pytest <test-path-or-args>
+```
 
 ## Documentation
 
@@ -40,6 +57,31 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 
 ## Conventions
 
+- **Python GLM imports**: use `from pyglm import glm` (not `import glm` or `import pyglm as glm`). For TTSL shader source strings, the compiler injects the same prelude.
 - Keep changes scoped; avoid unrelated refactors in the same edit.
 - Run `cargo check --all-targets` after Rust edits to verify zero warnings.
 - Run `uv run pytest` after changes that touch Python bindings.
+
+## Git workflow
+
+Before starting new feature or chore work, update your local base from `master` (for example: pull latest `master` first, then branch).
+
+- Branch naming should usually follow:
+  - `feat/<short-description>`
+  - `chore/<short-description>`
+- Commit messages must follow release-standard Conventional Commits, such as:
+  - `feat: <what changed>`
+  - `chore: <what changed>`
+  - `fix: <what changed>`
+  - `docs: <what changed>`
+- Keep commit message prefixes consistent so release automation and changelog tooling remain reliable.
+
+### Example command sequence (Windows PowerShell)
+
+```powershell
+git checkout master
+git pull
+git checkout -b feat/<short-description>
+git add .
+git commit -m "feat: <what changed>"
+```

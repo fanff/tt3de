@@ -28,7 +28,7 @@ from tt3de.ttsl.ttsl_assembly import (
 
 PRELUDE_GLM_IMPORT = """
 # GLM prelude
-import pyglm as glm
+from pyglm import glm
 vec2 = glm.vec2
 vec3 = glm.vec3
 vec4 = glm.vec4

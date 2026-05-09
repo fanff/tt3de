@@ -6,6 +6,7 @@ alwaysApply: false
 
 # Python Standards
 
+- Import GLM as `from pyglm import glm` (do not use `import glm` or `import pyglm as glm`).
 - Prefer typed function signatures and explicit return types for new/edited public APIs.
 - Keep rendering/runtime logic deterministic; avoid hidden global state and side effects at import time.
 - For Python wrappers over Rust modules, keep argument names, defaults, and behavior aligned with Rust-backed implementation.

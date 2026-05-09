@@ -4,7 +4,7 @@
 import os
 from typing import List, Tuple, Dict, Any
 
-from glm import floor
+from pyglm import glm
 
 from tt3de.points import Point2D, Point3D
 from tt3de.richtexture import ImageTexture
@@ -183,8 +183,8 @@ class OBJGroup:
 
                 # shift the uv toward somewhere positive (TT3DE can't manage negative uv for now)
                 if False:
-                    minu = floor(min(p0x, p1x, p2x))
-                    minv = floor(min(p0y, p1y, p2y))
+                    minu = glm.floor(min(p0x, p1x, p2x))
+                    minv = glm.floor(min(p0y, p1y, p2y))
                 else:
                     minu = 0
                     minv = 0
