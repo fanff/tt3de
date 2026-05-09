@@ -98,6 +98,12 @@ are not all fully surfaced/implemented in the high-level Python API.
 Note: Rust has additional `ToGlyphMethod` variants (`FromAlpha`, `Map4Color`) but
 current Python wrapper only exposes Static and Map4Luminance constructors.
 
+### TTSL Python compiler surface syntax
+
+The TTSL compiler requires the shader to ``return`` a 3-tuple ``(front, back, glyph)``
+with types ``(vec3, vec3, int)``, matching ``OP_RET`` above. Annotate as
+``tuple[vec3, vec3, int]`` (or ``typing.Tuple[...]``). See the [TTSL Compiler](ttsl_compiler.md) example.
+
 Variables list [TODO]
 ---------------------
 

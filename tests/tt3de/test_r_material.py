@@ -128,8 +128,9 @@ class Test_ShaderPySetShaderTimeCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_time_red(tt_TexCoord0: vec2) -> vec3:
-            return vec3(tt_Time, 0.0, 0.0)
+        def dummy_time_red(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            c: vec3 = vec3(tt_Time, 0.0, 0.0)
+            return (c, c, 0)
         """
     )
 

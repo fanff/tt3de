@@ -7,6 +7,7 @@ from tt3de.ttsl.compiler import (
     CompileError,
     TTSLCompilerContext,
     all_passes_compilation_with_state,
+    compile_ttsl,
 )
 import unittest
 
@@ -70,10 +71,11 @@ class Test_Compiler(unittest.TestCase):
         intermediate artifacts (AST, compiler context, and register allocation)."""
         source = dedent(
             """
-            def my_shader(tt_FragCoord: vec2) -> vec3:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 uv: vec2 = tt_TexCoord0
                 pulse: float = abs(sin(tt_Time))
-                return vec3(uv.x, uv.y, pulse)
+                c: vec3 = vec3(uv.x, uv.y, pulse)
+                return (c, c, 0)
             """
         )
         result = all_passes_compilation_with_state(
@@ -95,10 +97,11 @@ class Test_Compiler(unittest.TestCase):
         preserved in the result so callers can inspect partial compilation state."""
         source = dedent(
             """
-            def my_shader(tt_FragCoord: vec2) -> vec3:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 uv: vec2 = tt_TexCoord0
                 pulse: float = abs(sin(tt_Time))
-                return vec3(uv.x, uv.y, pulse)
+                c: vec3 = vec3(uv.x, uv.y, pulse)
+                return (c, c, 0)
             """
         )
 
@@ -118,3 +121,52 @@ class Test_Compiler(unittest.TestCase):
         self.assertIsNone(result.final_byte_code)
         self.assertIsNone(result.byte_array)
         self.assertIn("forced bytecode failure", result.traceback_text)
+
+
+class Test_ReturnTripleContract(unittest.TestCase):
+    def test_single_vec3_return_rejected(self):
+        src = dedent(
+            """
+            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return vec3(1.0, 0.0, 0.0)
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "f", {})
+        self.assertIn("3-tuple", str(ctx.exception))
+
+    def test_return_tuple_wrong_length(self):
+        src = dedent(
+            """
+            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0))
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "f", {})
+        self.assertIn("exactly 3", str(ctx.exception))
+
+    def test_return_third_slot_must_be_int(self):
+        src = dedent(
+            """
+            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), 1.0)
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "f", {})
+        msg = str(ctx.exception)
+        self.assertIn("vec3", msg)
+        self.assertIn("int", msg)
+
+    def test_vec3_return_annotation_rejected(self):
+        src = dedent(
+            """
+            def f(tt_FragCoord: vec2) -> vec3:
+                v: vec3 = vec3(1.0, 0.0, 0.0)
+                return (v, v, 0)
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "f", {})
+        self.assertIn("tuple[vec3, vec3, int]", str(ctx.exception))

@@ -15,20 +15,33 @@ from textual.widget import Widget
 from textual.worker import Worker, WorkerState
 from rich.syntax import Syntax
 
-from tt3de.ttsl.compiler import CompilationStateResult, all_passes_compilation_with_state
+from tt3de.ttsl.compiler import (
+    GLOBAL_VAR_TT_TIME,
+    CompilationStateResult,
+    all_passes_compilation_with_state,
+)
 from tt3de.ttsl.ttsl_assembly import IRType, OpCodes, Temp
 
 DEFAULT_SHADER_CODE = """\
 # Built-in inputs follow the GLSL `gl_*` naming style as `tt_*`.
 # See `source/ttsl.md` and `source/ttsl_compiler.md`.
+# Shaders return (front_rgb, back_rgb, glyph_index).
 
-def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:
+def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec3, glm.vec3, int]:
     uv: glm.vec2 = tt_TexCoord0
     pulse: float = abs(glm.sin(tt_Time * 1.25))
     if uv.x > uv.y:
-        return glm.vec3(uv.x, uv.y, pulse)
+        return (
+            glm.vec3(uv.x, uv.y, pulse),
+            glm.vec3(uv.x, uv.y, pulse),
+            0,
+        )
     else:
-        return glm.vec3(0.0, pulse, 1.0 - pulse)
+        return (
+            glm.vec3(0.0, pulse, 1.0 - pulse),
+            glm.vec3(0.0, pulse, 1.0 - pulse),
+            0,
+        )
 """
 
 
@@ -426,7 +439,7 @@ class TTSLCompilerTesterApp(App):
             return all_passes_compilation_with_state(
                 src=source,
                 func_name="my_shader",
-                globals_dict={"time": float},
+                globals_dict={GLOBAL_VAR_TT_TIME: float},
             )
         except Exception as exc:
             return CompilationStateResult(

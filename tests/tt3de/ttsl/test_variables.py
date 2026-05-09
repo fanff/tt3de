@@ -45,8 +45,8 @@ class Test_VariableContract(unittest.TestCase):
         """No implicit ``time`` or ``tt_Time`` slot — only ``globals_dict`` adds those."""
         src = dedent(
             """
-            def simple(tt_FragCoord: vec2) -> vec3:
-                return vec3(1.0, 2.0, 3.0)
+            def simple(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
             """
         )
         cc = compile_ttsl(src, "simple", {})
@@ -58,11 +58,15 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_pixel_builtins_plus_tt_Time_when_declared_in_globals(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 pulse: float = tt_Time
                 u0: vec2 = tt_TexCoord0
                 u1: vec2 = tt_TexCoord1
-                return vec3(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x)
+                return (
+                    vec3(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x),
+                    vec3(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x),
+                    0,
+                )
             """
         )
         globs = {GLOBAL_VAR_TT_TIME: float}
@@ -79,8 +83,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Time_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(tt_Time, 0.0, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_Time, 0.0, 0.0), vec3(tt_Time, 0.0, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -92,8 +96,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_empty_globals_dict_builtin_only(self):
         src = dedent(
             """
-            def simple(tt_FragCoord: vec2) -> vec3:
-                return vec3(1.0, 2.0, 3.0)
+            def simple(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
             """
         )
         cc = compile_ttsl(src, "simple", {})
@@ -105,10 +109,14 @@ class Test_UserGlobalsHappyPath(unittest.TestCase):
         globs = {"time": float, "position": glm.vec3}
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 t: float = time
                 p: vec3 = position
-                return vec3(t + tt_FragCoord.x * 0.0, p.y, p.z)
+                return (
+                    vec3(t + tt_FragCoord.x * 0.0, p.y, p.z),
+                    vec3(t + tt_FragCoord.x * 0.0, p.y, p.z),
+                    0,
+                )
             """
         )
         cc = compile_ttsl(src, "shade", globs)
@@ -121,8 +129,12 @@ class Test_ParameterVsBuiltinFragCoord(unittest.TestCase):
     def test_uv_parameter_distinct_from_tt_FragCoord_builtin(self):
         src = dedent(
             """
-            def shade(uv: vec2) -> vec3:
-                return vec3(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0)
+            def shade(uv: vec2) -> tuple[vec3, vec3, int]:
+                return (
+                    vec3(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0),
+                    vec3(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0),
+                    0,
+                )
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -139,9 +151,9 @@ class Test_ShadowBuiltinViaGlobalsDict(unittest.TestCase):
         """globals_dict chooses the IR type for ``tt_Time`` (here ``int`` vs default ``float``)."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 tick: int = tt_Time
-                return vec3(1.0, 2.0, 3.0)
+                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {GLOBAL_VAR_TT_TIME: int})
@@ -151,8 +163,8 @@ class Test_ShadowBuiltinViaGlobalsDict(unittest.TestCase):
         """sin(tt_Time) is I32; vec3(...) requires f32 components — CompileError."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(sin(tt_Time), 0.0, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(sin(tt_Time), 0.0, 0.0), vec3(sin(tt_Time), 0.0, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -168,9 +180,9 @@ class Test_VariableFailures(unittest.TestCase):
     def test_doc_catalog_tt_FragPos_not_implemented(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 p: vec2 = tt_FragPos
-                return vec3(p.x, p.y, 0.0)
+                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -182,9 +194,9 @@ class Test_VariableFailures(unittest.TestCase):
     def test_doc_catalog_tt_DeltaTime_not_implemented(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 d: float = tt_DeltaTime
-                return vec3(d, 0.0, 0.0)
+                return (vec3(d, 0.0, 0.0), vec3(d, 0.0, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -196,8 +208,8 @@ class Test_VariableFailures(unittest.TestCase):
     def test_typo_tt_Tim(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(tt_Tim, 0.0, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_Tim, 0.0, 0.0), vec3(tt_Tim, 0.0, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -209,8 +221,12 @@ class Test_VariableFailures(unittest.TestCase):
     def test_typo_tt_fragcoord_case(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(tt_fragcoord.x, 0.0, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (
+                    vec3(tt_fragcoord.x, 0.0, 0.0),
+                    vec3(tt_fragcoord.x, 0.0, 0.0),
+                    0,
+                )
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -222,8 +238,12 @@ class Test_VariableFailures(unittest.TestCase):
     def test_undeclared_user_global(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(mystery_uniform, 0.0, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (
+                    vec3(mystery_uniform, 0.0, 0.0),
+                    vec3(mystery_uniform, 0.0, 0.0),
+                    0,
+                )
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -235,8 +255,8 @@ class Test_VariableFailures(unittest.TestCase):
     def test_unsupported_global_type_in_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
-                return vec3(1.0, 2.0, 3.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -253,9 +273,9 @@ class Test_DocParityExpectedFailures(unittest.TestCase):
     def test_doc_tt_FragPos_vec2_builtin_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 p: vec2 = tt_FragPos
-                return vec3(p.x, p.y, 0.0)
+                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
             """
         )
         compile_ttsl(src, "shade", {})
@@ -264,9 +284,9 @@ class Test_DocParityExpectedFailures(unittest.TestCase):
     def test_doc_tt_DeltaTime_float_builtin_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> vec3:
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 d: float = tt_DeltaTime
-                return vec3(d, 0.0, 0.0)
+                return (vec3(d, 0.0, 0.0), vec3(d, 0.0, 0.0), 0)
             """
         )
         compile_ttsl(src, "shade", {})

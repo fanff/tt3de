@@ -24,9 +24,9 @@ class Test_SSARenaming(unittest.TestCase):
         src = dedent(
             """
 
-            def my_shader(tt_FragCoord: vec2) -> vec3:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 # accessing variables coming from the fragment:
-                return vec3(1.0, -2.0, 0.0)
+                return (vec3(1.0, -2.0, 0.0), vec3(1.0, -2.0, 0.0), 0)
 
             """
         )
@@ -42,14 +42,14 @@ class Test_SampleCompilation(unittest.TestCase):
         src = dedent(
             """
                 @ttsl(globals={})
-                def my_shader(tt_FragCoord: vec2) -> vec3:  # noqa: F811
+                def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:  # noqa: F811
                     # calculate a skybox background based on tt_FragCoord (from -1 to 1)
                     color_sky: vec3 = vec3(0.2, 0.4, 0.8)
                     color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
                     t: float = (tt_FragCoord.y + 1.0) / 2.0
                     mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
 
-                    return mixed
+                    return (mixed, mixed, 0)
             """
         )
         func_name = "my_shader"
@@ -69,14 +69,14 @@ class Test_SampleCompilation(unittest.TestCase):
         src = dedent(
             """
                 @ttsl(globals={})
-                def my_shader(tt_FragCoord: vec2) -> vec3:  # noqa: F811
+                def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:  # noqa: F811
                     # calculate a skybox background based on tt_FragCoord (from -1 to 1)
                     color_sky: vec3 = vec3(0.2, 0.4, 0.8)
                     color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
                     t: float = (tt_FragCoord.y + 1.0) / 2.0
                     mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
 
-                    return mixed
+                    return (mixed, mixed, 0)
             """
         )
         func_name = "my_shader"

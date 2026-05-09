@@ -26,15 +26,17 @@ from tt3de.ttsl.compiler import GLOBAL_VAR_TT_TIME, all_passes_compilation
 
 SHADER_SRC = dedent(
     """
-    def my_shader(tt_TexCoord0: vec2) -> vec3:
+    def my_shader(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
         # Make motion clearly visible at terminal framerate.
         phase: float = tt_Time * 4.0
         wave_x: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.x * 18.0) + phase)
         wave_y: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.y * 14.0) - phase * 1.2)
         blue: float = 0.5 + 0.5 * glm.sin(phase * 0.7 + (tt_TexCoord0.x + tt_TexCoord0.y) * 8.0)
-        return vec3(wave_x, wave_y, blue)
+        rgb: vec3 = vec3(wave_x, wave_y, blue)
+        return (rgb, rgb, 0)
     """
 )
+
 
 class TTSLSquareDemo(TT3DViewStandAlone):
     def initialize(self) -> None:

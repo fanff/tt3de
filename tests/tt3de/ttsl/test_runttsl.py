@@ -129,8 +129,9 @@ class Test_RunTTSL(unittest.TestCase):
 
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> vec3:
-            return vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
+        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            c: vec3 = vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
+            return (c, c, 0)
         """
         )
         bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
@@ -147,5 +148,5 @@ class Test_RunTTSL(unittest.TestCase):
         assert len(run_result) == 3
         front, back, glyphidx = run_result
         assert front == glm.vec3(0.5, 0.5, 0.0)
-        assert back == glm.vec3(0.0, 0.0, 0.0)
+        assert back == glm.vec3(0.5, 0.5, 0.0)
         assert glyphidx == 0
