@@ -427,68 +427,6 @@ impl DrawingBufferPy {
         }
         all_rows_list.into()
     }
-
-    // this version is slow; it is instanciating everything from scratch.
-    // see version to_textual_2 for the "fast" version.
-    fn to_textual(
-        &self,
-        py: Python,
-        min_x: usize,
-        max_x: usize,
-        min_y: usize,
-        max_y: usize,
-    ) -> Py<PyList> {
-        let canvas = &self.db.canvas;
-
-        let mut rows = Vec::new();
-
-        for row_idx in min_y..max_y {
-            let mut row = Vec::new();
-            for col_idx in min_x..max_x {
-                let idx = row_idx * self.max_col + col_idx;
-                let cell = canvas[idx];
-
-                let front_triplet = self
-                    .color_triplet_class
-                    .call1(
-                        py,
-                        (cell.front_color.r, cell.front_color.g, cell.front_color.b),
-                    )
-                    .unwrap();
-                let back_triplet = self
-                    .color_triplet_class
-                    .call1(
-                        py,
-                        (cell.back_color.r, cell.back_color.g, cell.back_color.b),
-                    )
-                    .unwrap();
-
-                let front_color = self
-                    .color_class
-                    .call_method1(py, "from_triplet", (front_triplet,))
-                    .unwrap();
-
-                let back_color = self
-                    .color_class
-                    .call_method1(py, "from_triplet", (back_triplet,))
-                    .unwrap();
-
-                let dict = PyDict::new(py);
-                dict.set_item("color", front_color).unwrap();
-                dict.set_item("bgcolor", back_color).unwrap();
-
-                // trying to call Style(color=front_color,bgcolor=back_color)
-                let style = self.style_class.call(py, (), Some(&dict)).unwrap();
-
-                let segment = self.segment_class.call1(py, ("?", style)).unwrap();
-
-                row.push(segment);
-            }
-            rows.push(PyList::new(py, row).unwrap());
-        }
-
-        PyList::new(py, rows).unwrap().into()
-    }
 }
 
 /// Finds the glyph index for the given character.
