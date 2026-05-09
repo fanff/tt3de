@@ -2,6 +2,20 @@
 
 Manual, runnable helpers for local development. They stay in this repo under `scripts/`; they are **not** packaged into `pip install tt3de` (only [`python/tt3de/`](../python/tt3de/) is shipped via maturin, and [`pyproject.toml`](../pyproject.toml) should not register these as `[project.scripts]`).
 
+## Opcode regeneration
+
+After edits to [`python/tt3de/ttsl/ttisa/low_level_def.py`](../python/tt3de/ttsl/ttisa/low_level_def.py):
+
+```bash
+bash scripts/gen_opcodes.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
+```
+
+Equivalent: **`make gen-opcodes`** (runs `bash scripts/gen_opcodes.sh`).
+
 ## `dev_tt3de_screenshot.py`
 
 Headless SVG snapshot using Textual’s **`run_test`** / **`export_screenshot`**.
@@ -35,7 +49,7 @@ uv run --no-sync python scripts/dev_tt3de_screenshot.py ^
   -o source/_static/screenshots/triple_panel.svg --width 200 --height 56
 ```
 
-`uv run tt3de-regen-doc-screenshot` runs the same job but **`uv run` may sync/rebuild the editable package first** because the command is wired through `[project.scripts]`.
+Optional: `uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
 
 ### Packaged examples (`screenshot_apps/`)
 

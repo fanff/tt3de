@@ -223,8 +223,8 @@ pub fn exec_opcode(
 
         MUL_V2_F32 => {
             unsafe {
-                let base_v2 = regs.v2.as_mut_ptr();
                 let base_f32_ = regs.f32_.as_mut_ptr();
+                let base_v2 = regs.v2.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val * b_val;
@@ -234,8 +234,8 @@ pub fn exec_opcode(
 
         DIV_V2_F32 => {
             unsafe {
-                let base_v2 = regs.v2.as_mut_ptr();
                 let base_f32_ = regs.f32_.as_mut_ptr();
+                let base_v2 = regs.v2.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val / b_val;
@@ -267,8 +267,8 @@ pub fn exec_opcode(
 
         MUL_V4_F32 => {
             unsafe {
-                let base_v4 = regs.v4.as_mut_ptr();
                 let base_f32_ = regs.f32_.as_mut_ptr();
+                let base_v4 = regs.v4.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v4.add(dst as usize) = a_val * b_val;
@@ -278,8 +278,8 @@ pub fn exec_opcode(
 
         DIV_V4_F32 => {
             unsafe {
-                let base_v4 = regs.v4.as_mut_ptr();
                 let base_f32_ = regs.f32_.as_mut_ptr();
+                let base_v4 = regs.v4.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v4.add(dst as usize) = a_val / b_val;
@@ -704,8 +704,8 @@ pub fn exec_opcode(
 
         CMP_GT_I32 => {
             unsafe {
-                let base_i32_ = regs.i32_.as_mut_ptr();
                 let base_bool_ = regs.bool_.as_mut_ptr();
+                let base_i32_ = regs.i32_.as_mut_ptr();
                 let a_val = *base_i32_.add(a as usize);
                 let b_val = *base_i32_.add(b as usize);
                 *base_bool_.add(dst as usize) = a_val > b_val;
@@ -715,8 +715,8 @@ pub fn exec_opcode(
 
         CMP_GTE_I32 => {
             unsafe {
-                let base_i32_ = regs.i32_.as_mut_ptr();
                 let base_bool_ = regs.bool_.as_mut_ptr();
+                let base_i32_ = regs.i32_.as_mut_ptr();
                 let a_val = *base_i32_.add(a as usize);
                 let b_val = *base_i32_.add(b as usize);
                 *base_bool_.add(dst as usize) = a_val >= b_val;

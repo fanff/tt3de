@@ -14,7 +14,8 @@ The full list of opcodes with their numeric values, types, and input signatures
 is maintained in the [Opcode Reference](opcode_reference.md).
 
 This reference is auto-generated from the opcode definitions in
-`python/tt3de/ttsl/ttisa/low_level_def.py` by running `uv run tt3de-gen-opcodes`.
+`python/tt3de/ttsl/ttisa/low_level_def.py` by running `bash scripts/gen_opcodes.sh`
+(or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` on Windows).
 
 Low-Level Runtime/Material Bridge
 ---------------------------------

@@ -8,7 +8,7 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 - **Rust check (all targets)**: `cargo check --all-targets` — use this to surface all warnings, including from tests and benchmarks.
 - **Rust tests**: `cargo test`
 - **Python tests**: `uv run pytest` — see [Testing](#testing) for `PYTHONPATH` when running pytest directly.
-- **Regenerate TTSL opcodes**: `uv run tt3de-gen-opcodes` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. This script is defined in `pyproject.toml` for **development only**; it must not be deployed or shipped inside released packages.
+- **Regenerate TTSL opcodes**: `bash scripts/gen_opcodes.sh` or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. Equivalent: **`make gen-opcodes`** (invokes the shell script; requires `bash` on `PATH`). Development-only helpers under `scripts/` are not shipped in the published wheel.
 
 ## Platform Notes
 
@@ -37,15 +37,11 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 
 - **Screenshots tracked in Sphinx static assets**: the triptych used in the docs lives under `source/_static/screenshots/`. After changing [`scripts/screenshot_apps/triple_panel.py`](scripts/screenshot_apps/triple_panel.py) or dependencies it renders, regenerate from the repository root:
 
-  ```bash
-  uv run tt3de-regen-doc-screenshot
-  ```
+  **`make regen-doc-screenshot`**, **`bash scripts/regen_doc_screenshot.sh`**, or **`powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1`**.
 
-  This writes `triple_panel.svg` under `source/_static/screenshots/`. Sphinx and the README embed that SVG.
+  These invoke [`scripts/dev_tt3de_screenshot.py`](scripts/dev_tt3de_screenshot.py) with `--width 200`, `--height 56`, and write `triple_panel.svg` under `source/_static/screenshots/`. Sphinx and the README embed that SVG.
 
-  This is the canonical command. It invokes [`python/tt3de/dev_regen_doc_screenshot.py`](python/tt3de/dev_regen_doc_screenshot.py) which calls `scripts/dev_tt3de_screenshot.py` with the correct `--width`, `--height`, and output path.
-
-  Other shortcuts with the same effect: **`make regen-doc-screenshot`**, **`scripts/regen_doc_screenshot.sh`**, **`scripts/regen_doc_screenshot.ps1`**.
+  Optional: `uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
 
   GitHub Actions documentation workflow regenerates these after `maturin develop`, before **`sphinx-build`**. Commit updated screenshots when you touch the triptych so local **`sphinx-build`** stays accurate offline too.
 

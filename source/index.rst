@@ -35,15 +35,15 @@ Screenshot examples (Textual SVG capture)
 =========================================
 
 The composite below shows three TT3DE panels in one terminal capture (textured cube,
-taxi car model, city block). Generated via ``uv run tt3de-regen-doc-screenshot``
-(default ``TriplePanelDemoApp``).
+taxi car model, city block). Generated via ``make regen-doc-screenshot`` or
+``bash scripts/regen_doc_screenshot.sh`` (default ``TriplePanelDemoApp``).
 
 .. figure:: _static/screenshots/triple_panel.svg
    :width: 100%
    :align: center
    :alt: Three TT3DE Textual panels in one terminal capture
 
-   Regenerate with ``uv run tt3de-regen-doc-screenshot`` after editing ``scripts/screenshot_apps/`` (see Agent guidelines).
+   Regenerate with ``make regen-doc-screenshot`` or ``bash scripts/regen_doc_screenshot.sh`` after editing ``scripts/screenshot_apps/`` (see Agent guidelines).
 
 
 How to use the engine

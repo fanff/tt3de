@@ -2,9 +2,8 @@
 """
 Single Textual `App` that lays out two titled TT3DE columns (doc smoke screenshot).
 
-Regenerate the SVG with::
-
-    uv run tt3de-regen-doc-screenshot
+Regenerate the SVG with ``make regen-doc-screenshot`` or
+``bash scripts/regen_doc_screenshot.sh`` (see ``scripts/README.md``).
 """
 
 from textual.app import App, ComposeResult

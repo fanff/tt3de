@@ -14,7 +14,7 @@ Manual equivalent::
       tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \\
       --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
 
-    uv run tt3de-material-bench-report benchmarks/material_apply.json
+    uv run --no-sync python python/tt3de/dev_material_bench_report.py benchmarks/material_apply.json
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def _ensure_repo_root() -> None:
     cwd = Path.cwd()
     if not (cwd / "pyproject.toml").is_file():
         raise SystemExit(
-            "tt3de-material-bench-report: run from the tt3de repository root "
+            "dev_material_bench_report: run from the tt3de repository root "
             "(expected pyproject.toml)."
         )
 

@@ -2,11 +2,12 @@
 """
 Regenerate the Sphinx static triptych SVG (development; run from repository root only).
 
-Usage::
+Prefer ``make regen-doc-screenshot``, ``bash scripts/regen_doc_screenshot.sh``, or
+``powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1``.
 
-    uv run tt3de-regen-doc-screenshot
+Optional Python entry (sets ``COLORTERM`` for export)::
 
-This is the canonical way to regenerate ``source/_static/screenshots/triple_panel.svg``.
+    uv run --no-sync python python/tt3de/dev_regen_doc_screenshot.py
 """
 
 from __future__ import annotations
@@ -23,12 +24,12 @@ def main() -> None:
     cwd = Path.cwd()
     if not (cwd / "source" / "conf.py").is_file():
         raise SystemExit(
-            "tt3de-regen-doc-screenshot: run from the tt3de repository root (expected source/conf.py)."
+            "dev_regen_doc_screenshot: run from the tt3de repository root (expected source/conf.py)."
         )
 
     script = cwd / "scripts" / "dev_tt3de_screenshot.py"
     if not script.is_file():
-        raise SystemExit(f"tt3de-regen-doc-screenshot: missing {script}.")
+        raise SystemExit(f"dev_regen_doc_screenshot: missing {script}.")
 
     out = cwd / DEFAULT_REL_OUT
     out.parent.mkdir(parents=True, exist_ok=True)

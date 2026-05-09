@@ -85,12 +85,18 @@ To set up a development version of this engine:
     PYTHONPATH=python uv run pytest \
       tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
       --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
-    uv run tt3de-material-bench-report benchmarks/material_apply.json
+    uv run --no-sync python python/tt3de/dev_material_bench_report.py benchmarks/material_apply.json
     ```
 
 9. Regenerate TTSL opcode/ABI files after opcode definition changes:
     ```bash
-    uv run tt3de-gen-opcodes
+    bash scripts/gen_opcodes.sh
+    ```
+
+    On Windows PowerShell:
+
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
     ```
 
 ## Build Documentation
