@@ -23,6 +23,7 @@ from tt3de.tt3de import (
     TextureBufferPy,
     TransformPackPy,
     VertexBufferPy,
+    apply_material_py,
     apply_material_py_parallel,
     build_primitives_py,
     raster_all_py,
@@ -42,9 +43,19 @@ class RustRenderContext:
         transform_buffer_size=64,
         texture_buffer_size=32,
         material_buffer_size=32,
+        material_parallel_threads: int | None = 8,
     ):
+        """Create buffers for Rust-backed rasterization.
+
+        ``material_parallel_threads``: ``None`` runs the material pass on one thread;
+        a positive integer builds a per-context Rayon pool with that many threads (default ``8``).
+        Values ``<= 0`` are treated like ``None`` (serial).
+        """
         self.width = screen_width
         self.height = screen_height
+        if material_parallel_threads is not None and material_parallel_threads < 1:
+            material_parallel_threads = None
+        self._material_parallel_threads = material_parallel_threads
 
         self.texture_buffer = TextureBufferPy(texture_buffer_size)
         self.material_buffer = MaterialBufferPy(material_buffer_size)
@@ -56,7 +67,11 @@ class RustRenderContext:
         self.primitive_buffer = PrimitiveBufferPy(primitive_buffer_size)
         self.transform_buffer = TransformPackPy(transform_buffer_size)
         self.drawing_buffer: DrawingBufferPy = DrawingBufferPy(
-            max_row=self.height, max_col=self.width
+            max_row=self.height,
+            max_col=self.width,
+            material_parallel_threads=(
+                0 if self._material_parallel_threads is None else self._material_parallel_threads
+            ),
         )
 
         self.global_bit_size = 4
@@ -70,7 +85,13 @@ class RustRenderContext:
         if w != self.width or h != self.height:
             self.width, self.height = w, h
             self.drawing_buffer = DrawingBufferPy(
-                max_row=self.height, max_col=self.width
+                max_row=self.height,
+                max_col=self.width,
+                material_parallel_threads=(
+                    0
+                    if self._material_parallel_threads is None
+                    else self._material_parallel_threads
+                ),
             )
             # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
@@ -112,14 +133,23 @@ class RustRenderContext:
         #     self.primitive_buffer,
         #     self.drawing_buffer,
         # )
-        # make a pass to apply the material on the drawing buffer
-        apply_material_py_parallel(
-            self.material_buffer,
-            self.texture_buffer,
-            self.vertex_buffer,
-            self.primitive_buffer,
-            self.drawing_buffer,
-        )
+        # material pass (parallel uses per-context Rayon pool on DrawingBufferPy)
+        if self._material_parallel_threads is None:
+            apply_material_py(
+                self.material_buffer,
+                self.texture_buffer,
+                self.vertex_buffer,
+                self.primitive_buffer,
+                self.drawing_buffer,
+            )
+        else:
+            apply_material_py_parallel(
+                self.material_buffer,
+                self.texture_buffer,
+                self.vertex_buffer,
+                self.primitive_buffer,
+                self.drawing_buffer,
+            )
 
     def to_textual_2(self, region: Region) -> List[Strip]:
         res = self.drawing_buffer.to_textual_2(

@@ -1,9 +1,12 @@
 use nalgebra_glm::{Vec2, Vec3};
 use pyo3::{
+    exceptions::PyValueError,
     intern,
     prelude::*,
     types::{PyList, PyTuple},
 };
+use rayon::ThreadPool;
+use std::sync::Arc;
 pub mod drawbuffer;
 use drawbuffer::*;
 use pyo3::types::PyDict;
@@ -20,6 +23,11 @@ pub struct DrawingBufferPy {
     max_col: usize,
     layer_count: usize,
 
+    /// When `Some(n)`, parallel material shading uses `n` Rayon threads; `None` means serial-only.
+    #[pyo3(get)]
+    pub material_parallel_threads: Option<usize>,
+    pub(crate) material_pool: Option<Arc<ThreadPool>>,
+
     segment_class: Py<PyAny>,
     style_class: Py<PyAny>,
     color_class: Py<PyAny>,
@@ -30,11 +38,51 @@ pub struct DrawingBufferPy {
     pub default_segment: Py<PyAny>,
 }
 
+fn build_material_thread_pool(num_threads: usize) -> Arc<ThreadPool> {
+    Arc::new(
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build()
+            .expect("Failed to build material thread pool"),
+    )
+}
+
+/// Interprets optional kwarg from Python: omitted → 8 threads; explicit `None` → serial;
+/// `0` → serial; `n >= 1` → pool with `n` threads.
+fn material_parallelism_from_py(spec: Option<Option<usize>>) -> (Option<usize>, Option<Arc<ThreadPool>>) {
+    match spec {
+        None => {
+            let n = 8;
+            (Some(n), Some(build_material_thread_pool(n)))
+        }
+        Some(None) => (None, None),
+        Some(Some(0)) => (None, None),
+        Some(Some(n)) => (Some(n), Some(build_material_thread_pool(n))),
+    }
+}
+
 #[pymethods]
 impl DrawingBufferPy {
     #[new]
-    #[pyo3(signature = (max_row, max_col, flip_x=false, flip_y=true))]
-    fn new(py: Python, max_row: usize, max_col: usize, flip_x: bool, flip_y: bool) -> Self {
+    #[pyo3(signature = (max_row, max_col, flip_x=false, flip_y=true, material_parallel_threads=-1))]
+    fn new(
+        py: Python<'_>,
+        max_row: usize,
+        max_col: usize,
+        flip_x: bool,
+        flip_y: bool,
+        material_parallel_threads: i64,
+    ) -> PyResult<Self> {
+        let spec = match material_parallel_threads {
+            -1 => None,
+            0 => Some(None),
+            n if n > 0 => Some(Some(n as usize)),
+            _ => {
+                return Err(PyValueError::new_err(
+                    "material_parallel_threads must be -1 (default 8 threads), 0 (serial), or a positive count",
+                ));
+            }
+        };
         let rich_style_module = py.import("rich.style").unwrap();
         let rich_color_module = py.import("rich.color").unwrap();
         let rich_text_module = py.import("rich.text").unwrap();
@@ -63,18 +111,21 @@ impl DrawingBufferPy {
             &style_class,
         );
         segment_cache.insert_with_hash(0, aseg0);
-        DrawingBufferPy {
+        let (material_parallel_threads, material_pool) = material_parallelism_from_py(spec);
+        Ok(DrawingBufferPy {
             db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),
             max_row,
             max_col,
             layer_count: 2,
+            material_parallel_threads,
+            material_pool,
             segment_class: segment_class.into(),
             style_class: style_class.into(),
             color_class: color_class.into(),
             color_triplet_class: color_triplet_class.into(),
             seg_cache: segment_cache,
             default_segment,
-        }
+        })
     }
 
     pub fn get_cache_size(&self) -> usize {

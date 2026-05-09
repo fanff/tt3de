@@ -1,6 +1,6 @@
 use nalgebra_glm::{vec3, vec4, Number, Vec3, Vec4};
 use primitivbuffer::PrimitiveBuffer;
-use pyo3::{pyfunction, PyRefMut};
+use pyo3::{exceptions::PyValueError, pyfunction, PyRefMut, PyResult};
 
 use crate::{
     drawbuffer::{
@@ -379,12 +379,25 @@ pub fn apply_material_py_parallel(
     vertex_buffer: &VertexBufferPy,
     primitivbuffer: &PrimitiveBufferPy,
     mut draw_buffer_py: PyRefMut<'_, DrawingBufferPy>,
-) {
+) -> PyResult<()> {
+    let DrawingBufferPy {
+        db,
+        material_pool,
+        ..
+    } = &mut *draw_buffer_py;
+    let pool = material_pool.as_ref().ok_or_else(|| {
+        PyValueError::new_err(
+            "DrawingBufferPy has no material thread pool (material_parallel_threads=None); \
+             use apply_material_py for serial shading",
+        )
+    })?;
     apply_material_on_parallel(
-        &mut draw_buffer_py.db,
+        pool.as_ref(),
+        db,
         &material_buffer.content,
         &texturebuffer.data,
         &vertex_buffer.uv_array,
         &primitivbuffer.content,
     );
+    Ok(())
 }
