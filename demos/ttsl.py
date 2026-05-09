@@ -7,20 +7,21 @@ from typing import Any
 
 from textual import widgets as txw
 from textual import work
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.worker import Worker, WorkerState
+from rich.syntax import Syntax
 
 from tt3de.ttsl.compiler import CompilationStateResult, all_passes_compilation_with_state
-from tt3de.ttsl.ttsl_assembly import IRType, Temp
+from tt3de.ttsl.ttsl_assembly import IRType, OpCodes, Temp
 
 DEFAULT_SHADER_CODE = """\
 # Built-in inputs follow the GLSL `gl_*` naming style as `tt_*`.
 # See `source/ttsl.md` and `source/ttsl_compiler.md`.
 
-@ttsl(globals={"time": float})
 def my_shader(tt_FragCoord: glm.vec2) -> glm.vec3:
     uv: glm.vec2 = tt_TexCoord0
     pulse: float = abs(glm.sin(tt_Time * 1.25))
@@ -64,7 +65,7 @@ class ControlsPane(Widget):
             yield txw.Static("Status: idle", id="compile-status")
 
 
-class OutputTabsPane(Widget):
+class OutputTabsPane(Widget, can_focus=False):
     def compose(self) -> ComposeResult:
         with txw.TabbedContent(initial="render-tab", id="output-tabs"):
             with txw.TabPane("Render", id="render-tab"):
@@ -79,9 +80,23 @@ class OutputTabsPane(Widget):
                     classes="output-panel",
                 )
             with txw.TabPane("AST", id="ast-tab"):
-                yield txw.Static("", classes="output-panel", id="ast-output", markup=False)
+                with VerticalScroll(id="ast-scroll", classes="output-panel"):
+                    yield txw.Static("", id="ast-output", markup=False)
             with txw.TabPane("IR", id="ir-tab"):
-                yield txw.Static("", classes="output-panel", id="ir-output", markup=False)
+                with VerticalScroll(id="ir-vscroll", classes="output-panel"):
+                    with Vertical(id="ir-content"):
+                        yield txw.Static("Variables", classes="ir-section-title")
+                        yield txw.DataTable(
+                            id="ir-variables-table", classes="ir-table"
+                        )
+                        yield txw.Static("Constant Pool", classes="ir-section-title")
+                        yield txw.DataTable(id="ir-const-table", classes="ir-table")
+                        yield txw.Static("CFG Arcs", classes="ir-section-title")
+                        yield txw.DataTable(id="ir-cfg-arcs-table", classes="ir-table")
+                        yield txw.Static("CFG Blocks", classes="ir-section-title")
+                        yield txw.DataTable(
+                            id="ir-blocks-table", classes="ir-table ir-wide-table"
+                        )
             with txw.TabPane("Bytecode", id="bytecode-tab"):
                 yield txw.Static(
                     "", classes="output-panel", id="bytecode-output", markup=False
@@ -176,6 +191,48 @@ class MainLayout(Widget):
     #symbols-table {
         height: 1fr;
     }
+
+    #ast-scroll {
+        height: 1fr;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: none;
+        padding: 0;
+    }
+
+    #ast-output {
+        border: none;
+        padding: 0;
+    }
+
+    #ir-vscroll {
+        height: 1fr;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: none;
+        padding: 0;
+    }
+
+    #ir-content {
+        width: 1fr;
+        height: auto;
+        min-width: 140;
+    }
+
+    .ir-section-title {
+        margin: 0 0 1 0;
+        text-style: bold;
+    }
+
+    .ir-table {
+        margin: 0 0 1 0;
+        height: auto;
+        min-height: 6;
+    }
+
+    .ir-wide-table {
+        min-width: 180;
+    }
     """
 
     def compose(self) -> ComposeResult:
@@ -217,11 +274,39 @@ class TTSLCompilerTesterApp(App):
 
     def on_mount(self) -> None:
         editor = self.query_one("#ttsl-editor", txw.TextArea)
+        tabs = self.query_one("#output-tabs", txw.TabbedContent)
+        tabs.can_focus = False
         # Force syntax highlighting settings explicitly at runtime.
         editor.language = "python"
         editor.theme = "dracula"
         editor.refresh()
+        self._init_ir_tables()
         self._append_log("Ready. Compile to populate AST / IR / Bytecode / Variables panels.")
+
+    def _init_ir_tables(self) -> None:
+        variables_table = self.query_one("#ir-variables-table", txw.DataTable)
+        variables_table.add_columns("VarId", "Value")
+
+        const_table = self.query_one("#ir-const-table", txw.DataTable)
+        const_table.add_columns("Idx", "Value")
+
+        arcs_table = self.query_one("#ir-cfg-arcs-table", txw.DataTable)
+        arcs_table.add_column(" ")
+
+        blocks_table = self.query_one("#ir-blocks-table", txw.DataTable)
+        blocks_table.add_columns(
+            "Block",
+            "Idx",
+            "Label",
+            "Op",
+            "Dst",
+            "Src1",
+            "Src2",
+            "Src3",
+            "Src4",
+            "Imm",
+            "Comment",
+        )
 
     def action_focus_editor(self) -> None:
         self.query_one("#ttsl-editor", txw.TextArea).focus()
@@ -240,6 +325,12 @@ class TTSLCompilerTesterApp(App):
         self._append_log("Starting full pipeline compilation (worker)...")
         self._compile_worker(source)
 
+    def on_key(self, event: events.Key) -> None:
+        # TextArea may consume ctrl+enter before global bindings trigger.
+        if event.key in {"ctrl+enter", "ctrl+return"}:
+            event.stop()
+            self.action_compile()
+
     def action_reset_source(self) -> None:
         editor = self.query_one("#ttsl-editor", txw.TextArea)
         editor.text = DEFAULT_SHADER_CODE
@@ -250,23 +341,38 @@ class TTSLCompilerTesterApp(App):
         tabs = self.query_one("#output-tabs", txw.TabbedContent)
         tabs.active = tab_id
 
+    def _focus_output_tab(self, tab_id: str) -> None:
+        self._set_output_tab(tab_id)
+        if tab_id == "ast-tab":
+            self.query_one("#ast-scroll", VerticalScroll).focus()
+        elif tab_id == "ir-tab":
+            self.query_one("#ir-vscroll", VerticalScroll).focus()
+        elif tab_id == "bytecode-tab":
+            self.query_one("#output-tabs", txw.TabbedContent).blur()
+        elif tab_id == "diagnostics-tab":
+            self.query_one("#diagnostics-log", txw.Log).focus()
+        elif tab_id == "symbols-tab":
+            self.query_one("#symbols-table", txw.DataTable).focus()
+        elif tab_id == "render-tab":
+            self.query_one("#output-tabs", txw.TabbedContent).blur()
+
     def action_show_ast_tab(self) -> None:
-        self._set_output_tab("ast-tab")
+        self._focus_output_tab("ast-tab")
 
     def action_show_render_tab(self) -> None:
-        self._set_output_tab("render-tab")
+        self._focus_output_tab("render-tab")
 
     def action_show_ir_tab(self) -> None:
-        self._set_output_tab("ir-tab")
+        self._focus_output_tab("ir-tab")
 
     def action_show_bytecode_tab(self) -> None:
-        self._set_output_tab("bytecode-tab")
+        self._focus_output_tab("bytecode-tab")
 
     def action_show_logs_tab(self) -> None:
-        self._set_output_tab("diagnostics-tab")
+        self._focus_output_tab("diagnostics-tab")
 
     def action_show_variables_tab(self) -> None:
-        self._set_output_tab("symbols-tab")
+        self._focus_output_tab("symbols-tab")
 
     def on_button_pressed(self, event: txw.Button.Pressed) -> None:
         if event.button.id == "compile-btn":
@@ -387,12 +493,11 @@ class TTSLCompilerTesterApp(App):
         self.query_one("#compile-status", txw.Static)
         self.query_one("#diagnostics-log", txw.Log)
 
-        ast_text = self._format_ast_panel(result)
-        ir_text = self._format_ir_panel(result)
+        ast_renderable = self._format_ast_panel(result)
         bytecode_text = self._format_bytecode_panel(result)
         variables_rows = self._format_variables_panel(result)
-        self.query_one("#ast-output", txw.Static).update(ast_text)
-        self.query_one("#ir-output", txw.Static).update(ir_text)
+        self.query_one("#ast-output", txw.Static).update(ast_renderable)
+        self._refresh_ir_tables(result)
         self.query_one("#bytecode-output", txw.Static).update(bytecode_text)
         table = self.query_one("#symbols-table", txw.DataTable)
         table.clear()
@@ -425,31 +530,92 @@ class TTSLCompilerTesterApp(App):
         if auto_compile_enabled and self._editor_change_seq > self._last_compiled_seq:
             self._queue_autocompile(self._editor_change_seq)
 
-    def _format_ast_panel(self, result: CompilationStateResult) -> str:
+    def _format_ast_panel(self, result: CompilationStateResult) -> Any:
         if result.ast_module is None:
             return ""
-        return ast.dump(result.ast_module, indent=2)
+        ast_text = ast.dump(result.ast_module, indent=2)
+        return Syntax(ast_text, "python", theme="dracula", word_wrap=False)
 
-    def _format_ir_panel(self, result: CompilationStateResult) -> str:
+    def _refresh_ir_tables(self, result: CompilationStateResult) -> None:
+        variables_table = self.query_one("#ir-variables-table", txw.DataTable)
+        const_table = self.query_one("#ir-const-table", txw.DataTable)
+        arcs_table = self.query_one("#ir-cfg-arcs-table", txw.DataTable)
+        blocks_table = self.query_one("#ir-blocks-table", txw.DataTable)
+
+        variables_table.clear()
+        const_table.clear()
+        arcs_table.clear(columns=True)
+        blocks_table.clear()
+
         cc = result.context
         if cc is None:
-            return ""
+            arcs_table.add_column(" ")
+            return
 
-        lines = []
-        lines.append(f"Last completed stage: {result.last_completed_stage}")
-        lines.append("")
-        lines.append("== IR Program ==")
-        for idx, instr in enumerate(cc.code.instrs):
-            lines.append(f"{idx:04d}: {self._format_instruction(instr)}")
+        for name, temp in sorted(cc.named_variables.items()):
+            variables_table.add_row(name, self._format_ir_operand(temp))
 
-        if cc.cfg is not None:
-            lines.append("")
-            lines.append("== CFG ==")
-            for node_id, node in cc.cfg.node_items():
-                lines.append(f"[{node_id}] {node.name}")
-                for instr in node.instrs():
-                    lines.append(f"  {self._format_instruction(instr)}")
-        return "\n".join(lines)
+        for idx, (const_value, const_type) in sorted(cc.const_pool.items()):
+            const_table.add_row(str(idx), f"{const_type.name} {const_value}")
+
+        arcs_table.add_column(" ")
+        if cc.cfg is None:
+            return
+
+        nodes = list(cc.cfg.node_items())
+        for node_id, node in nodes:
+            arcs_table.add_column(f"{node.name}\n[{node_id}]")
+
+        for node_id, node in nodes:
+            row = [node.name]
+            successors = cc.cfg.successors(node_id)
+            for dst_id, _ in nodes:
+                row.append("X" if dst_id in successors else "")
+            arcs_table.add_row(*row)
+
+        for node_id, node in nodes:
+            current_line = 0
+            for instr in node.instrs():
+                if instr.op == OpCodes.PHI:
+                    line_label = "-"
+                    operands = [
+                        f"B{block_id}>{self._format_ir_operand(temp)}"
+                        for block_id, temp in instr.phi_operands.items()
+                    ]
+                    src1 = operands[0] if len(operands) > 0 else "-"
+                    src2 = operands[1] if len(operands) > 1 else "-"
+                    src3 = operands[2] if len(operands) > 2 else "-"
+                    src4 = operands[3] if len(operands) > 3 else "-"
+                    imm = "-"
+                    comment_tail = ", ".join(operands[4:]) if len(operands) > 4 else ""
+                    comment = (
+                        f"{comment_tail} {instr.comment}".strip()
+                        if comment_tail
+                        else (instr.comment or "-")
+                    )
+                else:
+                    current_line += 1
+                    line_label = str(current_line)
+                    src1 = self._format_ir_operand(instr.src1)
+                    src2 = self._format_ir_operand(instr.src2)
+                    src3 = self._format_ir_operand(instr.src3)
+                    src4 = self._format_ir_operand(instr.src4)
+                    imm = str(instr.imm) if instr.imm is not None else "-"
+                    comment = instr.comment if instr.comment else "-"
+
+                blocks_table.add_row(
+                    f"{node.name}[{node_id}]",
+                    line_label,
+                    instr.label or "",
+                    instr.op.name,
+                    self._format_ir_operand(instr.dst),
+                    src1,
+                    src2,
+                    src3,
+                    src4,
+                    imm,
+                    comment,
+                )
 
     def _format_bytecode_panel(self, result: CompilationStateResult) -> str:
         if result.final_byte_code is None:
@@ -476,34 +642,11 @@ class TTSLCompilerTesterApp(App):
             rows.append((name, temp_ty, storage))
         return rows
 
-    def _format_instruction(self, instr: Any) -> str:
-        op = instr.op.value if hasattr(instr.op, "value") else str(instr.op)
-        dst = self._format_operand(instr.dst)
-        srcs = [
-            self._format_operand(instr.src1),
-            self._format_operand(instr.src2),
-            self._format_operand(instr.src3),
-            self._format_operand(instr.src4),
-        ]
-        parts = [op]
-        if dst:
-            parts.append(f"dst={dst}")
-        for idx, src in enumerate(srcs, start=1):
-            if src:
-                parts.append(f"s{idx}={src}")
-        if instr.imm is not None:
-            parts.append(f"imm={instr.imm}")
-        if instr.label is not None:
-            parts.append(f"label={instr.label}")
-        if instr.comment:
-            parts.append(f"# {instr.comment}")
-        return " ".join(parts)
-
-    def _format_operand(self, operand: Any) -> str:
+    def _format_ir_operand(self, operand: Any) -> str:
         if operand is None:
-            return ""
+            return "-"
         if isinstance(operand, Temp):
-            return f"t{operand.id}:{self._ir_type_name(operand.ty)}"
+            return f"{self._ir_type_name(operand.ty)} r{operand.id}"
         return str(operand)
 
     def _ir_type_name(self, ir_type: IRType) -> str:
