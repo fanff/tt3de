@@ -512,28 +512,18 @@ pub fn apply_material_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     }
 }
 
-use once_cell::sync::Lazy;
 use rayon::prelude::*;
 
-// Create a global thread pool that is initialized only once.
-static GLOBAL_THREAD_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
-    // Set your desired fixed number of threads.
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(8) // For example, use 4 threads.
-        .build()
-        .expect("Failed to build thread pool")
-});
-
-/// This function applies the material to every pixel in parallel.
+/// Applies the material to every pixel in parallel using the given Rayon pool.
 pub fn apply_material_on_parallel<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
+    pool: &rayon::ThreadPool,
     draw_buffer: &mut DrawBuffer<DEPTHLAYER, f32>,
     material_buffer: &MaterialBuffer,
     texture_buffer: &TextureBuffer<TEXTURESIZE>,
     uv_buffer: &UVBuffer<f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
-    // Use the global thread pool to run our work.
-    GLOBAL_THREAD_POOL.install(|| {
+    pool.install(|| {
         // `par_iter` and `par_iter_mut` split the work among threads.
         draw_buffer
             .depthbuffer
