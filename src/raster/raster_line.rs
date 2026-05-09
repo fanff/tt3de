@@ -1,3 +1,5 @@
+use nalgebra_glm::vec2;
+
 use crate::{drawbuffer::drawbuffer::DrawBuffer, raster::vertex::Vertex};
 
 use super::primitivbuffer::PrimitivReferences;
@@ -34,6 +36,8 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 prim_ref.material_id,
                 prim_ref.primitive_id,
                 true,
+                0.0,
+                vec2(0.0, 0.0),
             );
         }
         return;
@@ -45,7 +49,8 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
 
     let mut current_value = pa.clone();
 
-    for _i in 0..=steps {
+    for i in 0..=steps {
+        let line_coord = i as f32 / steps as f32;
         let row = current_value.pos.y as isize;
         let col = current_value.pos.x as isize;
         if row >= 0 && col >= 0 {
@@ -65,6 +70,8 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 prim_ref.material_id,
                 prim_ref.primitive_id,
                 true,
+                line_coord,
+                vec2(0.0, 0.0),
             );
         }
         current_value = current_value + step_interpolent;
@@ -131,6 +138,10 @@ mod tests {
 
         assert_eq!(pixinfo.uv.x, 1.0);
         assert_eq!(pixinfo.uv.y, 0.0);
+
+        let pix_end = drawing_buffer.get_pix_buffer_content_at_row_col(0, 1, 0);
+        assert!((pixinfo.line_coord - 0.0).abs() < 1e-5);
+        assert!((pix_end.line_coord - 1.0).abs() < 1e-5);
 
         let cell = drawing_buffer.get_depth_buffer_cell(0, 0);
         assert_eq!(cell.depth[0], 1.0);

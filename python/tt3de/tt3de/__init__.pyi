@@ -778,6 +778,8 @@ class DrawingBufferPy:
         material_id: int,
         primitive_id: int,
         front_facing: bool = True,
+        line_coord: float = 0.0,
+        point_coord: glm.vec2 | None = None,
     ) -> None:
         """
         Sets the depth content for a specific cell in the drawing buffer.
@@ -793,6 +795,8 @@ class DrawingBufferPy:
             material_id (int): The material ID.
             primitive_id (int): The primitive ID.
             front_facing (bool): Per-cell face orientation flag (default ``True``).
+            line_coord (float): TTSL ``tt_LineCoord`` payload for this sample (default ``0.0``).
+            point_coord (glm.vec2 | None): TTSL ``tt_PointCoord`` payload (default ``(0, 0)``).
         """
         ...
 

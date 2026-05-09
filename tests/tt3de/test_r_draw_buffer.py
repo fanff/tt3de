@@ -33,6 +33,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": 0,
                 "primitive_id": 0,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -51,6 +53,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": 0,
                 "primitive_id": 0,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -67,6 +71,8 @@ class Test_DrawBuffer(unittest.TestCase):
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
                     "front_facing": True,
+                    "line_coord": 0.0,
+                    "point_coord": [0.0, 0.0],
                 },
             )
 
@@ -119,6 +125,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": 0,
                 "primitive_id": 0,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -137,6 +145,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": 0,
                 "primitive_id": 0,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -153,6 +163,8 @@ class Test_DrawBuffer(unittest.TestCase):
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
                     "front_facing": True,
+                    "line_coord": 0.0,
+                    "point_coord": [0.0, 0.0],
                 },
             )
 
@@ -289,6 +301,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": node_id,
                 "material_id": material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -307,6 +321,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": 0,
                 "material_id": 0,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
         mind, maxd = drawbuffer.get_min_max_depth(layer=0)
@@ -346,6 +362,44 @@ class Test_DrawBuffer(unittest.TestCase):
         exp_y = (cy / half_y - 1.0) / sy
         self.assertAlmostEqual(pix["frag_pos"][0], exp_x, places=5)
         self.assertAlmostEqual(pix["frag_pos"][1], exp_y, places=5)
+
+    def test_set_depth_content_line_coord_kwarg(self):
+        drawbuffer = DrawingBufferPy(8, 8)
+        drawbuffer.hard_clear(10.0)
+        row, col = 0, 0
+        payload = [
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+        ]
+        drawbuffer.set_depth_content(row, col, *payload, line_coord=0.375)
+        pix = drawbuffer.get_pix_info_element(1)
+        self.assertAlmostEqual(pix["line_coord"], 0.375, places=6)
+
+    def test_set_depth_content_point_coord_kwarg(self):
+        drawbuffer = DrawingBufferPy(8, 8)
+        drawbuffer.hard_clear(10.0)
+        row, col = 0, 0
+        payload = [
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+        ]
+        pc = glm.vec2(0.25, 0.625)
+        drawbuffer.set_depth_content(row, col, *payload, point_coord=pc)
+        pix = drawbuffer.get_pix_info_element(1)
+        self.assertAlmostEqual(pix["point_coord"][0], 0.25, places=6)
+        self.assertAlmostEqual(pix["point_coord"][1], 0.625, places=6)
 
     def test_set_depth_movelayer_diffent_depth(self):
         w, h = 32, 32
@@ -395,6 +449,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -439,6 +495,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _1_node_id,
                 "material_id": _1_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -457,6 +515,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -507,6 +567,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -551,6 +613,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _0_node_id,
                 "material_id": _0_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 
@@ -568,6 +632,8 @@ class Test_DrawBuffer(unittest.TestCase):
                 "node_id": _1_node_id,
                 "material_id": _1_material_id,
                 "front_facing": True,
+                "line_coord": 0.0,
+                "point_coord": [0.0, 0.0],
             },
         )
 

@@ -89,6 +89,8 @@ pub fn raster_prect<const DEPTHCOUNT: usize>(
                 prim_ref.material_id,
                 prim_ref.primitive_id,
                 true,
+                0.0,
+                vec2(0.0, 0.0),
             );
             // step scanline interpolant
             i_line += di_uv_col;

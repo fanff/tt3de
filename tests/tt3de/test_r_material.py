@@ -20,6 +20,8 @@ from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_FRAG_DEPTH,
+    PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
     all_passes_compilation,
 )
@@ -107,6 +109,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
         self.assertIsNone(mat.frag_depth_f32_reg)
+        self.assertIsNone(mat.line_coord_f32_reg)
+        self.assertIsNone(mat.point_coord_v2_reg)
         self.assertEqual(mat.default_glyph, 219)
 
     def test_optional_time_and_glyph_none(self):
@@ -118,6 +122,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
         self.assertIsNone(mat.frag_depth_f32_reg)
+        self.assertIsNone(mat.line_coord_f32_reg)
+        self.assertIsNone(mat.point_coord_v2_reg)
         self.assertIsNone(mat.default_glyph)
         self.assertIsNone(mat.register_seed)
 
@@ -135,6 +141,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.resolution_v2_reg = 8
         mat.front_facing_bool_reg = 3
         mat.frag_depth_f32_reg = 4
+        mat.line_coord_f32_reg = 7
+        mat.point_coord_v2_reg = 8
         mat.default_glyph = 64
         self.assertEqual(mat.bytecode, b"\x01\x02")
         self.assertEqual(mat.time_f32_reg, 5)
@@ -143,6 +151,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertEqual(mat.resolution_v2_reg, 8)
         self.assertEqual(mat.front_facing_bool_reg, 3)
         self.assertEqual(mat.frag_depth_f32_reg, 4)
+        self.assertEqual(mat.line_coord_f32_reg, 7)
+        self.assertEqual(mat.point_coord_v2_reg, 8)
         self.assertEqual(mat.default_glyph, 64)
 
         mat.time_f32_reg = None
@@ -151,6 +161,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.resolution_v2_reg = None
         mat.front_facing_bool_reg = None
         mat.frag_depth_f32_reg = None
+        mat.line_coord_f32_reg = None
+        mat.point_coord_v2_reg = None
         mat.default_glyph = None
         self.assertIsNone(mat.time_f32_reg)
         self.assertIsNone(mat.delta_time_f32_reg)
@@ -158,6 +170,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
         self.assertIsNone(mat.frag_depth_f32_reg)
+        self.assertIsNone(mat.line_coord_f32_reg)
+        self.assertIsNone(mat.point_coord_v2_reg)
         self.assertIsNone(mat.default_glyph)
 
 
@@ -628,6 +642,115 @@ class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):
         expected_r = int(depth * 256.0)
         self.assertEqual(cell["f_r"], expected_r)
         self.assertLess(cell["f_g"], 8)
+        self.assertLess(cell["f_b"], 8)
+
+
+class Test_ShaderPyLineCoordMaterialBridge(unittest.TestCase):
+    """``ShaderPy.line_coord_f32_reg`` receives ``PixInfo::line_coord`` (see ``set_depth_content``)."""
+
+    _SRC = dedent(
+        """
+        def line_red(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(tt_LineCoord, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        """
+    )
+
+    def _cell_at_origin(self, mb: MaterialBufferPy, mat_idx: int, *, line_coord: float) -> dict:
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            0.25,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            mat_idx,
+            0,
+            line_coord=line_coord,
+        )
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(8),
+            draw,
+        )
+        return draw.get_canvas_cell(0, 0)
+
+    def test_line_coord_flows_into_compiled_shader_front_color(self):
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "line_red", {})
+        _ty, lc_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_LINE_COORD]
+
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(
+            bytecode,
+            line_coord_f32_reg=lc_reg,
+            default_glyph=None,
+        )
+        mat_idx = mb.add_shader(shader_mat)
+
+        coord = 0.5
+        cell = self._cell_at_origin(mb, mat_idx, line_coord=coord)
+        expected_r = int(coord * 256.0)
+        self.assertEqual(cell["f_r"], expected_r)
+        self.assertLess(cell["f_g"], 8)
+        self.assertLess(cell["f_b"], 8)
+
+
+class Test_ShaderPyPointCoordMaterialBridge(unittest.TestCase):
+    """``ShaderPy.point_coord_v2_reg`` receives ``PixInfo::point_coord`` (see ``set_depth_content``)."""
+
+    _SRC = dedent(
+        """
+        def point_xy(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(tt_PointCoord.x, tt_PointCoord.y, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        """
+    )
+
+    def _cell_at_origin(self, mb: MaterialBufferPy, mat_idx: int, *, pc: glm.vec2) -> dict:
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            0.25,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            mat_idx,
+            0,
+            point_coord=pc,
+        )
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(8),
+            draw,
+        )
+        return draw.get_canvas_cell(0, 0)
+
+    def test_point_coord_flows_into_compiled_shader_front_color(self):
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "point_xy", {})
+        _ty, pc_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_POINT_COORD]
+
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(
+            bytecode,
+            point_coord_v2_reg=pc_reg,
+            default_glyph=None,
+        )
+        mat_idx = mb.add_shader(shader_mat)
+
+        pc = glm.vec2(0.25, 0.5)
+        cell = self._cell_at_origin(mb, mat_idx, pc=pc)
+        self.assertEqual(cell["f_r"], int(pc.x * 256.0))
+        self.assertEqual(cell["f_g"], int(pc.y * 256.0))
         self.assertLess(cell["f_b"], 8)
 
 

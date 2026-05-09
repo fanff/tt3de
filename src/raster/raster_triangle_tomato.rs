@@ -1,4 +1,4 @@
-use nalgebra_glm::TVec2;
+use nalgebra_glm::{vec2, TVec2};
 
 use crate::drawbuffer::drawbuffer::{
     triangle_front_facing_submission_order_xy, DrawBuffer,
@@ -259,6 +259,8 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 prim_ref.material_id,
                 prim_ref.primitive_id,
                 front_facing,
+                0.0,
+                vec2(0.0, 0.0),
             );
             // Step the scanline interpolant to the next column by adding the horizontal interpolation step.
             // This updates `i_line` so that it correctly represents the vertex attributes for the next pixel.
@@ -490,6 +492,8 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
                 prim_ref.material_id,
                 prim_ref.primitive_id,
                 front_facing,
+                0.0,
+                vec2(0.0, 0.0),
             );
 
             // Advance the horizontal interpolants to the next column.

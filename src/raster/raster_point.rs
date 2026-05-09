@@ -1,4 +1,4 @@
-use nalgebra_glm::Vec3;
+use nalgebra_glm::{vec2, Vec3};
 
 use crate::drawbuffer::drawbuffer::DrawBuffer;
 
@@ -26,5 +26,6 @@ pub fn raster_point_info<const DEPTHCOUNT: usize>(
         0.0,
         0.5,
         0.5,
+        vec2(0.5, 0.5),
     )
 }

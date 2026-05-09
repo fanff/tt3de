@@ -65,6 +65,10 @@ pub fn triangle_front_facing_submission_order_xy(
 /// - `front_facing`: Per-cell flag from rasterization; triangles use winding in projected screen space
 ///   (see [`triangle_front_facing_submission_order`]). Non-triangle paths use an engine-defined
 ///   deterministic default (`true`).
+/// - `line_coord`: Parametric coordinate in \[0, 1\] along a rasterized line segment (TTSL ``tt_LineCoord``);
+///   ``0.0`` when the primitive is not a line or the engine does not define an interpolation.
+/// - `point_coord`: Coordinates within a rasterized point sprite (TTSL ``tt_PointCoord``), typically in \[0, 1\];
+///   ``(0, 0)`` when the primitive is not a point or the engine does not define coordinates.
 #[derive(Clone, Copy, Debug)]
 pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub uv: TVec2<InfoAccuracy>,
@@ -72,6 +76,8 @@ pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub frag_pos: Vec2,
     pub normal: Vec3,
     pub front_facing: bool,
+    pub line_coord: f32,
+    pub point_coord: Vec2,
     pub material_id: usize,
     pub primitive_id: usize,
     pub node_id: usize,
@@ -92,6 +98,8 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
             frag_pos: Vec2::zeros(),
             normal: Vec3::new(0.0, 0.0, 1.0),
             front_facing: true,
+            line_coord: 0.0,
+            point_coord: Vec2::zeros(),
             material_id: 0,
             primitive_id: 0,
             node_id: 0,
@@ -104,6 +112,8 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
         self.node_id = 0;
         self.geometry_id = 0;
         self.front_facing = true;
+        self.line_coord = 0.0;
+        self.point_coord = Vec2::zeros();
     }
     pub fn set_uv(&mut self, uv: TVec2<T>) {
         self.uv = uv;
@@ -206,6 +216,8 @@ mod test_frag_pos_ndc {
             0,
             0,
             true,
+            0.0,
+            vec2(0.0, 0.0),
         );
         let p = db.get_pix_buffer_content_at_row_col(1, 2, 0);
         let expected = db.cell_center_to_ndc(2, 1);
@@ -303,6 +315,8 @@ mod test_front_facing_winding {
             0,
             0,
             false,
+            0.0,
+            vec2(0.0, 0.0),
         );
         assert!(!db.get_pix_buffer_content_at_row_col(0, 1, 0).front_facing);
     }
@@ -603,6 +617,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         material_id: usize,
         primitive_id: usize,
         front_facing: bool,
+        line_coord: f32,
+        point_coord: Vec2,
     ) {
         let frag_pos_ndc = self.cell_center_to_ndc(col, row);
         let the_point = row * self.col_count + col;
@@ -637,6 +653,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     the_cell.depth[the_layer] = depth; // Set the depth
                     pix_info_dest.normal = normal;
                     pix_info_dest.front_facing = front_facing;
+                    pix_info_dest.line_coord = line_coord;
+                    pix_info_dest.point_coord = point_coord;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;
@@ -654,6 +672,8 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     let pix_info_dest = (self.pixbuffer[the_cell.pixinfo[the_layer]]).borrow_mut();
                     pix_info_dest.normal = normal;
                     pix_info_dest.front_facing = front_facing;
+                    pix_info_dest.line_coord = line_coord;
+                    pix_info_dest.point_coord = point_coord;
                     pix_info_dest.primitive_id = primitive_id;
                     pix_info_dest.geometry_id = geom_id;
                     pix_info_dest.node_id = node_id;

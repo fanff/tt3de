@@ -13,6 +13,8 @@ Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelC
 - `tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1` (`vec2`)
 - `tt_FrontFacing` (`bool`)
 - `tt_FragDepth` (`float`)
+- `tt_LineCoord` (`float`)
+- `tt_PointCoord` (`vec2`)
 - `tt_PrimitiveID` (`int`)
 
 The shader entry function may still declare `tt_FragCoord` (or other builtins) as parameters;
@@ -26,6 +28,10 @@ that replaces the default slot for those names in the register map.
 - `tt_Resolution` → `{"tt_Resolution": glm.vec2}`; seeds `(1, 1)`; `set_shader_resolution`, `resolution_v2_reg`
 
 Per-pixel depth: `tt_FragDepth` is always predeclared as `float`. After compilation, set `ShaderPy.frag_depth_f32_reg` from `RegisterSettings` so `ShaderMaterial` writes the active depth layer’s stored depth into that register each pixel (see [TTSL](ttsl.md) builtins table).
+
+Line interpolation: `tt_LineCoord` is always predeclared as `float` (compiler seeds `0.0`). Set `ShaderPy.line_coord_f32_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.line_coord` each pixel (line rasterization fills `0.0`…`1.0` along the segment; see `DrawingBufferPy.set_depth_content(..., line_coord=...)`).
+
+Point sprites: `tt_PointCoord` is always predeclared as `vec2` (compiler seeds `(0, 0)`). Set `ShaderPy.point_coord_v2_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.point_coord` each pixel (point rasterization sets `(0.5, 0.5)` for the single-cell path; see `DrawingBufferPy.set_depth_content(..., point_coord=...)`).
 
 User uniforms (any other name, e.g. `"position"`) are also declared only through `globals_dict`.
 

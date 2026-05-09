@@ -19,6 +19,8 @@ tt_TexCoord0: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_TexCoord1: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_FrontFacing: bool = True  # noqa: N816
 tt_FragDepth: float = 0.0  # noqa: N816 — depth for the shaded layer; engine fills via ShaderPy
+tt_LineCoord: float = 0.0  # noqa: N816 — parametric coord along rasterized lines; see PixInfo / ShaderPy
+tt_PointCoord: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816 — point sprite coords; see PixInfo / ShaderPy
 tt_PrimitiveID: int = 0  # noqa: N816 — per-pixel index of depth-winning primitive
 
 

@@ -24,6 +24,8 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_FRAGPOS,
     PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_FRONT_FACING,
+    PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
     PIXELVAR_TT_TEXCOORD1,
@@ -42,6 +44,8 @@ ALWAYS_PRESENT_BUILTIN_NAMES = (
     PIXELVAR_TT_FRAGPOS,
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_FRAG_DEPTH,
+    PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
 )
 
@@ -93,6 +97,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         self.assertEqual(cc.named_variables[PIXELVAR_TT_TEXCOORD1].ty, IRType.V2)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_FRAGPOS].ty, IRType.V2)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_FRONT_FACING].ty, IRType.BOOL)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_FRAG_DEPTH].ty, IRType.F32)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_LINE_COORD].ty, IRType.F32)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_PRIMITIVE_ID].ty, IRType.I32)
         self.assertEqual(cc.globals, {GLOBAL_VAR_TT_TIME: IRType.F32})
 
@@ -252,6 +258,76 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
             def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
                 bad: vec2 = tt_FragDepth
                 return (vec3(bad.x, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        with self.assertRaises(CompileError):
+            compile_ttsl(src, "shade", {})
+
+    def test_tt_LineCoord_always_present_f32_pixel_input(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                t: float = tt_LineCoord
+                return (vec3(t, 0.0, 0.0), vec3(t, 0.0, 0.0), 0)
+            """
+        )
+        cc = compile_ttsl(src, "shade", {})
+        self.assertIn(PIXELVAR_TT_LINE_COORD, cc.named_variables)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_LINE_COORD].ty, IRType.F32)
+
+    def test_tt_LineCoord_register_seed_defaults_zero(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_LineCoord, 0.0, 0.0), vec3(tt_LineCoord, 0.0, 0.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_LINE_COORD]
+        self.assertEqual(ty, IRType.F32)
+        self.assertEqual(reg_settings.regs[IRType.F32][reg_id], 0.0)
+
+    def test_tt_LineCoord_wrong_annotation_raises(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                bad: vec2 = tt_LineCoord
+                return (vec3(bad.x, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        with self.assertRaises(CompileError):
+            compile_ttsl(src, "shade", {})
+
+    def test_tt_PointCoord_always_present_v2_pixel_input(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                p: vec2 = tt_PointCoord
+                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
+            """
+        )
+        cc = compile_ttsl(src, "shade", {})
+        self.assertIn(PIXELVAR_TT_POINT_COORD, cc.named_variables)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_POINT_COORD].ty, IRType.V2)
+
+    def test_tt_PointCoord_register_seed_defaults_zero_vec2(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_PointCoord.x, tt_PointCoord.y, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_POINT_COORD]
+        self.assertEqual(ty, IRType.V2)
+        self.assertEqual(reg_settings.regs[IRType.V2][reg_id], glm.vec2(0.0, 0.0))
+
+    def test_tt_PointCoord_wrong_annotation_raises(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                bad: float = tt_PointCoord
+                return (vec3(bad, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
             """
         )
         with self.assertRaises(CompileError):

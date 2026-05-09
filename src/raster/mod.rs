@@ -1,4 +1,4 @@
-use nalgebra_glm::{RealNumber, TVec2, Vec3, Vec4};
+use nalgebra_glm::{RealNumber, TVec2, Vec2, Vec3, Vec4};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{pyfunction, PyRefMut, Python};
 
@@ -34,6 +34,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     v0: f32,
     u1: f32,
     v1: f32,
+    point_coord: Vec2,
 ) {
     let w = TVec2::new(u0, v0);
     let w_alt = TVec2::new(u1, v1);
@@ -49,6 +50,8 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
         prim_ref.material_id,
         prim_ref.primitive_id,
         true,
+        0.0,
+        point_coord,
     );
 }
 

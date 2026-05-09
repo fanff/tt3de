@@ -174,7 +174,7 @@ impl DrawingBufferPy {
         tt.into()
     }
 
-    #[pyo3(signature = (row, col, normal_py, depth, uv_py, uv_1_py, node_id, geom_id, material_id, primitive_id, front_facing=true))]
+    #[pyo3(signature = (row, col, normal_py, depth, uv_py, uv_1_py, node_id, geom_id, material_id, primitive_id, front_facing=true, line_coord=0.0, point_coord=None))]
     fn set_depth_content(
         &mut self,
         py: Python,
@@ -189,11 +189,16 @@ impl DrawingBufferPy {
         material_id: usize,
         primitive_id: usize,
         front_facing: bool,
+        line_coord: f32,
+        point_coord: Option<Py<PyAny>>,
     ) {
         let uv: Vec2 = convert_glm_vec2(py, uv_py);
         let uv_1: Vec2 = convert_glm_vec2(py, uv_1_py);
 
         let normal: Vec3 = convert_glm_vec3(py, normal_py);
+        let point_coord_v = point_coord
+            .map(|p| convert_glm_vec2(py, p))
+            .unwrap_or_else(Vec2::zeros);
 
         self.db.set_depth_content(
             row,
@@ -207,6 +212,8 @@ impl DrawingBufferPy {
             material_id,
             primitive_id,
             front_facing,
+            line_coord,
+            point_coord_v,
         )
     }
 
@@ -231,6 +238,10 @@ impl DrawingBufferPy {
         dict.set_item("geometry_id", pix_info_element.geometry_id)
             .unwrap();
         dict.set_item("front_facing", pix_info_element.front_facing)
+            .unwrap();
+        dict.set_item("line_coord", pix_info_element.line_coord)
+            .unwrap();
+        dict.set_item("point_coord", pix_info_element.point_coord.as_slice())
             .unwrap();
         dict.into()
     }
@@ -266,6 +277,10 @@ impl DrawingBufferPy {
         dict.set_item("geometry_id", pix_info_element.geometry_id)
             .unwrap();
         dict.set_item("front_facing", pix_info_element.front_facing)
+            .unwrap();
+        dict.set_item("line_coord", pix_info_element.line_coord)
+            .unwrap();
+        dict.set_item("point_coord", pix_info_element.point_coord.as_slice())
             .unwrap();
         dict.into()
     }

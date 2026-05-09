@@ -132,13 +132,17 @@ pub struct ShaderInputBinding {
     pub front_facing_bool_reg: Option<usize>,
     /// Register for ``tt_FragDepth`` (``float``); updated from the active depth layer each pixel.
     pub frag_depth_f32_reg: Option<usize>,
+    /// Register for ``tt_LineCoord`` (``float``, typically \[0, 1\] along rasterized lines).
+    pub line_coord_f32_reg: Option<usize>,
+    /// Register for ``tt_PointCoord`` (``vec2``, typically \[0, 1\] within a point sprite).
+    pub point_coord_v2_reg: Option<usize>,
 }
 
 impl Default for ShaderInputBinding {
     fn default() -> Self {
         // Must match `RegisterAllocatorPass` in `python/tt3de/ttsl/compiler.py`: built-in
-        // pixel vec2s are allocated V2 registers 1..=4 in order for `tt_FragCoord`,
-        // `tt_TexCoord0`, `tt_TexCoord1`, `tt_FragPos`. PixInfo UVs belong in registers 2–3;
+        // pixel vec2s are allocated V2 registers 1..=5 in order for `tt_FragCoord`,
+        // `tt_TexCoord0`, `tt_TexCoord1`, `tt_FragPos`, `tt_PointCoord`. PixInfo UVs belong in registers 2–3;
         // `tt_FragPos` is filled from `PixInfo::frag_pos` (see `DrawBuffer::set_depth_content`).
         // `tt_PrimitiveID` is pinned by the allocator to `regs.i32_[0]`; the remaining PixInfo
         // i32 IDs (material_id / node_id / geometry_id) are not yet TTSL-named and live in the
@@ -161,6 +165,8 @@ impl Default for ShaderInputBinding {
             resolution_v2_reg: None,
             front_facing_bool_reg: None,
             frag_depth_f32_reg: None,
+            line_coord_f32_reg: None,
+            point_coord_v2_reg: None,
         }
     }
 }
@@ -189,6 +195,16 @@ pub(crate) fn write_per_pixel_inputs_to_registers<const DEPTHLAYER: usize>(
     if let Some(reg_id) = bind.frag_depth_f32_reg {
         if reg_id < regs.f32_.len() && depth_layer < DEPTHLAYER {
             regs.f32_[reg_id] = depth_cell.depth[depth_layer];
+        }
+    }
+    if let Some(reg_id) = bind.line_coord_f32_reg {
+        if reg_id < regs.f32_.len() {
+            regs.f32_[reg_id] = pixinfo.line_coord;
+        }
+    }
+    if let Some(reg_id) = bind.point_coord_v2_reg {
+        if reg_id < regs.v2.len() {
+            regs.v2[reg_id] = pixinfo.point_coord;
         }
     }
 }
@@ -244,6 +260,16 @@ impl ShaderMaterial {
 
     pub fn with_frag_depth_f32_reg(mut self, frag_depth_f32_reg: Option<usize>) -> Self {
         self.input_binding.frag_depth_f32_reg = frag_depth_f32_reg;
+        self
+    }
+
+    pub fn with_line_coord_f32_reg(mut self, line_coord_f32_reg: Option<usize>) -> Self {
+        self.input_binding.line_coord_f32_reg = line_coord_f32_reg;
+        self
+    }
+
+    pub fn with_point_coord_v2_reg(mut self, point_coord_v2_reg: Option<usize>) -> Self {
+        self.input_binding.point_coord_v2_reg = point_coord_v2_reg;
         self
     }
 
@@ -549,6 +575,36 @@ mod tests {
         assert_eq!(regs.f32_[5], 0.375);
         super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 1, &mut regs);
         assert_eq!(regs.f32_[5], 0.625);
+    }
+
+    #[test]
+    fn test_write_per_pixel_inputs_sets_tt_line_coord_register() {
+        let bind = ShaderInputBinding {
+            line_coord_f32_reg: Some(6),
+            ..ShaderInputBinding::default()
+        };
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        let mut pixinfo = PixInfo::new();
+        pixinfo.line_coord = 0.625;
+        let mut regs = Registers::new();
+        regs.f32_[6] = -1.0;
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
+        assert_eq!(regs.f32_[6], 0.625);
+    }
+
+    #[test]
+    fn test_write_per_pixel_inputs_sets_tt_point_coord_register() {
+        let bind = ShaderInputBinding {
+            point_coord_v2_reg: Some(7),
+            ..ShaderInputBinding::default()
+        };
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        let mut pixinfo = PixInfo::new();
+        pixinfo.point_coord = vec2(0.25, 0.75);
+        let mut regs = Registers::new();
+        regs.v2[7] = vec2(-1.0, -1.0);
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
+        assert_eq!(regs.v2[7], vec2(0.25, 0.75));
     }
 
     #[test]

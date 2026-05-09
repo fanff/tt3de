@@ -77,7 +77,7 @@ From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
   - The shader is executed at material-application time and its return payload
     (`front`, `back`, `glyph`) drives final cell output.
   - Python API:
-    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_Frame`).
+    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_Frame`).
     - `MaterialBufferPy.add_shader(shader)`
     - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
       `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`.
@@ -110,7 +110,7 @@ with types ``(vec3, vec3, int)``, matching ``OP_RET`` above. Annotate as
 Built-in variables
 ------------------
 
-Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_FragDepth`, `tt_PrimitiveID`) are always known to the compiler. Engine uniforms (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`) are declared only when listed in `globals_dict` with the types below.
+Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_PrimitiveID`) are always known to the compiler. Engine uniforms (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`) are declared only when listed in `globals_dict` with the types below.
 
 **Availability** is **Shipped** vs **Planned** (compiler/runtime intent). **Tests** is **yes** when pytest under `tests/` includes TTSL shader source (or bytecode/run harness for that builtin) that references the builtin—**no** means no such unittest yet (coverage gap, not necessarily missing runtime support).
 
@@ -127,8 +127,8 @@ Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `
 | Shipped      | yes   | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. |
 | Shipped      | yes   | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). |
 | Shipped      | yes   | tt_FragDepth       | float | engine-defined (depth buffer units)    | Depth value for the shaded depth layer at this cell. Compiler seeds ``0.0``; ``ShaderMaterial`` writes ``ShaderPy.frag_depth_f32_reg`` from that layer each pixel when set (same pattern as ``tt_FrontFacing``). Standalone ``ttsl_run`` keeps the seed unless the host fills the register. |
-| Planned      | no    | tt_PointCoord      | vec2  | [0..1]                                 | Coordinates within a rasterized point sprite. Mirrors gl_PointCoord. Not wired in compiler/runtime yet. |
-| Planned      | no    | tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. Not wired yet. |
+| Shipped      | yes   | tt_LineCoord       | float | [0..1] along line segments             | Parametric coordinate from the line start toward the end for pixels produced by line rasterization; ``0.0`` for non-line primitives and when not supplied. Compiler seeds ``0.0``; optional ``ShaderPy.line_coord_f32_reg`` matches compilation (same pattern as ``tt_FragDepth``). Hosts may pass an explicit value through ``DrawingBufferPy.set_depth_content(..., line_coord=...)``. |
+| Shipped      | yes   | tt_PointCoord      | vec2  | [0..1] typical                         | Coordinates within a rasterized point sprite. Mirrors ``gl_PointCoord``. Compiler seeds ``(0, 0)``; optional ``ShaderPy.point_coord_v2_reg`` matches compilation. Non-point raster paths and standalone ``ttsl_run`` leave ``(0, 0)`` unless the host sets ``DrawingBufferPy.set_depth_content(..., point_coord=...)``. Point rasterization sets ``(0.5, 0.5)`` for the single-cell path. |
 
 ### Texture sampling (`tt_texture`, `tt_texelFetch`)
 

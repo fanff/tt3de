@@ -190,6 +190,8 @@ pub struct ShaderPy {
     pub resolution_v2_reg: Option<usize>,
     pub front_facing_bool_reg: Option<usize>,
     pub frag_depth_f32_reg: Option<usize>,
+    pub line_coord_f32_reg: Option<usize>,
+    pub point_coord_v2_reg: Option<usize>,
     pub default_glyph: Option<u8>,
     /// Same layout as ``RegisterSettings.get_register_list()`` (list of 6 dicts), or ``None``.
     #[pyo3(get, set)]
@@ -237,6 +239,8 @@ impl ShaderPy {
             .with_resolution_v2_reg(self.resolution_v2_reg)
             .with_front_facing_bool_reg(self.front_facing_bool_reg)
             .with_frag_depth_f32_reg(self.frag_depth_f32_reg)
+            .with_line_coord_f32_reg(self.line_coord_f32_reg)
+            .with_point_coord_v2_reg(self.point_coord_v2_reg)
             .with_default_glyph(self.default_glyph);
         if let Some(regs) = seed_registers {
             mat = mat.with_seed_registers(ShaderSeedRegisters::from_registers(regs));
@@ -248,7 +252,7 @@ impl ShaderPy {
 #[pymethods]
 impl ShaderPy {
     #[new]
-    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None))]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None))]
     fn new(
         bytecode: &Bound<'_, PyBytes>,
         time_f32_reg: Option<usize>,
@@ -256,6 +260,8 @@ impl ShaderPy {
         resolution_v2_reg: Option<usize>,
         front_facing_bool_reg: Option<usize>,
         frag_depth_f32_reg: Option<usize>,
+        line_coord_f32_reg: Option<usize>,
+        point_coord_v2_reg: Option<usize>,
         default_glyph: Option<u8>,
         register_seed: Option<Py<PyAny>>,
         frame_i32_reg: Option<usize>,
@@ -270,6 +276,8 @@ impl ShaderPy {
             resolution_v2_reg,
             front_facing_bool_reg,
             frag_depth_f32_reg,
+            line_coord_f32_reg,
+            point_coord_v2_reg,
             default_glyph,
             register_seed,
         })
@@ -343,6 +351,26 @@ impl ShaderPy {
     #[setter]
     fn set_frag_depth_f32_reg(&mut self, value: Option<usize>) {
         self.frag_depth_f32_reg = value;
+    }
+
+    #[getter]
+    fn line_coord_f32_reg(&self) -> Option<usize> {
+        self.line_coord_f32_reg
+    }
+
+    #[setter]
+    fn set_line_coord_f32_reg(&mut self, value: Option<usize>) {
+        self.line_coord_f32_reg = value;
+    }
+
+    #[getter]
+    fn point_coord_v2_reg(&self) -> Option<usize> {
+        self.point_coord_v2_reg
+    }
+
+    #[setter]
+    fn set_point_coord_v2_reg(&mut self, value: Option<usize>) {
+        self.point_coord_v2_reg = value;
     }
 
     #[getter]
