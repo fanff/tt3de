@@ -16,6 +16,7 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_TEXCOORD0,
     PIXELVAR_TT_TEXCOORD1,
 )
+from tt3de.ttsl.ttisa.ttisa_opcodes import TT_TEXTURE
 from tt3de.ttsl.ttsl_assembly import build_cfg_from_ir
 
 
@@ -87,3 +88,16 @@ class Test_SampleCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.5, 0.5))
+
+    def test_tt_texture_opcode_present_in_bytecode(self):
+        src = dedent(
+            """
+            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+                sample: vec4 = tt_texture(0, tt_TexCoord0)
+                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                return (rgb, rgb, 0)
+            """
+        )
+        bytecode, _ = all_passes_compilation(src, "shade", {})
+        opcodes = [bytecode[i] for i in range(0, len(bytecode), 6)]
+        self.assertIn(TT_TEXTURE, opcodes)

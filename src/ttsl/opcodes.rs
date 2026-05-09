@@ -2,7 +2,7 @@
 
 use nalgebra_glm::{abs, cos, exp, log, log2, mix, sin, sqrt, tan, Vec2, Vec3, Vec4};
 
-use crate::ttsl::Registers;
+use crate::ttsl::{Registers, TtslTextureEnv};
 
 pub const ADD_F32: u8 = 0;
 pub const SUB_F32: u8 = 1;
@@ -84,9 +84,10 @@ pub const READ_AXIS_W_V4_TO_F32: u8 = 76;
 pub const MIX_V2: u8 = 77;
 pub const MIX_V3: u8 = 78;
 pub const MIX_V4: u8 = 79;
-pub const OP_JMP: u8 = 80;
-pub const OP_JMP_IF_FALSE: u8 = 81;
-pub const OP_RET: u8 = 82;
+pub const TT_TEXTURE: u8 = 80;
+pub const OP_JMP: u8 = 81;
+pub const OP_JMP_IF_FALSE: u8 = 82;
+pub const OP_RET: u8 = 83;
 
 pub fn exec_opcode(
     opcode: u8,
@@ -97,6 +98,7 @@ pub fn exec_opcode(
     d: u8,
     regs: &mut Registers,
     ip: &mut usize,
+    tex: Option<&dyn TtslTextureEnv>,
 ) -> Option<(Vec3, Vec3, i32)> {
     match opcode {
         ADD_F32 => {
@@ -221,8 +223,8 @@ pub fn exec_opcode(
 
         MUL_V2_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v2 = regs.v2.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val * b_val;
@@ -232,8 +234,8 @@ pub fn exec_opcode(
 
         DIV_V2_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v2 = regs.v2.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val / b_val;
@@ -287,8 +289,8 @@ pub fn exec_opcode(
 
         MUL_F32_V2 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v2 = regs.v2.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_f32_.add(a as usize);
                 let b_val = *base_v2.add(b as usize);
                 *base_v2.add(dst as usize) = a_val * b_val;
@@ -880,6 +882,22 @@ pub fn exec_opcode(
                 let b_val = *base_v4.add(b as usize);
                 let c_val = *base_f32_.add(c as usize);
                 *base_v4.add(dst as usize) = mix(&a_val, &b_val, c_val);
+            }
+            None
+        }
+
+        TT_TEXTURE => {
+            unsafe {
+                let base_i32_ = regs.i32_.as_mut_ptr();
+                let base_v2 = regs.v2.as_mut_ptr();
+                let base_v4 = regs.v4.as_mut_ptr();
+                let idx = *base_i32_.add(a as usize);
+                let uv = *base_v2.add(b as usize);
+                let sampled = tex
+                    .as_ref()
+                    .map(|t| t.sample_tt_texture(idx, uv))
+                    .unwrap_or_else(|| Vec4::new(0.0, 0.0, 0.0, 1.0));
+                *base_v4.add(dst as usize) = sampled;
             }
             None
         }

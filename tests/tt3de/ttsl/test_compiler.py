@@ -6,6 +6,7 @@ from unittest.mock import patch
 from tt3de.ttsl.compiler import (
     CompileError,
     TTSLCompilerContext,
+    all_passes_compilation,
     all_passes_compilation_with_state,
     compile_ttsl,
 )
@@ -170,3 +171,18 @@ class Test_ReturnTripleContract(unittest.TestCase):
         with self.assertRaises(CompileError) as ctx:
             compile_ttsl(src, "f", {})
         self.assertIn("tuple[vec3, vec3, int]", str(ctx.exception))
+
+
+class Test_tt_texture_frontend(unittest.TestCase):
+    def test_tt_texture_compiles_full_pipeline(self):
+        src = dedent(
+            """
+            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+                sample: vec4 = tt_texture(0, tt_TexCoord0)
+                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                return (rgb, rgb, 0)
+            """
+        )
+        bytecode, _ = all_passes_compilation(src, "shade", {})
+        self.assertIsInstance(bytecode, bytes)
+        self.assertGreater(len(bytecode), 0)

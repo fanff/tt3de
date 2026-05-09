@@ -556,6 +556,34 @@ def generate_glm_tools_forms() -> List[Form]:
     return generate_glm_tool_mix_forms()
 
 
+def generate_tt_texture_form() -> Form:
+    """Filtered 2D texture sample: vec4 = tt_texture(tex_index i32, uv vec2)."""
+    return Form(
+        {
+            "name": "TT_TEXTURE",
+            "type": IRType.V4,
+            "input_types": [IRType.I32, IRType.V2],
+            "rust_match_code": """
+            TT_TEXTURE => {
+                unsafe {
+                    let base_i32_ = regs.i32_.as_mut_ptr();
+                    let base_v2 = regs.v2.as_mut_ptr();
+                    let base_v4 = regs.v4.as_mut_ptr();
+                    let idx = *base_i32_.add(a as usize);
+                    let uv = *base_v2.add(b as usize);
+                    let sampled = tex
+                        .as_ref()
+                        .map(|t| t.sample_tt_texture(idx, uv))
+                        .unwrap_or_else(|| Vec4::new(0.0, 0.0, 0.0, 1.0));
+                    *base_v4.add(dst as usize) = sampled;
+                }
+                None
+            }
+            """,
+        }
+    )
+
+
 def generate_all_forms() -> List[CategoryGroup]:
     categories = [
         CategoryGroup(
@@ -607,6 +635,7 @@ def generate_all_forms() -> List[CategoryGroup]:
         CategoryGroup("Store Vec from Scalars", generate_store_vec_from_scalar()),
         CategoryGroup("Read Axis", generate_read_axis_forms()),
         CategoryGroup("GLM Builtins", generate_glm_tools_forms()),
+        CategoryGroup("Texture", [generate_tt_texture_form()]),
         CategoryGroup("Control Flow", generate_jump_forms()),
         CategoryGroup("Return", [generate_return_form()]),
     ]
@@ -664,7 +693,7 @@ def main() -> None:
     use nalgebra_glm::{abs, cos, exp, log, log2, sin,
      mix, sqrt, tan, Vec2, Vec3, Vec4};
 
-    use crate::ttsl::Registers;
+    use crate::ttsl::{Registers, TtslTextureEnv};
 
     """
 
@@ -684,6 +713,7 @@ def main() -> None:
         d: u8,
         regs: &mut Registers,
         ip: &mut usize,
+        tex: Option<&dyn TtslTextureEnv>,
     ) -> Option<(Vec3, Vec3, i32)> {
         match opcode {
     %s

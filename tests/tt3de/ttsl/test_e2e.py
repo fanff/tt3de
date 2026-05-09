@@ -14,6 +14,7 @@ from tt3de.tt3de import (
     VertexBufferPy,
     apply_material_py,
     apply_material_py_parallel,
+    find_glyph_indices_py,
     materials,
 )
 from tt3de.ttsl.compiler import (
@@ -161,6 +162,63 @@ class Test_EndToEndCompilation(unittest.TestCase):
             sample_rgb_after_apply(2.0, apply_material_py_parallel),
             "shader output should depend on tt_Time (parallel apply_material path)",
         )
+
+    def test_tt_texture_shader_samples_bound_texture(self):
+        """Bytecode ``tt_texture`` must read the live ``TextureBuffer`` during apply_material."""
+        src = dedent(
+            """
+            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+                sample: vec4 = tt_texture(0, tt_TexCoord0)
+                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                return (rgb, rgb, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        tb = TextureBufferPy(8)
+        tb.add_texture(1, 1, [(255, 40, 80, 255)], True, True)
+
+        mb = MaterialBufferPy()
+        mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                default_glyph=None,
+                register_seed=reg_settings.get_register_list(),
+            )
+        )
+
+        def sample_rgb(apply_fn) -> tuple[int, int, int]:
+            draw = DrawingBufferPy(4, 4)
+            draw.hard_clear(10.0)
+            draw.set_depth_content(
+                0,
+                0,
+                glm.vec3(0.0, 0.0, 1.0),
+                1.0,
+                glm.vec2(0.5, 0.5),
+                glm.vec2(0.0, 0.0),
+                0,
+                0,
+                mat_idx,
+                0,
+            )
+            apply_fn(
+                mb,
+                tb,
+                VertexBufferPy(16, 16, 16),
+                PrimitiveBufferPy(8),
+                draw,
+            )
+            cell = draw.get_canvas_cell(0, 0)
+            return (cell["f_r"], cell["f_g"], cell["f_b"])
+
+        for apply_fn in (apply_material_py, apply_material_py_parallel):
+            r, g, b = sample_rgb(apply_fn)
+            self.assertGreater(r, 240, msg=f"expected red channel from texture ({apply_fn})")
+            self.assertLess(g, 80, msg=f"expected low green ({apply_fn})")
+            self.assertGreater(b, 40, msg=f"expected blue channel from texture ({apply_fn})")
+            self.assertLess(b, 120, msg=f"expected bounded blue ({apply_fn})")
 
 
 if __name__ == "__main__":

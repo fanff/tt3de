@@ -443,6 +443,39 @@ class TTSLCompilerContext:
                     )
                 elif func.id in GLM_TOOLS:
                     return self.compile_glm_tool_call(node, func.id, args)
+                elif func.id == "tt_texture":
+                    if len(args) != 2:
+                        raise CompileError(
+                            node,
+                            f"tt_texture expects 2 arguments (tex_index: int, coord: vec2), got {len(args)}",
+                        )
+                    i_ty = self.type_of(args[0])
+                    uv_ty = self.type_of(args[1])
+                    if i_ty != IRType.I32:
+                        raise CompileError(
+                            node,
+                            f"tt_texture first argument must be int, got {i_ty}",
+                        )
+                    if uv_ty != IRType.V2:
+                        raise CompileError(
+                            node,
+                            f"tt_texture second argument must be vec2, got {uv_ty}",
+                        )
+                    idx_reg = self.compile_expr(args[0], IRType.I32)
+                    uv_reg = self.compile_expr(args[1], IRType.V2)
+                    result_reg = self.alloc_temp_for_type(IRType.V4)
+                    self.emit(
+                        OpCodes.TT_TEXTURE,
+                        idx_reg,
+                        uv_reg,
+                        None,
+                        None,
+                        result_reg,
+                        comment=(
+                            f"tt_texture r{idx_reg.id}, r{uv_reg.id} -> r{result_reg.id}"
+                        ),
+                    )
+                    return result_reg
                 raise CompileError(node, f"Unsupported function call '{func.id}'")
             elif "attr" in func._fields:
                 if "value" in func._fields and "id" in func.value._fields:
@@ -739,6 +772,24 @@ class TTSLCompilerContext:
                         return type_args[0]
                     raise CompileError(
                         node, f"Cannot determine return type of function '{node.id}'"
+                    )
+                elif node.id == "tt_texture":
+                    if type_args is not None and len(type_args) == 2:
+                        ti, tv = type_args
+                        if ti != IRType.I32:
+                            raise CompileError(
+                                node,
+                                f"tt_texture expects int texture index, got {ti}",
+                            )
+                        if tv != IRType.V2:
+                            raise CompileError(
+                                node,
+                                f"tt_texture expects vec2 coord, got {tv}",
+                            )
+                        return IRType.V4
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of tt_texture (need int, vec2 arguments)",
                     )
                 elif node.id in PIXEL_VARIABLES_STR_TYPE:  #
                     return PIXEL_VARIABLES_STR_TYPE[node.id]

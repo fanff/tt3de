@@ -1,4 +1,4 @@
-use nalgebra_glm::Vec2;
+use nalgebra_glm::{Vec2, Vec4};
 
 use crate::texturebuffer::UvMapper;
 
@@ -145,5 +145,24 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
         }
         self.current_size += 1;
         self.current_size - 1
+    }
+}
+
+impl<const SIZE: usize> crate::ttsl::TtslTextureEnv for TextureBuffer<SIZE> {
+    fn sample_tt_texture(&self, idx: i32, uv: Vec2) -> Vec4 {
+        if idx < 0 {
+            return Vec4::new(0.0, 0.0, 0.0, 1.0);
+        }
+        let ui = idx as usize;
+        if ui >= self.current_size || ui >= self.max_size {
+            return Vec4::new(0.0, 0.0, 0.0, 1.0);
+        }
+        let rgba = self.get_rgba_at_v(ui, &uv, 0);
+        Vec4::new(
+            rgba.r as f32 / 255.0,
+            rgba.g as f32 / 255.0,
+            rgba.b as f32 / 255.0,
+            rgba.a as f32 / 255.0,
+        )
     }
 }

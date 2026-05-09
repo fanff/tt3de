@@ -71,7 +71,7 @@ pub fn ttsl_run(
     let bytes: &[u8] = bytecode.extract(py).unwrap();
     let instrs = decode_instrs_256(bytes);
 
-    let (v3a, v3b, iret) = run_ttsl_vm(&instrs, &mut regs);
+    let (v3a, v3b, iret) = run_ttsl_vm(&instrs, &mut regs, None);
     let a = vec3_to_pyglm(py, v3a);
     let b = vec3_to_pyglm(py, v3b);
     let c = iret;

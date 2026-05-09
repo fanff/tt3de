@@ -95,7 +95,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
     """Rust ``ShaderPy``: Python-visible fields match ``materials.pyi``."""
 
     def test_ctor_exposes_bytecode_time_reg_default_glyph(self):
-        bytecode = bytes([82, 0, 3, 2, 1, 0])
+        bytecode = bytes([83, 0, 3, 2, 1, 0])
         mat = materials.ShaderPy(
             bytecode, time_f32_reg=11, default_glyph=219
         )
@@ -572,7 +572,7 @@ class Test_ShaderPySeedValidation(unittest.TestCase):
     def test_add_shader_rejects_register_seed_wrong_length(self):
         mb = MaterialBufferPy()
         bad = materials.ShaderPy(
-            bytes([82, 0, 0, 0, 0, 0]),
+            bytes([83, 0, 0, 0, 0, 0]),
             register_seed=[{}, {}, {}],
         )
         with self.assertRaises(ValueError):

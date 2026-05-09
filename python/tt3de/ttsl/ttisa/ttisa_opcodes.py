@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ADD_F32 = 0
 SUB_F32 = 1
 ADD_V2 = 2
@@ -79,6 +78,7 @@ READ_AXIS_W_V4_TO_F32 = 76
 MIX_V2 = 77
 MIX_V3 = 78
 MIX_V4 = 79
-OP_JMP = 80
-OP_JMP_IF_FALSE = 81
-OP_RET = 82
+TT_TEXTURE = 80
+OP_JMP = 81
+OP_JMP_IF_FALSE = 82
+OP_RET = 83

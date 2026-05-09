@@ -92,6 +92,7 @@ class OpCodes(Enum):
     LN = "ln"
     LOG = "log"
     MIX = "mix"
+    TT_TEXTURE = "tt_texture"
 
 
 @dataclass

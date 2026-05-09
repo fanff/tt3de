@@ -42,6 +42,8 @@ def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
 
 Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
 
+**Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered to opcode `TT_TEXTURE`. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the VM; standalone `ttsl_run` from Python has no texture binding (samples behave as opaque black per spec). `tt_texelFetch` is not implemented yet.
+
 Note: `glm.mix` is not yet typable in `type_of(...)`, so prefer arithmetic or other supported ops until mix is wired end-to-end.
 
 ## Where compilation starts

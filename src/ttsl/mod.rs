@@ -1,4 +1,10 @@
 use nalgebra_glm::{Vec2, Vec3, Vec4};
+
+/// Host-provided 2D texture sampling for TTSL ``TT_TEXTURE`` / ``tt_texture``.
+pub trait TtslTextureEnv {
+    fn sample_tt_texture(&self, idx: i32, uv: Vec2) -> Vec4;
+}
+
 pub mod opcodes;
 use opcodes::*;
 pub mod ttslpy;
@@ -70,7 +76,11 @@ pub fn decode_instrs_256(bytes: &[u8]) -> [Instr; 256] {
     instrs.try_into().unwrap()
 }
 
-pub fn run_ttsl(instrs: &[Instr; 256], regs: &mut Registers) -> (Vec3, Vec3, i32) {
+pub fn run_ttsl(
+    instrs: &[Instr; 256],
+    regs: &mut Registers,
+    tex: Option<&dyn TtslTextureEnv>,
+) -> (Vec3, Vec3, i32) {
     let mut ip: usize = 0;
     loop {
         let instr = unsafe { instrs.get_unchecked(ip) };
@@ -84,6 +94,7 @@ pub fn run_ttsl(instrs: &[Instr; 256], regs: &mut Registers) -> (Vec3, Vec3, i32
             instr.d,
             regs,
             &mut ip,
+            tex,
         ) {
             return r;
         }
@@ -105,7 +116,7 @@ impl TTPU {
     }
 
     fn run(&mut self, bytecode: &[Instr; 256]) -> (Vec3, Vec3, i32) {
-        run_ttsl(bytecode, &mut self.regs)
+        run_ttsl(bytecode, &mut self.regs, None)
     }
 }
 
@@ -146,7 +157,7 @@ mod tests {
         ]);
 
         let expected = ttpu.run(&instrs);
-        let actual = run_ttsl(&instrs, &mut ttpu.regs);
+        let actual = run_ttsl(&instrs, &mut ttpu.regs, None);
 
         assert_eq!(actual, expected);
     }
@@ -175,11 +186,59 @@ mod tests {
         ]);
 
         regs.bool_[5] = true;
-        let out_t = run_ttsl(&instrs, &mut regs);
+        let out_t = run_ttsl(&instrs, &mut regs, None);
         assert_eq!(out_t.0, Vec3::new(1.0, 0.0, 0.0));
 
         regs.bool_[5] = false;
-        let out_f = run_ttsl(&instrs, &mut regs);
+        let out_f = run_ttsl(&instrs, &mut regs, None);
         assert_eq!(out_f.0, Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn tt_texture_samples_via_trait_env() {
+        struct MockTex;
+        impl TtslTextureEnv for MockTex {
+            fn sample_tt_texture(&self, _idx: i32, _uv: Vec2) -> Vec4 {
+                Vec4::new(0.25, 0.5, 0.75, 1.0)
+            }
+        }
+
+        let mut regs = Registers::new();
+        regs.i32_[10] = 0;
+        regs.v2[11] = Vec2::new(0.25, 0.75);
+        let mut ip = 0usize;
+        let mock = MockTex;
+        let out = exec_opcode(
+            TT_TEXTURE,
+            12,
+            10,
+            11,
+            0,
+            0,
+            &mut regs,
+            &mut ip,
+            Some(&mock as &dyn TtslTextureEnv),
+        );
+        assert!(out.is_none());
+        assert!((regs.v4[12].x - 0.25).abs() < 1e-5);
+        assert!((regs.v4[12].y - 0.5).abs() < 1e-5);
+        assert!((regs.v4[12].z - 0.75).abs() < 1e-5);
+        assert!((regs.v4[12].w - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn tt_texture_without_env_is_opaque_black() {
+        let mut regs = Registers::new();
+        regs.i32_[0] = 0;
+        regs.v2[1] = Vec2::new(0.5, 0.5);
+        let mut ip = 0usize;
+        let out = exec_opcode(
+            TT_TEXTURE, 2, 0, 1, 0, 0, &mut regs, &mut ip, None,
+        );
+        assert!(out.is_none());
+        assert!((regs.v4[2].x - 0.0).abs() < 1e-5);
+        assert!((regs.v4[2].y - 0.0).abs() < 1e-5);
+        assert!((regs.v4[2].z - 0.0).abs() < 1e-5);
+        assert!((regs.v4[2].w - 1.0).abs() < 1e-5);
     }
 }
