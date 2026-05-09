@@ -1,4 +1,7 @@
-use nalgebra_glm::{vec2, vec3, Vec2};
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use nalgebra_glm::{vec2, vec3, Vec2, Vec3};
 
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
@@ -9,6 +12,15 @@ use crate::{
 };
 
 use super::materials::RenderMaterial;
+
+/// Incremented at the start of each full-buffer [`crate::drawbuffer::drawbuffer::apply_material_on`]
+/// / [`crate::drawbuffer::drawbuffer::apply_material_on_parallel`] pass so thread-local shader register
+/// caches do not reuse state across passes (e.g. after seed/uniform updates).
+static MATERIAL_APPLY_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+pub(super) fn bump_material_apply_generation() {
+    MATERIAL_APPLY_GENERATION.fetch_add(1, Ordering::AcqRel);
+}
 
 #[derive(Clone)]
 pub struct ShaderMaterial {
@@ -38,9 +50,20 @@ impl ShaderSeedRegisters {
         self.regs.clone()
     }
 
+    /// Copies the seed register banks into `dst` (same effect as assigning `clone_registers()`).
+    pub fn copy_seed_into(&self, dst: &mut Registers) {
+        dst.clone_from(&self.regs);
+    }
+
     pub fn set_f32(&mut self, reg_id: usize, value: f32) {
         if reg_id < self.regs.f32_.len() {
             self.regs.f32_[reg_id] = value;
+        }
+    }
+
+    pub fn set_v3(&mut self, reg_id: usize, value: Vec3) {
+        if reg_id < self.regs.v3.len() {
+            self.regs.v3[reg_id] = value;
         }
     }
 
@@ -244,6 +267,54 @@ impl ShaderMaterial {
     }
 }
 
+/// Thread-local TTSL register scratch + cache key for skipping redundant seed copies.
+///
+/// After each [`run_ttsl`], we [`ShaderSeedRegisters::copy_seed_into`] the TLS buffer again so the
+/// VM’s clobbered registers do not leak into the next pixel. When the next invocation targets the
+/// same `(material_id, ShaderMaterial)` as the previous one on this OS thread **within the same
+/// apply generation**, we can skip the initial seed reload and only patch per-pixel inputs.
+struct ShaderRenderTls {
+    apply_generation: u64,
+    last_shader_bits: usize,
+    last_material_id: usize,
+    regs: Registers,
+}
+
+impl ShaderRenderTls {
+    fn new() -> Self {
+        Self {
+            apply_generation: u64::MAX,
+            last_shader_bits: 0,
+            last_material_id: usize::MAX,
+            regs: Registers::new(),
+        }
+    }
+
+    fn sync_apply_generation(&mut self) {
+        let g = MATERIAL_APPLY_GENERATION.load(Ordering::Relaxed);
+        if self.apply_generation != g {
+            self.apply_generation = g;
+            self.last_shader_bits = 0;
+            self.last_material_id = usize::MAX;
+        }
+    }
+}
+
+thread_local! {
+    static SHADER_RENDER_TLS: RefCell<ShaderRenderTls> = RefCell::new(ShaderRenderTls::new());
+}
+
+/// Clears the `(shader, material_id)` TLS fast-path key so the next [`ShaderMaterial::render_mat`]
+/// reloads the seed. Used in tests; production relies on [`bump_material_apply_generation`] each pass.
+#[cfg(test)]
+pub(super) fn test_only_force_tls_shader_cache_miss() {
+    SHADER_RENDER_TLS.with(|tls| {
+        let mut t = tls.borrow_mut();
+        t.last_shader_bits = 0;
+        t.last_material_id = usize::MAX;
+    });
+}
+
 impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
     RenderMaterial<TEXTURE_BUFFER_SIZE, DEPTHLAYER> for ShaderMaterial
 {
@@ -257,24 +328,41 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
         _texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
         _uv_buffer: &UVBuffer<f32>,
     ) {
-        let mut regs = self.seed_regs.clone_registers();
+        let self_bits = self as *const ShaderMaterial as usize;
+        let material_id = pixinfo.material_id;
 
-        // Only write runtime-varying inputs used by the default shader bridge.
-        let bind = self.input_binding;
-        write_per_pixel_inputs_to_registers(&bind, pixinfo, &mut regs);
+        SHADER_RENDER_TLS.with(|tls| {
+            let mut t = tls.borrow_mut();
+            t.sync_apply_generation();
 
-        let (front, back, glyph) = run_ttsl(&self.instrs, &mut regs);
-        cell.front_color = Color::new_opaque_from_vec3(&front);
-        cell.back_color = Color::new_opaque_from_vec3(&back);
-        if glyph == 0 {
-            if let Some(default_glyph) = self.default_glyph {
-                cell.glyph = default_glyph;
-            } else {
-                cell.glyph = 0;
+            let cache_hit =
+                t.last_shader_bits == self_bits && t.last_material_id == material_id;
+            if !cache_hit {
+                self.seed_regs.copy_seed_into(&mut t.regs);
+                t.last_shader_bits = self_bits;
+                t.last_material_id = material_id;
             }
-        } else {
-            cell.glyph = glyph.clamp(0, 255) as u8;
-        }
+
+            let bind = self.input_binding;
+            let regs = &mut t.regs;
+            write_per_pixel_inputs_to_registers(&bind, pixinfo, regs);
+
+            let (front, back, glyph) = run_ttsl(&self.instrs, regs);
+            cell.front_color = Color::new_opaque_from_vec3(&front);
+            cell.back_color = Color::new_opaque_from_vec3(&back);
+            if glyph == 0 {
+                if let Some(default_glyph) = self.default_glyph {
+                    cell.glyph = default_glyph;
+                } else {
+                    cell.glyph = 0;
+                }
+            } else {
+                cell.glyph = glyph.clamp(0, 255) as u8;
+            }
+
+            // Restore seed snapshot so a cache hit on the next invocation starts from correct banks.
+            self.seed_regs.copy_seed_into(regs);
+        });
     }
 }
 
@@ -447,5 +535,113 @@ mod tests {
             &uv_buffer,
         );
         assert_eq!(canvas_cell.glyph, 219);
+    }
+
+    /// Two consecutive invocations on the same OS thread with the same `(shader, material_id)`
+    /// must still apply the second pixel's inputs (TLS fast path after post-VM seed restore).
+    #[test]
+    fn test_shader_material_tls_cache_preserves_per_pixel_inputs() {
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        let primitive_element = PrimitiveElements::Triangle3D(PTriangle3D::zero());
+        let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
+        let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
+        let shader = ShaderMaterial::from_bytecode(&[82, 0, 0, 1, 1, 0]);
+
+        let mut pix_a = PixInfo::new();
+        pix_a.set_uv(vec2(0.5, 0.25));
+        pix_a.set_uv_1(vec2(0.25, 0.75));
+        pix_a.material_id = 1;
+
+        let mut pix_b = PixInfo::new();
+        pix_b.set_uv(vec2(0.9, 0.1));
+        pix_b.set_uv_1(vec2(0.1, 0.9));
+        pix_b.material_id = 1;
+
+        let mut cell_a = CanvasCell::default();
+        let mut cell_b = CanvasCell::default();
+        shader.render_mat(
+            &mut cell_a,
+            &depth_cell,
+            0,
+            &pix_a,
+            &primitive_element,
+            &texture_buffer,
+            &uv_buffer,
+        );
+        shader.render_mat(
+            &mut cell_b,
+            &depth_cell,
+            0,
+            &pix_b,
+            &primitive_element,
+            &texture_buffer,
+            &uv_buffer,
+        );
+
+        assert_eq!(cell_a.front_color, Color::new(128, 64, 0, 255));
+        assert_eq!(cell_a.back_color, Color::new(64, 192, 0, 255));
+        assert_eq!(cell_a.glyph, 1);
+
+        assert_eq!(cell_b.front_color, Color::new(230, 25, 0, 255));
+        assert_eq!(cell_b.back_color, Color::new(25, 230, 0, 255));
+        assert_eq!(cell_b.glyph, 1);
+    }
+
+    /// TLS seed cache must miss after uniforms change. Production relies on
+    /// [`super::bump_material_apply_generation`] each full-buffer apply; here we force a miss with
+    /// [`super::test_only_force_tls_shader_cache_miss`] (parallel unit tests share a global generation
+    /// counter and would race otherwise).
+    #[test]
+    fn test_tls_seed_cache_miss_sees_updated_uniforms() {
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        let pixinfo = PixInfo::new();
+        let primitive_element = PrimitiveElements::Triangle3D(PTriangle3D::zero());
+        let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
+        let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
+
+        let mut regs = Registers::new();
+        regs.v3[7] = vec3(0.2, 0.4, 0.6);
+        regs.i32_[9] = 99;
+        let mut shader =
+            ShaderMaterial::from_bytecode(&[82, 0, 7, 7, 9, 0]).with_seed_registers(
+                ShaderSeedRegisters::from_registers(regs),
+            );
+
+        let mut cell = CanvasCell::default();
+        shader.render_mat(
+            &mut cell,
+            &depth_cell,
+            0,
+            &pixinfo,
+            &primitive_element,
+            &texture_buffer,
+            &uv_buffer,
+        );
+        let first = cell.front_color;
+        assert_eq!(first, Color::new(51, 102, 153, 255));
+
+        shader.seed_regs.set_v3(7, vec3(0.0, 1.0, 0.0));
+        shader.render_mat(
+            &mut cell,
+            &depth_cell,
+            0,
+            &pixinfo,
+            &primitive_element,
+            &texture_buffer,
+            &uv_buffer,
+        );
+        assert_eq!(first, cell.front_color);
+
+        super::test_only_force_tls_shader_cache_miss();
+        shader.render_mat(
+            &mut cell,
+            &depth_cell,
+            0,
+            &pixinfo,
+            &primitive_element,
+            &texture_buffer,
+            &uv_buffer,
+        );
+        assert_eq!(cell.front_color, Color::new(0, 255, 0, 255));
     }
 }

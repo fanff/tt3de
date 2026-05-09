@@ -11,7 +11,7 @@ use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
-use crate::material::apply_material;
+use crate::material::{apply_material, bump_material_apply_generation_for_pass};
 use crate::material::MaterialBuffer;
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::RGBA;
@@ -681,6 +681,7 @@ pub fn apply_material_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     uv_buffer: &UVBuffer<f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
+    bump_material_apply_generation_for_pass();
     for (depth_cell, canvascell) in draw_buffer
         .depthbuffer
         .iter()
@@ -714,28 +715,42 @@ pub fn apply_material_on_parallel<const TEXTURESIZE: usize, const DEPTHLAYER: us
     uv_buffer: &UVBuffer<f32>,
     primitive_buffer: &PrimitiveBuffer,
 ) {
+    bump_material_apply_generation_for_pass();
     pool.install(|| {
-        // `par_iter` and `par_iter_mut` split the work among threads.
-        draw_buffer
-            .depthbuffer
-            .par_iter()
-            .zip(draw_buffer.canvas.par_iter_mut())
-            .for_each(|(depth_cell, canvas_cell)| {
-                for depth_layer in (0..DEPTHLAYER).rev() {
-                    // Access the pixel info; note that `pixbuffer` is assumed read-only.
-                    let pixinfo = draw_buffer.pixbuffer[depth_cell.pixinfo[depth_layer]];
+        let row_count = draw_buffer.row_count;
+        let col_count = draw_buffer.col_count;
+        let len = draw_buffer.depthbuffer.len();
+        if len == 0 {
+            return;
+        }
 
-                    // Call the material application function.
-                    apply_material(
-                        pixinfo,
-                        material_buffer,
-                        texture_buffer,
-                        uv_buffer,
-                        primitive_buffer,
-                        depth_cell,
-                        depth_layer,
-                        canvas_cell,
-                    );
+        let threads = pool.current_num_threads().max(1);
+        let chunk_rows = (row_count + threads - 1) / threads;
+        let chunk_size = chunk_rows.saturating_mul(col_count).max(1);
+
+        let pixbuffer = &draw_buffer.pixbuffer;
+        let depth_sl = draw_buffer.depthbuffer.as_ref();
+        let canvas_sl = draw_buffer.canvas.as_mut();
+
+        depth_sl
+            .par_chunks(chunk_size)
+            .zip(canvas_sl.par_chunks_mut(chunk_size))
+            .for_each(|(depth_chunk, canvas_chunk)| {
+                for (depth_cell, canvas_cell) in depth_chunk.iter().zip(canvas_chunk.iter_mut()) {
+                    for depth_layer in (0..DEPTHLAYER).rev() {
+                        let pixinfo = pixbuffer[depth_cell.pixinfo[depth_layer]];
+
+                        apply_material(
+                            pixinfo,
+                            material_buffer,
+                            texture_buffer,
+                            uv_buffer,
+                            primitive_buffer,
+                            depth_cell,
+                            depth_layer,
+                            canvas_cell,
+                        );
+                    }
                 }
             });
     });

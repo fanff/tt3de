@@ -17,6 +17,12 @@ mod materials;
 use materials::*;
 mod shader_material;
 use shader_material::*;
+
+/// Invalidate thread-local TTSL register caches for a new full-buffer material pass.
+pub(crate) fn bump_material_apply_generation_for_pass() {
+    shader_material::bump_material_apply_generation();
+}
+
 mod textured;
 
 use textured::*;
