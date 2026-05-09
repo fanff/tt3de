@@ -18,7 +18,7 @@ fi
 
 mkdir -p "${root}/benchmarks"
 export PYTHONPATH="${root}/python"
-run_timestamp="$(date --iso-8601=seconds)"
+run_timestamp="$(date +%s)"
 json_out="${root}/benchmarks/to_textual_${run_timestamp}.json"
 
 uv run --no-sync pytest \
