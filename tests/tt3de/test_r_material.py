@@ -19,6 +19,7 @@ from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_RESOLUTION,
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRONT_FACING,
+    PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_PRIMITIVE_ID,
     all_passes_compilation,
 )
@@ -105,6 +106,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
+        self.assertIsNone(mat.frag_depth_f32_reg)
         self.assertEqual(mat.default_glyph, 219)
 
     def test_optional_time_and_glyph_none(self):
@@ -115,6 +117,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
+        self.assertIsNone(mat.frag_depth_f32_reg)
         self.assertIsNone(mat.default_glyph)
         self.assertIsNone(mat.register_seed)
 
@@ -131,6 +134,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.frame_i32_reg = 6
         mat.resolution_v2_reg = 8
         mat.front_facing_bool_reg = 3
+        mat.frag_depth_f32_reg = 4
         mat.default_glyph = 64
         self.assertEqual(mat.bytecode, b"\x01\x02")
         self.assertEqual(mat.time_f32_reg, 5)
@@ -138,6 +142,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertEqual(mat.frame_i32_reg, 6)
         self.assertEqual(mat.resolution_v2_reg, 8)
         self.assertEqual(mat.front_facing_bool_reg, 3)
+        self.assertEqual(mat.frag_depth_f32_reg, 4)
         self.assertEqual(mat.default_glyph, 64)
 
         mat.time_f32_reg = None
@@ -145,12 +150,14 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.frame_i32_reg = None
         mat.resolution_v2_reg = None
         mat.front_facing_bool_reg = None
+        mat.frag_depth_f32_reg = None
         mat.default_glyph = None
         self.assertIsNone(mat.time_f32_reg)
         self.assertIsNone(mat.delta_time_f32_reg)
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
+        self.assertIsNone(mat.frag_depth_f32_reg)
         self.assertIsNone(mat.default_glyph)
 
 
@@ -566,6 +573,62 @@ class Test_ShaderPyPrimitiveIDFlow(unittest.TestCase):
                 primitive_id,
                 f"shader glyph must mirror primitive_id={primitive_id}",
             )
+
+
+class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):
+    """``ShaderPy.frag_depth_f32_reg`` receives ``DepthBufferCell::depth[layer]`` for the layer
+    being shaded (same value passed into ``set_depth_content`` for a single-layer submission).
+    """
+
+    _SRC = dedent(
+        """
+        def depth_red(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            return (vec3(tt_FragDepth, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        """
+    )
+
+    def _cell_at_origin(self, mb: MaterialBufferPy, mat_idx: int, *, depth: float) -> dict:
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            depth,
+            glm.vec2(0.25, 0.75),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            mat_idx,
+            0,
+        )
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(8),
+            draw,
+        )
+        return draw.get_canvas_cell(0, 0)
+
+    def test_frag_depth_flows_into_compiled_shader_front_color(self):
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "depth_red", {})
+        _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
+
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(
+            bytecode,
+            frag_depth_f32_reg=fd_reg,
+            default_glyph=None,
+        )
+        mat_idx = mb.add_shader(shader_mat)
+
+        depth = 0.375
+        cell = self._cell_at_origin(mb, mat_idx, depth=depth)
+        expected_r = int(depth * 256.0)
+        self.assertEqual(cell["f_r"], expected_r)
+        self.assertLess(cell["f_g"], 8)
+        self.assertLess(cell["f_b"], 8)
 
 
 class Test_ShaderPySeedValidation(unittest.TestCase):

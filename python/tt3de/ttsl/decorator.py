@@ -18,6 +18,7 @@ tt_FragPos: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_TexCoord0: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_TexCoord1: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_FrontFacing: bool = True  # noqa: N816
+tt_FragDepth: float = 0.0  # noqa: N816 — depth for the shaded layer; engine fills via ShaderPy
 tt_PrimitiveID: int = 0  # noqa: N816 — per-pixel index of depth-winning primitive
 
 

@@ -77,7 +77,7 @@ From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
   - The shader is executed at material-application time and its return payload
     (`front`, `back`, `glyph`) drives final cell output.
   - Python API:
-    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_Frame`).
+    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_Frame`).
     - `MaterialBufferPy.add_shader(shader)`
     - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
       `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`.
@@ -110,25 +110,25 @@ with types ``(vec3, vec3, int)``, matching ``OP_RET`` above. Annotate as
 Built-in variables
 ------------------
 
-Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_PrimitiveID`) are always known to the compiler. Engine uniforms (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`) are declared only when listed in `globals_dict` with the types below.
+Per-cell inputs (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_FragDepth`, `tt_PrimitiveID`) are always known to the compiler. Engine uniforms (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`) are declared only when listed in `globals_dict` with the types below.
 
-The **Status** column tracks what the project ships today vs names reserved for future parity.
+**Availability** is **Shipped** vs **Planned** (compiler/runtime intent). **Tests** is **yes** when pytest under `tests/` includes TTSL shader source (or bytecode/run harness for that builtin) that references the builtin—**no** means no such unittest yet (coverage gap, not necessarily missing runtime support).
 
-| Status   | Name               | Type  | Range / Units                          | Description |
-|----------|--------------------|-------|----------------------------------------|-------------|
-| Shipped  | tt_FragCoord       | vec2  | x:[0..res.x-1], y:[0..res.y-1]         | Window-space cell coordinate of the current shaded cell. Equivalent to gl_FragCoord.xy (cell-level, integer-like). |
-| Shipped  | tt_FragPos         | vec2  | [-1..1]                                | Normalized device-space position of the cell center. Equivalent to gl_Position → NDC mapping for fragments. |
-| Shipped  | tt_Resolution      | vec2  | (width_cells, height_cells)            | Size of the render target in cells. Pass ``'tt_Resolution': glm.vec2`` in ``globals_dict`` when referenced. Compiler seeds ``(1, 1)`` until the host writes via ``register_seed`` / ``ShaderPy.resolution_v2_reg`` or ``MaterialBufferPy.set_shader_resolution``. Non-positive dimensions are clamped to 1 in the Rust setter. On resize, ``tt_FragCoord`` and ``tt_Resolution`` may briefly disagree unless the host refreshes both together. |
-| Shipped  | tt_PrimitiveID     | int   | [0..N-1]                               | Index of the primitive that generated this cell (depth winner). Mirrors gl_PrimitiveID. |
-| Shipped  | tt_FrontFacing     | bool  | true / false                           | Front-facing under current winding rules. Mirrors gl_FrontFacing; optional ``ShaderPy.front_facing_bool_reg`` binds the VM bool the runtime fills each pixel. |
-| Shipped  | tt_TexCoord0       | vec2  | typically [0..1] (convention-defined)  | First interpolated texture coordinate set. Equivalent to a user-defined in vec2 or legacy gl_TexCoord[0]. |
-| Shipped  | tt_TexCoord1       | vec2  | typically [0..1] (convention-defined)  | Second interpolated texture coordinate set. Equivalent to gl_TexCoord[1] / multi-UV workflows. |
-| Shipped  | tt_Time            | float | seconds (>= 0)                         | Elapsed engine time. Pass ``'tt_Time': float`` in ``globals_dict`` when referenced; host updates via ``MaterialBufferPy.set_shader_time`` (and ``ShaderPy.time_f32_reg`` from compilation). |
-| Shipped  | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. |
-| Shipped  | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). |
-| Planned  | tt_PointCoord      | vec2  | [0..1]                                 | Coordinates within a rasterized point sprite. Mirrors gl_PointCoord. Not wired in compiler/runtime yet. |
-| Planned  | tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. Not wired yet. |
-| Planned  | tt_FragDepth       | float | [0..1] or [-1..1] (engine-defined)     | Depth of the current cell. Not wired yet. |
+| Availability | Tests | Name               | Type  | Range / Units                          | Description |
+|--------------|-------|--------------------|-------|----------------------------------------|-------------|
+| Shipped      | yes   | tt_FragCoord       | vec2  | x:[0..res.x-1], y:[0..res.y-1]         | Window-space cell coordinate of the current shaded cell. Equivalent to gl_FragCoord.xy (cell-level, integer-like). |
+| Shipped      | yes   | tt_FragPos         | vec2  | [-1..1]                                | Normalized device-space position of the cell center. Equivalent to gl_Position → NDC mapping for fragments. |
+| Shipped      | yes   | tt_Resolution      | vec2  | (width_cells, height_cells)            | Size of the render target in cells. Pass ``'tt_Resolution': glm.vec2`` in ``globals_dict`` when referenced. Compiler seeds ``(1, 1)`` until the host writes via ``register_seed`` / ``ShaderPy.resolution_v2_reg`` or ``MaterialBufferPy.set_shader_resolution``. Non-positive dimensions are clamped to 1 in the Rust setter. On resize, ``tt_FragCoord`` and ``tt_Resolution`` may briefly disagree unless the host refreshes both together. |
+| Shipped      | yes   | tt_PrimitiveID     | int   | [0..N-1]                               | Index of the primitive that generated this cell (depth winner). Mirrors gl_PrimitiveID. |
+| Shipped      | yes   | tt_FrontFacing     | bool  | true / false                           | Front-facing under current winding rules. Mirrors gl_FrontFacing; optional ``ShaderPy.front_facing_bool_reg`` binds the VM bool the runtime fills each pixel. |
+| Shipped      | yes   | tt_TexCoord0       | vec2  | typically [0..1] (convention-defined)  | First interpolated texture coordinate set. Equivalent to a user-defined in vec2 or legacy gl_TexCoord[0]. |
+| Shipped      | yes   | tt_TexCoord1       | vec2  | typically [0..1] (convention-defined)  | Second interpolated texture coordinate set. Equivalent to gl_TexCoord[1] / multi-UV workflows. |
+| Shipped      | yes   | tt_Time            | float | seconds (>= 0)                         | Elapsed engine time. Pass ``'tt_Time': float`` in ``globals_dict`` when referenced; host updates via ``MaterialBufferPy.set_shader_time`` (and ``ShaderPy.time_f32_reg`` from compilation). |
+| Shipped      | yes   | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. |
+| Shipped      | yes   | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). |
+| Shipped      | yes   | tt_FragDepth       | float | engine-defined (depth buffer units)    | Depth value for the shaded depth layer at this cell. Compiler seeds ``0.0``; ``ShaderMaterial`` writes ``ShaderPy.frag_depth_f32_reg`` from that layer each pixel when set (same pattern as ``tt_FrontFacing``). Standalone ``ttsl_run`` keeps the seed unless the host fills the register. |
+| Planned      | no    | tt_PointCoord      | vec2  | [0..1]                                 | Coordinates within a rasterized point sprite. Mirrors gl_PointCoord. Not wired in compiler/runtime yet. |
+| Planned      | no    | tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. Not wired yet. |
 
 ### Texture sampling (`tt_texture`, `tt_texelFetch`)
 
@@ -140,10 +140,12 @@ vec4 texture(sampler2D sampler, vec2 P);
 
 TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_FragCoord`, `tt_TexCoord0`). There are no separate sampler objects on the surface—you pick a **texture slot** with an integer index, in the same spirit as binding `sampler2D` units on the host. TTSL does not expose **`textureLod`** / explicit mip selection; sampling uses the engine’s single resolved image for that slot.
 
-| TTSL (specified) | OpenGL / GLSL analogue | Result |
-|------------------|------------------------|--------|
-| `tt_texture(texture_index: int, coord: vec2) -> vec4` | `texture(sampler2D, vec2 P)` | Filtered RGBA sample at **normalized** `coord` (typically \([0,1]^2\); behavior outside the volume is engine-defined: clamp, repeat, or border). |
-| `tt_texelFetch(texture_index: int, texel: vec2) -> vec4` | `texelFetch(gsampler2D, ivec2 P, int lod)` with **fixed lod** | **Unfiltered** lookup at integer texel coordinates \((x, y)\) passed as `texel` (integral values in a `vec2` carrier), always at the texture’s **base mip** (same idea as GLSL `texelFetch` with `lod == 0`; TTSL has no lod argument). |
+**Tests** follows the same rule as built-ins: **yes** if pytest under `tests/` exercises the TTSL call or opcode path.
+
+| TTSL (specified) | OpenGL / GLSL analogue | Result | Tests |
+|------------------|------------------------|--------|-------|
+| `tt_texture(texture_index: int, coord: vec2) -> vec4` | `texture(sampler2D, vec2 P)` | Filtered RGBA sample at **normalized** `coord` (typically \([0,1]^2\); behavior outside the volume is engine-defined: clamp, repeat, or border). | yes |
+| `tt_texelFetch(texture_index: int, texel: vec2) -> vec4` | `texelFetch(gsampler2D, ivec2 P, int lod)` with **fixed lod** | **Unfiltered** lookup at integer texel coordinates \((x, y)\) passed as `texel` (integral values in a `vec2` carrier), always at the texture’s **base mip** (same idea as GLSL `texelFetch` with `lod == 0`; TTSL has no lod argument). | no |
 
 **Semantics**
 
@@ -155,39 +157,41 @@ TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_F
 
 The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
 
+**Tests** is **yes** when pytest under `tests/` embeds the symbol in TTSL shader source run through compilation and/or `ttsl_run` / `apply_material_*`. **partial** means only some names in a grouped row appear in those tests. **no** means no TTSL unittest references that row yet (the compiler may still lower opcodes—check the opcode reference).
 
-| Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |
-|---|---|---|---|
-| tt_texture | `tt_texture(tex_index: int, coord: vec2) -> vec4` | 2D texture sample (filtered) | OpenGL **`texture(sampler2D, vec2)`**; pair `coord` with **`tt_TexCoord0`** / **`tt_TexCoord1`** like a varying |
-| tt_texelFetch | `tt_texelFetch(tex_index: int, texel: vec2) -> vec4` | Integer texel read (base mip) | Same role as **`texelFetch(..., ivec2 P, 0)`**; no lod parameter in TTSL |
-| mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1], works on float/vec2/vec3/vec4 |
-| clamp | clamp(x, lo, hi) -> T | Clamp into a range | Great for keeping colors in [0..1] |
-| min / max | min(a,b)->T, max(a,b)->T | Bounds / compare | Works component-wise on vectors |
-| smoothstep | smoothstep(e0, e1, x) -> T | Smooth threshold | Hermite curve; output in [0..1] when e0<e1 |
-| step | step(edge, x) -> T | Hard threshold | Returns 0 or 1 (component-wise) |
-| abs / sign | abs(x)->T, sign(x)->T | Magnitude / sign | `sign(0)=0` |
-| floor / ceil / fract | floor(x)->T, ceil(x)->T, fract(x)->T | Tiling, patterns, quantization | `fract(x)=x-floor(x)` in [0..1) |
-| mod | mod(x, y) -> T | Periodic wrap | For floats (GLSL-style); component-wise |
-| pow | pow(x, y) -> T | Curves / gamma-like shaping | Be careful with negative bases |
-| sqrt / inversesqrt | sqrt(x)->T, inversesqrt(x)->T | Lengths, normalization helpers | `x` should be >= 0 for real sqrt |
-| exp / log | exp(x)->T, log(x)->T | Exponential / logarithmic shaping | Useful for tone mapping-ish curves |
-| sin / cos / tan | sin(x)->T, cos(x)->T, tan(x)->T | Oscillation / waves | Input in radians |
-| asin / acos / atan | asin(x)->T, acos(x)->T, atan(y,x)->T | Angles from values | `asin/acos` domain [-1..1] |
-| radians / degrees | radians(deg)->T, degrees(rad)->T | Unit conversion | Convenience |
-| dot | dot(a,b)->float | Lighting, projections | For vec2/vec3/vec4 |
-| cross | cross(a,b)->vec3 | Perpendicular vector | Only vec3 |
-| length | length(v)->float | Vector magnitude | |
-| distance | distance(a,b)->float | Metric distance | |
-| normalize | normalize(v)->T | Unit-length vector | Undefined for zero-length vectors (decide your behavior) |
-| reflect | reflect(I, N)->T | Reflection vector | `N` should be normalized |
-| refract | refract(I, N, eta)->T | Refraction vector | `eta` is n1/n2; returns 0-vector on total internal reflection (GLSL behavior) |
-| faceforward | faceforward(N, I, Nref)->T | Choose normal orientation | Helps ensure N faces viewer/light |
-| any / all | any(bvec)->bool, all(bvec)->bool | Boolean reductions | For vector bools if you have them (or emulate) |
-| lessThan / greaterThan / equal / notEqual | lessThan(a,b)->bvec, equal(a,b)->bvec | Vector comparisons | If you don’t have bvec types, you can omit or return bool via `all()` patterns |
-| isnan / isinf | isnan(x)->bvec/bool, isinf(x)->bvec/bool | Robustness / debugging | Optional but handy in shader languages |
-| fma | fma(a,b,c)->T | Fused multiply-add | If available, improves precision/perf |
-| dFdx / dFdy | dFdx(x)->T, dFdy(x)->T | Screen-space derivatives | Niche but powerful; needs neighbor access (per 2x2 quad concept) |
-| fwidth | fwidth(x)->T | `abs(dFdx)+abs(dFdy)` | Great for anti-aliased lines/signed-distance fields (SDF) style edges |
-| round / trunc | round(x)->T, trunc(x)->T | Quantization | Optional; useful for glyph selection / palette quantization |
-| frexp / ldexp | frexp(x, out exp)->T, ldexp(x, exp)->T | Mantissa/exponent ops | Very niche; can skip unless you want full GLSL parity |
-| bitwise (int) | & \| ^ ~ << >> | Masks, packing, hashing | If your “int” is real int, these are very useful for RNG/patterns |
+
+| Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges | Tests |
+|---|---|---|---|---|
+| tt_texture | `tt_texture(tex_index: int, coord: vec2) -> vec4` | 2D texture sample (filtered) | OpenGL **`texture(sampler2D, vec2)`**; pair `coord` with **`tt_TexCoord0`** / **`tt_TexCoord1`** like a varying | yes |
+| tt_texelFetch | `tt_texelFetch(tex_index: int, texel: vec2) -> vec4` | Integer texel read (base mip) | Same role as **`texelFetch(..., ivec2 P, 0)`**; no lod parameter in TTSL | no |
+| mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1], works on float/vec2/vec3/vec4 | no |
+| clamp | clamp(x, lo, hi) -> T | Clamp into a range | Great for keeping colors in [0..1] | no |
+| min / max | min(a,b)->T, max(a,b)->T | Bounds / compare | Works component-wise on vectors | no |
+| smoothstep | smoothstep(e0, e1, x) -> T | Smooth threshold | Hermite curve; output in [0..1] when e0<e1 | no |
+| step | step(edge, x) -> T | Hard threshold | Returns 0 or 1 (component-wise) | no |
+| abs / sign | abs(x)->T, sign(x)->T | Magnitude / sign | `sign(0)=0` | partial (abs only) |
+| floor / ceil / fract | floor(x)->T, ceil(x)->T, fract(x)->T | Tiling, patterns, quantization | `fract(x)=x-floor(x)` in [0..1) | no |
+| mod | mod(x, y) -> T | Periodic wrap | For floats (GLSL-style); component-wise | no |
+| pow | pow(x, y) -> T | Curves / gamma-like shaping | Be careful with negative bases | no |
+| sqrt / inversesqrt | sqrt(x)->T, inversesqrt(x)->T | Lengths, normalization helpers | `x` should be >= 0 for real sqrt | no |
+| exp / log | exp(x)->T, log(x)->T | Exponential / logarithmic shaping | Useful for tone mapping-ish curves | no |
+| sin / cos / tan | sin(x)->T, cos(x)->T, tan(x)->T | Oscillation / waves | Input in radians | partial (sin only; see also `glm.sin` in TTSL sources) |
+| asin / acos / atan | asin(x)->T, acos(x)->T, atan(y,x)->T | Angles from values | `asin/acos` domain [-1..1] | no |
+| radians / degrees | radians(deg)->T, degrees(rad)->T | Unit conversion | Convenience | no |
+| dot | dot(a,b)->float | Lighting, projections | For vec2/vec3/vec4 | no |
+| cross | cross(a,b)->vec3 | Perpendicular vector | Only vec3 | no |
+| length | length(v)->float | Vector magnitude | | no |
+| distance | distance(a,b)->float | Metric distance | | no |
+| normalize | normalize(v)->T | Unit-length vector | Undefined for zero-length vectors (decide your behavior) | no |
+| reflect | reflect(I, N)->T | Reflection vector | `N` should be normalized | no |
+| refract | refract(I, N, eta)->T | Refraction vector | `eta` is n1/n2; returns 0-vector on total internal reflection (GLSL behavior) | no |
+| faceforward | faceforward(N, I, Nref)->T | Choose normal orientation | Helps ensure N faces viewer/light | no |
+| any / all | any(bvec)->bool, all(bvec)->bool | Boolean reductions | For vector bools if you have them (or emulate) | no |
+| lessThan / greaterThan / equal / notEqual | lessThan(a,b)->bvec, equal(a,b)->bvec | Vector comparisons | If you don’t have bvec types, you can omit or return bool via `all()` patterns | no |
+| isnan / isinf | isnan(x)->bvec/bool, isinf(x)->bvec/bool | Robustness / debugging | Optional but handy in shader languages | no |
+| fma | fma(a,b,c)->T | Fused multiply-add | If available, improves precision/perf | no |
+| dFdx / dFdy | dFdx(x)->T, dFdy(x)->T | Screen-space derivatives | Niche but powerful; needs neighbor access (per 2x2 quad concept) | no |
+| fwidth | fwidth(x)->T | `abs(dFdx)+abs(dFdy)` | Great for anti-aliased lines/signed-distance fields (SDF) style edges | no |
+| round / trunc | round(x)->T, trunc(x)->T | Quantization | Optional; useful for glyph selection / palette quantization | no |
+| frexp / ldexp | frexp(x, out exp)->T, ldexp(x, exp)->T | Mantissa/exponent ops | Very niche; can skip unless you want full GLSL parity | no |
+| bitwise (int) | & \| ^ ~ << >> | Masks, packing, hashing | If your “int” is real int, these are very useful for RNG/patterns | no |

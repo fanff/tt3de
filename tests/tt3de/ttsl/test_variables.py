@@ -22,6 +22,7 @@ from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
     PIXELVAR_TT_FRAGPOS,
+    PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
@@ -40,6 +41,7 @@ ALWAYS_PRESENT_BUILTIN_NAMES = (
     PIXELVAR_TT_TEXCOORD1,
     PIXELVAR_TT_FRAGPOS,
     PIXELVAR_TT_FRONT_FACING,
+    PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_PRIMITIVE_ID,
 )
 
@@ -219,6 +221,41 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
         self.assertEqual(ty, IRType.BOOL)
         self.assertEqual(reg_settings.regs[IRType.BOOL][reg_id], True)
+
+    def test_tt_FragDepth_always_present_f32_pixel_input(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                d: float = tt_FragDepth
+                return (vec3(d, 0.0, 0.0), vec3(d, 0.0, 0.0), 0)
+            """
+        )
+        cc = compile_ttsl(src, "shade", {})
+        self.assertIn(PIXELVAR_TT_FRAG_DEPTH, cc.named_variables)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_FRAG_DEPTH].ty, IRType.F32)
+
+    def test_tt_FragDepth_register_seed_defaults_zero(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_FragDepth, 0.0, 0.0), vec3(tt_FragDepth, 0.0, 0.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
+        self.assertEqual(ty, IRType.F32)
+        self.assertEqual(reg_settings.regs[IRType.F32][reg_id], 0.0)
+
+    def test_tt_FragDepth_wrong_annotation_raises(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                bad: vec2 = tt_FragDepth
+                return (vec3(bad.x, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        with self.assertRaises(CompileError):
+            compile_ttsl(src, "shade", {})
 
     def test_tt_Time_requires_globals_dict(self):
         src = dedent(

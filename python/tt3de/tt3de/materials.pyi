@@ -84,6 +84,7 @@ class ShaderPy(MaterialPy):
     frame_i32_reg: int | None
     resolution_v2_reg: int | None
     front_facing_bool_reg: int | None
+    frag_depth_f32_reg: int | None
     default_glyph: int | None
     register_seed: list[dict[int, object]] | None
 
@@ -94,6 +95,7 @@ class ShaderPy(MaterialPy):
         delta_time_f32_reg: int | None = ...,
         resolution_v2_reg: int | None = ...,
         front_facing_bool_reg: int | None = ...,
+        frag_depth_f32_reg: int | None = ...,
         default_glyph: int | None = ...,
         register_seed: list[dict[int, object]] | None = ...,
         frame_i32_reg: int | None = ...,

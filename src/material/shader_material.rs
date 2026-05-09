@@ -130,6 +130,8 @@ pub struct ShaderInputBinding {
     pub resolution_v2_reg: Option<usize>,
     /// Register for ``tt_FrontFacing`` (``bool``); updated from ``PixInfo::front_facing`` each pixel.
     pub front_facing_bool_reg: Option<usize>,
+    /// Register for ``tt_FragDepth`` (``float``); updated from the active depth layer each pixel.
+    pub frag_depth_f32_reg: Option<usize>,
 }
 
 impl Default for ShaderInputBinding {
@@ -158,13 +160,16 @@ impl Default for ShaderInputBinding {
             frame_i32_reg: None,
             resolution_v2_reg: None,
             front_facing_bool_reg: None,
+            frag_depth_f32_reg: None,
         }
     }
 }
 
-pub(crate) fn write_per_pixel_inputs_to_registers(
+pub(crate) fn write_per_pixel_inputs_to_registers<const DEPTHLAYER: usize>(
     bind: &ShaderInputBinding,
     pixinfo: &PixInfo<f32>,
+    depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+    depth_layer: usize,
     regs: &mut Registers,
 ) {
     regs.v2[bind.uv_v2_reg] = pixinfo.uv;
@@ -179,6 +184,11 @@ pub(crate) fn write_per_pixel_inputs_to_registers(
     if let Some(reg_id) = bind.front_facing_bool_reg {
         if reg_id < regs.bool_.len() {
             regs.bool_[reg_id] = pixinfo.front_facing;
+        }
+    }
+    if let Some(reg_id) = bind.frag_depth_f32_reg {
+        if reg_id < regs.f32_.len() && depth_layer < DEPTHLAYER {
+            regs.f32_[reg_id] = depth_cell.depth[depth_layer];
         }
     }
 }
@@ -229,6 +239,11 @@ impl ShaderMaterial {
 
     pub fn with_front_facing_bool_reg(mut self, front_facing_bool_reg: Option<usize>) -> Self {
         self.input_binding.front_facing_bool_reg = front_facing_bool_reg;
+        self
+    }
+
+    pub fn with_frag_depth_f32_reg(mut self, frag_depth_f32_reg: Option<usize>) -> Self {
+        self.input_binding.frag_depth_f32_reg = frag_depth_f32_reg;
         self
     }
 
@@ -321,8 +336,8 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
     fn render_mat(
         &self,
         cell: &mut CanvasCell,
-        _depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
-        _depth_layer: usize,
+        depth_cell: &DepthBufferCell<f32, DEPTHLAYER>,
+        depth_layer: usize,
         pixinfo: &PixInfo<f32>,
         _primitive_element: &PrimitiveElements,
         texture_buffer: &TextureBuffer<TEXTURE_BUFFER_SIZE>,
@@ -345,7 +360,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
 
             let bind = self.input_binding;
             let regs = &mut t.regs;
-            write_per_pixel_inputs_to_registers(&bind, pixinfo, regs);
+            write_per_pixel_inputs_to_registers(&bind, pixinfo, depth_cell, depth_layer, regs);
 
             let (front, back, glyph) =
                 run_ttsl(&self.instrs, regs, Some(texture_buffer as &dyn crate::ttsl::TtslTextureEnv));
@@ -493,7 +508,8 @@ mod tests {
         pixinfo.primitive_id = 42;
         pixinfo.material_id = 7;
         let mut regs = Registers::new();
-        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &mut regs);
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
         assert_eq!(regs.i32_[bind.primitive_id_i32_reg], 42);
         assert_eq!(regs.i32_[bind.material_id_i32_reg], 7);
     }
@@ -508,12 +524,31 @@ mod tests {
         pixinfo.front_facing = false;
         let mut regs = Registers::new();
         regs.bool_[14] = true;
-        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &mut regs);
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
         assert!(!regs.bool_[14]);
 
         pixinfo.front_facing = true;
-        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &mut regs);
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
         assert!(regs.bool_[14]);
+    }
+
+    #[test]
+    fn test_write_per_pixel_inputs_sets_tt_frag_depth_register() {
+        let bind = ShaderInputBinding {
+            frag_depth_f32_reg: Some(5),
+            ..ShaderInputBinding::default()
+        };
+        let mut depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        depth_cell.depth[0] = 0.375;
+        depth_cell.depth[1] = 0.625;
+        let pixinfo = PixInfo::new();
+        let mut regs = Registers::new();
+        regs.f32_[5] = -1.0;
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
+        assert_eq!(regs.f32_[5], 0.375);
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 1, &mut regs);
+        assert_eq!(regs.f32_[5], 0.625);
     }
 
     #[test]

@@ -60,6 +60,7 @@ PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
 PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
 PIXELVAR_TT_FRAGPOS: str = "tt_FragPos"
 PIXELVAR_TT_FRONT_FACING: str = "tt_FrontFacing"
+PIXELVAR_TT_FRAG_DEPTH: str = "tt_FragDepth"
 PIXELVAR_TT_PRIMITIVE_ID: str = "tt_PrimitiveID"
 
 PIXEL_VARIABLES_STR_TYPE = {
@@ -68,6 +69,7 @@ PIXEL_VARIABLES_STR_TYPE = {
     PIXELVAR_TT_TEXCOORD1: IRType.V2,
     PIXELVAR_TT_FRAGPOS: IRType.V2,
     PIXELVAR_TT_FRONT_FACING: IRType.BOOL,
+    PIXELVAR_TT_FRAG_DEPTH: IRType.F32,
     PIXELVAR_TT_PRIMITIVE_ID: IRType.I32,
 }
 
@@ -155,7 +157,9 @@ class TTSLCompilerContext:
     @classmethod
     def always_present_variables(cls) -> Dict[str, IRType]:
         """Per-cell inputs only (including ``tt_FrontFacing`` as ``bool``, winding-based,
-        and ``tt_PrimitiveID`` as ``int``: per-pixel index of the depth-winning primitive,
+        ``tt_FragDepth`` as ``float`` (depth value for the shaded depth layer from the
+        depth buffer), and ``tt_PrimitiveID`` as ``int``: per-pixel index of the
+        depth-winning primitive,
         ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL ``gl_PrimitiveID``).
         Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
         (``int``), and ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells) must be
@@ -2027,6 +2031,10 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
     ``tt_PrimitiveID`` defaults to ``0`` so VM-only harnesses (no ``ShaderMaterial`` per-pixel
     write) see the same value ``PixInfo::primitive_id`` initializes to; ``ShaderMaterial``
     overwrites it each pixel from ``PixInfo::primitive_id``.
+
+    ``tt_FragDepth`` defaults to ``0.0`` for standalone VM runs; ``ShaderMaterial`` writes
+    the bound ``f32`` register each pixel from the active depth layer when
+    ``ShaderPy.frag_depth_f32_reg`` is set.
     """
     names = reg_settings.var_name_to_registers
     if GLOBAL_VAR_TT_FRAME in names:
@@ -2035,6 +2043,8 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
         reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(1.0, 1.0))
     if PIXELVAR_TT_FRONT_FACING in names:
         reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, True)
+    if PIXELVAR_TT_FRAG_DEPTH in names:
+        reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, 0.0)
     if PIXELVAR_TT_PRIMITIVE_ID in names:
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 0)
 
