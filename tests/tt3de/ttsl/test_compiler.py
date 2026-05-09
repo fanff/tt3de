@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
 import ast
 from textwrap import dedent
-from tt3de.ttsl.compiler import TTSLCompilerContext, CompileError
+from unittest.mock import patch
+
+from tt3de.ttsl.compiler import (
+    CompileError,
+    TTSLCompilerContext,
+    all_passes_compilation_with_state,
+)
 import unittest
 
 
@@ -57,3 +63,58 @@ class Test_Compiler(unittest.TestCase):
             assert True
         else:
             assert False
+
+    def test_all_passes_compilation_with_state_success(self):
+        """This test checks the happy path:
+        compiling a valid shader should complete every stage and return bytecode plus
+        intermediate artifacts (AST, compiler context, and register allocation)."""
+        source = dedent(
+            """
+            def my_shader(tt_FragCoord: vec2) -> vec3:
+                uv: vec2 = tt_TexCoord0
+                pulse: float = abs(sin(tt_Time))
+                return vec3(uv.x, uv.y, pulse)
+            """
+        )
+        result = all_passes_compilation_with_state(
+            source, "my_shader", {"tt_Time": float}
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.last_completed_stage, "bytecode")
+        self.assertIsNotNone(result.ast_module)
+        self.assertIsNotNone(result.context)
+        self.assertIsNotNone(result.register_allocation)
+        self.assertIsNotNone(result.final_byte_code)
+        self.assertIsNotNone(result.byte_array)
+        self.assertGreater(len(result.byte_array), 0)
+
+    def test_all_passes_compilation_with_state_keeps_partial_state_on_late_failure(self):
+        """This test checks failure reporting late in the pipeline:
+        if bytecode generation crashes, earlier successful stages should still be
+        preserved in the result so callers can inspect partial compilation state."""
+        source = dedent(
+            """
+            def my_shader(tt_FragCoord: vec2) -> vec3:
+                uv: vec2 = tt_TexCoord0
+                pulse: float = abs(sin(tt_Time))
+                return vec3(uv.x, uv.y, pulse)
+            """
+        )
+
+        with patch(
+            "tt3de.ttsl.compiler.PassToByteCode.run",
+            side_effect=RuntimeError("forced bytecode failure"),
+        ):
+            result = all_passes_compilation_with_state(
+                source, "my_shader", {"tt_Time": float}
+            )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.last_completed_stage, "normalize_terms")
+        self.assertIsNotNone(result.ast_module)
+        self.assertIsNotNone(result.context)
+        self.assertIsNotNone(result.register_allocation)
+        self.assertIsNone(result.final_byte_code)
+        self.assertIsNone(result.byte_array)
+        self.assertIn("forced bytecode failure", result.traceback_text)

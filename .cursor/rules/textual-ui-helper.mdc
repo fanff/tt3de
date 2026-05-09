@@ -1,0 +1,17 @@
+---
+description: Textual UI helper notes from TTSL demo
+globs: **/*.py
+alwaysApply: false
+---
+
+# Textual UI Helper
+
+- Prefer `TextArea.code_editor(..., language="python", theme="<theme>")` for code panes; if needed, re-assert on mount with `editor.language` / `editor.theme`.
+- For compact controls, use built-in widget flags/classes (for `Button`: `compact=True`, optional `-textual-compact`) rather than custom hacks.
+- Keep `Button` size tweaks minimal in CSS (`min-width`, spacing). Do not rely on unsupported properties.
+- Use supported Textual CSS only; if a property is rejected, remove it instead of forcing it.
+- For text panels that show compiler output (`AST`, `IR`, `Bytecode`), set `markup=False` on `Static` widgets to avoid Rich markup parsing errors.
+- For log-style output, centralize writes through helpers; auto-scroll with `log.scroll_end(animate=False)` after each appended line.
+- Clear logs at the start of each compile run when the latest run output should be isolated.
+- Use Textual workers for background compile actions (`@work(...)`) instead of raw thread orchestration.
+- Keep compile status explicit and color-coded via CSS classes (working/ok/failed) for fast feedback.

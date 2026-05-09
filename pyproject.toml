@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project]
-dependencies = ["pyglm>2.7.0", "pypng>=0.20220715.0", "textual>=6.6.0"]
+dependencies = ["pyglm>2.7.0", "pypng>=0.20220715.0", "textual[syntax]>=6.6.0"]
 description = "TT3DE: Tiny Textual 3D Engine"
 name = "tt3de"
 readme = "README.md"
