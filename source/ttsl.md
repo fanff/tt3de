@@ -129,14 +129,36 @@ The **Status** column tracks what the project ships today vs names reserved for 
 | Planned  | tt_LineCoord       | float | [0..1]                                 | Parametric coordinate along a rasterized line. Not wired yet. |
 | Planned  | tt_FragDepth       | float | [0..1] or [-1..1] (engine-defined)     | Depth of the current cell. Not wired yet. |
 
+### Texture sampling (`tt_texture`, `tt_texelFetch`)
+
+GLSL selects a bound sampler and passes normalized **fragment coordinates** into **`texture`**:
+
+```glsl
+vec4 texture(sampler2D sampler, vec2 P);
+```
+
+TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_FragCoord`, `tt_TexCoord0`). There are no separate sampler objects on the surface—you pick a **texture slot** with an integer index, in the same spirit as binding `sampler2D` units on the host. TTSL does not expose **`textureLod`** / explicit mip selection; sampling uses the engine’s single resolved image for that slot.
+
+| TTSL (specified) | OpenGL / GLSL analogue | Result |
+|------------------|------------------------|--------|
+| `tt_texture(texture_index: int, coord: vec2) -> vec4` | `texture(sampler2D, vec2 P)` | Filtered RGBA sample at **normalized** `coord` (typically \([0,1]^2\); behavior outside the volume is engine-defined: clamp, repeat, or border). |
+| `tt_texelFetch(texture_index: int, texel: vec2) -> vec4` | `texelFetch(gsampler2D, ivec2 P, int lod)` with **fixed lod** | **Unfiltered** lookup at integer texel coordinates \((x, y)\) passed as `texel` (integral values in a `vec2` carrier), always at the texture’s **base mip** (same idea as GLSL `texelFetch` with `lod == 0`; TTSL has no lod argument). |
+
+**Semantics**
+
+- **`texture_index`**: unsigned logical slot into the engine texture store (the same indexing family used when materials reference `albedo_texture_idx` / texture ids on the host). Out-of-range indices yield an engine-defined color (often opaque black).
+- **Combining with varyings**: Using `tt_texture(albedo_ix, tt_TexCoord0)` is the direct analogue of sampling in a fragment shader with an interpolated `in vec2 texcoord` and a bound `sampler2D`.
+- **Channels**: Return type is **`vec4`** with RGBA in **linear** float components.
 
 ## Primitives
 
-The table below is the intended GLSL-style surface. Only a small subset is recognized by the TTSL compiler today; see [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
+The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
 
 
 | Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |
 |---|---|---|---|
+| tt_texture | `tt_texture(tex_index: int, coord: vec2) -> vec4` | 2D texture sample (filtered) | OpenGL **`texture(sampler2D, vec2)`**; pair `coord` with **`tt_TexCoord0`** / **`tt_TexCoord1`** like a varying |
+| tt_texelFetch | `tt_texelFetch(tex_index: int, texel: vec2) -> vec4` | Integer texel read (base mip) | Same role as **`texelFetch(..., ivec2 P, 0)`**; no lod parameter in TTSL |
 | mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1], works on float/vec2/vec3/vec4 |
 | clamp | clamp(x, lo, hi) -> T | Clamp into a range | Great for keeping colors in [0..1] |
 | min / max | min(a,b)->T, max(a,b)->T | Bounds / compare | Works component-wise on vectors |
