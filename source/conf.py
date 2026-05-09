@@ -18,7 +18,6 @@ release = "0.1.0"
 extensions = [
     "myst_parser",
     "sphinx.ext.extlinks",
-    "sphinxcontrib.mermaid",
 ]
 
 extlinks = {
@@ -35,19 +34,3 @@ exclude_patterns = []
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_css_files = ["style.css"]
-
-# Mermaid diagram rendering options:
-# - use a neutral theme that blends with Sphinx docs
-# - increase base font size for readability
-mermaid_init_js = """
-mermaid.initialize({
-    startOnLoad: true,
-    theme: "default",
-    themeVariables: {
-        fontSize: "18px"
-    },
-    flowchart: {
-        htmlLabels: true
-    }
-});
-"""
