@@ -65,6 +65,9 @@ class Test_Compiler(unittest.TestCase):
             assert False
 
     def test_all_passes_compilation_with_state_success(self):
+        """This test checks the happy path:
+        compiling a valid shader should complete every stage and return bytecode plus
+        intermediate artifacts (AST, compiler context, and register allocation)."""
         source = dedent(
             """
             def my_shader(tt_FragCoord: vec2) -> vec3:
@@ -74,7 +77,7 @@ class Test_Compiler(unittest.TestCase):
             """
         )
         result = all_passes_compilation_with_state(
-            source, "my_shader", {"time": float}
+            source, "my_shader", {"tt_Time": float}
         )
 
         self.assertTrue(result.ok)
@@ -87,6 +90,9 @@ class Test_Compiler(unittest.TestCase):
         self.assertGreater(len(result.byte_array), 0)
 
     def test_all_passes_compilation_with_state_keeps_partial_state_on_late_failure(self):
+        """This test checks failure reporting late in the pipeline:
+        if bytecode generation crashes, earlier successful stages should still be
+        preserved in the result so callers can inspect partial compilation state."""
         source = dedent(
             """
             def my_shader(tt_FragCoord: vec2) -> vec3:
@@ -101,7 +107,7 @@ class Test_Compiler(unittest.TestCase):
             side_effect=RuntimeError("forced bytecode failure"),
         ):
             result = all_passes_compilation_with_state(
-                source, "my_shader", {"time": float}
+                source, "my_shader", {"tt_Time": float}
             )
 
         self.assertFalse(result.ok)
