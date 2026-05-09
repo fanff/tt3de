@@ -3,13 +3,16 @@ import inspect
 from tt3de.ttsl.compiler import TTSLCompilerContext, compile_ttsl
 from pyglm import glm
 
-# Constant accessible in the global uniforms:
-ttsl_time: float = 0.0
+# Built-in TTSL variables. Names mirror the OpenGL `gl_<CamelCase>` convention as
+# `tt_<CamelCase>`; see `source/ttsl.md` for the canonical spec.
 
-# Pixel input variables:
-ttsl_uv0: glm.vec2 = glm.vec2(0.0, 0.0)
-ttsl_uv1: glm.vec2 = glm.vec2(0.0, 0.0)
-screen_pos: glm.vec2 = glm.vec2(0.0, 0.0)
+# Global uniform:
+tt_Time: float = 0.0  # noqa: N816 — built-in name follows OpenGL `gl_*` convention
+
+# Per-fragment (cell) input variables:
+tt_FragCoord: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
+tt_TexCoord0: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
+tt_TexCoord1: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 
 
 class ShaderDescriptor:

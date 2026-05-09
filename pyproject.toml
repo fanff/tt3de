@@ -20,7 +20,8 @@ dev = [
   "setuptools>=80.9.0",
   "sphinx-book-theme>=1.1.4",
   "sphinx-rtd-theme>=3.0.2",
-  "sphinx>=8.2.3"
+  "sphinx>=8.2.3",
+  "sphinxcontrib-mermaid>=1.0.0"
 ]
 
 [project]

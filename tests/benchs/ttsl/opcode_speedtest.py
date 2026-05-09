@@ -11,7 +11,7 @@ from tt3de.ttsl.ttsl_assembly import IRType
 from typing import Dict, Any, List
 from tt3de.ttsl.compiler import (
     all_passes_compilation,
-    PIXELVAR_TTSL_UV0,
+    PIXELVAR_TT_TEXCOORD0,
     RegisterSettings,
 )
 from tt3de.tt3de import ttsl_run
@@ -23,12 +23,12 @@ def rversion(regs, bytecode: bytes):
 
 
 SHADER_CODE = """
-def frag(pos: vec2) -> vec3:
-    return vec3(ttsl_uv0.x, ttsl_uv0.y, 0.0)
+def frag(tt_FragCoord: vec2) -> vec3:
+    return vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
 """
 
 SHADER_CODE2 = """
-def frag(pos: vec2) -> vec3:
+def frag(tt_FragCoord: vec2) -> vec3:
     a:vec3 = vec3(1.0, 2.0, 3.0)
     b:vec3 = vec3(4.0, 5.0, 6.0)
     c:vec3 = a + b
@@ -39,7 +39,7 @@ def frag(pos: vec2) -> vec3:
     c:vec3 = a + b
     c:vec3 = a + b
     c:vec3 = a + b
-    return vec3(ttsl_uv0.x, ttsl_uv0.y, 0.0)
+    return vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
 """
 
 
@@ -78,7 +78,7 @@ def test_compiled(benchmark: CustomBenchmark, shader_codeidx):
     bytecode, reg_settings = all_passes_compilation(
         all_codes[shader_codeidx], "frag", {}
     )
-    reg_settings.set_variable(PIXELVAR_TTSL_UV0, glm.vec2(0.5, 0.5))
+    reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
     benchmark.context_info["bytecode_size"] = len(bytecode) / 6
     benchmark.run(rversion, reg_settings.get_register_list(), bytecode)
 
@@ -90,7 +90,7 @@ def bench_raw_code(
 ):
 
     # compile the shader first
-    reg_settings.set_variable(PIXELVAR_TTSL_UV0, glm.vec2(0.5, 0.5))
+    reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
     benchmark.context_info["bytecode_size"] = len(bytecode) / 6
     benchmark.run(rversion, reg_settings.get_register_list(), bytecode)
 
