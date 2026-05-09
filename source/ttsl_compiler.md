@@ -18,14 +18,18 @@ transposed to `tt_<CamelCase>` (see [TTSL spec](ttsl.md) for the full table):
 User uniforms (any name, including e.g. `"position"`) are also declared only through
 `globals_dict`.
 
+Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec3, vec3, int)`:
+front/back are RGB triples (or any per-channel `vec3` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec3, vec3, int]` or `typing.Tuple[vec3, vec3, int]`.
+
 ```python
-def shade(tt_FragCoord: vec2) -> vec3:
+def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
     pulse: float = sin(tt_Time)
     color: vec3 = glm.vec3(tt_TexCoord0.x, tt_TexCoord0.y, pulse)
     if tt_TexCoord0.x > tt_TexCoord0.y:
-        return color
+        return (color, color, 0)
     else:
-        return glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
+        mixed: vec3 = glm.mix(color, glm.vec3(0.0, 0.0, 0.0), 0.25)
+        return (mixed, mixed, 0)
 ```
 
 Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
@@ -99,7 +103,7 @@ The current implementation supports a focused shader-style subset:
 - scalar and vector arithmetic (`+`, `-`, `*`, `/`)
 - comparisons (`>`, `>=`, `<`, `<=`)
 - conditionals (`if` / `else`)
-- returns
+- returns (must be a 3-tuple `(vec3, vec3, int)`; see example above)
 - vector constructors (`vec2`, `vec3`, `vec4`, including `glm.vec*`)
 - selected math calls (`sin`, `cos`, `abs`, unary `-`)
 - selected glm tools (`mix`, and some typed dispatch helpers)

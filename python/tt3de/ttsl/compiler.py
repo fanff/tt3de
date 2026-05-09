@@ -230,6 +230,52 @@ class TTSLCompilerContext:
             return instr.op
         return None
 
+    def _compile_return_shader_triple(self, node: ast.Return) -> None:
+        if node.value is None:
+            raise CompileError(
+                node,
+                "TTSL shader must return (front: vec3, back: vec3, glyph: int); "
+                "bare return is not allowed",
+            )
+        val = node.value
+        if not isinstance(val, ast.Tuple):
+            raise CompileError(
+                val,
+                "TTSL shader must return a 3-tuple (front, back, glyph) with types "
+                "(vec3, vec3, int), e.g. return (color, color, 0); "
+                "a single vec3 is no longer valid",
+            )
+        if len(val.elts) != 3:
+            raise CompileError(
+                val,
+                "TTSL return tuple must have exactly 3 elements (front, back, glyph); "
+                f"got {len(val.elts)}",
+            )
+        e_front, e_back, e_glyph = val.elts
+        t_front = self.type_of(e_front)
+        t_back = self.type_of(e_back)
+        t_glyph = self.type_of(e_glyph)
+        if (t_front, t_back, t_glyph) != (IRType.V3, IRType.V3, IRType.I32):
+            raise CompileError(
+                val,
+                "TTSL return element types must be (vec3, vec3, int); "
+                f"got ({t_front}, {t_back}, {t_glyph})",
+            )
+        r_front = self.compile_expr(e_front, forced_type=IRType.V3)
+        r_back = self.compile_expr(e_back, forced_type=IRType.V3)
+        r_glyph = self.compile_expr(e_glyph, forced_type=IRType.I32)
+        self.emit(
+            OpCodes.RET,
+            r_front,
+            r_back,
+            r_glyph,
+            None,
+            None,
+            comment=(
+                f"return (front r{r_front.id}, back r{r_back.id}, glyph r{r_glyph.id})"
+            ),
+        )
+
     def compile_block(self, stmts: list[ast.stmt]):
         with self.code.block() as _block:
             for s in stmts:
@@ -272,15 +318,7 @@ class TTSLCompilerContext:
         elif isinstance(node, ast.While):
             self.compile_while(node)
         elif isinstance(node, ast.Return):
-            returned_type = self.type_of(node.value)
-
-            ret_reg = self.compile_expr(node.value, forced_type=returned_type)
-            self.emit_1(
-                OpCodes.RET,
-                ret_reg,
-                None,
-                comment=f"return r{ret_reg.id} : {returned_type}",
-            )
+            self._compile_return_shader_triple(node)
         else:
             raise NotImplementedError(type(node))
 
@@ -765,6 +803,8 @@ def compile_ttsl_function(
     tree = CleanPythonTreePass().visit(fn_node)
     tree = ast.fix_missing_locations(tree)
 
+    _validate_shader_returns_annotation(fn_node)
+
     typed_globals = {}
     for k, pytype in globals_dict.items():
         if pytype not in ALLOWED_IR_TYPES:
@@ -799,6 +839,48 @@ def type_of_annotation(arg_annotation) -> IRType:
     elif isinstance(arg_annotation, ast.Name):
         return IRType.from_str(arg_annotation.id)
     raise NotImplementedError(f"Unsupported annotation type: {arg_annotation}")
+
+
+def _validate_shader_returns_annotation(fn_node: ast.FunctionDef) -> None:
+    """If the shader function has a return annotation, require tuple[vec3, vec3, int]."""
+    ann = fn_node.returns
+    if ann is None:
+        return
+    elts: Optional[List[ast.expr]] = None
+    if isinstance(ann, ast.Subscript):
+        base = ann.value
+        ok_base = (isinstance(base, ast.Name) and base.id == "tuple") or (
+            isinstance(base, ast.Attribute) and base.attr == "Tuple"
+        )
+        if ok_base:
+            sl = ann.slice
+            if isinstance(sl, ast.Tuple):
+                elts = list(sl.elts)
+    if elts is None:
+        raise CompileError(
+            ann,
+            "TTSL shader return annotation must be tuple[vec3, vec3, int] "
+            "(or typing.Tuple[vec3, vec3, int]) when a return type is given",
+        )
+    if len(elts) != 3:
+        raise CompileError(
+            ann,
+            f"TTSL return annotation must list exactly 3 types (vec3, vec3, int); "
+            f"got {len(elts)}",
+        )
+    try:
+        got = tuple(type_of_annotation(e) for e in elts)
+    except (NotImplementedError, ValueError) as ex:
+        raise CompileError(
+            elts[0],
+            f"Unsupported type in shader return annotation: {ex}",
+        ) from ex
+    if got != (IRType.V3, IRType.V3, IRType.I32):
+        raise CompileError(
+            ann,
+            "TTSL shader return annotation must be tuple[vec3, vec3, int]; "
+            f"got ({', '.join(str(t) for t in got)})",
+        )
 
 
 def opcode_for_binop(op, left_type: IRType, right_type: IRType) -> OpCodes:
@@ -1720,6 +1802,15 @@ class PassToByteCode(CompilationPass):
             elif instr.op == OpCodes.JMP_IF_FALSE and op_name == "OP_JMP_IF_FALSE":
                 return form
             elif instr.op == OpCodes.RET and op_name == "OP_RET":
+                for label, op, expect in (
+                    ("src1", instr.src1, IRType.V3),
+                    ("src2", instr.src2, IRType.V3),
+                    ("src3", instr.src3, IRType.I32),
+                ):
+                    if not isinstance(op, Temp) or op.ty != expect:
+                        raise ValueError(
+                            f"OP_RET expects {label} temp of type {expect}, got {op!r}"
+                        )
                 return form
             elif instr.op.name in op_name:
                 # check types now
