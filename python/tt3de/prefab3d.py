@@ -61,6 +61,71 @@ class Prefab3D:
         return m
 
     @staticmethod
+    def unitary_cube(half_extent: float = 0.5) -> TT3DPolygon:
+        """Axis-aligned cube centered at the origin, UV 0–1 on each face (same layout).
+
+        Triangle winding matches ``models/cube.obj`` loaded with ``flip_triangles=True``.
+        U is mirrored per face (``u → 1 - u``) so BMP/OBJ-style textures are not shown
+        left–right inverted compared to the image file.
+
+        ``half_extent`` is half the edge length (default ``0.5`` → unit cube from -0.5 to 0.5).
+        """
+        h = half_extent
+        # Vertices: front +z, then back -z (same winding reference as ``unitary_square`` XY).
+        vertices = [
+            Point3D(-h, -h, h),
+            Point3D(h, -h, h),
+            Point3D(h, h, h),
+            Point3D(-h, h, h),
+            Point3D(-h, -h, -h),
+            Point3D(h, -h, -h),
+            Point3D(h, h, -h),
+            Point3D(-h, h, -h),
+        ]
+
+        # Per-face 0–1 UV square with U mirrored (same corner labels as unmirrored layout).
+        u1 = (
+            Point2D(1.0, 0.0),
+            Point2D(0.0, 0.0),
+            Point2D(0.0, 1.0),
+        )
+        u2 = (
+            Point2D(1.0, 0.0),
+            Point2D(0.0, 1.0),
+            Point2D(1.0, 1.0),
+        )
+
+        triangles = []
+        uvmap = []
+
+        def add_face(a: int, b: int, c: int, d: int) -> None:
+            # Match ``cube.obj`` winding when loaded with ``flip_triangles=True``
+            # (swap second/third vertex per triangle; same UV corners).
+            triangles.append((a, c, b))
+            uvmap.append((u1[0], u1[2], u1[1]))
+            triangles.append((a, d, c))
+            uvmap.append((u2[0], u2[2], u2[1]))
+
+        # +Z front
+        add_face(0, 1, 2, 3)
+        # -Z back
+        add_face(5, 4, 7, 6)
+        # +X right
+        add_face(1, 5, 6, 2)
+        # -X left
+        add_face(4, 0, 3, 7)
+        # +Y top
+        add_face(3, 2, 6, 7)
+        # -Y bottom
+        add_face(4, 5, 1, 0)
+
+        m = TT3DPolygon()
+        m.vertex_list = vertices
+        m.triangles = triangles
+        m.uvmap = uvmap
+        return m
+
+    @staticmethod
     def unitary_circle(segment_count=3) -> TT3DPolygon:
         vertices = [Point3D(0.0, 0.0, 0.0)]
         triangles = []
