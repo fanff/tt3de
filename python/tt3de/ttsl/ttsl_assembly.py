@@ -91,6 +91,10 @@ class OpCodes(Enum):
     EXP = "exp"
     LN = "ln"
     LOG = "log"
+    FLOOR = "floor"
+    CEIL = "ceil"
+    FRACT = "fract"
+    MOD = "mod"
     MIX = "mix"
     TT_TEXTURE = "tt_texture"
 

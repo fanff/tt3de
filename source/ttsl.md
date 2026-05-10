@@ -73,8 +73,8 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 | Planned | smoothstep | smoothstep(e0, e1, x) -> T | Smooth threshold | Hermite curve; output in [0..1] when e0<e1 |
 | Planned | step | step(edge, x) -> T | Hard threshold | Returns 0 or 1 (component-wise) |
 | Shipped | abs / sign | abs(x)->T, sign(x)->T | Magnitude / sign | TTSL: **`abs`** only (unary opcode lowering). **`sign`** not implemented; GLSL defines `sign(0)=0` |
-| Planned | floor / ceil / fract | floor(x)->T, ceil(x)->T, fract(x)->T | Tiling, patterns, quantization | `fract(x)=x-floor(x)` in [0..1) |
-| Planned | mod | mod(x, y) -> T | Periodic wrap | For floats (GLSL-style); component-wise |
+| Shipped | floor / ceil / fract | floor(x)->T, ceil(x)->T, fract(x)->T | Tiling, patterns, quantization | Bare **`floor`** / **`ceil`** / **`fract`** and **`glm.floor`** / **`glm.ceil`** / **`glm.fract`**; works on float/vec2/vec3/vec4. `fract(x)=x-floor(x)` in [0..1) |
+| Shipped | mod | mod(x, y) -> T | Periodic wrap | Bare **`mod`** and **`glm.mod`**; GLSL-style `x - y * floor(x/y)` for float/vec2/vec3/vec4 (component-wise on vectors) |
 | Planned | pow | pow(x, y) -> T | Curves / gamma-like shaping | Be careful with negative bases |
 | Planned | sqrt / inversesqrt | sqrt(x)->T, inversesqrt(x)->T | Lengths, normalization helpers | `x` should be >= 0 for real sqrt |
 | Planned | exp / log | exp(x)->T, log(x)->T | Exponential / logarithmic shaping | Useful for tone mapping-ish curves |

@@ -1,6 +1,8 @@
 // Generated with Love <3.
 
-use nalgebra_glm::{abs, cos, exp, log, log2, mix, sin, sqrt, tan, Vec2, Vec3, Vec4};
+use nalgebra_glm::{
+    abs, ceil, cos, exp, floor, fract, log, log2, mix, sin, sqrt, tan, Vec2, Vec3, Vec4,
+};
 
 use crate::ttsl::{Registers, TtslTextureEnv};
 
@@ -34,60 +36,76 @@ pub const TAN_F32: u8 = 26;
 pub const EXP_F32: u8 = 27;
 pub const LN_F32: u8 = 28;
 pub const LOG_F32: u8 = 29;
-pub const STORE_F32: u8 = 30;
-pub const NEG_V2: u8 = 31;
-pub const ABS_V2: u8 = 32;
-pub const SQRT_V2: u8 = 33;
-pub const SIN_V2: u8 = 34;
-pub const COS_V2: u8 = 35;
-pub const TAN_V2: u8 = 36;
-pub const EXP_V2: u8 = 37;
-pub const LN_V2: u8 = 38;
-pub const LOG_V2: u8 = 39;
-pub const STORE_V2: u8 = 40;
-pub const NEG_V3: u8 = 41;
-pub const ABS_V3: u8 = 42;
-pub const SQRT_V3: u8 = 43;
-pub const SIN_V3: u8 = 44;
-pub const COS_V3: u8 = 45;
-pub const TAN_V3: u8 = 46;
-pub const EXP_V3: u8 = 47;
-pub const LN_V3: u8 = 48;
-pub const LOG_V3: u8 = 49;
-pub const STORE_V3: u8 = 50;
-pub const NEG_V4: u8 = 51;
-pub const ABS_V4: u8 = 52;
-pub const SQRT_V4: u8 = 53;
-pub const SIN_V4: u8 = 54;
-pub const COS_V4: u8 = 55;
-pub const TAN_V4: u8 = 56;
-pub const EXP_V4: u8 = 57;
-pub const LN_V4: u8 = 58;
-pub const LOG_V4: u8 = 59;
-pub const STORE_V4: u8 = 60;
-pub const CMP_GT_F32: u8 = 61;
-pub const CMP_GTE_F32: u8 = 62;
-pub const CMP_GT_I32: u8 = 63;
-pub const CMP_GTE_I32: u8 = 64;
-pub const STORE_VEC_FROM_SCALAR_V2_F32: u8 = 65;
-pub const STORE_VEC_FROM_SCALAR_V3_F32: u8 = 66;
-pub const STORE_VEC_FROM_SCALAR_V4_F32: u8 = 67;
-pub const READ_AXIS_X_V2_TO_F32: u8 = 68;
-pub const READ_AXIS_Y_V2_TO_F32: u8 = 69;
-pub const READ_AXIS_X_V3_TO_F32: u8 = 70;
-pub const READ_AXIS_Y_V3_TO_F32: u8 = 71;
-pub const READ_AXIS_Z_V3_TO_F32: u8 = 72;
-pub const READ_AXIS_X_V4_TO_F32: u8 = 73;
-pub const READ_AXIS_Y_V4_TO_F32: u8 = 74;
-pub const READ_AXIS_Z_V4_TO_F32: u8 = 75;
-pub const READ_AXIS_W_V4_TO_F32: u8 = 76;
-pub const MIX_V2: u8 = 77;
-pub const MIX_V3: u8 = 78;
-pub const MIX_V4: u8 = 79;
-pub const TT_TEXTURE: u8 = 80;
-pub const OP_JMP: u8 = 81;
-pub const OP_JMP_IF_FALSE: u8 = 82;
-pub const OP_RET: u8 = 83;
+pub const FLOOR_F32: u8 = 30;
+pub const CEIL_F32: u8 = 31;
+pub const FRACT_F32: u8 = 32;
+pub const STORE_F32: u8 = 33;
+pub const NEG_V2: u8 = 34;
+pub const ABS_V2: u8 = 35;
+pub const SQRT_V2: u8 = 36;
+pub const SIN_V2: u8 = 37;
+pub const COS_V2: u8 = 38;
+pub const TAN_V2: u8 = 39;
+pub const EXP_V2: u8 = 40;
+pub const LN_V2: u8 = 41;
+pub const LOG_V2: u8 = 42;
+pub const FLOOR_V2: u8 = 43;
+pub const CEIL_V2: u8 = 44;
+pub const FRACT_V2: u8 = 45;
+pub const STORE_V2: u8 = 46;
+pub const NEG_V3: u8 = 47;
+pub const ABS_V3: u8 = 48;
+pub const SQRT_V3: u8 = 49;
+pub const SIN_V3: u8 = 50;
+pub const COS_V3: u8 = 51;
+pub const TAN_V3: u8 = 52;
+pub const EXP_V3: u8 = 53;
+pub const LN_V3: u8 = 54;
+pub const LOG_V3: u8 = 55;
+pub const FLOOR_V3: u8 = 56;
+pub const CEIL_V3: u8 = 57;
+pub const FRACT_V3: u8 = 58;
+pub const STORE_V3: u8 = 59;
+pub const NEG_V4: u8 = 60;
+pub const ABS_V4: u8 = 61;
+pub const SQRT_V4: u8 = 62;
+pub const SIN_V4: u8 = 63;
+pub const COS_V4: u8 = 64;
+pub const TAN_V4: u8 = 65;
+pub const EXP_V4: u8 = 66;
+pub const LN_V4: u8 = 67;
+pub const LOG_V4: u8 = 68;
+pub const FLOOR_V4: u8 = 69;
+pub const CEIL_V4: u8 = 70;
+pub const FRACT_V4: u8 = 71;
+pub const STORE_V4: u8 = 72;
+pub const MOD_F32: u8 = 73;
+pub const MOD_V2: u8 = 74;
+pub const MOD_V3: u8 = 75;
+pub const MOD_V4: u8 = 76;
+pub const CMP_GT_F32: u8 = 77;
+pub const CMP_GTE_F32: u8 = 78;
+pub const CMP_GT_I32: u8 = 79;
+pub const CMP_GTE_I32: u8 = 80;
+pub const STORE_VEC_FROM_SCALAR_V2_F32: u8 = 81;
+pub const STORE_VEC_FROM_SCALAR_V3_F32: u8 = 82;
+pub const STORE_VEC_FROM_SCALAR_V4_F32: u8 = 83;
+pub const READ_AXIS_X_V2_TO_F32: u8 = 84;
+pub const READ_AXIS_Y_V2_TO_F32: u8 = 85;
+pub const READ_AXIS_X_V3_TO_F32: u8 = 86;
+pub const READ_AXIS_Y_V3_TO_F32: u8 = 87;
+pub const READ_AXIS_Z_V3_TO_F32: u8 = 88;
+pub const READ_AXIS_X_V4_TO_F32: u8 = 89;
+pub const READ_AXIS_Y_V4_TO_F32: u8 = 90;
+pub const READ_AXIS_Z_V4_TO_F32: u8 = 91;
+pub const READ_AXIS_W_V4_TO_F32: u8 = 92;
+pub const MIX_V2: u8 = 93;
+pub const MIX_V3: u8 = 94;
+pub const MIX_V4: u8 = 95;
+pub const TT_TEXTURE: u8 = 96;
+pub const OP_JMP: u8 = 97;
+pub const OP_JMP_IF_FALSE: u8 = 98;
+pub const OP_RET: u8 = 99;
 
 pub fn exec_opcode(
     opcode: u8,
@@ -223,8 +241,8 @@ pub fn exec_opcode(
 
         MUL_V2_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v2 = regs.v2.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val * b_val;
@@ -234,8 +252,8 @@ pub fn exec_opcode(
 
         DIV_V2_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v2 = regs.v2.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v2.add(dst as usize) = a_val / b_val;
@@ -401,6 +419,33 @@ pub fn exec_opcode(
             None
         }
 
+        FLOOR_F32 => {
+            unsafe {
+                let base_f32_ = regs.f32_.as_mut_ptr();
+                let a_val = *base_f32_.add(a as usize);
+                *base_f32_.add(dst as usize) = a_val.floor();
+            }
+            None
+        }
+
+        CEIL_F32 => {
+            unsafe {
+                let base_f32_ = regs.f32_.as_mut_ptr();
+                let a_val = *base_f32_.add(a as usize);
+                *base_f32_.add(dst as usize) = a_val.ceil();
+            }
+            None
+        }
+
+        FRACT_F32 => {
+            unsafe {
+                let base_f32_ = regs.f32_.as_mut_ptr();
+                let a_val = *base_f32_.add(a as usize);
+                *base_f32_.add(dst as usize) = a_val.fract();
+            }
+            None
+        }
+
         STORE_F32 => {
             unsafe {
                 let base_f32_ = regs.f32_.as_mut_ptr();
@@ -487,6 +532,33 @@ pub fn exec_opcode(
                 let base_v2 = regs.v2.as_mut_ptr();
                 let a_val = *base_v2.add(a as usize);
                 *base_v2.add(dst as usize) = log(&a_val);
+            }
+            None
+        }
+
+        FLOOR_V2 => {
+            unsafe {
+                let base_v2 = regs.v2.as_mut_ptr();
+                let a_val = *base_v2.add(a as usize);
+                *base_v2.add(dst as usize) = floor(&a_val);
+            }
+            None
+        }
+
+        CEIL_V2 => {
+            unsafe {
+                let base_v2 = regs.v2.as_mut_ptr();
+                let a_val = *base_v2.add(a as usize);
+                *base_v2.add(dst as usize) = ceil(&a_val);
+            }
+            None
+        }
+
+        FRACT_V2 => {
+            unsafe {
+                let base_v2 = regs.v2.as_mut_ptr();
+                let a_val = *base_v2.add(a as usize);
+                *base_v2.add(dst as usize) = fract(&a_val);
             }
             None
         }
@@ -581,6 +653,33 @@ pub fn exec_opcode(
             None
         }
 
+        FLOOR_V3 => {
+            unsafe {
+                let base_v3 = regs.v3.as_mut_ptr();
+                let a_val = *base_v3.add(a as usize);
+                *base_v3.add(dst as usize) = floor(&a_val);
+            }
+            None
+        }
+
+        CEIL_V3 => {
+            unsafe {
+                let base_v3 = regs.v3.as_mut_ptr();
+                let a_val = *base_v3.add(a as usize);
+                *base_v3.add(dst as usize) = ceil(&a_val);
+            }
+            None
+        }
+
+        FRACT_V3 => {
+            unsafe {
+                let base_v3 = regs.v3.as_mut_ptr();
+                let a_val = *base_v3.add(a as usize);
+                *base_v3.add(dst as usize) = fract(&a_val);
+            }
+            None
+        }
+
         STORE_V3 => {
             unsafe {
                 let base_v3 = regs.v3.as_mut_ptr();
@@ -671,11 +770,90 @@ pub fn exec_opcode(
             None
         }
 
+        FLOOR_V4 => {
+            unsafe {
+                let base_v4 = regs.v4.as_mut_ptr();
+                let a_val = *base_v4.add(a as usize);
+                *base_v4.add(dst as usize) = floor(&a_val);
+            }
+            None
+        }
+
+        CEIL_V4 => {
+            unsafe {
+                let base_v4 = regs.v4.as_mut_ptr();
+                let a_val = *base_v4.add(a as usize);
+                *base_v4.add(dst as usize) = ceil(&a_val);
+            }
+            None
+        }
+
+        FRACT_V4 => {
+            unsafe {
+                let base_v4 = regs.v4.as_mut_ptr();
+                let a_val = *base_v4.add(a as usize);
+                *base_v4.add(dst as usize) = fract(&a_val);
+            }
+            None
+        }
+
         STORE_V4 => {
             unsafe {
                 let base_v4 = regs.v4.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 *base_v4.add(dst as usize) = a_val;
+            }
+            None
+        }
+
+        MOD_F32 => {
+            unsafe {
+                let base_f32_ = regs.f32_.as_mut_ptr();
+                let a_val = *base_f32_.add(a as usize);
+                let b_val = *base_f32_.add(b as usize);
+                *base_f32_.add(dst as usize) = a_val - b_val * (a_val / b_val).floor();
+            }
+            None
+        }
+
+        MOD_V2 => {
+            unsafe {
+                let base_v2 = regs.v2.as_mut_ptr();
+                let a_val = *base_v2.add(a as usize);
+                let b_val = *base_v2.add(b as usize);
+                *base_v2.add(dst as usize) = Vec2::new(
+                    a_val.x - b_val.x * (a_val.x / b_val.x).floor(),
+                    a_val.y - b_val.y * (a_val.y / b_val.y).floor(),
+                );
+            }
+            None
+        }
+
+        MOD_V3 => {
+            unsafe {
+                let base_v3 = regs.v3.as_mut_ptr();
+                let a_val = *base_v3.add(a as usize);
+                let b_val = *base_v3.add(b as usize);
+                *base_v3.add(dst as usize) = Vec3::new(
+                    a_val.x - b_val.x * (a_val.x / b_val.x).floor(),
+                    a_val.y - b_val.y * (a_val.y / b_val.y).floor(),
+                    a_val.z - b_val.z * (a_val.z / b_val.z).floor(),
+                );
+            }
+            None
+        }
+
+        MOD_V4 => {
+            unsafe {
+                let base_v4 = regs.v4.as_mut_ptr();
+                let a_val = *base_v4.add(a as usize);
+                let b_val = *base_v4.add(b as usize);
+                *base_v4.add(dst as usize) = Vec4::new(
+                    a_val.x - b_val.x * (a_val.x / b_val.x).floor(),
+                    a_val.y - b_val.y * (a_val.y / b_val.y).floor(),
+                    a_val.z - b_val.z * (a_val.z / b_val.z).floor(),
+                    a_val.w - b_val.w * (a_val.w / b_val.w).floor(),
+                );
             }
             None
         }
@@ -704,8 +882,8 @@ pub fn exec_opcode(
 
         CMP_GT_I32 => {
             unsafe {
-                let base_i32_ = regs.i32_.as_mut_ptr();
                 let base_bool_ = regs.bool_.as_mut_ptr();
+                let base_i32_ = regs.i32_.as_mut_ptr();
                 let a_val = *base_i32_.add(a as usize);
                 let b_val = *base_i32_.add(b as usize);
                 *base_bool_.add(dst as usize) = a_val > b_val;
@@ -715,8 +893,8 @@ pub fn exec_opcode(
 
         CMP_GTE_I32 => {
             unsafe {
-                let base_i32_ = regs.i32_.as_mut_ptr();
                 let base_bool_ = regs.bool_.as_mut_ptr();
+                let base_i32_ = regs.i32_.as_mut_ptr();
                 let a_val = *base_i32_.add(a as usize);
                 let b_val = *base_i32_.add(b as usize);
                 *base_bool_.add(dst as usize) = a_val >= b_val;

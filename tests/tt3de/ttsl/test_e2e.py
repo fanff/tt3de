@@ -387,5 +387,151 @@ class Test_EndToEndCompilation(unittest.TestCase):
         self.assertAlmostEqual(cell["f_b"] / 255.0, vm_front.z, delta=2 / 255.0)
 
 
+class Test_FloorCeilFractMod(unittest.TestCase):
+    """End-to-end tests for floor, ceil, fract, and mod builtins."""
+
+    def test_floor_f32_compiles_and_runs(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = floor(3.7)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        regs = reg_settings.get_register_list()
+        front, _back, _glyph = ttsl_run(*regs, bytecode)
+        self.assertAlmostEqual(front.x, 3.0, places=4)
+
+    def test_floor_negative(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = floor(-1.3)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, -2.0, places=4)
+
+    def test_ceil_f32(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = ceil(2.1)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 3.0, places=4)
+
+    def test_fract_f32(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = fract(5.75)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.75, places=4)
+
+    def test_mod_f32_basic(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = mod(7.5, 3.0)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.5, places=4)
+
+    def test_mod_f32_negative_glsl_semantics(self):
+        """GLSL mod(x,y) = x - y*floor(x/y), so mod(-1.0, 4.0) = 3.0."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = mod(-1.0, 4.0)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = -1.0 - 4.0 * (-1.0 / 4.0).__floor__()
+        self.assertAlmostEqual(front.x, expected, places=4)
+
+    def test_floor_with_variable_input(self):
+        """floor applied to a runtime uniform, not just a compile-time constant."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                scaled: float = tt_FragDepth * 4.0
+                band: float = floor(scaled)
+                return (vec3(band, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        for depth, expected_band in [(0.0, 0.0), (0.3, 1.0), (0.5, 2.0), (0.8, 3.0)]:
+            reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, depth)
+            regs = reg_settings.get_register_list()
+            front, _, _ = ttsl_run(*regs, bytecode)
+            self.assertAlmostEqual(
+                front.x, expected_band, places=4,
+                msg=f"floor(depth={depth} * 4.0) should be {expected_band}, got {front.x}",
+            )
+
+    def test_mod_with_variable_wrapping(self):
+        """mod wraps a computed index back into [0, 4) — the fog-band use case."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                raw: float = tt_FragDepth * 4.0 + 2.0
+                wrapped: float = mod(raw, 4.0)
+                return (vec3(wrapped, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        for depth, expected in [(0.0, 2.0), (0.25, 3.0), (0.5, 0.0), (0.75, 1.0)]:
+            reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, depth)
+            front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+            self.assertAlmostEqual(
+                front.x, expected, places=4,
+                msg=f"mod(depth={depth}*4+2, 4) should be {expected}, got {front.x}",
+            )
+
+    def test_glm_floor_spelling(self):
+        """glm.floor(...) must compile identically to bare floor(...)."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = glm.floor(3.7)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 3.0, places=4)
+
+    def test_glm_mod_spelling(self):
+        """glm.mod(x, y) must compile identically to bare mod(x, y)."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                v: float = glm.mod(7.5, 3.0)
+                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.5, places=4)
+
+
 if __name__ == "__main__":
     unittest.main()

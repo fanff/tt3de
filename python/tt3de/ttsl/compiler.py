@@ -85,6 +85,9 @@ NATIVE_UNI_OPS_TYPE = {
     "tan": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
     "abs": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
     "neg": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
+    "floor": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
+    "ceil": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
+    "fract": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
     "norm": (IRType.V2, IRType.V3, IRType.V4),
 }
 
@@ -441,7 +444,7 @@ class TTSLCompilerContext:
             func = node.func
             args = node.args
             if "id" in func._fields:
-                if func.id in ("sin", "abs", "cos"):
+                if func.id in ("sin", "abs", "cos", "floor", "ceil", "fract"):
                     assert len(args) == 1
                     return_type = self.type_of(args[0])
                     arg_reg = self.compile_expr(args[0], return_type)
@@ -449,6 +452,25 @@ class TTSLCompilerContext:
 
                     opcode = opcode_for_uniop(func.id, return_type)
                     self.emit_1(opcode, arg_reg, result_reg)
+                    return result_reg
+                elif func.id == "mod":
+                    if len(args) != 2:
+                        raise CompileError(
+                            node,
+                            f"mod expects 2 arguments (x, y), got {len(args)}",
+                        )
+                    x_ty = self.type_of(args[0])
+                    y_ty = self.type_of(args[1])
+                    if x_ty != y_ty:
+                        raise CompileError(
+                            node,
+                            f"mod arguments must have the same type, got {x_ty} and {y_ty}",
+                        )
+                    x_reg = self.compile_expr(args[0], x_ty)
+                    y_reg = self.compile_expr(args[1], y_ty)
+                    result_reg = self.alloc_temp_for_type(x_ty)
+                    self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
+                                comment=f"mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
                     return result_reg
                 elif func.id in VECTOR_CONSTRUCTORS:
                     return self.compile_vec_constructor(
@@ -511,6 +533,25 @@ class TTSLCompilerContext:
                                 result_reg,
                                 comment=f"glm.{func_name} r{arg_reg.id} -> r{result_reg.id}",
                             )
+                            return result_reg
+                        elif func_name == "mod":
+                            if len(args) != 2:
+                                raise CompileError(
+                                    node,
+                                    f"glm.mod expects 2 arguments (x, y), got {len(args)}",
+                                )
+                            x_ty = self.type_of(args[0])
+                            y_ty = self.type_of(args[1])
+                            if x_ty != y_ty:
+                                raise CompileError(
+                                    node,
+                                    f"glm.mod arguments must have the same type, got {x_ty} and {y_ty}",
+                                )
+                            x_reg = self.compile_expr(args[0], x_ty)
+                            y_reg = self.compile_expr(args[1], y_ty)
+                            result_reg = self.alloc_temp_for_type(x_ty)
+                            self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
+                                        comment=f"glm.mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
                             return result_reg
                         elif func_name in GLM_TOOLS:
                             return self.compile_glm_tool_call(node, func_name, args)
@@ -780,11 +821,23 @@ class TTSLCompilerContext:
             if "id" in node._fields:
                 if node.id in self.named_variables:
                     return self.named_variables[node.id].ty
-                elif node.id in ("abs", "sin", "cos"):
+                elif node.id in ("abs", "sin", "cos", "floor", "ceil", "fract"):
                     if type_args is not None and len(type_args) == 1:
                         return type_args[0]
                     raise CompileError(
                         node, f"Cannot determine return type of function '{node.id}'"
+                    )
+                elif node.id == "mod":
+                    if type_args is not None and len(type_args) == 2:
+                        if type_args[0] != type_args[1]:
+                            raise CompileError(
+                                node,
+                                f"mod arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                            )
+                        return type_args[0]
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of mod (need 2 same-type arguments)",
                     )
                 elif node.id == "tt_texture":
                     if type_args is not None and len(type_args) == 2:
@@ -826,12 +879,24 @@ class TTSLCompilerContext:
                     return IRType.F32
                 elif value_type == IRType.V4:
                     return IRType.F32
-            elif node.attr in ("sin", "cos"):
+            elif node.attr in ("sin", "cos", "floor", "ceil", "fract"):
                 if type_args is not None and len(type_args) == 1:
                     return type_args[0]
                 raise CompileError(
                     node,
                     f"Function '{node.attr}' expects one Typed argument, got {type_args}",
+                )
+            elif node.attr == "mod":
+                if type_args is not None and len(type_args) == 2:
+                    if type_args[0] != type_args[1]:
+                        raise CompileError(
+                            node,
+                            f"mod arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                        )
+                    return type_args[0]
+                raise CompileError(
+                    node,
+                    f"Function 'mod' expects 2 same-type arguments, got {type_args}",
                 )
             elif node.attr in ("vec3", "vec2", "vec4"):
                 count = {"vec2": 2, "vec3": 3, "vec4": 4}[node.attr]
@@ -985,6 +1050,9 @@ def opcode_for_uniop(op_name: str, operand_type: IRType) -> OpCodes:
         name_to_op = {
             "sin": OpCodes.SIN,
             "abs": OpCodes.ABS,
+            "floor": OpCodes.FLOOR,
+            "ceil": OpCodes.CEIL,
+            "fract": OpCodes.FRACT,
         }
         if op_name in name_to_op:
             return name_to_op[op_name]

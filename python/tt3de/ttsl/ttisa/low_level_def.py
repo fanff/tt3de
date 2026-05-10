@@ -268,6 +268,9 @@ MATH_FUNCTION_NATIVE_TYPES = {
     OpCodes.EXP: "{a}.exp()",
     OpCodes.LN: "{a}.ln()",
     OpCodes.LOG: "{a}.log2()",
+    OpCodes.FLOOR: "{a}.floor()",
+    OpCodes.CEIL: "{a}.ceil()",
+    OpCodes.FRACT: "{a}.fract()",
     OpCodes.STORE: "{a}",
 }
 MATH_FUNCTION_VEC_TYPES = {
@@ -280,6 +283,9 @@ MATH_FUNCTION_VEC_TYPES = {
     OpCodes.EXP: "exp(&{a})",
     OpCodes.LN: "log2(&{a})",
     OpCodes.LOG: "log(&{a})",
+    OpCodes.FLOOR: "floor(&{a})",
+    OpCodes.CEIL: "ceil(&{a})",
+    OpCodes.FRACT: "fract(&{a})",
     OpCodes.STORE: "{a}",
 }
 
@@ -315,6 +321,69 @@ def generate_unary_forms(
                 """
             form["rust_match_code"] = match_code
             forms.append(form)
+    return forms
+
+
+def _mod_rust_body_f32() -> str:
+    return Rustgen.unsafe_block(
+        "\n".join(
+            [
+                Rustgen.let_base_register_be(IRType.F32),
+                Rustgen.let_operand_register_be("a", IRType.F32),
+                Rustgen.let_operand_register_be("b", IRType.F32),
+                Rustgen.base_register_is(
+                    "a_val - b_val * (a_val / b_val).floor()", IRType.F32
+                ),
+            ]
+        )
+    )
+
+
+def _mod_rust_body_vec(ir_type: IRType) -> str:
+    """Component-wise GLSL mod for vectors: map(|c| c.0 - c.1 * (c.0 / c.1).floor())."""
+    comp_count = {IRType.V2: 2, IRType.V3: 3, IRType.V4: 4}[ir_type]
+    vec_name = {IRType.V2: "Vec2", IRType.V3: "Vec3", IRType.V4: "Vec4"}[ir_type]
+    axes = ["x", "y", "z", "w"][:comp_count]
+    components = ", ".join(
+        f"a_val.{ax} - b_val.{ax} * (a_val.{ax} / b_val.{ax}).floor()" for ax in axes
+    )
+    regname = IRTYPE_TO_REGISTER_NAME[ir_type]
+    return Rustgen.unsafe_block(
+        "\n".join(
+            [
+                Rustgen.let_base_register_be(ir_type),
+                Rustgen.let_operand_register_be("a", ir_type),
+                Rustgen.let_operand_register_be("b", ir_type),
+                f"*base_{regname}.add(dst as usize) = {vec_name}::new({components});",
+            ]
+        )
+    )
+
+
+def generate_mod_forms() -> List[Form]:
+    """Generate MOD forms: GLSL-style mod(x, y) = x - y * floor(x / y)."""
+    forms = []
+    for ir_type in [IRType.F32, IRType.V2, IRType.V3, IRType.V4]:
+        form = Form(
+            {
+                "name": f"MOD_{ir_type.name}",
+                "type": ir_type,
+                "input_types": [ir_type, ir_type],
+                "bank": ir_type.name.lower() + "_",
+            }
+        )
+        if ir_type == IRType.F32:
+            rust_body = _mod_rust_body_f32()
+        else:
+            rust_body = _mod_rust_body_vec(ir_type)
+        match_code = f"""
+                {form["name"]} => {{
+                    {rust_body}
+                None
+                }}
+                """
+        form["rust_match_code"] = match_code
+        forms.append(form)
     return forms
 
 
@@ -627,10 +696,14 @@ def generate_all_forms() -> List[CategoryGroup]:
                     OpCodes.EXP,
                     OpCodes.LN,
                     OpCodes.LOG,
+                    OpCodes.FLOOR,
+                    OpCodes.CEIL,
+                    OpCodes.FRACT,
                     OpCodes.STORE,
                 ],
             ),
         ),
+        CategoryGroup("Modulo", generate_mod_forms()),
         CategoryGroup("Comparison", generate_comparison_forms()),
         CategoryGroup("Store Vec from Scalars", generate_store_vec_from_scalar()),
         CategoryGroup("Read Axis", generate_read_axis_forms()),
@@ -690,7 +763,7 @@ def main() -> None:
     // Generated with Love <3.
 
 
-    use nalgebra_glm::{abs, cos, exp, log, log2, sin,
+    use nalgebra_glm::{abs, ceil, cos, exp, floor, fract, log, log2, sin,
      mix, sqrt, tan, Vec2, Vec3, Vec4};
 
     use crate::ttsl::{Registers, TtslTextureEnv};
