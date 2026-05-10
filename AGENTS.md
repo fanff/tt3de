@@ -64,6 +64,9 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 
 Before starting new feature or chore work, update your local base from `master` (for example: pull latest `master` first, then branch).
 
+- **Commits belong on the session branch only**: make every commit on the branch checked out for the current work (`feat/…`, `chore/…`, `evol/…`, or another task branch). **Do not commit on `master`** — keep `master` for fast-forwarding from upstream only.
+- **Push when branching is routine**: if the git steps are straightforward (branch from an updated base, normal commits, no conflicts or unusual risk), **`git push` may be fully automatic** without pausing for confirmation.
+
 - Branch naming should usually follow:
   - `feat/<short-description>`
   - `chore/<short-description>`
