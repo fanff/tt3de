@@ -30,7 +30,7 @@ description = "TT3DE: Tiny Textual 3D Engine"
 name = "tt3de"
 readme = "README.md"
 requires-python = ">=3.11"
-version = "0.1.2"
+version = "1.0.0"
 
 [tool.maturin]
 # Links like a Python extension (no libpython); must stay off for plain `cargo test`.
