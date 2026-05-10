@@ -56,48 +56,93 @@ To set up a development version of this engine:
     PYTHONPATH=python uv run python demos/3d/some_models.py
     ```
 
-6. Run the Rust unit tests:
-    ```bash
-    cargo test
-    ```
-7. Run the Python unit tests:
-    ```bash
-    uv run pytest
-    ```
-8. **Material shading threading benchmark** (`test_bench_material_apply`): captures serial vs Rayon (1/2/4/8 threads) over several canvas sizes, writes `benchmarks/material_apply.json`, and prints a compact Rich KPI report (~100-column friendly). From the repository root:
+6. Run the Rust unit tests.
+
+    Maturin builds enable the Cargo feature `extension-module` (see `pyproject.toml`), which links PyO3 like a normal Python extension and avoids linking `libpython`. **`cargo test` must not use that feature**: default crate features are correct so the test harness links against the Python shared library.
+
+    Pin which interpreter PyO3 uses (same idea as [`.github/workflows/fast-checks.yml`](.github/workflows/fast-checks.yml)) via **`PYO3_PYTHON`**—especially if several Python installs are on your machine.
+
+    **macOS / Linux (bash/zsh)**:
 
     ```bash
-    ./scripts/bench_material.sh
+    bash scripts/cargo_test.sh
     ```
 
-    On Windows PowerShell:
+    Pass-through arguments go to Cargo (for example `bash scripts/cargo_test.sh --lib`).
+
+    **Windows (PowerShell)**:
 
     ```powershell
-    .\scripts\bench_material.ps1
+    scripts/cargo_test.ps1
     ```
 
-    The report summarizes **speedup vs serial** (`×ser`), **per-thread efficiency** (`η/T`), **scaling loss** vs ideal linear speedup (`loss`), and a **throughput bar** per configuration. Expect roughly one minute on a typical CPU.
+    Example with Cargo arguments (extra tokens after the script path are forwarded to `cargo test`):
 
-    Equivalent manual invocation:
-
-    ```bash
-    mkdir -p benchmarks
-    PYTHONPATH=python uv run pytest \
-      tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
-      --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
-    uv run --no-sync python scripts/dev_material_bench_report.py benchmarks/material_apply.json
+    ```powershell
+    scripts/cargo_test.ps1 --lib
     ```
+
+    If you are already in PowerShell: `.\scripts\cargo_test.ps1 --lib`.
+
+    Without `uv`, set **`PYO3_PYTHON`** yourself and run `cargo test`; on Windows, prepend **`PATH`** with the directory containing **`python.exe`**, and usually **`%base_prefix%\DLLs`** and **`base_prefix`**, as in [`scripts/cargo_test.ps1`](scripts/cargo_test.ps1).
+
+7. Run the Python unit tests.
+
+Build the extension in develop mode first (step 4); tests import the native `tt3de` module.
+
+Pytest loads packages under `tests/` (for example `from tests.tt3de…`), so keep the **repository root** on `PYTHONPATH`, matching CI’s working directory and [`AGENTS.md`](AGENTS.md).
+
+**macOS / Linux (bash/zsh)**:
+
+```bash
+PYTHONPATH=. uv run pytest
+```
+
+**Windows (PowerShell)**:
+
+```powershell
+$env:PYTHONPATH='.'
+uv run pytest
+```
+
+
+8. **Material shading threading benchmark** (`test_bench_material_apply`): 
+
+captures serial vs Rayon (1/2/4/8 threads) over several canvas sizes, writes `benchmarks/material_apply.json`, and prints a compact Rich KPI report (~100-column friendly). From the repository root:
+
+```bash
+./scripts/bench_material.sh
+```
+
+On Windows PowerShell:
+
+```powershell
+.\scripts\bench_material.ps1
+```
+
+The report summarizes **speedup vs serial** (`×ser`), **per-thread efficiency** (`η/T`), **scaling loss** vs ideal linear speedup (`loss`), and a **throughput bar** per configuration. Expect roughly one minute on a typical CPU.
+
+Equivalent manual invocation:
+
+```bash
+mkdir -p benchmarks
+PYTHONPATH=python uv run pytest \
+    tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
+    --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
+uv run --no-sync python scripts/dev_material_bench_report.py benchmarks/material_apply.json
+```
 
 9. Regenerate TTSL opcode/ABI files after opcode definition changes:
-    ```bash
-    bash scripts/gen_opcodes.sh
-    ```
 
-    On Windows PowerShell:
+```bash
+bash scripts/gen_opcodes.sh
+```
 
-    ```powershell
-    powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
-    ```
+On Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
+```
 
 ## Build Documentation
 

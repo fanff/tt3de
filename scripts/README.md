@@ -16,6 +16,18 @@ powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
 
 Equivalent: **`make gen-opcodes`** (runs `bash scripts/gen_opcodes.sh`).
 
+## Rust unit tests (`cargo test` + PyO3)
+
+Plain `cargo test` must use **default** Cargo features (not Maturin’s `extension-module`), and PyO3 should target the same interpreter as your dev environment. Helpers under [`scripts/cargo_test.sh`](cargo_test.sh) and [`scripts/cargo_test.ps1`](cargo_test.ps1) set **`PYO3_PYTHON`** from `uv run python`; the PowerShell script also extends **`PATH`** on Windows so **`python3XY.dll`** resolves.
+
+```bash
+bash scripts/cargo_test.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/cargo_test.ps1
+```
+
 ## `dev_tt3de_screenshot.py`
 
 Headless SVG snapshot using Textual’s **`run_test`** / **`export_screenshot`**.
