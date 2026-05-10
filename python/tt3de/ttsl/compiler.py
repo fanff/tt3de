@@ -1785,10 +1785,23 @@ class PassNormalizeTerminators(CompilationPass):
 
 def build_layout_with_fallthrough(cfg: CFG, rpo: List[int]) -> List[int]:
     """
-    Build a layout that respects *required* fallthrough: if a block has no terminator,
-    its fallthrough successor must be the next block.
+    Build a layout that respects *required* fallthrough.
 
-    Then it tries to improve fallthrough for other blocks greedily.
+    Two kinds of blocks impose a required next-in-bytecode successor:
+
+    1. Blocks with no terminator at all (single successor): the bytecode literally
+       falls into the next instruction, so that successor must be physically next.
+    2. Blocks ending in ``JMP_IF_FALSE``: the false branch is encoded as a target
+       address, but the **true** branch is the implicit fall-through (``pc + 1``),
+       so the true (non-jump-target) successor must be physically next as well.
+       Without this, a cascade of ``if cond: return ...`` (no ``else``) can place
+       the false-target block right after the conditional and silently drop the
+       true branches at the end of the layout — every conditional then flows down
+       to the final return regardless of the condition (regression covered by
+       ``test_depth_fog_glyph_shader_vm_vs_python_reference``).
+
+    Other blocks fall back to a greedy heuristic that prefers placing JMP targets
+    or any unplaced successor next.
     """
     rpo_set = set(rpo)
     placed: Set[int] = set()
@@ -1813,6 +1826,22 @@ def build_layout_with_fallthrough(cfg: CFG, rpo: List[int]) -> List[int]:
                     f"cannot model fallthrough unambiguously."
                 )
             fallthrough[b] = succs[0]
+        elif term.op == OpCodes.JMP_IF_FALSE:
+            # The false branch is an explicit address (`term.dst` label, encoded by
+            # `PassToByteCode`); the true branch is the implicit `pc + 1` fall-through,
+            # so the non-jump-target successor MUST be the next block in the layout.
+            assert isinstance(term.dst, str)
+            false_target_name = term.dst
+            succs = [s for s in cfg.successors(b) if cfg.nodes[s] is not None]
+            ft_succs = [s for s in succs if cfg.nodes[s].name != false_target_name]
+            if len(ft_succs) != 1:
+                raise ValueError(
+                    f"Block {b} (`{node.name}`) ends in JMP_IF_FALSE to "
+                    f"`{false_target_name}` but has {len(ft_succs)} fall-through "
+                    f"successors {[cfg.nodes[s].name for s in ft_succs]}; "
+                    f"layout cannot place the true branch unambiguously."
+                )
+            fallthrough[b] = ft_succs[0]
 
     # --- 2) Utility: follow required fallthrough chain ---
     def place_fallthrough_chain(start: int) -> None:

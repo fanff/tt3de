@@ -2,6 +2,7 @@
 """End-to-end TTSL compilation: parse → IR → CFG → SSA → bytecode."""
 
 from textwrap import dedent
+import math
 import unittest
 
 from pyglm import glm
@@ -19,6 +20,8 @@ from tt3de.tt3de import (
     ttsl_run,
 )
 from tt3de.ttsl.compiler import (
+    GLOBAL_VAR_TT_FAR,
+    GLOBAL_VAR_TT_NEAR,
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
     PIXELVAR_TT_FRAG_DEPTH,
@@ -306,6 +309,127 @@ class Test_EndToEndCompilation(unittest.TestCase):
                 msg=f"back should be black at ndc={ndc}",
             )
             self.assertEqual(glyph, 0, msg=f"glyph should be 0 at ndc={ndc}")
+
+    def test_depth_fog_glyph_shader_vm_vs_python_reference(self):
+        """Mirror ``depth_fog_glyph`` (demos fog + quantized glyph bands): VM vs Python.
+
+        Regression: cascading ``if cond: return ...`` (no ``else``) used to flow
+        through every conditional and run the final return because
+        ``build_layout_with_fallthrough`` did not pin the ``JMP_IF_FALSE`` true
+        branch as the next block in bytecode. The fix records ``JMP_IF_FALSE``
+        fall-through as required next-in-layout.
+        """
+        src = dedent(
+            """
+            def depth_fog_glyph(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                z_n: float = 2.0 * tt_FragDepth - 1.0
+                d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
+                t: float = 1.0 - d / (d + 10.0)
+                band: float = floor(t * 4.0)
+                if band >= 4.0:
+                    band = 3.0
+                blk: vec3 = vec3(0.0, 0.0, 0.0)
+                if band >= 3.0:
+                    return (blk, u_albedo, u_g3)
+                if band >= 2.0:
+                    return (blk, u_albedo, u_g2)
+                if band >= 1.0:
+                    return (blk, u_albedo, u_g1)
+                return (blk, u_albedo, u_g0)
+            """
+        )
+        globals_dict = {
+            GLOBAL_VAR_TT_NEAR: float,
+            GLOBAL_VAR_TT_FAR: float,
+            "u_albedo": glm.vec3,
+            "u_g0": int,
+            "u_g1": int,
+            "u_g2": int,
+            "u_g3": int,
+        }
+        bytecode, reg_settings = all_passes_compilation(
+            src, "depth_fog_glyph", globals_dict
+        )
+
+        def python_reference(
+            frag_depth: float,
+            near: float,
+            far: float,
+            albedo: glm.vec3,
+            g0: int,
+            g1: int,
+            g2: int,
+            g3: int,
+        ) -> tuple[glm.vec3, glm.vec3, int]:
+            z_n = 2.0 * frag_depth - 1.0
+            d = (2.0 * near * far) / (far + near - z_n * (far - near))
+            t = 1.0 - d / (d + 10.0)
+            band = float(math.floor(t * 4.0))
+            if band >= 4.0:
+                band = 3.0
+            blk = glm.vec3(0.0, 0.0, 0.0)
+            if band >= 3.0:
+                return (blk, albedo, g3)
+            if band >= 2.0:
+                return (blk, albedo, g2)
+            if band >= 1.0:
+                return (blk, albedo, g1)
+            return (blk, albedo, g0)
+
+        near_f = 0.1
+        far_f = 100.0
+        albedo = glm.vec3(0.7, 0.55, 0.4)
+        g0, g1, g2, g3 = 10, 20, 30, 40
+
+        reg_settings.set_variable(GLOBAL_VAR_TT_NEAR, near_f)
+        reg_settings.set_variable(GLOBAL_VAR_TT_FAR, far_f)
+        reg_settings.set_variable("u_albedo", albedo)
+        reg_settings.set_variable("u_g0", g0)
+        reg_settings.set_variable("u_g1", g1)
+        reg_settings.set_variable("u_g2", g2)
+        reg_settings.set_variable("u_g3", g3)
+
+        test_depths = [0.0, 0.05, 0.2, 0.5, 0.75, 0.9, 1.0]
+        for frag_depth in test_depths:
+            reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, frag_depth)
+            reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(2.0, 3.0))
+            reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.0, 0.0))
+            reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
+            regs = reg_settings.get_register_list()
+
+            front, back, glyph = ttsl_run(*regs, bytecode)
+            exp_front, exp_back, exp_g = python_reference(
+                frag_depth, near_f, far_f, albedo, g0, g1, g2, g3
+            )
+
+            self.assertAlmostEqual(
+                front.x, exp_front.x, places=4,
+                msg=f"front.x @ tt_FragDepth={frag_depth}: VM={front.x}, ref={exp_front.x}",
+            )
+            self.assertAlmostEqual(
+                front.y, exp_front.y, places=4,
+                msg=f"front.y @ tt_FragDepth={frag_depth}: VM={front.y}, ref={exp_front.y}",
+            )
+            self.assertAlmostEqual(
+                front.z, exp_front.z, places=4,
+                msg=f"front.z @ tt_FragDepth={frag_depth}: VM={front.z}, ref={exp_front.z}",
+            )
+            self.assertAlmostEqual(
+                back.x, exp_back.x, places=4,
+                msg=f"back.x @ tt_FragDepth={frag_depth}: VM={back.x}, ref={exp_back.x}",
+            )
+            self.assertAlmostEqual(
+                back.y, exp_back.y, places=4,
+                msg=f"back.y @ tt_FragDepth={frag_depth}: VM={back.y}, ref={exp_back.y}",
+            )
+            self.assertAlmostEqual(
+                back.z, exp_back.z, places=4,
+                msg=f"back.z @ tt_FragDepth={frag_depth}: VM={back.z}, ref={exp_back.z}",
+            )
+            self.assertEqual(
+                glyph, exp_g,
+                msg=f"glyph @ tt_FragDepth={frag_depth}: VM={glyph}, ref={exp_g}",
+            )
 
     def test_user_uniforms_vec3_vec2_ttsl_run(self):
         """User globals from globals_dict occupy VM registers; seed via RegisterSettings."""
