@@ -11,6 +11,8 @@ tt_Time: float = 0.0  # noqa: N816 — built-in name follows OpenGL `gl_*` conve
 tt_DeltaTime: float = 0.0  # noqa: N816 — frame delta seconds; host updates via material API
 tt_Frame: int = 0  # noqa: N816 — non-negative frame counter
 tt_Resolution: glm.vec2 = glm.vec2(1.0, 1.0)  # noqa: N816 — width_cells, height_cells
+tt_Near: float = 0.1  # noqa: N816 — near clip distance; compiler seeds until host writes
+tt_Far: float = 100.0  # noqa: N816 — far clip distance; must exceed near in real scenes
 
 # Per-fragment (cell) input variables:
 tt_FragCoord: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816

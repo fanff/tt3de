@@ -83,6 +83,8 @@ class ShaderPy(MaterialPy):
     delta_time_f32_reg: int | None
     frame_i32_reg: int | None
     resolution_v2_reg: int | None
+    near_f32_reg: int | None
+    far_f32_reg: int | None
     front_facing_bool_reg: int | None
     frag_depth_f32_reg: int | None
     line_coord_f32_reg: int | None
@@ -103,4 +105,6 @@ class ShaderPy(MaterialPy):
         default_glyph: int | None = ...,
         register_seed: list[dict[int, object]] | None = ...,
         frame_i32_reg: int | None = ...,
+        near_f32_reg: int | None = ...,
+        far_f32_reg: int | None = ...,
     ) -> "ShaderPy": ...

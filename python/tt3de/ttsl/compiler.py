@@ -48,13 +48,15 @@ VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
 # TTSL names follow the OpenGL/GLSL convention `gl_<CamelCase>` as `tt_<CamelCase>`.
 # Pixel inputs (`PIXEL_VARIABLES_STR_TYPE`) are always predeclared; engine uniforms such as
-# `GLOBAL_VAR_TT_TIME`, `GLOBAL_VAR_TT_DELTA_TIME`, `GLOBAL_VAR_TT_FRAME`, and
-# `GLOBAL_VAR_TT_RESOLUTION` are only
+# `GLOBAL_VAR_TT_TIME`, `GLOBAL_VAR_TT_DELTA_TIME`, `GLOBAL_VAR_TT_FRAME`,
+# `GLOBAL_VAR_TT_RESOLUTION`, `GLOBAL_VAR_TT_NEAR`, and `GLOBAL_VAR_TT_FAR` are only
 # bound when passed in `globals_dict`. Keep names in sync with `source/ttsl.md`.
 GLOBAL_VAR_TT_TIME: str = "tt_Time"
 GLOBAL_VAR_TT_DELTA_TIME: str = "tt_DeltaTime"
 GLOBAL_VAR_TT_FRAME: str = "tt_Frame"
 GLOBAL_VAR_TT_RESOLUTION: str = "tt_Resolution"
+GLOBAL_VAR_TT_NEAR: str = "tt_Near"
+GLOBAL_VAR_TT_FAR: str = "tt_Far"
 PIXELVAR_TT_FRAGCOORD: str = "tt_FragCoord"
 PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
 PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
@@ -168,7 +170,8 @@ class TTSLCompilerContext:
         index of the depth-winning primitive,
         ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL ``gl_PrimitiveID``).
         Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
-        (``int``), and ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells) must be
+        (``int``), ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells), and
+        ``tt_Near`` / ``tt_Far`` (``float``: clip distances) must be
         passed via ``globals_dict`` when referenced."""
         return dict(PIXEL_VARIABLES_STR_TYPE)
 
@@ -2039,6 +2042,10 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
     defaults to ``(1, 1)`` cells when the host has not written a size yet; components ``<= 0``
     are treated as invalid by the Rust setter and replaced with ``1``.
 
+    ``tt_Near`` / ``tt_Far`` default to ``0.1`` and ``100.0`` (documented placeholder clip
+    distances) until ``MaterialBufferPy.set_shader_near`` / ``set_shader_far`` overwrites them;
+    hosts should set values consistent with the active projection and ``tt_FragDepth`` encoding.
+
     ``tt_FrontFacing`` defaults to ``True``, matching ``PixInfo`` initialization and non-triangle
     raster paths (2D / point sampling). ``ShaderMaterial`` overwrites the bound bool register
     each pixel from ``PixInfo::front_facing`` when ``ShaderPy.front_facing_bool_reg`` is set.
@@ -2074,6 +2081,13 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
         reg_settings.set_variable(PIXELVAR_TT_POINT_COORD, glm.vec2(0.0, 0.0))
     if PIXELVAR_TT_PRIMITIVE_ID in names:
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 0)
+    if GLOBAL_VAR_TT_NEAR in names:
+        # Documented default clip distances (see `source/ttsl.md`); host should overwrite
+        # from the active projection. Matches the common 0.1 / 100 hyperbolic depth scale
+        # used in depth-fog demos before these uniforms shipped.
+        reg_settings.set_variable(GLOBAL_VAR_TT_NEAR, 0.1)
+    if GLOBAL_VAR_TT_FAR in names:
+        reg_settings.set_variable(GLOBAL_VAR_TT_FAR, 100.0)
 
 
 @dataclass

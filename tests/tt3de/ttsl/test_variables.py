@@ -3,7 +3,8 @@
 TTSL variable binding tests (front-end only: `compile_ttsl`).
 
 Always-present inputs match `TTSLCompilerContext.always_present_variables()` (pixel
-inputs only). ``tt_Time``, ``tt_DeltaTime``, ``tt_Resolution``, and other engine uniforms are optional via ``globals_dict``;
+inputs only). ``tt_Time``, ``tt_DeltaTime``, ``tt_Resolution``, ``tt_Near``, ``tt_Far``,
+and other engine uniforms are optional via ``globals_dict``;
 see `source/ttsl_compiler.md`. The broader catalog in `source/ttsl.md` includes names
 not yet present in the Python compiler; some tests use `@unittest.expectedFailure`
 only where noted for constructs still missing from the compiler surface.
@@ -17,7 +18,9 @@ from pyglm import glm
 
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_DELTA_TIME,
+    GLOBAL_VAR_TT_FAR,
     GLOBAL_VAR_TT_FRAME,
+    GLOBAL_VAR_TT_NEAR,
     GLOBAL_VAR_TT_RESOLUTION,
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRAGCOORD,
@@ -385,6 +388,49 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         msg = str(ctx.exception)
         self.assertIn(GLOBAL_VAR_TT_FRAME, msg)
         self.assertIn("Unknown variable", msg)
+
+    def test_tt_Near_requires_globals_dict(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_Near, 0.0, 0.0), vec3(tt_Near, 0.0, 0.0), 0)
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "shade", {})
+        msg = str(ctx.exception)
+        self.assertIn(GLOBAL_VAR_TT_NEAR, msg)
+        self.assertIn("Unknown variable", msg)
+
+    def test_tt_Far_requires_globals_dict(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_Far, 0.0, 0.0), vec3(tt_Far, 0.0, 0.0), 0)
+            """
+        )
+        with self.assertRaises(CompileError) as ctx:
+            compile_ttsl(src, "shade", {})
+        msg = str(ctx.exception)
+        self.assertIn(GLOBAL_VAR_TT_FAR, msg)
+        self.assertIn("Unknown variable", msg)
+
+    def test_tt_Near_tt_Far_globals_dict_seeded_defaults(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (vec3(tt_Near, tt_Far, 0.0), vec3(tt_Near, tt_Far, 0.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(
+            src,
+            "shade",
+            {GLOBAL_VAR_TT_NEAR: float, GLOBAL_VAR_TT_FAR: float},
+        )
+        _, near_id = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
+        _, far_id = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
+        self.assertEqual(reg_settings.regs[IRType.F32][near_id], 0.1)
+        self.assertEqual(reg_settings.regs[IRType.F32][far_id], 100.0)
 
     def test_tt_Resolution_globals_dict_seeded_to_one_by_default(self):
         src = dedent(

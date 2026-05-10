@@ -15,7 +15,9 @@ from tt3de.tt3de import (
 )
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_DELTA_TIME,
+    GLOBAL_VAR_TT_FAR,
     GLOBAL_VAR_TT_FRAME,
+    GLOBAL_VAR_TT_NEAR,
     GLOBAL_VAR_TT_RESOLUTION,
     GLOBAL_VAR_TT_TIME,
     PIXELVAR_TT_FRONT_FACING,
@@ -107,6 +109,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.delta_time_f32_reg)
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
+        self.assertIsNone(mat.near_f32_reg)
+        self.assertIsNone(mat.far_f32_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
         self.assertIsNone(mat.frag_depth_f32_reg)
         self.assertIsNone(mat.line_coord_f32_reg)
@@ -120,12 +124,9 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.delta_time_f32_reg)
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
+        self.assertIsNone(mat.near_f32_reg)
+        self.assertIsNone(mat.far_f32_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
-        self.assertIsNone(mat.frag_depth_f32_reg)
-        self.assertIsNone(mat.line_coord_f32_reg)
-        self.assertIsNone(mat.point_coord_v2_reg)
-        self.assertIsNone(mat.default_glyph)
-        self.assertIsNone(mat.register_seed)
 
     def test_register_seed_roundtrip(self):
         seed = [{}, {1: 0.5}, {}, {}, {}, {}]
@@ -139,6 +140,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.delta_time_f32_reg = 9
         mat.frame_i32_reg = 6
         mat.resolution_v2_reg = 8
+        mat.near_f32_reg = 12
+        mat.far_f32_reg = 13
         mat.front_facing_bool_reg = 3
         mat.frag_depth_f32_reg = 4
         mat.line_coord_f32_reg = 7
@@ -149,6 +152,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertEqual(mat.delta_time_f32_reg, 9)
         self.assertEqual(mat.frame_i32_reg, 6)
         self.assertEqual(mat.resolution_v2_reg, 8)
+        self.assertEqual(mat.near_f32_reg, 12)
+        self.assertEqual(mat.far_f32_reg, 13)
         self.assertEqual(mat.front_facing_bool_reg, 3)
         self.assertEqual(mat.frag_depth_f32_reg, 4)
         self.assertEqual(mat.line_coord_f32_reg, 7)
@@ -159,6 +164,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.delta_time_f32_reg = None
         mat.frame_i32_reg = None
         mat.resolution_v2_reg = None
+        mat.near_f32_reg = None
+        mat.far_f32_reg = None
         mat.front_facing_bool_reg = None
         mat.frag_depth_f32_reg = None
         mat.line_coord_f32_reg = None
@@ -168,6 +175,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.delta_time_f32_reg)
         self.assertIsNone(mat.frame_i32_reg)
         self.assertIsNone(mat.resolution_v2_reg)
+        self.assertIsNone(mat.near_f32_reg)
+        self.assertIsNone(mat.far_f32_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
         self.assertIsNone(mat.frag_depth_f32_reg)
         self.assertIsNone(mat.line_coord_f32_reg)
@@ -434,6 +443,86 @@ class Test_ShaderPySetShaderResolutionCompiled(unittest.TestCase):
         mb.add_static((255, 0, 0, 255), (0, 0, 0, 255), 0)
         with self.assertRaises(ValueError):
             mb.set_shader_resolution(0, 4.0, 4.0)
+
+
+class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
+    """``set_shader_near`` / ``set_shader_far`` update ``tt_Near`` / ``tt_Far`` seed registers."""
+
+    _DUMMY_SRC = dedent(
+        """
+        def dummy_clip(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            c: vec3 = vec3(tt_Near, tt_Far / 400.0, 0.0)
+            return (c, c, 0)
+        """
+    )
+
+    def _apply_shader_at_origin(self, mb: MaterialBufferPy, mat_idx: int) -> dict:
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.25, 0.75),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            mat_idx,
+            0,
+        )
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(8),
+            draw,
+        )
+        return draw.get_canvas_cell(0, 0)
+
+    def test_set_shader_near_and_far_update_compiled_shader_output(self):
+        bytecode, reg_settings = all_passes_compilation(
+            self._DUMMY_SRC,
+            "dummy_clip",
+            {GLOBAL_VAR_TT_NEAR: float, GLOBAL_VAR_TT_FAR: float},
+        )
+        _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
+        _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
+
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(
+            bytecode,
+            near_f32_reg=near_reg,
+            far_f32_reg=far_reg,
+            default_glyph=None,
+            register_seed=reg_settings.get_register_list(),
+        )
+        mat_idx = mb.add_shader(shader_mat)
+        self.assertEqual(mat_idx, 0)
+
+        mb.set_shader_near(mat_idx, 0.25)
+        mb.set_shader_far(mat_idx, 100.0)
+        cell = self._apply_shader_at_origin(mb, mat_idx)
+        self.assertEqual(cell["f_r"], int(0.25 * 256.0))
+        self.assertEqual(cell["f_g"], int((100.0 / 400.0) * 256.0))
+
+        mb.set_shader_near(mat_idx, 0.5)
+        mb.set_shader_far(mat_idx, 200.0)
+        cell_b = self._apply_shader_at_origin(mb, mat_idx)
+        self.assertEqual(cell_b["f_r"], int(0.5 * 256.0))
+        self.assertEqual(cell_b["f_g"], int((200.0 / 400.0) * 256.0))
+
+    def test_set_shader_near_wrong_material_raises(self):
+        mb = MaterialBufferPy()
+        mb.add_static((255, 0, 0, 255), (0, 0, 0, 255), 0)
+        with self.assertRaises(ValueError):
+            mb.set_shader_near(0, 1.0)
+
+    def test_set_shader_far_wrong_material_raises(self):
+        mb = MaterialBufferPy()
+        mb.add_static((255, 0, 0, 255), (0, 0, 0, 255), 0)
+        with self.assertRaises(ValueError):
+            mb.set_shader_far(0, 100.0)
 
 
 class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):

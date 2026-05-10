@@ -31,6 +31,8 @@ The shader entry function may still list `tt_FragCoord` (or other builtins above
 | `tt_DeltaTime` | `float` | `set_shader_delta_time`, `delta_time_f32_reg` |
 | `tt_Frame` | `int` | compiler seeds `0`; `set_shader_frame`, `frame_i32_reg` (saturates at `i32::MAX`) |
 | `tt_Resolution` | `glm.vec2` | seeds `(1, 1)`; `set_shader_resolution`, `resolution_v2_reg` |
+| `tt_Near` | `float` | seeds `0.1`; `set_shader_near`, `near_f32_reg` |
+| `tt_Far` | `float` | seeds `100.0`; `set_shader_far`, `far_f32_reg` |
 
 **User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`).
 

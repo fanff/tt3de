@@ -353,4 +353,36 @@ impl MaterialBufferPy {
             )),
         }
     }
+
+    fn set_shader_near(&mut self, material_idx: usize, near_clip_distance: f32) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_near_clip_distance(near_clip_distance);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
+    }
+
+    fn set_shader_far(&mut self, material_idx: usize, far_clip_distance: f32) -> PyResult<()> {
+        if material_idx >= self.content.current_size {
+            return Err(PyValueError::new_err("material_idx out of range"));
+        }
+
+        match &mut self.content.mats[material_idx] {
+            Material::Shader(shader) => {
+                shader.set_far_clip_distance(far_clip_distance);
+                Ok(())
+            }
+            _ => Err(PyValueError::new_err(
+                "material at material_idx is not a Shader material",
+            )),
+        }
+    }
 }

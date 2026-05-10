@@ -2,12 +2,14 @@
 """TTSL depth fog: a rotating box room where walls fade with distance.
 
 Four inward-facing quads plus a floor share full-block materials. Each TTSL
-fragment reads ``tt_FragDepth``, converts it to a linear-ish depth, and scales
-color with ``1 - d/(d+k)`` so nearby surfaces read bright and far ones sink into
+fragment reads ``tt_FragDepth``, reconstructs linear eye-space depth with
+``tt_Near`` / ``tt_Far`` (matching the camera clip planes), and scales color with
+``1 - d/(d+k)`` so nearby surfaces read bright and far ones sink into
 black—classic distance fog without a separate pass.
 
 Uses ``ShaderPy`` with ``frag_depth_f32_reg`` tied to ``PIXELVAR_TT_FRAG_DEPTH``
-from ``all_passes_compilation``. Slot 0 is a static space fill. Camera is offset
+and ``near_f32_reg`` / ``far_f32_reg`` for ``tt_Near`` / ``tt_Far`` from
+``all_passes_compilation``. Slot 0 is a static space fill. Camera is offset
 from the room center so rotation shows the fog sliding over red (north/south),
 blue (east/west), and neutral floor tints.
 
@@ -27,9 +29,14 @@ from tt3de.textual_standalone import TT3DViewStandAlone
 from tt3de.tt3de import find_glyph_indices_py, materials  # type: ignore[reportMissingImports]
 from tt3de.tt_3dnodes import TT3DNode
 from tt3de.ttsl.compiler import (
+    GLOBAL_VAR_TT_FAR,
+    GLOBAL_VAR_TT_NEAR,
     PIXELVAR_TT_FRAG_DEPTH,
     all_passes_compilation,
 )
+
+CAM_NEAR = 0.1
+CAM_FAR = 100.0
 
 ROOM_HALF = 10.0
 WALL_H = 3.0
@@ -39,7 +46,8 @@ SHADER_SRC_RED_WALL = dedent(
     """
     def depth_red_wall(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
-        d: float = 20.0 / (100.1 - z_n * 99.9)
+        # linear eye-space depth from NDC z using active clip planes (see ttsl.md)
+        d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
         rgb: vec3 = vec3(0.92 * t, 0.22 * t, 0.18 * t)
         return (rgb, vec3(0.0, 0.0, 0.0), 0)
@@ -50,7 +58,7 @@ SHADER_SRC_BLUE_WALL = dedent(
     """
     def depth_blue_wall(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
-        d: float = 20.0 / (100.1 - z_n * 99.9)
+        d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
         rgb: vec3 = vec3(0.2 * t, 0.28 * t, 0.92 * t)
         return (rgb, vec3(0.0, 0.0, 0.0), 0)
@@ -61,7 +69,7 @@ SHADER_SRC_FLOOR = dedent(
     """
     def depth_floor(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
-        d: float = 20.0 / (100.1 - z_n * 99.9)
+        d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
         rgb: vec3 = vec3(0.42 * t, 0.36 * t, 0.30 * t)
         return (rgb, vec3(0.0, 0.0, 0.0), 0)
@@ -76,15 +84,26 @@ def _add_depth_shader_material(
     entry: str,
     full_block: tuple[int, ...],
 ) -> int:
-    bytecode, reg_settings = all_passes_compilation(shader_src, entry, {})
+    globals_dict = {
+        GLOBAL_VAR_TT_NEAR: float,
+        GLOBAL_VAR_TT_FAR: float,
+    }
+    bytecode, reg_settings = all_passes_compilation(shader_src, entry, globals_dict)
     _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
+    _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
+    _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
     shader_mat = materials.ShaderPy(
         bytecode,
         default_glyph=full_block,
         register_seed=reg_settings.get_register_list(),
         frag_depth_f32_reg=fd_reg,
+        near_f32_reg=near_reg,
+        far_f32_reg=far_reg,
     )
-    return rc.material_buffer.add_shader(shader_mat)
+    mat_id = rc.material_buffer.add_shader(shader_mat)
+    rc.material_buffer.set_shader_near(mat_id, CAM_NEAR)
+    rc.material_buffer.set_shader_far(mat_id, CAM_FAR)
+    return mat_id
 
 
 def _wall_xf(angle_y_deg: float, pos: glm.vec3) -> glm.mat4:
@@ -112,8 +131,8 @@ class TTSLFogRoomDemo(TT3DViewStandAlone):
     def initialize(self) -> None:
         self.camera.set_viewport_scale_mode(ViewportScaleMode.FIT)
         self.camera.set_projectioninfo(
-            dist_min=0.1,
-            dist_max=100.0,
+            dist_min=CAM_NEAR,
+            dist_max=CAM_FAR,
             fov_radians=glm.radians(110.0),
         )
         # camera is shifted away from the room to apreciate distance better

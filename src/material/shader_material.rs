@@ -128,6 +128,10 @@ pub struct ShaderInputBinding {
     pub frame_i32_reg: Option<usize>,
     /// Register index for ``tt_Resolution`` (``glm.vec2`` uniform); updated via seed only — not per pixel.
     pub resolution_v2_reg: Option<usize>,
+    /// Register for ``tt_Near`` (``float``, near clip distance); updated via seed only — not per pixel.
+    pub near_f32_reg: Option<usize>,
+    /// Register for ``tt_Far`` (``float``, far clip distance); updated via seed only — not per pixel.
+    pub far_f32_reg: Option<usize>,
     /// Register for ``tt_FrontFacing`` (``bool``); updated from ``PixInfo::front_facing`` each pixel.
     pub front_facing_bool_reg: Option<usize>,
     /// Register for ``tt_FragDepth`` (``float``); updated from the active depth layer each pixel.
@@ -163,6 +167,8 @@ impl Default for ShaderInputBinding {
             delta_time_f32_reg: None,
             frame_i32_reg: None,
             resolution_v2_reg: None,
+            near_f32_reg: None,
+            far_f32_reg: None,
             front_facing_bool_reg: None,
             frag_depth_f32_reg: None,
             line_coord_f32_reg: None,
@@ -253,6 +259,16 @@ impl ShaderMaterial {
         self
     }
 
+    pub fn with_near_f32_reg(mut self, near_f32_reg: Option<usize>) -> Self {
+        self.input_binding.near_f32_reg = near_f32_reg;
+        self
+    }
+
+    pub fn with_far_f32_reg(mut self, far_f32_reg: Option<usize>) -> Self {
+        self.input_binding.far_f32_reg = far_f32_reg;
+        self
+    }
+
     pub fn with_front_facing_bool_reg(mut self, front_facing_bool_reg: Option<usize>) -> Self {
         self.input_binding.front_facing_bool_reg = front_facing_bool_reg;
         self
@@ -299,6 +315,18 @@ impl ShaderMaterial {
         let h = if height_cells > 0.0 { height_cells } else { 1.0 };
         if let Some(reg_id) = self.input_binding.resolution_v2_reg {
             self.seed_regs.set_v2(reg_id, vec2(w, h));
+        }
+    }
+
+    pub fn set_near_clip_distance(&mut self, near: f32) {
+        if let Some(reg_id) = self.input_binding.near_f32_reg {
+            self.seed_regs.set_f32(reg_id, near);
+        }
+    }
+
+    pub fn set_far_clip_distance(&mut self, far: f32) {
+        if let Some(reg_id) = self.input_binding.far_f32_reg {
+            self.seed_regs.set_f32(reg_id, far);
         }
     }
 
@@ -519,6 +547,17 @@ mod tests {
         assert_eq!(shader.seed_regs.get_v2(7), vec2(80.0, 24.0));
         shader.set_resolution_cells(0.0, -5.0);
         assert_eq!(shader.seed_regs.get_v2(7), vec2(1.0, 1.0));
+    }
+
+    #[test]
+    fn test_shader_material_near_far_uniform_setters_update_seed_registers() {
+        let mut shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0])
+            .with_near_f32_reg(Some(13))
+            .with_far_f32_reg(Some(14));
+        shader.set_near_clip_distance(0.25);
+        shader.set_far_clip_distance(500.0);
+        assert_eq!(shader.seed_regs.get_f32(13), 0.25);
+        assert_eq!(shader.seed_regs.get_f32(14), 500.0);
     }
 
     #[test]

@@ -208,6 +208,14 @@ class MaterialBufferPy:
         """
         ...
 
+    def set_shader_near(self, material_idx: int, near_clip_distance: float) -> None:
+        """Updates ``tt_Near`` for a shader material (near clip distance, engine units)."""
+        ...
+
+    def set_shader_far(self, material_idx: int, far_clip_distance: float) -> None:
+        """Updates ``tt_Far`` for a shader material (far clip distance, engine units)."""
+        ...
+
     def add_textured(self, albedo_texture_idx: int, glyph_idx: int) -> int:
         """
         Adds a textured material to the buffer.

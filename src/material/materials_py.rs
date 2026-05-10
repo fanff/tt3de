@@ -188,6 +188,8 @@ pub struct ShaderPy {
     pub delta_time_f32_reg: Option<usize>,
     pub frame_i32_reg: Option<usize>,
     pub resolution_v2_reg: Option<usize>,
+    pub near_f32_reg: Option<usize>,
+    pub far_f32_reg: Option<usize>,
     pub front_facing_bool_reg: Option<usize>,
     pub frag_depth_f32_reg: Option<usize>,
     pub line_coord_f32_reg: Option<usize>,
@@ -237,6 +239,8 @@ impl ShaderPy {
             .with_delta_time_f32_reg(self.delta_time_f32_reg)
             .with_frame_i32_reg(self.frame_i32_reg)
             .with_resolution_v2_reg(self.resolution_v2_reg)
+            .with_near_f32_reg(self.near_f32_reg)
+            .with_far_f32_reg(self.far_f32_reg)
             .with_front_facing_bool_reg(self.front_facing_bool_reg)
             .with_frag_depth_f32_reg(self.frag_depth_f32_reg)
             .with_line_coord_f32_reg(self.line_coord_f32_reg)
@@ -252,7 +256,7 @@ impl ShaderPy {
 #[pymethods]
 impl ShaderPy {
     #[new]
-    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None))]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None))]
     fn new(
         bytecode: &Bound<'_, PyBytes>,
         time_f32_reg: Option<usize>,
@@ -265,6 +269,8 @@ impl ShaderPy {
         default_glyph: Option<u8>,
         register_seed: Option<Py<PyAny>>,
         frame_i32_reg: Option<usize>,
+        near_f32_reg: Option<usize>,
+        far_f32_reg: Option<usize>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
         let bytes = bytecode.as_bytes();
@@ -274,6 +280,8 @@ impl ShaderPy {
             delta_time_f32_reg,
             frame_i32_reg,
             resolution_v2_reg,
+            near_f32_reg,
+            far_f32_reg,
             front_facing_bool_reg,
             frag_depth_f32_reg,
             line_coord_f32_reg,
@@ -331,6 +339,26 @@ impl ShaderPy {
     #[setter]
     fn set_resolution_v2_reg(&mut self, value: Option<usize>) {
         self.resolution_v2_reg = value;
+    }
+
+    #[getter]
+    fn near_f32_reg(&self) -> Option<usize> {
+        self.near_f32_reg
+    }
+
+    #[setter]
+    fn set_near_f32_reg(&mut self, value: Option<usize>) {
+        self.near_f32_reg = value;
+    }
+
+    #[getter]
+    fn far_f32_reg(&self) -> Option<usize> {
+        self.far_f32_reg
+    }
+
+    #[setter]
+    fn set_far_f32_reg(&mut self, value: Option<usize>) {
+        self.far_f32_reg = value;
     }
 
     #[getter]
