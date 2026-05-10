@@ -444,7 +444,7 @@ mod tests {
         drawbuffer::drawbuffer::PixInfo,
         primitivbuffer::{primitiv_triangle::PTriangle3D, primitivbuffer::PrimitiveElements},
         texturebuffer::texture_buffer::TextureBuffer,
-        ttsl::Registers,
+        ttsl::{opcodes::OP_RET, Registers},
         vertexbuffer::uv_buffer::UVBuffer,
     };
 
@@ -465,7 +465,7 @@ mod tests {
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
-        let shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 1, 1, 0]);
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0]);
 
         shader.render_mat(
             &mut canvas_cell,
@@ -496,7 +496,7 @@ mod tests {
         regs.v3[7] = vec3(0.2, 0.4, 0.6);
         regs.i32_[9] = 99;
 
-        let shader = ShaderMaterial::from_bytecode(&[83, 0, 7, 7, 9, 0])
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0])
             .with_seed_registers(ShaderSeedRegisters::from_registers(regs));
 
         shader.render_mat(
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_shader_material_time_uniform_setter_updates_seed_register() {
-        let mut shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0]).with_time_f32_reg(Some(12));
+        let mut shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_time_f32_reg(Some(12));
         shader.set_time_seconds(3.25);
         assert_eq!(shader.seed_regs.get_f32(12), 3.25);
     }
@@ -524,7 +524,7 @@ mod tests {
     #[test]
     fn test_shader_material_delta_time_uniform_setter_updates_seed_register() {
         let mut shader =
-            ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0]).with_delta_time_f32_reg(Some(11));
+            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_delta_time_f32_reg(Some(11));
         shader.set_delta_time_seconds(1.0 / 60.0);
         assert_eq!(shader.seed_regs.get_f32(11), 1.0 / 60.0);
     }
@@ -532,7 +532,7 @@ mod tests {
     #[test]
     fn test_shader_material_frame_uniform_setter_updates_seed_register() {
         let mut shader =
-            ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0]).with_frame_i32_reg(Some(6));
+            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_frame_i32_reg(Some(6));
         shader.set_frame_counter(42);
         assert_eq!(shader.seed_regs.get_i32(6), 42);
         shader.set_frame_counter(u32::MAX);
@@ -542,7 +542,7 @@ mod tests {
     #[test]
     fn test_shader_material_resolution_uniform_setter_updates_seed_register() {
         let mut shader =
-            ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0]).with_resolution_v2_reg(Some(7));
+            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_resolution_v2_reg(Some(7));
         shader.set_resolution_cells(80.0, 24.0);
         assert_eq!(shader.seed_regs.get_v2(7), vec2(80.0, 24.0));
         shader.set_resolution_cells(0.0, -5.0);
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_shader_material_near_far_uniform_setters_update_seed_registers() {
-        let mut shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0])
+        let mut shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0])
             .with_near_f32_reg(Some(13))
             .with_far_f32_reg(Some(14));
         shader.set_near_clip_distance(0.25);
@@ -655,7 +655,7 @@ mod tests {
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
-        let shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 0, 0, 0]).with_default_glyph(Some(219));
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_default_glyph(Some(219));
         shader.render_mat(
             &mut canvas_cell,
             &depth_cell,
@@ -676,7 +676,7 @@ mod tests {
         let primitive_element = PrimitiveElements::Triangle3D(PTriangle3D::zero());
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
-        let shader = ShaderMaterial::from_bytecode(&[83, 0, 0, 1, 1, 0]);
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0]);
 
         let mut pix_a = PixInfo::new();
         pix_a.set_uv(vec2(0.5, 0.25));
@@ -734,7 +734,7 @@ mod tests {
         regs.v3[7] = vec3(0.2, 0.4, 0.6);
         regs.i32_[9] = 99;
         let mut shader =
-            ShaderMaterial::from_bytecode(&[83, 0, 7, 7, 9, 0]).with_seed_registers(
+            ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0]).with_seed_registers(
                 ShaderSeedRegisters::from_registers(regs),
             );
 
