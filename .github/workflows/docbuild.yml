@@ -21,6 +21,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -67,5 +71,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - id: deployment
         uses: actions/deploy-pages@v4
