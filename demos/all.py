@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Launch any demo under ``demos/2d/`` or ``demos/3d/`` from a Textual menu.
 
-Select a demo with Enter; press Escape to return to the menu. A rolling median FPS
-overlay (last 50 samples) is shown while a demo runs.
+Demos are listed in **two side-by-side panels** (``demos/2d`` and ``demos/3d``). Select
+with Enter (Tab moves between panels). Escape returns from a running demo. A rolling
+median FPS overlay (last 50 samples) is shown while a demo runs.
 
 Run from the repository root (``models/`` and other assets are cwd-relative):
 
@@ -28,8 +29,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Header, Static
-from textual.widgets import OptionList
+from textual.widgets import Header, OptionList, Rule, Static
 from textual.widgets.option_list import Option
 
 from tt3de.textual_standalone import TT3DViewStandAlone
@@ -221,51 +221,133 @@ class DemoRunScreen(Screen):
 
 
 class DemoMenuScreen(Screen):
-    """Pick a demo from ``demos/2d`` and ``demos/3d``."""
+    """Pick a demo from ``demos/2d`` and ``demos/3d`` (two styled columns)."""
 
     DEFAULT_CSS = """
     #menu-column {
         height: 100%;
     }
-    #demo-options {
+    #hint-line {
+        margin: 0 0 1 0;
+        color: $text-muted;
+    }
+    #demo-panels {
         height: 1fr;
-        min-height: 8;
+        min-height: 10;
+    }
+    .demo-panel {
+        width: 1fr;
+        height: 100%;
+        padding: 1 2;
+        background: $boost;
+        border: round $panel;
+    }
+    .demo-panel.panel-2d {
+        margin-right: 1;
+        border: round $accent;
+    }
+    .demo-panel.panel-3d {
+        margin-left: 1;
+        border: round $primary;
+    }
+    .panel-title {
+        text-style: bold;
+        margin-bottom: 0;
+    }
+    .demo-panel.panel-2d .panel-title {
+        color: $accent;
+    }
+    .demo-panel.panel-3d .panel-title {
+        color: $primary;
+    }
+    .panel-path {
+        color: $text-muted;
+        margin-top: 0;
+        margin-bottom: 1;
+    }
+    .panel-rule {
+        margin: 0 0 1 0;
+        color: $border;
+    }
+    #demo-options-2d, #demo-options-3d {
+        height: 1fr;
+        min-height: 6;
+        border: none;
+        background: transparent;
     }
     """
 
     def __init__(self, entries: list[DemoEntry]) -> None:
         super().__init__()
-        self._entries = entries
+        self._entries_2d = [e for e in entries if e.category == "2d"]
+        self._entries_3d = [e for e in entries if e.category == "3d"]
+
+    @staticmethod
+    def _options_for(entries: list[DemoEntry]) -> list[Option]:
+        return [
+            Option(
+                (
+                    f"[dim]{e.label}[/] — {e.load_error}"
+                    if e.view_cls is None
+                    else e.label
+                ),
+                id=str(i),
+                disabled=e.view_cls is None,
+            )
+            for i, e in enumerate(entries)
+        ]
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Vertical(id="menu-column"):
             yield Static(
-                "Select a demo (Enter). Escape returns from a running demo. Ctrl+Q quits.",
+                "Enter runs the highlighted demo · Tab switches panel · Escape exits a demo · Ctrl+Q quits",
+                id="hint-line",
                 markup=False,
             )
-            options = [
-                Option(
-                    (
-                        f"[dim]{e.label}[/] — {e.load_error}"
-                        if e.view_cls is None
-                        else e.label
-                    ),
-                    id=str(i),
-                    disabled=e.view_cls is None,
-                )
-                for i, e in enumerate(self._entries)
-            ]
-            yield OptionList(*options, id="demo-options")
+            with Horizontal(id="demo-panels"):
+                with Vertical(classes="demo-panel panel-2d"):
+                    yield Static("2D", classes="panel-title", markup=False)
+                    yield Static(
+                        f"demos/2d · {len(self._entries_2d)} files",
+                        classes="panel-path",
+                        markup=False,
+                    )
+                    yield Rule(line_style="heavy", classes="panel-rule")
+                    yield OptionList(
+                        *self._options_for(self._entries_2d),
+                        id="demo-options-2d",
+                    )
+                with Vertical(classes="demo-panel panel-3d"):
+                    yield Static("3D", classes="panel-title", markup=False)
+                    yield Static(
+                        f"demos/3d · {len(self._entries_3d)} files",
+                        classes="panel-path",
+                        markup=False,
+                    )
+                    yield Rule(line_style="heavy", classes="panel-rule")
+                    yield OptionList(
+                        *self._options_for(self._entries_3d),
+                        id="demo-options-3d",
+                    )
 
     def on_mount(self) -> None:
         self.app.title = "TT3DE Demo Launcher"
         self.app.sub_title = ""
-        opt_list = self.query_one("#demo-options", OptionList)
-        opt_list.focus()
+        if self._entries_2d:
+            self.query_one("#demo-options-2d", OptionList).focus()
+        elif self._entries_3d:
+            self.query_one("#demo-options-3d", OptionList).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        entry = self._entries[event.option_index]
+        ol = event.option_list
+        if ol.id == "demo-options-2d":
+            entries = self._entries_2d
+        elif ol.id == "demo-options-3d":
+            entries = self._entries_3d
+        else:
+            return
+        entry = entries[event.option_index]
         if entry.view_cls is None:
             self.app.notify(
                 entry.load_error or "Demo unavailable",
