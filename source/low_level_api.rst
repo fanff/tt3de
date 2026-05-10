@@ -104,6 +104,55 @@ Depth Buffer:
     A parallel 2D array storing depth values for each pixel.
     Used to ensure correct visibility and occlusion.
 
+Depth layer resolve
+^^^^^^^^^^^^^^^^^^^
+
+The drawing buffer is not a single OpenGL-style depth sample per terminal
+cell. It stores a small fixed stack of depth layers per cell (currently two
+layers through ``DrawingBufferPy`` / ``DrawBuffer<2, f32>``). Each layer keeps
+both a depth value and a reference to the matching ``PixInfo`` entry for that
+fragment: UVs, normal, material id, primitive id, and other per-pixel data.
+
+During rasterization, ``DrawBuffer::set_depth_content`` inserts each covered
+fragment into the cell's depth stack if it is closer than an existing layer.
+The stack is kept sorted nearest-first: layer ``0`` is the closest stored
+fragment, layer ``1`` is the next closest fragment, and any fragment beyond the
+available layer count is dropped.
+
+After rasterization, ``apply_material_on`` resolves each cell by shading layers
+from farthest to nearest:
+
+.. code-block:: rust
+
+    for depth_layer in (0..DEPTHLAYER).rev() {
+        // shade this layer into the same CanvasCell
+    }
+
+All layers write into the same final ``CanvasCell`` fields: ``front_color``,
+``back_color``, and ``glyph``. There is no single global blend equation at this
+stage. The effective compositing behavior is material-defined:
+
+- ``StaticColor`` copies only the channels enabled by its ``front``, ``back``,
+  and ``glyph`` toggles.
+- ``BaseTexture`` can alpha-blend front/back colors and can choose a glyph from
+  texture data or a fixed glyph method.
+- ``Textured`` and many shader paths overwrite the channels they produce.
+- Glyph composition is usually last-writer-wins for whichever nearer material
+  writes a glyph.
+
+This makes tt3de closer to a tiny fixed-size **K-buffer** / order-independent
+transparency approach than to the classic OpenGL default framebuffer model. The
+engine stores a few visible fragments first, then resolves them into one ASCII
+cell.
+
+For comparison, classic OpenGL normally has one depth value per pixel. A
+fragment passes or fails the depth test against that single value; if it passes,
+it may blend its color into the framebuffer and update the depth buffer.
+Transparent rendering is usually handled separately by drawing opaque geometry
+first, then drawing transparent geometry back-to-front with blending enabled
+and depth writes disabled, or by using advanced techniques such as depth
+peeling, A-buffers, or K-buffers.
+
 
 Material modes
 --------------
