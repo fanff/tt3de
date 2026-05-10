@@ -1,6 +1,6 @@
 ---
 description: Documentation sync standards for language and demo changes
-globs: **/*.md
+globs: **/*.md,**/*.rst
 alwaysApply: false
 ---
 
@@ -11,3 +11,4 @@ alwaysApply: false
 - Prefer concise sections with concrete commands or snippets over long prose.
 - Clearly call out compatibility notes or breaking changes.
 - For TTSL updates, ensure opcode/assembly semantics stay synchronized with docs.
+- For Sphinx `.rst` pages: **one document title** underlined with `=` only; demote every other heading (`-`, `^`, …). Never repeat the top-level adornment within the same page.

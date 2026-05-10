@@ -3,7 +3,7 @@ Low Level API
 ==============
 
 Main Buffer Usage
-=================
+-----------------
 
 This section documents all core buffers used by the 3D engine.
 Each buffer has a specific responsibility in the rendering pipeline and interacts
@@ -11,7 +11,7 @@ with others as the scene is transformed, rasterized, shaded, and drawn.
 
 
 Transform Buffer
-----------------
+^^^^^^^^^^^^^^^^
 Stores all 3D transformations required for rendering the scene.
 
 This includes:
@@ -25,7 +25,7 @@ all geometry correctly on screen.
 
 
 Geometry Buffer
----------------
+^^^^^^^^^^^^^^^
 Stores all original 3D geometry data.
 
 Contents typically include:
@@ -44,7 +44,7 @@ Notes:
 
 
 Primitive Buffer
-----------------
+^^^^^^^^^^^^^^^^
 
 Holds the **2D projected primitives** after transformation from 3D space to
 screen space.
@@ -59,7 +59,7 @@ These primitives are already clipped and ready for rasterization.
 
 
 Texture Buffer
---------------
+^^^^^^^^^^^^^^
 Stores 2D texture data used by materials when shading pixels.
 
 Textures typically contain:
@@ -72,7 +72,7 @@ Textures are referenced by entries in the **Material Buffer**.
 
 
 Material Buffer
----------------
+^^^^^^^^^^^^^^^
 Defines how each object should appear when rendered.
 
 Materials may specify:
@@ -87,7 +87,7 @@ appearance on screen.
 
 
 Drawing Buffer
---------------
+^^^^^^^^^^^^^^
 
 Contains all final screen output information, separated into two primary parts:
 
@@ -106,7 +106,7 @@ Depth Buffer:
 
 
 Overall Pipeline Flow
-=====================
+---------------------
 
 When rendering a 3D scene, the engine processes data through a sequence of
 operations. Each stage consumes one or more buffers and produces new data for
@@ -123,7 +123,7 @@ Conceptually:
 
 
 Project & Clip
---------------
+^^^^^^^^^^^^^^
 
 Inputs:
 
@@ -144,7 +144,7 @@ Output:
 
 
 Raster
-------
+^^^^^^
 
 Inputs:
 
@@ -168,7 +168,7 @@ Output:
 
 
 Pixel Shader
-------------
+^^^^^^^^^^^^
 
 Inputs:
 
@@ -189,7 +189,7 @@ Output:
 
 
 Where to see this in demos
-==========================
+--------------------------
 
 - ``demos/2d/material_test.py``: material switching and glyph/textured output
 - ``demos/3d/triangle_test.py``: primitive generation and simple material assignment

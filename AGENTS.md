@@ -35,6 +35,8 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 
 - The `source/` folder is a [Sphinx](https://www.sphinx-doc.org/) documentation project. Generated docs (e.g. `source/opcode_reference.md`) are written there so Sphinx can include them in the built site.
 
+- **reStructuredText pages (`.rst`)**: use **only one top-level heading per page** — the title underlined with `=` (same convention as `high_level_api.rst`). Additional sections must use deeper adornments (`-`, then `^`, and so on). Multiple `===`-style headings split the document into parallel top-level sections and break the table of contents / navigation.
+
 - **Screenshots tracked in Sphinx static assets**: the dual-panel composite used in the docs lives under `source/_static/screenshots/`. After changing [`scripts/screenshot_apps/dual_panel.py`](scripts/screenshot_apps/dual_panel.py) or dependencies it renders, regenerate from the repository root:
 
  **`make regen-doc-screenshot`**, **`bash scripts/regen_doc_screenshot.sh`**, or **`powershell -ExecutionPolicy Bypass -File scripts/regen_doc_screenshot.ps1`**.
