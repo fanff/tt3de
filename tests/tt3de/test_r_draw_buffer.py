@@ -642,7 +642,7 @@ class Test_totextual(unittest.TestCase):
     def test_to_textual_2(self):
         gb = DrawingBufferPy(max_row=10, max_col=20)
         gb.hard_clear(100.0)
-        gb.set_canvas_cell(0, 0, (0, 100, 200, 255), (200, 100, 0, 255), 1)
+        gb.set_canvas_cell(0, 0, (0, 100, 200, 255), (200, 100, 0, 255), 0)
 
         gb.set_bit_size_front(8, 8, 8)
         gb.set_bit_size_back(8, 8, 8)
@@ -657,7 +657,7 @@ class Test_totextual(unittest.TestCase):
                 "b_r": 200,
                 "b_g": 100,
                 "b_b": 0,
-                "glyph": 1,
+                "glyph": 0,
             },
         )
 
@@ -725,3 +725,104 @@ class Test_totextual(unittest.TestCase):
 
         self.assertEqual(len(res), 25)
         self.assertEqual(len(res[0]), 178)
+
+    def test_to_textual_2_glyph_indices_zero_one_two(self) -> None:
+        """GLYPH_STATIC_STR[0], [1], [2] must round-trip through ``to_textual_2``.
+
+        Regression guard for reports that glyph index 0 mis-extracts (e.g. black /
+        wrong segment) after segment-cache reduction.
+        """
+        gb = DrawingBufferPy(max_row=1, max_col=3)
+        gb.hard_clear(100.0)
+        gb.set_bit_size_front(8, 8, 8)
+        gb.set_bit_size_back(8, 8, 8)
+
+        # Columns 0..2: glyph indices 0, 1, 2 with distinct non-black foregrounds.
+        gb.set_canvas_cell(0, 0, (255, 40, 35, 255), (12, 12, 12, 255), 0)
+        gb.set_canvas_cell(0, 1, (35, 255, 45, 255), (24, 24, 24, 255), 1)
+        gb.set_canvas_cell(0, 2, (40, 38, 255, 255), (36, 36, 36, 255), 2)
+
+        res = gb.to_textual_2(min_x=0, max_x=3, min_y=0, max_y=1)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(len(res[0]), 3)
+
+        # Must match ``src/drawbuffer/glyphset.rs`` GLYPH_STATIC_STR[0..3].
+        expected_chars = ("!", " ", "'")
+        for i in range(3):
+            seg = res[0][i]
+            self.assertEqual(
+                seg.text,
+                expected_chars[i],
+                msg=f"glyph index {i} -> Rich Segment text",
+            )
+            tri = seg.style.color.triplet
+            self.assertNotEqual(
+                (tri.red, tri.green, tri.blue),
+                (0, 0, 0),
+                msg=f"glyph index {i}: foreground triplet should not collapse to black",
+            )
+
+    def test_to_textual_2_default_bit_depth_unreduces_colors(self) -> None:
+        """Without ``set_bit_size_*``, cache uses 4-bit reduction (see ``DrawingBufferPy::new``).
+
+        Colors must be **unreduced** when building Rich segments — never treat reduced
+        tuple bytes as 8-bit RGB. Raw black reduces to 0 in each channel; unreduce
+        fills low bits so the displayed pair is (15, 15, 15), not (0, 0, 0).
+        """
+        gb = DrawingBufferPy(max_row=1, max_col=1, material_parallel_threads=0)
+        gb.hard_clear(100.0)
+        gb.set_canvas_cell(0, 0, (0, 0, 0, 255), (0, 0, 0, 255), 0)
+
+        res = gb.to_textual_2(min_x=0, max_x=1, min_y=0, max_y=1)
+        seg = res[0][0]
+        self.assertEqual(seg.text, "!")
+        self.assertEqual(seg.style.color.triplet.red, 15)
+        self.assertEqual(seg.style.color.triplet.green, 15)
+        self.assertEqual(seg.style.color.triplet.blue, 15)
+        self.assertEqual(seg.style.bgcolor.triplet.red, 15)
+        self.assertEqual(seg.style.bgcolor.triplet.green, 15)
+        self.assertEqual(seg.style.bgcolor.triplet.blue, 15)
+
+    def test_to_textual_2_same_colors_distinct_glyphs_no_wrong_cache_share(self) -> None:
+        """Identical reduced fg/bg must still yield different segments per glyph index."""
+        gb = DrawingBufferPy(max_row=1, max_col=2, material_parallel_threads=0)
+        gb.hard_clear(100.0)
+        gb.set_bit_size_front(8, 8, 8)
+        gb.set_bit_size_back(8, 8, 8)
+        fg = (90, 120, 140, 255)
+        bg = (10, 20, 30, 255)
+        gb.set_canvas_cell(0, 0, fg, bg, 0)
+        gb.set_canvas_cell(0, 1, fg, bg, 1)
+
+        res1 = gb.to_textual_2(0, 2, 0, 1)
+        self.assertEqual(res1[0][0].text, "!")
+        self.assertEqual(res1[0][1].text, " ")
+
+        res2 = gb.to_textual_2(0, 2, 0, 1)
+        self.assertEqual(res2[0][0].text, "!")
+        self.assertEqual(res2[0][1].text, " ")
+
+    def test_to_textual_2_second_pass_matches_first(self) -> None:
+        """Segment cache reuse must not swap glyphs or colors."""
+        gb = DrawingBufferPy(max_row=1, max_col=3, material_parallel_threads=0)
+        gb.hard_clear(100.0)
+        gb.set_bit_size_front(8, 8, 8)
+        gb.set_bit_size_back(8, 8, 8)
+        gb.set_canvas_cell(0, 0, (200, 10, 10, 255), (1, 2, 3, 255), 0)
+        gb.set_canvas_cell(0, 1, (10, 200, 10, 255), (4, 5, 6, 255), 1)
+        gb.set_canvas_cell(0, 2, (10, 10, 200, 255), (7, 8, 9, 255), 2)
+
+        def row_snapshot(lines):
+            return tuple(
+                (
+                    seg.text,
+                    seg.style.color.triplet.red,
+                    seg.style.color.triplet.green,
+                    seg.style.color.triplet.blue,
+                )
+                for seg in lines[0]
+            )
+
+        a = row_snapshot(gb.to_textual_2(0, 3, 0, 1))
+        b = row_snapshot(gb.to_textual_2(0, 3, 0, 1))
+        self.assertEqual(a, b)

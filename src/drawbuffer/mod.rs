@@ -93,15 +93,7 @@ impl DrawingBufferPy {
         let color_class = rich_color_module.getattr("Color").unwrap();
         let color_triplet_class = rich_color_triplet_module.getattr("ColorTriplet").unwrap();
 
-        let mut segment_cache = SegmentCache::new_iso(4);
-        let aseg0 = create_textual_segment(
-            py,
-            [0, 0, 0, 0, 0, 0, 0],
-            &color_triplet_class,
-            &color_class,
-            &segment_class,
-            &style_class,
-        );
+        let segment_cache = SegmentCache::new_iso(4);
         let default_segment = create_textual_segment(
             py,
             [0, 0, 0, 0, 0, 0, 1],
@@ -110,7 +102,6 @@ impl DrawingBufferPy {
             &segment_class,
             &style_class,
         );
-        segment_cache.insert_with_hash(0, aseg0);
         let (material_parallel_threads, material_pool) = material_parallelism_from_py(spec);
         Ok(DrawingBufferPy {
             db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),

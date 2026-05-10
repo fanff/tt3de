@@ -20,7 +20,8 @@ pub const GLYPH_STATIC_STR: [&str; 256] = [
 ];
 //⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿
 
-pub const SPACE: u8 = 0;
+/// Index of ``' '`` in ``GLYPH_STATIC_STR`` (index 0 is ``'!'``).
+pub const SPACE: u8 = 1;
 pub const HALF_UPPER_BLOCK: u8 = 95;
 pub const HALF_LOWER_BLOCK: u8 = 99;
 

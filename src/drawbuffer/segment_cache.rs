@@ -205,6 +205,37 @@ mod tests {
     }
 
     #[test]
+    fn reduced_tuple_to_int_differs_by_glyph_when_colors_match() {
+        let cache = SegmentCache::new_iso(8);
+        let base = [10u8, 20, 30, 40, 50, 60];
+        let mut hashes = std::collections::HashSet::new();
+        for glyph in 0u8..=2 {
+            let mut t = [0u8; 7];
+            t[..6].copy_from_slice(&base);
+            t[6] = glyph;
+            assert!(
+                hashes.insert(cache.reduced_tuple_to_int(t)),
+                "glyph {glyph}: hash must be unique for fixed reduced colors"
+            );
+        }
+    }
+
+    #[test]
+    fn reduced_tuple_to_int_injective_for_small_grid() {
+        let cache = SegmentCache::new([4, 4, 4], [4, 4, 4]);
+        let mut seen = std::collections::HashSet::new();
+        for g in 0u8..=2u8 {
+            for fr in 0u8..4 {
+                for fg in 0u8..4 {
+                    let t = [fr, fg, 0u8, 0u8, 0u8, 0u8, g];
+                    let h = cache.reduced_tuple_to_int(t);
+                    assert!(seen.insert(h), "unexpected hash collision for {t:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn test_combination() {
         let bit_size_front = [2, 2, 2];
         let bit_size_back = [2, 2, 2];

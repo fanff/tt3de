@@ -7,7 +7,7 @@ from tt3de.tt3de import find_glyph_indices_py
 
 class Test_DrawBuffer(unittest.TestCase):
     def test_find_glyph(self):
-        self.assertEqual(find_glyph_indices_py(" "), 0)
+        self.assertEqual(find_glyph_indices_py(" "), 1)
         self.assertEqual(find_glyph_indices_py("2"), 18)
         self.assertEqual(find_glyph_indices_py("E"), 37)
         self.assertEqual(find_glyph_indices_py("X"), 56)
