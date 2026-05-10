@@ -67,6 +67,7 @@ Before starting new feature or chore work, update your local base from `master` 
 - Branch naming should usually follow:
   - `feat/<short-description>`
   - `chore/<short-description>`
+  - `evol/<evol-description>`
 - Commit messages must follow release-standard Conventional Commits, such as:
   - `feat: <what changed>`
   - `chore: <what changed>`
