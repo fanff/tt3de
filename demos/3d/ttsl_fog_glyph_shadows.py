@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""TTSL fog with glyph dither: depth bands select shade glyphs.
+"""TTSL fog with glyph shadows: depth bands choose the visible glyph.
 
-Same rotating box room as ``ttsl_fog.py``, but the fragment shader maps the fog factor
-``t`` (linear depth -> ``1 - d/(d+k)``) into **four density bands** using ``floor()``
-for quantization. Each band selects one of four glyph indices passed as **user uniforms**
-``u_g0``...``u_g3`` (defaults: the block-density run from ``GLYPH_STATIC_STR`` in
-``glyphset.rs``). The room geometry spins over time (``update_step``), so depth bands
-shift naturally without any time logic inside the shader itself.
+Same rotating box room as ``ttsl_fog.py``, but the fragment shader keeps the
+cell background as the per-surface ``u_albedo`` and fixes the foreground to
+black. The fog factor ``t`` (linear depth -> ``1 - d/(d+k)``) is quantized into
+four bands using ``floor()``, then each band selects one glyph index passed as a
+user uniform: ``u_g0``...``u_g3``. The demo uses ``A`` through ``D`` so the glyph
+shape, rather than the color, carries the depth-fog shadow.
 
-Uses ``ShaderPy`` with ``frag_depth_f32_reg`` / ``near_f32_reg`` / ``far_f32_reg``,
-slot 0 static space, and per-wall ``u_albedo`` like the original fog demo.
+The room geometry spins over time (``update_step``), so depth bands shift
+naturally without any time logic inside the shader itself. Uses ``ShaderPy``
+with ``frag_depth_f32_reg`` / ``near_f32_reg`` / ``far_f32_reg``, slot 0 static
+space, and per-wall ``u_albedo`` like the original fog demo.
 
 Run:
     uv run python demos/3d/ttsl_fog_glyph_shadows.py
@@ -29,11 +31,10 @@ from tt3de.tt_3dnodes import TT3DNode
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_FAR,
     GLOBAL_VAR_TT_NEAR,
-    PIXELVAR_TT_FRAG_DEPTH,
     RegisterSettings,
     all_passes_compilation,
+    shader_py_frag_depth_clip_kwargs,
 )
-from tt3de.ttsl.ttsl_assembly import IRType
 
 CAM_NEAR = 0.1
 CAM_FAR = 100.0
@@ -46,11 +47,11 @@ ALBEDO_RED_WALL = glm.vec3(0.92, 0.22, 0.18)
 ALBEDO_BLUE_WALL = glm.vec3(0.2, 0.28, 0.92)
 ALBEDO_FLOOR = glm.vec3(0.42, 0.36, 0.30)
 
-# Indices into GLYPH_STATIC_STR (see src/drawbuffer/glyphset.rs): light -> full block.
-GLYPH_D = find_glyph_indices_py("\u2591")
-GLYPH_M2 = find_glyph_indices_py("\u2592")
-GLYPH_M3 = find_glyph_indices_py("\u2593")
-GLYPH_FULL = find_glyph_indices_py("\u2588")
+# Glyph uniforms used as the four depth-fog shadow bands.
+GLYPH_D = find_glyph_indices_py("▓")
+GLYPH_M2 = find_glyph_indices_py("▒")
+GLYPH_M3 = find_glyph_indices_py("░")
+GLYPH_FULL = find_glyph_indices_py("!")
 
 SHADER_SRC = dedent(
     """
@@ -58,28 +59,19 @@ SHADER_SRC = dedent(
         z_n: float = 2.0 * tt_FragDepth - 1.0
         d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
-        rgb: vec3 = u_albedo * t
-        # Quantize depth factor into 4 fog bands via floor.
-        band: float = floor(t * 4.0)
-        if band >= 4.0:
-            band = 3.0
+        # Stretched fog bands: outer glyphs take wide t-ranges,
+        # middle glyphs sit in narrow transition windows.
+        band: float = t * 4.0
         blk: vec3 = vec3(0.0, 0.0, 0.0)
-        if band >= 3.0:
-            return (rgb, blk, u_g3)
+        if band >= 2.4:
+            return (blk, u_albedo, u_g3)
         if band >= 2.0:
-            return (rgb, blk, u_g2)
-        if band >= 1.0:
-            return (rgb, blk, u_g1)
-        return (rgb, blk, u_g0)
+            return (blk, u_albedo, u_g2)
+        if band >= 1.6:
+            return (blk, u_albedo, u_g1)
+        return (blk, u_albedo, u_g0)
     """
 )
-
-
-def _clone_reg_settings(base: RegisterSettings) -> RegisterSettings:
-    out = RegisterSettings(dict(base.var_name_to_registers))
-    for ty in IRType:
-        out.regs[ty] = dict(base.regs[ty])
-    return out
 
 
 def _add_glyph_fog_material(
@@ -91,7 +83,7 @@ def _add_glyph_fog_material(
     full_block: tuple[int, ...],
     glyph_uniforms: tuple[int, int, int, int],
 ) -> int:
-    reg_settings = _clone_reg_settings(reg_template)
+    reg_settings = reg_template.fork()
     reg_settings.set_variable("u_albedo", u_albedo)
     g0, g1, g2, g3 = glyph_uniforms
     reg_settings.set_variable("u_g0", int(g0))
@@ -99,16 +91,11 @@ def _add_glyph_fog_material(
     reg_settings.set_variable("u_g2", int(g2))
     reg_settings.set_variable("u_g3", int(g3))
 
-    _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
-    _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
-    _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
     shader_mat = materials.ShaderPy(
         bytecode,
         default_glyph=full_block,
         register_seed=reg_settings.get_register_list(),
-        frag_depth_f32_reg=fd_reg,
-        near_f32_reg=near_reg,
-        far_f32_reg=far_reg,
+        **shader_py_frag_depth_clip_kwargs(reg_settings),
     )
     mat_id = rc.material_buffer.add_shader(shader_mat)
     rc.material_buffer.set_shader_near(mat_id, CAM_NEAR)

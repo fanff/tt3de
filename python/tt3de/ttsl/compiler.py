@@ -2131,6 +2131,47 @@ class RegisterSettings:
             regs.append(self.regs[ty])
         return regs
 
+    def fork(self) -> "RegisterSettings":
+        """Copy allocation maps so per-material ``set_variable`` calls do not alias state.
+
+        Used when one compiled bytecode is shared across multiple ``ShaderPy`` instances
+        with different register seeds (for example per-instance ``u_albedo``).
+        """
+        out = RegisterSettings(dict(self.var_name_to_registers))
+        for ty in IRType:
+            out.regs[ty] = dict(self.regs[ty])
+        return out
+
+
+def shader_py_frag_depth_clip_kwargs(reg_settings: RegisterSettings) -> Dict[str, int]:
+    """Keyword arguments for ``ShaderPy`` when the shader uses ``tt_FragDepth``, ``tt_Near``, and ``tt_Far``.
+
+    Call after ``all_passes_compilation`` with a ``globals_dict`` that includes
+    ``GLOBAL_VAR_TT_NEAR`` and ``GLOBAL_VAR_TT_FAR`` so clip uniforms are allocated.
+
+    Returns:
+        ``frag_depth_f32_reg``, ``near_f32_reg``, and ``far_f32_reg`` register indices.
+
+    Raises:
+        ValueError: if ``tt_FragDepth``, ``tt_Near``, or ``tt_Far`` are missing from the allocation.
+    """
+    bindings: List[Tuple[str, str]] = [
+        (PIXELVAR_TT_FRAG_DEPTH, "frag_depth_f32_reg"),
+        (GLOBAL_VAR_TT_NEAR, "near_f32_reg"),
+        (GLOBAL_VAR_TT_FAR, "far_f32_reg"),
+    ]
+    missing = [name for name, _ in bindings if name not in reg_settings.var_name_to_registers]
+    if missing:
+        raise ValueError(
+            "Register allocation is missing depth/clip bindings for shader_py_frag_depth_clip_kwargs: "
+            + ", ".join(missing)
+        )
+    out: Dict[str, int] = {}
+    for var_name, kw in bindings:
+        _ty, reg_id = reg_settings.var_name_to_registers[var_name]
+        out[kw] = reg_id
+    return out
+
 
 def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> None:
     """Seed registers for globals / always-present builtins that have a documented default.

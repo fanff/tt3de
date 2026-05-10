@@ -31,11 +31,10 @@ from tt3de.tt_3dnodes import TT3DNode
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_FAR,
     GLOBAL_VAR_TT_NEAR,
-    PIXELVAR_TT_FRAG_DEPTH,
     RegisterSettings,
     all_passes_compilation,
+    shader_py_frag_depth_clip_kwargs,
 )
-from tt3de.ttsl.ttsl_assembly import IRType
 
 CAM_NEAR = 0.1
 CAM_FAR = 100.0
@@ -44,7 +43,7 @@ ROOM_HALF = 10.0
 WALL_H = 3.0
 SPIN_SPEED = 0.55  # radians per second
 
-# Base RGB before fog; one bytecode + ``u_albedo`` per material instance (see ``_clone_reg_settings``).
+# Base RGB before fog; one bytecode + ``u_albedo`` per material instance (``RegisterSettings.fork``).
 ALBEDO_RED_WALL = glm.vec3(0.92, 0.22, 0.18)
 ALBEDO_BLUE_WALL = glm.vec3(0.2, 0.28, 0.92)
 ALBEDO_FLOOR = glm.vec3(0.42, 0.36, 0.30)
@@ -61,14 +60,6 @@ SHADER_SRC = dedent(
         return (rgb, vec3(0.0, 0.0, 0.0), 0)
     """
 )
-
-
-def _clone_reg_settings(base: RegisterSettings) -> RegisterSettings:
-    """Copy allocated banks so each ShaderPy can seed ``u_albedo`` independently."""
-    out = RegisterSettings(dict(base.var_name_to_registers))
-    for ty in IRType:
-        out.regs[ty] = dict(base.regs[ty])
-    return out
 
 
 def _wall_xf(angle_y_deg: float, pos: glm.vec3) -> glm.mat4:
@@ -100,19 +91,14 @@ def _add_depth_fog_material(
     u_albedo: glm.vec3,
     full_block: tuple[int, ...],
 ) -> int:
-    reg_settings = _clone_reg_settings(reg_template)
+    reg_settings = reg_template.fork()
     reg_settings.set_variable("u_albedo", u_albedo)
 
-    _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
-    _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
-    _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
     shader_mat = materials.ShaderPy(
         bytecode,
         default_glyph=full_block,
         register_seed=reg_settings.get_register_list(),
-        frag_depth_f32_reg=fd_reg,
-        near_f32_reg=near_reg,
-        far_f32_reg=far_reg,
+        **shader_py_frag_depth_clip_kwargs(reg_settings),
     )
     mat_id = rc.material_buffer.add_shader(shader_mat)
     rc.material_buffer.set_shader_near(mat_id, CAM_NEAR)
