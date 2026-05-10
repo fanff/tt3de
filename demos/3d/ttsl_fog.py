@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """TTSL depth fog: a rotating box room where walls fade with distance.
 
-Four inward-facing quads plus a floor share full-block materials. Each TTSL
-fragment reads ``tt_FragDepth``, reconstructs linear eye-space depth with
-``tt_Near`` / ``tt_Far`` (matching the camera clip planes), and scales color with
-``1 - d/(d+k)`` so nearby surfaces read bright and far ones sink into
-black—classic distance fog without a separate pass.
+Four inward-facing quads plus a floor share full-block materials. One TTSL entry
+computes linear eye-space depth from ``tt_FragDepth`` with ``tt_Near`` /
+``tt_Far`` (matching the camera clip planes), applies ``1 - d/(d+k)`` fog, and
+tints with a per-material **user uniform** ``u_albedo`` (``glm.vec3`` in
+``globals_dict``) so red, blue, and floor surfaces reuse the same bytecode with
+different ``register_seed`` snapshots.
 
-Uses ``ShaderPy`` with ``frag_depth_f32_reg`` tied to ``PIXELVAR_TT_FRAG_DEPTH``
-and ``near_f32_reg`` / ``far_f32_reg`` for ``tt_Near`` / ``tt_Far`` from
-``all_passes_compilation``. Slot 0 is a static space fill. Camera is offset
-from the room center so rotation shows the fog sliding over red (north/south),
-blue (east/west), and neutral floor tints.
+Uses ``ShaderPy`` with ``frag_depth_f32_reg`` / ``near_f32_reg`` / ``far_f32_reg``
+from ``all_passes_compilation``. Slot 0 is a static space fill. Camera is offset
+from the room center so rotation shows fog sliding over colored walls and a
+neutral floor.
 
 Run:
     uv run python demos/3d/ttsl_fog.py
@@ -32,8 +32,10 @@ from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_FAR,
     GLOBAL_VAR_TT_NEAR,
     PIXELVAR_TT_FRAG_DEPTH,
+    RegisterSettings,
     all_passes_compilation,
 )
+from tt3de.ttsl.ttsl_assembly import IRType
 
 CAM_NEAR = 0.1
 CAM_FAR = 100.0
@@ -42,68 +44,31 @@ ROOM_HALF = 10.0
 WALL_H = 3.0
 SPIN_SPEED = 0.55  # radians per second
 
-SHADER_SRC_RED_WALL = dedent(
+# Base RGB before fog; one bytecode + ``u_albedo`` per material instance (see ``_clone_reg_settings``).
+ALBEDO_RED_WALL = glm.vec3(0.92, 0.22, 0.18)
+ALBEDO_BLUE_WALL = glm.vec3(0.2, 0.28, 0.92)
+ALBEDO_FLOOR = glm.vec3(0.42, 0.36, 0.30)
+
+SHADER_SRC = dedent(
     """
-    def depth_red_wall(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+    def depth_fog_surface(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
         # linear eye-space depth from NDC z using active clip planes (see ttsl.md)
         d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
-        rgb: vec3 = vec3(0.92 * t, 0.22 * t, 0.18 * t)
-        return (rgb, vec3(0.0, 0.0, 0.0), 0)
-    """
-)
-
-SHADER_SRC_BLUE_WALL = dedent(
-    """
-    def depth_blue_wall(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-        z_n: float = 2.0 * tt_FragDepth - 1.0
-        d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
-        t: float = 1.0 - d / (d + 10.0)
-        rgb: vec3 = vec3(0.2 * t, 0.28 * t, 0.92 * t)
-        return (rgb, vec3(0.0, 0.0, 0.0), 0)
-    """
-)
-
-SHADER_SRC_FLOOR = dedent(
-    """
-    def depth_floor(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-        z_n: float = 2.0 * tt_FragDepth - 1.0
-        d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
-        t: float = 1.0 - d / (d + 10.0)
-        rgb: vec3 = vec3(0.42 * t, 0.36 * t, 0.30 * t)
+        # per-material tint via user uniform (globals_dict + register_seed)
+        rgb: vec3 = u_albedo * t
         return (rgb, vec3(0.0, 0.0, 0.0), 0)
     """
 )
 
 
-def _add_depth_shader_material(
-    rc,
-    *,
-    shader_src: str,
-    entry: str,
-    full_block: tuple[int, ...],
-) -> int:
-    globals_dict = {
-        GLOBAL_VAR_TT_NEAR: float,
-        GLOBAL_VAR_TT_FAR: float,
-    }
-    bytecode, reg_settings = all_passes_compilation(shader_src, entry, globals_dict)
-    _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
-    _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
-    _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
-    shader_mat = materials.ShaderPy(
-        bytecode,
-        default_glyph=full_block,
-        register_seed=reg_settings.get_register_list(),
-        frag_depth_f32_reg=fd_reg,
-        near_f32_reg=near_reg,
-        far_f32_reg=far_reg,
-    )
-    mat_id = rc.material_buffer.add_shader(shader_mat)
-    rc.material_buffer.set_shader_near(mat_id, CAM_NEAR)
-    rc.material_buffer.set_shader_far(mat_id, CAM_FAR)
-    return mat_id
+def _clone_reg_settings(base: RegisterSettings) -> RegisterSettings:
+    """Copy allocated banks so each ShaderPy can seed ``u_albedo`` independently."""
+    out = RegisterSettings(dict(base.var_name_to_registers))
+    for ty in IRType:
+        out.regs[ty] = dict(base.regs[ty])
+    return out
 
 
 def _wall_xf(angle_y_deg: float, pos: glm.vec3) -> glm.mat4:
@@ -127,6 +92,34 @@ def _floor_xf() -> glm.mat4:
     return t * rx * s
 
 
+def _add_depth_fog_material(
+    rc,
+    *,
+    bytecode: bytes,
+    reg_template: RegisterSettings,
+    u_albedo: glm.vec3,
+    full_block: tuple[int, ...],
+) -> int:
+    reg_settings = _clone_reg_settings(reg_template)
+    reg_settings.set_variable("u_albedo", u_albedo)
+
+    _ty, fd_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRAG_DEPTH]
+    _, near_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_NEAR]
+    _, far_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_FAR]
+    shader_mat = materials.ShaderPy(
+        bytecode,
+        default_glyph=full_block,
+        register_seed=reg_settings.get_register_list(),
+        frag_depth_f32_reg=fd_reg,
+        near_f32_reg=near_reg,
+        far_f32_reg=far_reg,
+    )
+    mat_id = rc.material_buffer.add_shader(shader_mat)
+    rc.material_buffer.set_shader_near(mat_id, CAM_NEAR)
+    rc.material_buffer.set_shader_far(mat_id, CAM_FAR)
+    return mat_id
+
+
 class TTSLFogRoomDemo(TT3DViewStandAlone):
     def initialize(self) -> None:
         self.camera.set_viewport_scale_mode(ViewportScaleMode.FIT)
@@ -146,23 +139,36 @@ class TTSLFogRoomDemo(TT3DViewStandAlone):
             find_glyph_indices_py(" "),
         )
 
+        bytecode, reg_template = all_passes_compilation(
+            SHADER_SRC,
+            "depth_fog_surface",
+            {
+                GLOBAL_VAR_TT_NEAR: float,
+                GLOBAL_VAR_TT_FAR: float,
+                "u_albedo": glm.vec3,
+            },
+        )
+
         full_block = find_glyph_indices_py("█")
-        mat_red = _add_depth_shader_material(
+        mat_red = _add_depth_fog_material(
             self.rc,
-            shader_src=SHADER_SRC_RED_WALL,
-            entry="depth_red_wall",
+            bytecode=bytecode,
+            reg_template=reg_template,
+            u_albedo=ALBEDO_RED_WALL,
             full_block=full_block,
         )
-        mat_blue = _add_depth_shader_material(
+        mat_blue = _add_depth_fog_material(
             self.rc,
-            shader_src=SHADER_SRC_BLUE_WALL,
-            entry="depth_blue_wall",
+            bytecode=bytecode,
+            reg_template=reg_template,
+            u_albedo=ALBEDO_BLUE_WALL,
             full_block=full_block,
         )
-        mat_floor = _add_depth_shader_material(
+        mat_floor = _add_depth_fog_material(
             self.rc,
-            shader_src=SHADER_SRC_FLOOR,
-            entry="depth_floor",
+            bytecode=bytecode,
+            reg_template=reg_template,
+            u_albedo=ALBEDO_FLOOR,
             full_block=full_block,
         )
 
