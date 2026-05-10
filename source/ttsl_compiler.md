@@ -34,7 +34,43 @@ The shader entry function may still list `tt_FragCoord` (or other builtins above
 | `tt_Near` | `float` | seeds `0.1`; `set_shader_near`, `near_f32_reg` |
 | `tt_Far` | `float` | seeds `100.0`; `set_shader_far`, `far_f32_reg` |
 
-**User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`).
+**User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`). They use the **same register banks** as engine uniforms; the compiler picks concrete indices, and you must **seed** those slots before running bytecode.
+
+**Wiring user uniforms after `all_passes_compilation`**
+
+1. Put each uniform name and its **type object** in `globals_dict` (for example `{"u_color": glm.vec3, "u_uv_bias": glm.vec2}`).
+2. Call `reg_settings.set_variable("u_color", glm.vec3(0.2, 0.4, 0.6))` (and likewise for every uniform register you care about). Uniforms you never seed read as **numeric zero** / **false** in the VM (Rust register banks start cleared).
+3. Pass the snapshot into the renderer: `register_seed=reg_settings.get_register_list()` on `ShaderPy`, or the same six dicts plus `bytecode` into `ttsl_run`.
+4. Optional **engine** uniforms (`tt_Time`, …) still use `ShaderPy.time_f32_reg` (etc.) and `MaterialBufferPy.set_shader_time` so values can change every frame **without** rebuilding the material. User uniforms have **no** `MaterialBufferPy` setters today: `add_shader` copies the seed banks once, so changing a user uniform means rebuilding `ShaderPy` / re-`add_shader` (or adding a host API later).
+
+```python
+from pyglm import glm
+from tt3de.tt3de import ttsl_run
+from tt3de.ttsl.compiler import all_passes_compilation
+
+SRC = """
+def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+    # u_color / u_uv_bias are ordinary globals — declare types in globals_dict
+    c: vec3 = u_color + vec3(u_uv_bias.x, u_uv_bias.y, 0.0)
+    return (c, c, 0)
+"""
+
+bytecode, reg_settings = all_passes_compilation(
+    SRC,
+    "shade",
+    globals_dict={
+        "u_color": glm.vec3,
+        "u_uv_bias": glm.vec2,
+    },
+)
+reg_settings.set_variable("u_color", glm.vec3(0.1, 0.2, 0.3))
+reg_settings.set_variable("u_uv_bias", glm.vec2(0.25, 0.5))
+
+front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+assert glyph == 0
+
+# Full renderer: pass the same seed list into ShaderPy(..., register_seed=reg_settings.get_register_list()).
+```
 
 **Minimal compile example** (per-cell builtins need no `globals_dict` entry; only `tt_Time` is declared because the shader reads it):
 

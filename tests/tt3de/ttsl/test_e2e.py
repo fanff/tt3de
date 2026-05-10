@@ -307,6 +307,85 @@ class Test_EndToEndCompilation(unittest.TestCase):
             )
             self.assertEqual(glyph, 0, msg=f"glyph should be 0 at ndc={ndc}")
 
+    def test_user_uniforms_vec3_vec2_ttsl_run(self):
+        """User globals from globals_dict occupy VM registers; seed via RegisterSettings."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                c: vec3 = u_color + vec3(u_uv_bias.x, u_uv_bias.y, 0.0)
+                return (c, c, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            src,
+            "shade",
+            {"u_color": glm.vec3, "u_uv_bias": glm.vec2},
+        )
+        reg_settings.set_variable("u_color", glm.vec3(0.1, 0.2, 0.3))
+        reg_settings.set_variable("u_uv_bias", glm.vec2(0.4, 0.5))
+
+        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertEqual(glyph, 0)
+        want = glm.vec3(0.5, 0.7, 0.3)
+        self.assertAlmostEqual(front.x, want.x, places=5)
+        self.assertAlmostEqual(front.y, want.y, places=5)
+        self.assertAlmostEqual(front.z, want.z, places=5)
+        self.assertEqual(back, front)
+
+    def test_user_uniform_material_apply_seed_matches_ttsl_run(self):
+        """ShaderPy.register_seed must align bytecode user-uniform slots with the VM."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+                return (u_color, u_color, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            src, "shade", {"u_color": glm.vec3}
+        )
+        reg_settings.set_variable("u_color", glm.vec3(0.25, 0.5, 0.75))
+        seed = reg_settings.get_register_list()
+
+        vm_front, _, vm_g = ttsl_run(*seed, bytecode)
+        self.assertEqual(vm_g, 0)
+
+        mb = MaterialBufferPy()
+        mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                default_glyph=None,
+                register_seed=seed,
+            )
+        )
+
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            mat_idx,
+            0,
+        )
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(8),
+            draw,
+        )
+        cell = draw.get_canvas_cell(0, 0)
+        # Canvas stores 8-bit channels; allow quantization slack vs float VM output.
+        self.assertAlmostEqual(cell["f_r"] / 255.0, vm_front.x, delta=2 / 255.0)
+        self.assertAlmostEqual(cell["f_g"] / 255.0, vm_front.y, delta=2 / 255.0)
+        self.assertAlmostEqual(cell["f_b"] / 255.0, vm_front.z, delta=2 / 255.0)
+
 
 if __name__ == "__main__":
     unittest.main()

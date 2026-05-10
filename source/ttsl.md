@@ -12,6 +12,8 @@ Built-in variables
 
 **Engine uniforms** — `tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`, `tt_Near`, and `tt_Far` are **host uniforms**: for each name the shader references, pass that key in `globals_dict` with the type shown below so compilation allocates the matching register and `ShaderPy` / `MaterialBufferPy` setters stay aligned.
 
+**User-defined uniforms** — Any other global you read in TTSL (for example ``u_color`` as ``glm.vec3``, ``u_uv_bias`` as ``glm.vec2``) must also appear in ``globals_dict`` with the correct **type object**. After ``all_passes_compilation``, call ``RegisterSettings.set_variable(name, value)`` and pass ``register_seed=reg_settings.get_register_list()`` into ``ShaderPy`` so bytecode and the material snapshot use the same register indices. See [TTSL Compiler](ttsl_compiler.md) for a full example and for how this differs from per-frame engine uniform setters.
+
 **Availability** for built-ins is **Shipped** (compiler + material bridge), **Planned** (roadmap intent), or **Missing** (specified below for depth workflows but **not** implemented in the compiler or Rust renderer yet—no registers or setters today).
 
 | Name               | Type  | Range / Units                          | Description | Availability |
@@ -175,7 +177,7 @@ From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
     - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
       `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`, `set_shader_near`, `set_shader_far`.
       These update **seed / uniform** registers only (same cadence as `tt_Time`), not per-pixel inputs such as `tt_FragCoord`.
-    - After `all_passes_compilation(...)`, copy `RegisterSettings` into `ShaderPy` fields and/or `register_seed` so bytecode literals and uniform slots agree with what the runtime writes (see [TTSL Compiler](ttsl_compiler.md)).
+    - After `all_passes_compilation(...)`, copy `RegisterSettings` into `ShaderPy` fields and/or `register_seed` so bytecode literals and uniform slots agree with what the runtime writes (see [TTSL Compiler](ttsl_compiler.md)). **User-defined** uniforms only flow through `register_seed` / `set_variable` today—there are no `MaterialBufferPy.set_shader_*` helpers for custom names; re-`add_shader` (or rebuild `ShaderPy`) if you need to change those values after the material is created.
 - Debug helpers (`add_debug_depth`, `add_debug_uv`)
   - Depth and UV visualization materials exposed by Rust bindings.
 
