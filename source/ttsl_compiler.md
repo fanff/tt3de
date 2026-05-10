@@ -8,7 +8,11 @@ The main implementation is in `python/tt3de/ttsl/compiler.py`, and the IR/CFG da
 Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelCase>`
 (see [TTSL spec](ttsl.md), including **Shipped** vs **Planned** rows).
 
-**Always predeclared** (per-cell inputs; do not list in `globals_dict`):
+### `globals_dict`: what goes in it
+
+`globals_dict` is the **compile-time declaration map** for **host uniforms**: keys are identifier strings, and each value must be a supported **Python type** object (`float`, `int`, `bool`, `glm.vec2`, `glm.vec3`, `glm.vec4`, …—the compiler rejects any other mapping target). The compiler uses those entries only for typing and register allocation; it does **not** accept arbitrary literal initializer values in this dict. `all_passes_compilation` returns `RegisterSettings` after seeding documented defaults (`apply_engine_uniform_register_defaults`); the engine then overwrites registers each frame or each shaded cell via `ShaderPy.*_reg` and the material bridge.
+
+**Implicit per-cell inputs** — **omit from `globals_dict`**. The compiler already knows these names and types; the material bridge fills them **per shaded cell** (not as globals):
 
 - `tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1` (`vec2`)
 - `tt_FrontFacing` (`bool`)
@@ -17,23 +21,49 @@ Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelC
 - `tt_PointCoord` (`vec2`)
 - `tt_PrimitiveID` (`int`)
 
-The shader entry function may still declare `tt_FragCoord` (or other builtins) as parameters;
-that replaces the default slot for those names in the register map.
+The shader entry function may still list `tt_FragCoord` (or other builtins above) as parameters; that pins them to explicit parameter slots instead of the default implicit mapping.
 
-**Engine uniforms** — only bound when passed in `globals_dict` if the shader references them:
+**Engine uniforms** — **include in `globals_dict` for each name the shader reads**. If the source references `tt_Time` but `globals_dict` omits `tt_Time`, compilation does not treat it as a declared uniform. When present, the entry maps the name to the host type and ties bytecode to the runtime hooks below:
 
-- `tt_Time` → `globals_dict={"tt_Time": float}`; runtime: `MaterialBufferPy.set_shader_time`, `ShaderPy.time_f32_reg`
-- `tt_DeltaTime` → `{"tt_DeltaTime": float}`; `set_shader_delta_time`, `delta_time_f32_reg`
-- `tt_Frame` → `{"tt_Frame": int}`; compiler seeds `0`; `set_shader_frame`, `frame_i32_reg` (saturates at `i32::MAX`)
-- `tt_Resolution` → `{"tt_Resolution": glm.vec2}`; seeds `(1, 1)`; `set_shader_resolution`, `resolution_v2_reg`
+| Name | `globals_dict` value (type) | Runtime update / register |
+|------|----------------------------|---------------------------|
+| `tt_Time` | `float` | `MaterialBufferPy.set_shader_time`, `ShaderPy.time_f32_reg` |
+| `tt_DeltaTime` | `float` | `set_shader_delta_time`, `delta_time_f32_reg` |
+| `tt_Frame` | `int` | compiler seeds `0`; `set_shader_frame`, `frame_i32_reg` (saturates at `i32::MAX`) |
+| `tt_Resolution` | `glm.vec2` | seeds `(1, 1)`; `set_shader_resolution`, `resolution_v2_reg` |
+
+**User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`).
+
+**Minimal compile example** (per-cell builtins need no `globals_dict` entry; only `tt_Time` is declared because the shader reads it):
+
+```python
+from pyglm import glm
+from tt3de.ttsl.compiler import all_passes_compilation
+
+SRC = """
+def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+    # tt_FragCoord: implicit — do not put in globals_dict
+    c: vec3 = glm.vec3(tt_Time, tt_FragCoord.x * 0.01, 0.5)
+    return (c, c, 0)
+"""
+
+bytecode, reg_settings = all_passes_compilation(
+    SRC,
+    "shade",
+    globals_dict={
+        "tt_Time": float,
+        # "tt_Resolution": glm.vec2,  # add only if the shader references tt_Resolution
+        # "u_gain": float,             # user uniform: same pattern (name → type)
+    },
+)
+# reg_settings holds register ids + defaults; pass into ShaderPy / ttsl_run as elsewhere in the docs
+```
 
 Per-pixel depth: `tt_FragDepth` is always predeclared as `float`. After compilation, set `ShaderPy.frag_depth_f32_reg` from `RegisterSettings` so `ShaderMaterial` writes the active depth layer’s stored depth into that register each pixel (see [TTSL](ttsl.md) builtins table).
 
 Line interpolation: `tt_LineCoord` is always predeclared as `float` (compiler seeds `0.0`). Set `ShaderPy.line_coord_f32_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.line_coord` each pixel (line rasterization fills `0.0`…`1.0` along the segment; see `DrawingBufferPy.set_depth_content(..., line_coord=...)`).
 
 Point sprites: `tt_PointCoord` is always predeclared as `vec2` (compiler seeds `(0, 0)`). Set `ShaderPy.point_coord_v2_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.point_coord` each pixel (point rasterization sets `(0.5, 0.5)` for the single-cell path; see `DrawingBufferPy.set_depth_content(..., point_coord=...)`).
-
-User uniforms (any other name, e.g. `"position"`) are also declared only through `globals_dict`.
 
 Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec3, vec3, int)`:
 front/back are RGB triples (or any per-channel `vec3` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec3, vec3, int]` or `typing.Tuple[vec3, vec3, int]`.
@@ -49,7 +79,7 @@ def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
         return (dark, dark, 0)
 ```
 
-Compile the above with `globals_dict={"tt_Time": float}` (and no extra implicit `"time"` uniform).
+Compile it with the same `globals_dict={"tt_Time": float}` shape as the minimal example (no alternate `"time"` key).
 
 **Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered to opcode `TT_TEXTURE`. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the VM; standalone `ttsl_run` from Python has no texture binding (samples behave as opaque black per spec). `tt_texelFetch` is not implemented yet.
 
