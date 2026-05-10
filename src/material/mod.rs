@@ -28,8 +28,6 @@ mod textured;
 use textured::*;
 mod noise_mat;
 use noise_mat::*;
-pub mod combo_material;
-use combo_material::*;
 use pyo3::{
     exceptions::PyValueError, pyclass, pymethods, types::PyTuple, Bound, PyResult, Python,
 };
@@ -122,80 +120,15 @@ pub fn apply_material<const SIZE: usize, const DEPTHLAYER: usize>(
 ) {
     let primitive_element = &primitive_buffer.content[pixinfo.primitive_id];
     let mat = &material_buffer.mats[pixinfo.material_id];
-    // If mat is a Custom material we don't assume any specific payload here,
-    // so just fall back to the default render path.
-    if let Material::ComboMaterial(t) = mat {
-        if t.count >= 1 {
-            let mat0 = &material_buffer.mats[t.idx0];
-            mat0.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                &pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            );
-        }
-        if t.count >= 2 {
-            let mat1 = &material_buffer.mats[t.idx1];
-            mat1.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                &pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            );
-        }
-        if t.count >= 3 {
-            let mat2 = &material_buffer.mats[t.idx2];
-            mat2.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                &pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            );
-        }
-        if t.count >= 4 {
-            let mat3 = &material_buffer.mats[t.idx3];
-            mat3.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                &pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            );
-        }
-        if t.count >= 5 {
-            let mat4 = &material_buffer.mats[t.idx4];
-            mat4.render_mat(
-                cell,
-                depth_cell,
-                depth_layer,
-                &pixinfo,
-                primitive_element,
-                texture_buffer,
-                uv_buffer,
-            );
-        }
-    } else {
-        mat.render_mat(
-            cell,
-            depth_cell,
-            depth_layer,
-            &pixinfo,
-            primitive_element,
-            texture_buffer,
-            uv_buffer,
-        );
-    }
+    mat.render_mat(
+        cell,
+        depth_cell,
+        depth_layer,
+        &pixinfo,
+        primitive_element,
+        texture_buffer,
+        uv_buffer,
+    );
 }
 
 pub fn apply_noise<T: Number>(noise: &NoiseMaterial, _pixinfo: &PixInfo<T>, u: f32, v: f32) -> f32 {
@@ -239,19 +172,6 @@ impl MaterialBufferPy {
     fn add_shader(&mut self, py: Python<'_>, mat: &Bound<'_, ShaderPy>) -> PyResult<usize> {
         let native = mat.borrow().build_native(py)?;
         Ok(self.content.add_material(Material::Shader(native)))
-    }
-
-    fn add_combo_material(&mut self, mat: &ComboMaterialPy) -> usize {
-        return self
-            .content
-            .add_material(Material::ComboMaterial(ComboMaterial {
-                count: mat.count,
-                idx0: mat.idx0,
-                idx1: mat.idx1,
-                idx2: mat.idx2,
-                idx3: mat.idx3,
-                idx4: mat.idx4,
-            }));
     }
 
     fn clear(&mut self) {

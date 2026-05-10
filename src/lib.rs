@@ -19,7 +19,6 @@ use pyo3::prelude::*;
 #[pymodule]
 fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::{
-        material::combo_material::ComboMaterialPy,
         material::materials_py::*,
         vertexbuffer::{transform_pack_py::TransformPackPy, vertex_buffer_py::VertexBufferPy},
     };
@@ -46,7 +45,6 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ttsl::ttslpy::ttsl_run, m)?)?;
 
     let submodule = PyModule::new(m.py(), "materials")?;
-    submodule.add_class::<ComboMaterialPy>()?;
     submodule.add_class::<MaterialPy>()?;
     submodule.add_class::<BaseTexturePy>()?;
     submodule.add_class::<ShaderPy>()?;

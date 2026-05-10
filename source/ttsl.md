@@ -148,54 +148,6 @@ material mode is `Shader`, the material owns compiled TTSL bytecode and executes
 it during material application so shader output directly drives final cell
 channels (`front_color`, `back_color`, `glyph`).
 
-### Material modes currently available
-
-From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
-
-- `StaticColor` / `materials.StaticColorPy`
-  - Writes any subset of front color, back color, and glyph through booleans:
-    `front`, `back`, `glyph`.
-- `BaseTexture` / `materials.BaseTexturePy`
-  - Texture-driven shading with explicit channel toggles:
-    `front`, `back`, `glyph`.
-  - UV source selection per channel:
-    `front_uv_0`, `back_uv_0`, `glyph_uv_0` (choose between `uv` and `uv_1`).
-  - Texture selection:
-    `albedo_texture_idx(+subid)` and `glyph_texture_idx(+subid)`.
-- `Textured` (legacy fast path, via `MaterialBufferPy.add_textured`)
-  - Uses one albedo texture and a fixed glyph index.
-- `ComboMaterial` / `materials.ComboMaterialPy`
-  - Applies up to 5 materials in sequence; later materials can overwrite earlier
-    front/back/glyph outputs.
-- `Shader`
-  - Material mode backed by compiled TTSL bytecode.
-  - The shader is executed at material-application time and its return payload
-    (`front`, `back`, `glyph`) drives final cell output.
-  - Python API:
-    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_Frame`, `tt_Near`, `tt_Far`).
-    - `MaterialBufferPy.add_shader(shader)`
-    - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
-      `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`, `set_shader_near`, `set_shader_far`.
-      These update **seed / uniform** registers only (same cadence as `tt_Time`), not per-pixel inputs such as `tt_FragCoord`.
-    - After `all_passes_compilation(...)`, copy `RegisterSettings` into `ShaderPy` fields and/or `register_seed` so bytecode literals and uniform slots agree with what the runtime writes (see [TTSL Compiler](ttsl_compiler.md)). **User-defined** uniforms only flow through `register_seed` / `set_variable` today—there are no `MaterialBufferPy.set_shader_*` helpers for custom names; re-`add_shader` (or rebuild `ShaderPy`) if you need to change those values after the material is created.
-- Debug helpers (`add_debug_depth`, `add_debug_uv`)
-  - Depth and UV visualization materials exposed by Rust bindings.
-
-Rust also defines additional variants (`Noise`, `StaticGlyph`, `Custom`) but these
-are not all fully surfaced/implemented in the high-level Python API.
-
-### Glyph mapping modes for `BaseTexture`
-
-`BaseTexturePy.glyph_method` controls how glyph index is derived:
-
-- `toglyphmethod.ToGlyphMethodPyStatic(g)`:
-  always use glyph `g`.
-- `toglyphmethod.ToGlyphMethodPyMap4Luminance((g0, g1, g2, g3))`:
-  compute luminance from sampled glyph texture and map to 4 buckets.
-
-Note: Rust has additional `ToGlyphMethod` variants (`FromAlpha`, `Map4Color`) but
-current Python wrapper only exposes Static and Map4Luminance constructors.
-
 ### TTSL Python compiler surface syntax
 
 The TTSL compiler requires the shader to ``return`` a 3-tuple ``(front, back, glyph)``

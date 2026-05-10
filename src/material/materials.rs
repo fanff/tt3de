@@ -1,5 +1,4 @@
 use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
-use crate::material::combo_material::ComboMaterial;
 use crate::material::textured::BaseTexture;
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
@@ -35,7 +34,6 @@ pub enum Material<T = ()> {
     DebugDepth(DebugDepth),
     DebugUV(DebugUV),
     Shader(ShaderMaterial),
-    ComboMaterial(ComboMaterial),
     Custom(T),
 }
 impl Material {
@@ -102,7 +100,6 @@ impl<
         uv_buffer: &UVBuffer<f32>,
     ) {
         match self {
-            Material::ComboMaterial(_cm) => {}
             Material::DoNothing {} => {}
             Material::Texture(t) => t.render_mat(
                 cell,

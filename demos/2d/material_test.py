@@ -10,8 +10,7 @@ from tt3de.points import Point2D, Point3D
 from tt3de.textual.debugged_view import DebuggedView
 from tt3de.textual_standalone import TT3DViewStandAlone
 
-from tt3de.tt3de import find_glyph_indices_py, materials
-from tt3de.tt3de.materials import ComboMaterialPy
+from tt3de.tt3de import materials
 from tt3de.tt_2dnodes import TT2DLines, TT2DNode, TT2DPolygon, TT2DUnitSquare
 
 
@@ -23,29 +22,9 @@ class DemoContent(TT3DViewStandAlone):
         matidx_front_tex0 = self.rc.material_buffer.add_base_texture(
             materials.BaseTexturePy(0)
         )
-        matix_back_static_black = self.rc.material_buffer.add_static_color(
-            materials.StaticColorPy(
-                False, True, False, (0, 0, 0, 255), (0, 0, 0, 255), 0
-            )
-        )
-        glyph = self.rc.material_buffer.add_static_color(
-            materials.StaticColorPy(
-                False,
-                False,
-                True,
-                (0, 0, 0, 255),
-                (0, 0, 0, 255),
-                find_glyph_indices_py("#"),
-            )
-        )
 
-        mat_idx = self.rc.material_buffer.add_combo_material(
-            ComboMaterialPy.from_list(
-                [glyph, matix_back_static_black, matidx_front_tex0]
-            )
-        )
+        mat_idx = matidx_front_tex0
 
-        # adding line
         self.lines = TT2DLines(
             transform=glm.translate(glm.vec3(-0.5, -0.5, 0.0)),
             point_list=[Point3D(0, 0, 0), Point3D(1, 1, 0)],

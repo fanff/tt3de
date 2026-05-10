@@ -49,35 +49,6 @@ class Test_MaterialBufferPy(unittest.TestCase):
         self.assertEqual(mb.add_static((255, 90, 90, 255), (5, 10, 20, 255), 2), 1)
         self.assertEqual(mb.count(), 2)
 
-    def test_generic_add(self):
-        mb = self.mb
-        self.assertEqual(mb.count(), 0)
-        cb = materials.ComboMaterialPy()
-        cb.count = 2
-        cb.idx0 = 0
-        cb.idx1 = 1
-
-        with self.assertRaises(TypeError):
-            mb.add_material(cb)
-        self.assertEqual(mb.count(), 0)
-
-    def test_add_combo_material(self):
-        mb = self.mb
-        self.assertEqual(mb.count(), 0)
-        cb = materials.ComboMaterialPy()
-        cb.count = 2
-        cb.idx0 = 0
-        cb.idx1 = 1
-
-        self.assertEqual(mb.add_combo_material(cb), 0)
-        self.assertEqual(mb.count(), 1)
-
-        cb = materials.ComboMaterialPy.from_list([5, 6, 7])
-        self.assertEqual(cb.count, 3)
-        self.assertEqual(cb.idx0, 5)
-        self.assertEqual(cb.idx1, 6)
-        self.assertEqual(cb.idx2, 7)
-
     def test_add_texture(self):
         texture_array = TextureBufferPy(12)
         img: ImageTexture = fast_load("models/test_screen32.bmp")
