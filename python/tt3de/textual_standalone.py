@@ -158,7 +158,7 @@ class TT3DViewStandAlone(Container):
 
     def update_frame(self):
         if self.is_debugged():
-            self.update_frame_debugged()
+            return self.update_frame_debugged()
         if self.size.width > 1 and self.size.height > 1:
             ts = time()
             self.update_step(
@@ -168,7 +168,9 @@ class TT3DViewStandAlone(Container):
             self.before_render_step()
             self.rc.clear_canvas()
 
+            t_render_start = time()
             self.rc.render(self.camera)
+            self.frame_timings.render_duration = time() - t_render_start
 
             self.post_render_step()
             return True

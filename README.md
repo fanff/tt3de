@@ -56,6 +56,12 @@ To set up a development version of this engine:
     PYTHONPATH=python uv run python demos/3d/some_models.py
     ```
 
+    Browse every ``demos/2d`` and ``demos/3d`` script from one Textual menu:
+
+    ```bash
+    uv run python demos/all.py
+    ```
+
 6. Run the Rust unit tests.
 
     Maturin builds enable the Cargo feature `extension-module` (see `pyproject.toml`), which links PyO3 like a normal Python extension and avoids linking `libpython`. **`cargo test` must not use that feature**: default crate features are correct so the test harness links against the Python shared library.

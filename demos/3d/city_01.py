@@ -30,7 +30,8 @@ class GLMTester(TT3DFpsView):
         self.rc.material_buffer = MaterialBufferPy()
 
         self.rc.texture_buffer = TextureBufferPy(32)
-        self.rc.material_buffer.add_static((200, 10, 10), (50, 50, 50), 0)  # 0
+        SPACE = find_glyph_indices_py(" ")
+        self.rc.material_buffer.add_static((200, 10, 10), (50, 50, 50), SPACE) # background color
 
         img = fast_load("models/cities/TownColor_256.bmp")
         tex_idx = self.rc.texture_buffer.add_texture(

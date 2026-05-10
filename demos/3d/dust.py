@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
+import os
+from pathlib import Path
 from time import time
 
 from pyglm import glm
@@ -15,6 +17,8 @@ from tt3de.obj_loader import load_obj
 from tt3de.textual_widget import TT3DFpsView
 
 from tt3de.tt_3dnodes import TT3DNode
+
+_DEMO_DIR = Path(__file__).resolve().parent
 
 
 class GLMTester(TT3DFpsView):
@@ -34,7 +38,7 @@ class GLMTester(TT3DFpsView):
         # create a root 3D node
         self.root3Dnode = TT3DNode()
 
-        obj_file = os.path.join(current_demo_folder, "Dust/Dust.obj")
+        obj_file = str(_DEMO_DIR / "Dust" / "Dust.obj")
 
         polys = load_obj(obj_file, self.rc.texture_buffer, self.rc.material_buffer)
 
@@ -98,11 +102,8 @@ def download_extract(url, dest, folder_name="Dust"):
 
 
 if __name__ == "__main__":
-    import os
-
-    current_demo_folder = os.path.dirname(__file__)
     download_extract(
-        "https://www.models-resource.com/download/28161/", current_demo_folder
+        "https://www.models-resource.com/download/28161/", str(_DEMO_DIR)
     )
     app = Demo3dView()
     app._disable_tooltips = True

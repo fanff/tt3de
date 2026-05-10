@@ -29,7 +29,8 @@ class GLMTester(TT3DFpsView):
             img.image_width, img.image_height, img.chained_data(), True, True
         )
         HALF_BLOCK = find_glyph_indices_py("▀")
-        self.rc.material_buffer.add_static((200, 10, 10), (50, 50, 50), 0)  # 0
+        SPACE = find_glyph_indices_py(" ")
+        self.rc.material_buffer.add_static((200, 10, 10), (50, 50, 50), SPACE)  # 0
         mat_id = self.rc.material_buffer.add_base_texture(
             materials.BaseTexturePy(
                 albedo_texture_idx=tex_idx,

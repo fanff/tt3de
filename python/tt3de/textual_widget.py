@@ -68,5 +68,6 @@ class TT3DFpsView(TT3DViewStandAlone):
                     self.camera.move_side(0.3)
                 case "escape":
                     self.enableMouseFpsCamera = False
+            await super().on_event(event)
         else:
             await super().on_event(event)

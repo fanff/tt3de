@@ -51,7 +51,7 @@ ALBEDO_FLOOR = glm.vec3(0.42, 0.36, 0.30)
 GLYPH_D = find_glyph_indices_py("▓")
 GLYPH_M2 = find_glyph_indices_py("▒")
 GLYPH_M3 = find_glyph_indices_py("░")
-GLYPH_FULL = find_glyph_indices_py("!")
+GLYPH_FULL = find_glyph_indices_py(" ")
 
 SHADER_SRC = dedent(
     """
