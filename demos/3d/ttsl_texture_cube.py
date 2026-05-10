@@ -30,9 +30,9 @@ CUBE_SCALE = 2.0
 
 SHADER_SRC = dedent(
     """
-    def texshade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+    def texshade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
         s: vec4 = tt_texture(0, tt_TexCoord0)
-        rgb: vec3 = vec3(s.x, s.y, s.z)
+        rgb: vec4 = vec4(s.x, s.y, s.z, 1.0)
         return (rgb, rgb, 0)
     """
 )

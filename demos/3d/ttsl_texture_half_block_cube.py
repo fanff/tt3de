@@ -35,11 +35,11 @@ SHADER_SRC = dedent(
     def texshade(
         tt_TexCoord0: vec2,
         tt_TexCoord1: vec2,
-    ) -> tuple[vec3, vec3, int]:
+    ) -> tuple[vec4, vec4, int]:
         upper: vec4 = tt_texture(0, tt_TexCoord0)
         lower: vec4 = tt_texture(0, tt_TexCoord1)
-        top_rgb: vec3 = vec3(upper.x, upper.y, upper.z)
-        bot_rgb: vec3 = vec3(lower.x, lower.y, lower.z)
+        top_rgb: vec4 = vec4(upper.x, upper.y, upper.z, 1.0)
+        bot_rgb: vec4 = vec4(lower.x, lower.y, lower.z, 1.0)
         return (top_rgb, bot_rgb, 0)
     """
 )

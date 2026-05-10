@@ -50,14 +50,14 @@ ALBEDO_FLOOR = glm.vec3(0.42, 0.36, 0.30)
 
 SHADER_SRC = dedent(
     """
-    def depth_fog_surface(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+    def depth_fog_surface(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
         # linear eye-space depth from NDC z using active clip planes (see ttsl.md)
         d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
         # per-material tint via user uniform (globals_dict + register_seed)
         rgb: vec3 = u_albedo * t
-        return (rgb, vec3(0.0, 0.0, 0.0), 0)
+        return (vec4(rgb.x, rgb.y, rgb.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
     """
 )
 

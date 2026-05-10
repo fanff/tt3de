@@ -25,9 +25,9 @@ class Test_SSARenaming(unittest.TestCase):
         src = dedent(
             """
 
-            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 # accessing variables coming from the fragment:
-                return (vec3(1.0, -2.0, 0.0), vec3(1.0, -2.0, 0.0), 0)
+                return (vec4(1.0, -2.0, 0.0, 1.0), vec4(1.0, -2.0, 0.0, 1.0), 0)
 
             """
         )
@@ -43,12 +43,12 @@ class Test_SampleCompilation(unittest.TestCase):
         src = dedent(
             """
                 @ttsl(globals={})
-                def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:  # noqa: F811
+                def my_shader(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:  # noqa: F811
                     # calculate a skybox background based on tt_FragCoord (from -1 to 1)
-                    color_sky: vec3 = vec3(0.2, 0.4, 0.8)
-                    color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
+                    color_sky: vec4 = vec4(0.2, 0.4, 0.8, 1.0)
+                    color_horizon: vec4 = vec4(0.8, 0.9, 1.0, 1.0)
                     t: float = (tt_FragCoord.y + 1.0) / 2.0
-                    mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
+                    mixed: vec4 = color_sky * (1.0 - t) + color_horizon * t
 
                     return (mixed, mixed, 0)
             """
@@ -70,12 +70,12 @@ class Test_SampleCompilation(unittest.TestCase):
         src = dedent(
             """
                 @ttsl(globals={})
-                def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:  # noqa: F811
+                def my_shader(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:  # noqa: F811
                     # calculate a skybox background based on tt_FragCoord (from -1 to 1)
-                    color_sky: vec3 = vec3(0.2, 0.4, 0.8)
-                    color_horizon: vec3 = vec3(0.8, 0.9, 1.0)
+                    color_sky: vec4 = vec4(0.2, 0.4, 0.8, 1.0)
+                    color_horizon: vec4 = vec4(0.8, 0.9, 1.0, 1.0)
                     t: float = (tt_FragCoord.y + 1.0) / 2.0
-                    mixed: vec3 = color_sky * (1.0 - t) + color_horizon * t
+                    mixed: vec4 = color_sky * (1.0 - t) + color_horizon * t
 
                     return (mixed, mixed, 0)
             """
@@ -92,9 +92,9 @@ class Test_SampleCompilation(unittest.TestCase):
     def test_tt_texture_opcode_present_in_bytecode(self):
         src = dedent(
             """
-            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
                 sample: vec4 = tt_texture(0, tt_TexCoord0)
-                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                rgb: vec4 = vec4(sample.x, sample.y, sample.z, 1.0)
                 return (rgb, rgb, 0)
             """
         )

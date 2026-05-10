@@ -27,19 +27,19 @@ DEFAULT_SHADER_CODE = """\
 # See `source/ttsl.md` and `source/ttsl_compiler.md`.
 # Shaders return (front_rgb, back_rgb, glyph_index).
 
-def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec3, glm.vec3, int]:
+def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec4, glm.vec4, int]:
     uv: glm.vec2 = tt_TexCoord0
     pulse: float = abs(glm.sin(tt_Time * 1.25))
     if uv.x > uv.y:
         return (
-            glm.vec3(uv.x, uv.y, pulse),
-            glm.vec3(uv.x, uv.y, pulse),
+            glm.vec4(uv.x, uv.y, pulse, 1.0),
+            glm.vec4(uv.x, uv.y, pulse, 1.0),
             0,
         )
     else:
         return (
-            glm.vec3(0.0, pulse, 1.0 - pulse),
-            glm.vec3(0.0, pulse, 1.0 - pulse),
+            glm.vec4(0.0, pulse, 1.0 - pulse, 1.0),
+            glm.vec4(0.0, pulse, 1.0 - pulse, 1.0),
             0,
         )
 """

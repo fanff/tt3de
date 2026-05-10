@@ -55,21 +55,22 @@ GLYPH_FULL = find_glyph_indices_py(" ")
 
 SHADER_SRC = dedent(
     """
-    def depth_fog_glyph(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+    def depth_fog_glyph(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
         z_n: float = 2.0 * tt_FragDepth - 1.0
         d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
         t: float = 1.0 - d / (d + 10.0)
         # Stretched fog bands: outer glyphs take wide t-ranges,
         # middle glyphs sit in narrow transition windows.
         band: float = t * 4.0
-        blk: vec3 = vec3(0.0, 0.0, 0.0)
+        blk: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
+        bg: vec4 = vec4(u_albedo.x, u_albedo.y, u_albedo.z, 1.0)
         if band >= 2.4:
-            return (blk, u_albedo, u_g3)
+            return (blk, bg, u_g3)
         if band >= 2.0:
-            return (blk, u_albedo, u_g2)
+            return (blk, bg, u_g2)
         if band >= 1.6:
-            return (blk, u_albedo, u_g1)
-        return (blk, u_albedo, u_g0)
+            return (blk, bg, u_g1)
+        return (blk, bg, u_g0)
     """
 )
 

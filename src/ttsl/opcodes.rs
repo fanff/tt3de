@@ -117,7 +117,7 @@ pub fn exec_opcode(
     regs: &mut Registers,
     ip: &mut usize,
     tex: Option<&dyn TtslTextureEnv>,
-) -> Option<(Vec3, Vec3, i32)> {
+) -> Option<(Vec4, Vec4, i32)> {
     match opcode {
         ADD_F32 => {
             unsafe {
@@ -1100,8 +1100,8 @@ pub fn exec_opcode(
 
         OP_RET => {
             return Some((
-                regs.v3[a as usize],
-                regs.v3[b as usize],
+                regs.v4[a as usize],
+                regs.v4[b as usize],
                 regs.i32_[c as usize],
             ));
         }

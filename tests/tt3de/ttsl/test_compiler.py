@@ -78,10 +78,10 @@ class Test_Compiler(unittest.TestCase):
         intermediate artifacts (AST, compiler context, and register allocation)."""
         source = dedent(
             """
-            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 uv: vec2 = tt_TexCoord0
                 pulse: float = abs(sin(tt_Time))
-                c: vec3 = vec3(uv.x, uv.y, pulse)
+                c: vec4 = vec4(uv.x, uv.y, pulse, 1.0)
                 return (c, c, 0)
             """
         )
@@ -104,10 +104,10 @@ class Test_Compiler(unittest.TestCase):
         preserved in the result so callers can inspect partial compilation state."""
         source = dedent(
             """
-            def my_shader(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def my_shader(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 uv: vec2 = tt_TexCoord0
                 pulse: float = abs(sin(tt_Time))
-                c: vec3 = vec3(uv.x, uv.y, pulse)
+                c: vec4 = vec4(uv.x, uv.y, pulse, 1.0)
                 return (c, c, 0)
             """
         )
@@ -134,7 +134,7 @@ class Test_ReturnTripleContract(unittest.TestCase):
     def test_single_vec3_return_rejected(self):
         src = dedent(
             """
-            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def f(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 return vec3(1.0, 0.0, 0.0)
             """
         )
@@ -145,8 +145,8 @@ class Test_ReturnTripleContract(unittest.TestCase):
     def test_return_tuple_wrong_length(self):
         src = dedent(
             """
-            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0))
+            def f(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0))
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -156,36 +156,36 @@ class Test_ReturnTripleContract(unittest.TestCase):
     def test_return_third_slot_must_be_int(self):
         src = dedent(
             """
-            def f(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), 1.0)
+            def f(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), 1.0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
             compile_ttsl(src, "f", {})
         msg = str(ctx.exception)
-        self.assertIn("vec3", msg)
+        self.assertIn("vec4", msg)
         self.assertIn("int", msg)
 
     def test_vec3_return_annotation_rejected(self):
         src = dedent(
             """
             def f(tt_FragCoord: vec2) -> vec3:
-                v: vec3 = vec3(1.0, 0.0, 0.0)
+                v: vec4 = vec4(1.0, 0.0, 0.0, 1.0)
                 return (v, v, 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
             compile_ttsl(src, "f", {})
-        self.assertIn("tuple[vec3, vec3, int]", str(ctx.exception))
+        self.assertIn("tuple[vec4, vec4, int]", str(ctx.exception))
 
 
 class Test_tt_texture_frontend(unittest.TestCase):
     def test_tt_texture_compiles_full_pipeline(self):
         src = dedent(
             """
-            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
                 sample: vec4 = tt_texture(0, tt_TexCoord0)
-                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                rgb: vec4 = vec4(sample.x, sample.y, sample.z, 1.0)
                 return (rgb, rgb, 0)
             """
         )
@@ -198,16 +198,16 @@ class Test_RegisterSettings_fork_and_depth_kwargs(unittest.TestCase):
     def test_fork_is_independent_for_user_uniform(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (u_tint, vec3(0.0, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (u_tint, vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
-        _, template = all_passes_compilation(src, "shade", {"u_tint": glm.vec3})
+        _, template = all_passes_compilation(src, "shade", {"u_tint": glm.vec4})
 
         a = template.fork()
         b = template.fork()
-        a.set_variable("u_tint", glm.vec3(1.0, 0.0, 0.0))
-        b.set_variable("u_tint", glm.vec3(0.0, 0.0, 1.0))
+        a.set_variable("u_tint", glm.vec4(1.0, 0.0, 0.0, 1.0))
+        b.set_variable("u_tint", glm.vec4(0.0, 0.0, 1.0, 1.0))
 
         ty, rid = template.var_name_to_registers["u_tint"]
         self.assertAlmostEqual(a.regs[ty][rid].x, 1.0)
@@ -217,10 +217,10 @@ class Test_RegisterSettings_fork_and_depth_kwargs(unittest.TestCase):
     def test_shader_py_frag_depth_clip_kwargs_matches_manual_registers(self):
         src = dedent(
             """
-            def depth_tone(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def depth_tone(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 z_n: float = 2.0 * tt_FragDepth - 1.0
                 d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
-                return (vec3(d, d, d), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(d, d, d, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(
@@ -244,8 +244,8 @@ class Test_RegisterSettings_fork_and_depth_kwargs(unittest.TestCase):
     def test_shader_py_frag_depth_clip_kwargs_raises_without_clip_globals(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_FragDepth, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_FragDepth, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})

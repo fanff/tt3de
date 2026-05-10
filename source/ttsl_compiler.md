@@ -49,9 +49,9 @@ from tt3de.tt3de import ttsl_run
 from tt3de.ttsl.compiler import all_passes_compilation
 
 SRC = """
-def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
     # u_color / u_uv_bias are ordinary globals — declare types in globals_dict
-    c: vec3 = u_color + vec3(u_uv_bias.x, u_uv_bias.y, 0.0)
+    c: vec4 = vec4(u_color.x + u_uv_bias.x, u_color.y + u_uv_bias.y, u_color.z, 1.0)
     return (c, c, 0)
 """
 
@@ -79,9 +79,9 @@ from pyglm import glm
 from tt3de.ttsl.compiler import all_passes_compilation
 
 SRC = """
-def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
     # tt_FragCoord: implicit — do not put in globals_dict
-    c: vec3 = glm.vec3(tt_Time, tt_FragCoord.x * 0.01, 0.5)
+    c: vec4 = glm.vec4(tt_Time, tt_FragCoord.x * 0.01, 0.5, 1.0)
     return (c, c, 0)
 """
 
@@ -103,17 +103,17 @@ Line interpolation: `tt_LineCoord` is always predeclared as `float` (compiler se
 
 Point sprites: `tt_PointCoord` is always predeclared as `vec2` (compiler seeds `(0, 0)`). Set `ShaderPy.point_coord_v2_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.point_coord` each pixel (point rasterization sets `(0.5, 0.5)` for the single-cell path; see `DrawingBufferPy.set_depth_content(..., point_coord=...)`).
 
-Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec3, vec3, int)`:
-front/back are RGB triples (or any per-channel `vec3` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec3, vec3, int]` or `typing.Tuple[vec3, vec3, int]`.
+Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec4, vec4, int)`:
+front/back are RGBA vectors (or any per-channel `vec4` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec4, vec4, int]` or `typing.Tuple[vec4, vec4, int]`.
 
 ```python
-def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
     pulse: float = sin(tt_Time)
-    color: vec3 = glm.vec3(tt_TexCoord0.x, tt_TexCoord0.y, pulse)
+    color: vec4 = glm.vec4(tt_TexCoord0.x, tt_TexCoord0.y, pulse, 1.0)
     if tt_TexCoord0.x > tt_TexCoord0.y:
         return (color, color, 0)
     else:
-        dark: vec3 = glm.vec3(color.x * 0.75, color.y * 0.75, color.z * 0.75)
+        dark: vec4 = glm.vec4(color.x * 0.75, color.y * 0.75, color.z * 0.75, 1.0)
         return (dark, dark, 0)
 ```
 
@@ -192,7 +192,7 @@ The current implementation supports a focused shader-style subset:
 - scalar and vector arithmetic (`+`, `-`, `*`, `/`)
 - comparisons (`>`, `>=`, `<`, `<=`)
 - conditionals (`if` / `else`)
-- returns (must be a 3-tuple `(vec3, vec3, int)`; see example above)
+- returns (must be a 3-tuple `(vec4, vec4, int)`; see example above)
 - vector constructors (`vec2`, `vec3`, `vec4`, including `glm.vec*`)
 - unary `-` on numeric / vector types
 - math calls: bare `sin`, `abs`; `glm.sin` (VM `SIN_*` / `ABS_*`). Bare `cos` / `glm.cos` fail at codegen today (`opcode_for_uniop` only maps `sin` and `abs`), though unary `COS_*` opcodes exist in the VM.

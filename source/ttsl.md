@@ -121,18 +121,18 @@ This section documents how TTSL VM output is consumed by the Rust renderer.
 
 At bytecode level, `OP_RET` returns **three values**:
 
-- `front: vec3`
-- `back: vec3`
+- `front: vec4`
+- `back: vec4`
 - `glyph: i32`
 
 The Rust VM implementation (`src/ttsl/opcodes.rs`) reads these from register files
-as `v3[a]`, `v3[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
+as `v4[a]`, `v4[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
 
 ```python
-front_vec3, back_vec3, glyph_idx = ttsl_run(*regs, bytecode)
+front_vec4, back_vec4, glyph_idx = ttsl_run(*regs, bytecode)
 ```
 
-In practice today, most demos use `front_vec3` as the generated color and then
+In practice today, most demos use `front_vec4` as the generated color and then
 write a material (often static color) into `MaterialBufferPy` each frame.
 
 ### How rendering applies materials
@@ -151,5 +151,5 @@ channels (`front_color`, `back_color`, `glyph`).
 ### TTSL Python compiler surface syntax
 
 The TTSL compiler requires the shader to ``return`` a 3-tuple ``(front, back, glyph)``
-with types ``(vec3, vec3, int)``, matching ``OP_RET`` above. Annotate as
-``tuple[vec3, vec3, int]`` (or ``typing.Tuple[...]``). See the [TTSL Compiler](ttsl_compiler.md) example.
+with types ``(vec4, vec4, int)``, matching ``OP_RET`` above. Annotate as
+``tuple[vec4, vec4, int]`` (or ``typing.Tuple[...]``). See the [TTSL Compiler](ttsl_compiler.md) example.

@@ -11,17 +11,17 @@ def rversion(regs, bytecode: bytes):
 
 
 SHADER_CODE = """
-def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-    c: vec3 = vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
+def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+    c: vec4 = vec4(tt_TexCoord0.x, tt_TexCoord0.y, 0.0, 1.0)
     return (c, c, 0)
 """
 
 SHADER_CODE2 = """
-def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
     a:vec3 = vec3(1.0, 2.0, 3.0)
     b:vec3 = vec3(4.0, 5.0, 6.0)
     c:vec3 = a + b + a + b + a + b + a + b + a + b
-    outv: vec3 = vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
+    outv: vec4 = vec4(tt_TexCoord0.x, tt_TexCoord0.y, 0.0, 1.0)
     return (outv, outv, 0)
 """
 

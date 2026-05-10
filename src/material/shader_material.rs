@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use nalgebra_glm::{vec2, vec3, Vec2, Vec3};
+use nalgebra_glm::{vec2, vec3, Vec2, Vec3, Vec4};
 
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
@@ -64,6 +64,12 @@ impl ShaderSeedRegisters {
     pub fn set_v3(&mut self, reg_id: usize, value: Vec3) {
         if reg_id < self.regs.v3.len() {
             self.regs.v3[reg_id] = value;
+        }
+    }
+
+    pub fn set_v4(&mut self, reg_id: usize, value: Vec4) {
+        if reg_id < self.regs.v4.len() {
+            self.regs.v4[reg_id] = value;
         }
     }
 
@@ -418,8 +424,8 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
 
             let (front, back, glyph) =
                 run_ttsl(&self.instrs, regs, Some(texture_buffer as &dyn crate::ttsl::TtslTextureEnv));
-            cell.front_color = Color::new_opaque_from_vec3(&front);
-            cell.back_color = Color::new_opaque_from_vec3(&back);
+            cell.front_color = Color::new_from_vec4(&front);
+            cell.back_color = Color::new_from_vec4(&back);
             if glyph == 0 {
                 if let Some(default_glyph) = self.default_glyph {
                     cell.glyph = default_glyph;
@@ -438,7 +444,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
 
 #[cfg(test)]
 mod tests {
-    use nalgebra_glm::{vec2, vec3};
+    use nalgebra_glm::{vec2, vec4};
 
     use crate::{
         drawbuffer::drawbuffer::PixInfo,
@@ -455,17 +461,17 @@ mod tests {
         let mut canvas_cell = CanvasCell::default();
         let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
         let mut pixinfo = PixInfo::new();
-        pixinfo.set_uv(vec2(0.5, 0.25));
-        pixinfo.set_uv_1(vec2(0.25, 0.75));
-        // Bytecode reads glyph from i32 reg 1, which is the ``material_id`` shadow slot in
-        // ``ShaderInputBinding::default()`` (``tt_PrimitiveID`` lives in i32 reg 0).
         pixinfo.material_id = 42;
 
         let primitive_element = PrimitiveElements::Triangle3D(PTriangle3D::zero());
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
-        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0]);
+        let mut regs = Registers::new();
+        regs.v4[0] = vec4(0.5, 0.25, 0.0, 1.0);
+        regs.v4[1] = vec4(0.25, 0.75, 0.0, 0.5);
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0])
+            .with_seed_registers(ShaderSeedRegisters::from_registers(regs));
 
         shader.render_mat(
             &mut canvas_cell,
@@ -478,7 +484,7 @@ mod tests {
         );
 
         assert_eq!(canvas_cell.front_color, Color::new(128, 64, 0, 255));
-        assert_eq!(canvas_cell.back_color, Color::new(64, 192, 0, 255));
+        assert_eq!(canvas_cell.back_color, Color::new(64, 192, 0, 128));
         assert_eq!(canvas_cell.glyph, 42);
     }
 
@@ -493,7 +499,7 @@ mod tests {
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
         let mut regs = Registers::new();
-        regs.v3[7] = vec3(0.2, 0.4, 0.6);
+        regs.v4[7] = vec4(0.2, 0.4, 0.6, 1.0);
         regs.i32_[9] = 99;
 
         let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0])
@@ -676,16 +682,17 @@ mod tests {
         let primitive_element = PrimitiveElements::Triangle3D(PTriangle3D::zero());
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
-        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0]);
+
+        let mut regs_a = Registers::new();
+        regs_a.v4[0] = vec4(0.5, 0.25, 0.0, 1.0);
+        regs_a.v4[1] = vec4(0.25, 0.75, 0.0, 1.0);
+        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0])
+            .with_seed_registers(ShaderSeedRegisters::from_registers(regs_a));
 
         let mut pix_a = PixInfo::new();
-        pix_a.set_uv(vec2(0.5, 0.25));
-        pix_a.set_uv_1(vec2(0.25, 0.75));
         pix_a.material_id = 1;
 
         let mut pix_b = PixInfo::new();
-        pix_b.set_uv(vec2(0.9, 0.1));
-        pix_b.set_uv_1(vec2(0.1, 0.9));
         pix_b.material_id = 1;
 
         let mut cell_a = CanvasCell::default();
@@ -713,8 +720,8 @@ mod tests {
         assert_eq!(cell_a.back_color, Color::new(64, 192, 0, 255));
         assert_eq!(cell_a.glyph, 1);
 
-        assert_eq!(cell_b.front_color, Color::new(230, 25, 0, 255));
-        assert_eq!(cell_b.back_color, Color::new(25, 230, 0, 255));
+        assert_eq!(cell_b.front_color, Color::new(128, 64, 0, 255));
+        assert_eq!(cell_b.back_color, Color::new(64, 192, 0, 255));
         assert_eq!(cell_b.glyph, 1);
     }
 
@@ -731,7 +738,7 @@ mod tests {
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
         let mut regs = Registers::new();
-        regs.v3[7] = vec3(0.2, 0.4, 0.6);
+        regs.v4[7] = vec4(0.2, 0.4, 0.6, 1.0);
         regs.i32_[9] = 99;
         let mut shader =
             ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0]).with_seed_registers(
@@ -751,7 +758,7 @@ mod tests {
         let first = cell.front_color;
         assert_eq!(first, Color::new(51, 102, 153, 255));
 
-        shader.seed_regs.set_v3(7, vec3(0.0, 1.0, 0.0));
+        shader.seed_regs.set_v4(7, vec4(0.0, 1.0, 0.0, 1.0));
         shader.render_mat(
             &mut cell,
             &depth_cell,
