@@ -16,15 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
       - uses: actions/setup-python@v5
+        id: setup-py-cargo
         with:
           python-version: "3.12"
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+      # Plain `cargo test` links libpython (extension-module is maturin-only). Pin the interpreter
+      # so pyo3-build-config resolves includes/libs consistently on the runner.
       - name: Run cargo test
+        env:
+          PYO3_PYTHON: ${{ steps.setup-py-cargo.outputs.python-path }}
         run: cargo test
 
   python-build-and-tests:
