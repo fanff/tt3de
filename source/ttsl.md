@@ -12,7 +12,7 @@ Built-in variables
 
 **Engine uniforms** — `tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution` are **host uniforms**: for each name the shader references, pass that key in `globals_dict` with the type shown below so compilation allocates the matching register and `ShaderPy` / `MaterialBufferPy` setters stay aligned.
 
-**Availability** is **Shipped** vs **Planned** (compiler/runtime intent).
+**Availability** for built-ins is **Shipped** (compiler + material bridge), **Planned** (roadmap intent), or **Missing** (specified below for depth workflows but **not** implemented in the compiler or Rust renderer yet—no registers or setters today).
 
 | Name               | Type  | Range / Units                          | Description | Availability |
 |--------------------|-------|----------------------------------------|-------------|--------------|
@@ -27,6 +27,8 @@ Built-in variables
 | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. | Shipped |
 | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). | Shipped |
 | tt_FragDepth       | float | engine-defined (depth buffer units)    | Depth value for the shaded depth layer at this cell. Compiler seeds ``0.0``; ``ShaderMaterial`` writes ``ShaderPy.frag_depth_f32_reg`` from that layer each pixel when set (same pattern as ``tt_FrontFacing``). Standalone ``ttsl_run`` keeps the seed unless the host fills the register. | Shipped |
+| tt_Near            | float | (> 0), engine clip distance            | Intended **near clip distance** for the active projection (same units as depth buffering). When shipped, this would be a host uniform: pass ``'tt_Near': float`` in ``globals_dict`` when referenced; Rust would copy the camera/projection near plane each frame (mirroring ``tt_Time`` / ``ShaderPy`` register wiring). Today shaders that need a near plane **must use literals or reconstruct** from engine-specific depth (see fog-style demos). | Missing |
+| tt_Far             | float | (> ``tt_Near``), engine clip distance    | Intended **far clip distance** for the active projection. Same host-uniform pattern as ``tt_Near``; Rust would supply the far plane consistent with whatever depth encoding feeds ``tt_FragDepth``. Enables portable fog and linear depth without hard-coded constants once wired. | Missing |
 | tt_LineCoord       | float | [0..1] along line segments             | Parametric coordinate from the line start toward the end for pixels produced by line rasterization; ``0.0`` for non-line primitives and when not supplied. Compiler seeds ``0.0``; optional ``ShaderPy.line_coord_f32_reg`` matches compilation (same pattern as ``tt_FragDepth``). Hosts may pass an explicit value through ``DrawingBufferPy.set_depth_content(..., line_coord=...)``. | Shipped |
 | tt_PointCoord      | vec2  | [0..1] typical                         | Coordinates within a rasterized point sprite. Mirrors ``gl_PointCoord``. Compiler seeds ``(0, 0)``; optional ``ShaderPy.point_coord_v2_reg`` matches compilation. Non-point raster paths and standalone ``ttsl_run`` leave ``(0, 0)`` unless the host sets ``DrawingBufferPy.set_depth_content(..., point_coord=...)``. Point rasterization sets ``(0.5, 0.5)`` for the single-cell path. | Shipped |
 
@@ -57,7 +59,7 @@ TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_F
 
 The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
 
-**Availability** is **Shipped** vs **Planned** on the TTSL compiler surface. **Shipped** here means at least one spelling in the row is accepted by `all_passes_compilation` today (see **Notes / ranges** for the subset). **Planned** names may still have VM opcodes reserved—check the opcode reference—but they are not wired through this language surface yet.
+**Availability** is **Shipped**, **Planned**, or **Missing** on the TTSL compiler surface. **Shipped** means at least one spelling in the row is accepted by `all_passes_compilation` today (see **Notes / ranges** for the subset). **Planned** names may still have VM opcodes reserved—check the opcode reference—but they are not wired through this language surface yet. **Missing** rows describe intended builtins that are **not** parsed, lowered, or opcode-backed yet (often paired with engine work in Rust).
 
 | Availability | Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |
 |---|---|---|---|---|
@@ -82,6 +84,7 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 | Planned | length | length(v)->float | Vector magnitude | |
 | Planned | distance | distance(a,b)->float | Metric distance | |
 | Planned | normalize | normalize(v)->T | Unit-length vector | Undefined for zero-length vectors (decide your behavior) |
+| Missing | tt_linear_depth | ``tt_linear_depth(z: float) -> float`` | Linear eye-space / clip-distance factor for fog and depth grading | Intended to convert a **stored depth** (e.g. ``tt_FragDepth`` or a reconstructed linear depth in engine units) into a stable **[0..1]** scalar using the active **``tt_Near``** / **``tt_Far``** uniforms supplied by Rust—so shaders avoid ad‑hoc formulas that duplicate projection constants. Exact mapping (hyperbolic vs linear clip space) will match whatever the renderer documents for ``tt_FragDepth`` once ``tt_Near`` / ``tt_Far`` ship; until then demos keep manual math. Not in the compiler or VM. |
 | Planned | reflect | reflect(I, N)->T | Reflection vector | `N` should be normalized |
 | Planned | refract | refract(I, N, eta)->T | Refraction vector | `eta` is n1/n2; returns 0-vector on total internal reflection (GLSL behavior) |
 | Planned | faceforward | faceforward(N, I, Nref)->T | Choose normal orientation | Helps ensure N faces viewer/light |
@@ -167,7 +170,7 @@ From Rust (`src/material/materials.rs`) and Python bindings (`materials_py.rs`):
   - The shader is executed at material-application time and its return payload
     (`front`, `back`, `glyph`) drives final cell output.
   - Python API:
-    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_Frame`).
+    - `materials.ShaderPy(bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None)` — keyword names mirror the TTSL uniforms / per-pixel bindings they feed (`tt_Time`, `tt_DeltaTime`, `tt_Resolution`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_Frame`). **Missing** future pairs: `tt_Near` / `tt_Far` would need matching optional `*_f32_reg` fields and `MaterialBufferPy` setters once the Rust bridge exposes clip distances per shader/material.
     - `MaterialBufferPy.add_shader(shader)`
     - In-place uniform updates (no material rebuild), matching the optional `ShaderPy.*_reg` bindings from compilation:
       `set_shader_time`, `set_shader_delta_time`, `set_shader_frame`, `set_shader_resolution`.

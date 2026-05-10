@@ -45,3 +45,6 @@ Use a subset that fits the request: primary showcase, 2D vs 3D, static vs animat
 ## After discovery
 
 Implement against `.cursor/rules/demos-standards.mdc` and `.cursor/rules/python-standards.mdc`. Use the **Checklist** at the bottom of `demos-standards.mdc`, and confirm discovery is settled (or explicitly waived with `1:y`-style confirmation to proceed).
+
+Do not attempt at running the demo. since its a TUI application you are going to have problem running it. 
+if you want a test, just ask the use to run the demo to validate work progress.
