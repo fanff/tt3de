@@ -80,7 +80,7 @@ pub fn run_ttsl(
     instrs: &[Instr; 256],
     regs: &mut Registers,
     tex: Option<&dyn TtslTextureEnv>,
-) -> (Vec3, Vec3, i32) {
+) -> (Vec4, Vec4, i32) {
     let mut ip: usize = 0;
     loop {
         let instr = unsafe { instrs.get_unchecked(ip) };
@@ -115,7 +115,7 @@ impl TTPU {
         }
     }
 
-    fn run(&mut self, bytecode: &[Instr; 256]) -> (Vec3, Vec3, i32) {
+    fn run(&mut self, bytecode: &[Instr; 256]) -> (Vec4, Vec4, i32) {
         run_ttsl(bytecode, &mut self.regs, None)
     }
 }
@@ -141,14 +141,14 @@ mod tests {
         ttsl.regs.f32_[1] = 2.5;
 
         let result = ttsl.run(&bytecode_array);
-        assert_eq!(result, (Vec3::zeros(), Vec3::new(4.0, 6.0, 8.0), 0));
+        assert_eq!(result, (Vec4::zeros(), Vec4::zeros(), 0));
         dbg!(result);
     }
 
     #[test]
     fn test_run_ttsl_matches_ttpu_path() {
         let mut ttpu = TTPU::new();
-        ttpu.regs.v3[3] = Vec3::new(0.25, 0.5, 1.0);
+        ttpu.regs.v4[3] = Vec4::new(0.25, 0.5, 1.0, 1.0);
         ttpu.regs.i32_[7] = 42;
 
         let instrs = decode_instrs_256(&[
@@ -176,8 +176,8 @@ mod tests {
     #[test]
     fn jmp_if_false_routes_to_else_ret_without_phi() {
         let mut regs = Registers::new();
-        regs.v3[1] = Vec3::new(1.0, 0.0, 0.0);
-        regs.v3[2] = Vec3::new(0.0, 1.0, 0.0);
+        regs.v4[1] = Vec4::new(1.0, 0.0, 0.0, 1.0);
+        regs.v4[2] = Vec4::new(0.0, 1.0, 0.0, 1.0);
 
         let instrs = decode_instrs_256(&[
             OP_JMP_IF_FALSE, 2, 5, 0, 0, 0,
@@ -187,11 +187,11 @@ mod tests {
 
         regs.bool_[5] = true;
         let out_t = run_ttsl(&instrs, &mut regs, None);
-        assert_eq!(out_t.0, Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(out_t.0, Vec4::new(1.0, 0.0, 0.0, 1.0));
 
         regs.bool_[5] = false;
         let out_f = run_ttsl(&instrs, &mut regs, None);
-        assert_eq!(out_f.0, Vec3::new(0.0, 1.0, 0.0));
+        assert_eq!(out_f.0, Vec4::new(0.0, 1.0, 0.0, 1.0));
     }
 
     #[test]

@@ -40,19 +40,19 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """
         src = dedent(
             """
-            def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec3, glm.vec3, int]:
+            def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec4, glm.vec4, int]:
                 uv: glm.vec2 = tt_TexCoord0
                 pulse: float = abs(glm.sin(tt_Time * 1.25))
                 if uv.x > uv.y:
                     return (
-                        glm.vec3(uv.x, uv.y, pulse),
-                        glm.vec3(uv.x, uv.y, pulse),
+                        glm.vec4(uv.x, uv.y, pulse, 1.0),
+                        glm.vec4(uv.x, uv.y, pulse, 1.0),
                         0,
                     )
                 else:
                     return (
-                        glm.vec3(0.0, pulse, 1.0 - pulse),
-                        glm.vec3(0.0, pulse, 1.0 - pulse),
+                        glm.vec4(0.0, pulse, 1.0 - pulse, 1.0),
+                        glm.vec4(0.0, pulse, 1.0 - pulse, 1.0),
                         0,
                     )
             """
@@ -74,7 +74,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """
         src = dedent(
             """
-            def my_shader(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            def my_shader(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
                 # Make motion clearly visible at terminal framerate.
                 phase: float = tt_Time * 4.0
                 wave_x: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.x * 18.0) + phase)
@@ -82,7 +82,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
                 blue: float = 0.5 + 0.5 * glm.sin(
                     phase * 0.7 + (tt_TexCoord0.x + tt_TexCoord0.y) * 8.0
                 )
-                rgb: vec3 = vec3(wave_x, wave_y, blue)
+                rgb: vec4 = vec4(wave_x, wave_y, blue, 1.0)
                 return (rgb, rgb, 0)
             """
         )
@@ -105,14 +105,14 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """
         src = dedent(
             """
-            def my_shader(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            def my_shader(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
                 phase: float = tt_Time * 4.0
                 wave_x: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.x * 18.0) + phase)
                 wave_y: float = 0.5 + 0.5 * glm.sin((tt_TexCoord0.y * 14.0) - phase * 1.2)
                 blue: float = 0.5 + 0.5 * glm.sin(
                     phase * 0.7 + (tt_TexCoord0.x + tt_TexCoord0.y) * 8.0
                 )
-                rgb: vec3 = vec3(wave_x, wave_y, blue)
+                rgb: vec4 = vec4(wave_x, wave_y, blue, 1.0)
                 return (rgb, rgb, 0)
             """
         )
@@ -172,9 +172,9 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """Bytecode ``tt_texture`` must read the live ``TextureBuffer`` during apply_material."""
         src = dedent(
             """
-            def shade(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
                 sample: vec4 = tt_texture(0, tt_TexCoord0)
-                rgb: vec3 = vec3(sample.x, sample.y, sample.z)
+                rgb: vec4 = vec4(sample.x, sample.y, sample.z, 1.0)
                 return (rgb, rgb, 0)
             """
         )
@@ -235,11 +235,11 @@ class Test_EndToEndCompilation(unittest.TestCase):
         runtime."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 a: float = 7.0 + tt_FragDepth
                 b: float = 7.0 - tt_FragDepth
                 out: float = a + b
-                return (vec3(out, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(out, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -264,22 +264,22 @@ class Test_EndToEndCompilation(unittest.TestCase):
         divergence."""
         src = dedent(
             """
-            def depth_floor(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def depth_floor(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 ndc: float = tt_FragDepth
                 denom: float = 100.0 - ndc * 99.9
                 d: float = 10.0 / denom
                 t: float = 30.0 / (d + 30.0)
-                rgb: vec3 = vec3(0.42 * t, 0.36 * t, 0.30 * t)
-                return (rgb, vec3(0.0, 0.0, 0.0), 0)
+                rgb: vec4 = vec4(0.42 * t, 0.36 * t, 0.30 * t, 1.0)
+                return (rgb, vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "depth_floor", {})
 
-        def python_reference(ndc: float) -> glm.vec3:
+        def python_reference(ndc: float) -> glm.vec4:
             denom = 100.0 - ndc * 99.9
             d = 10.0 / denom
             t = 30.0 / (d + 30.0)
-            return glm.vec3(0.42 * t, 0.36 * t, 0.30 * t)
+            return glm.vec4(0.42 * t, 0.36 * t, 0.30 * t, 1.0)
 
         test_depths = [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0]
         for ndc in test_depths:
@@ -305,7 +305,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
                 msg=f"front.z mismatch at ndc={ndc}: VM={front.z}, python={expected.z}",
             )
             self.assertEqual(
-                back, glm.vec3(0.0, 0.0, 0.0),
+                back, glm.vec4(0.0, 0.0, 0.0, 1.0),
                 msg=f"back should be black at ndc={ndc}",
             )
             self.assertEqual(glyph, 0, msg=f"glyph should be 0 at ndc={ndc}")
@@ -321,14 +321,14 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """
         src = dedent(
             """
-            def depth_fog_glyph(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def depth_fog_glyph(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 z_n: float = 2.0 * tt_FragDepth - 1.0
                 d: float = (2.0 * tt_Near * tt_Far) / (tt_Far + tt_Near - z_n * (tt_Far - tt_Near))
                 t: float = 1.0 - d / (d + 10.0)
                 band: float = floor(t * 4.0)
                 if band >= 4.0:
                     band = 3.0
-                blk: vec3 = vec3(0.0, 0.0, 0.0)
+                blk: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
                 if band >= 3.0:
                     return (blk, u_albedo, u_g3)
                 if band >= 2.0:
@@ -341,7 +341,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         globals_dict = {
             GLOBAL_VAR_TT_NEAR: float,
             GLOBAL_VAR_TT_FAR: float,
-            "u_albedo": glm.vec3,
+            "u_albedo": glm.vec4,
             "u_g0": int,
             "u_g1": int,
             "u_g2": int,
@@ -355,19 +355,19 @@ class Test_EndToEndCompilation(unittest.TestCase):
             frag_depth: float,
             near: float,
             far: float,
-            albedo: glm.vec3,
+            albedo: glm.vec4,
             g0: int,
             g1: int,
             g2: int,
             g3: int,
-        ) -> tuple[glm.vec3, glm.vec3, int]:
+        ) -> tuple[glm.vec4, glm.vec4, int]:
             z_n = 2.0 * frag_depth - 1.0
             d = (2.0 * near * far) / (far + near - z_n * (far - near))
             t = 1.0 - d / (d + 10.0)
             band = float(math.floor(t * 4.0))
             if band >= 4.0:
                 band = 3.0
-            blk = glm.vec3(0.0, 0.0, 0.0)
+            blk = glm.vec4(0.0, 0.0, 0.0, 1.0)
             if band >= 3.0:
                 return (blk, albedo, g3)
             if band >= 2.0:
@@ -378,7 +378,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
 
         near_f = 0.1
         far_f = 100.0
-        albedo = glm.vec3(0.7, 0.55, 0.4)
+        albedo = glm.vec4(0.7, 0.55, 0.4, 1.0)
         g0, g1, g2, g3 = 10, 20, 30, 40
 
         reg_settings.set_variable(GLOBAL_VAR_TT_NEAR, near_f)
@@ -435,22 +435,22 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """User globals from globals_dict occupy VM registers; seed via RegisterSettings."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                c: vec3 = u_color + vec3(u_uv_bias.x, u_uv_bias.y, 0.0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec4 = u_color + vec4(u_uv_bias.x, u_uv_bias.y, 0.0, 1.0)
                 return (c, c, 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(
             src,
             "shade",
-            {"u_color": glm.vec3, "u_uv_bias": glm.vec2},
+            {"u_color": glm.vec4, "u_uv_bias": glm.vec2},
         )
-        reg_settings.set_variable("u_color", glm.vec3(0.1, 0.2, 0.3))
+        reg_settings.set_variable("u_color", glm.vec4(0.1, 0.2, 0.3, 1.0))
         reg_settings.set_variable("u_uv_bias", glm.vec2(0.4, 0.5))
 
         front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
         self.assertEqual(glyph, 0)
-        want = glm.vec3(0.5, 0.7, 0.3)
+        want = glm.vec4(0.5, 0.7, 0.3, 1.0)
         self.assertAlmostEqual(front.x, want.x, places=5)
         self.assertAlmostEqual(front.y, want.y, places=5)
         self.assertAlmostEqual(front.z, want.z, places=5)
@@ -460,14 +460,14 @@ class Test_EndToEndCompilation(unittest.TestCase):
         """ShaderPy.register_seed must align bytecode user-uniform slots with the VM."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 return (u_color, u_color, 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(
-            src, "shade", {"u_color": glm.vec3}
+            src, "shade", {"u_color": glm.vec4}
         )
-        reg_settings.set_variable("u_color", glm.vec3(0.25, 0.5, 0.75))
+        reg_settings.set_variable("u_color", glm.vec4(0.25, 0.5, 0.75, 1.0))
         seed = reg_settings.get_register_list()
 
         vm_front, _, vm_g = ttsl_run(*seed, bytecode)
@@ -517,9 +517,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
     def test_floor_f32_compiles_and_runs(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = floor(3.7)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -530,9 +530,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
     def test_floor_negative(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = floor(-1.3)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -542,9 +542,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
     def test_ceil_f32(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = ceil(2.1)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -554,9 +554,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
     def test_fract_f32(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = fract(5.75)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -566,9 +566,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
     def test_mod_f32_basic(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = mod(7.5, 3.0)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -579,9 +579,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         """GLSL mod(x,y) = x - y*floor(x/y), so mod(-1.0, 4.0) = 3.0."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = mod(-1.0, 4.0)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -593,10 +593,10 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         """floor applied to a runtime uniform, not just a compile-time constant."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 scaled: float = tt_FragDepth * 4.0
                 band: float = floor(scaled)
-                return (vec3(band, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(band, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -614,10 +614,10 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         """mod wraps a computed index back into [0, 4) — the fog-band use case."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 raw: float = tt_FragDepth * 4.0 + 2.0
                 wrapped: float = mod(raw, 4.0)
-                return (vec3(wrapped, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(wrapped, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -634,9 +634,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         """glm.floor(...) must compile identically to bare floor(...)."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = glm.floor(3.7)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
@@ -647,9 +647,9 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         """glm.mod(x, y) must compile identically to bare mod(x, y)."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 v: float = glm.mod(7.5, 3.0)
-                return (vec3(v, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(v, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})

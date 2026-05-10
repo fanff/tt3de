@@ -9,6 +9,7 @@ use nalgebra_glm::Number;
 use nalgebra_glm::TVec2;
 use nalgebra_glm::Vec2;
 use nalgebra_glm::Vec3;
+use nalgebra_glm::Vec4;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
 use crate::material::{apply_material, bump_material_apply_generation_for_pass};
@@ -139,6 +140,11 @@ impl Color {
     pub fn new_opaque_from_vec3(color_vec: &Vec3) -> Self {
         let w = max(&floor(&(color_vec * 256.0)), 0.0);
         Color::new(w.x as u8, w.y as u8, w.z as u8, 255)
+    }
+
+    pub fn new_from_vec4(color_vec: &Vec4) -> Self {
+        let w = max(&floor(&(color_vec * 256.0)), 0.0);
+        Color::new(w.x as u8, w.y as u8, w.z as u8, w.w as u8)
     }
 
     pub fn new_opaque_from_vec2(color_vec: &Vec2) -> Self {

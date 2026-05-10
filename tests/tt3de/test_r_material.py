@@ -163,8 +163,8 @@ class Test_ShaderPySetShaderTimeCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_time_red(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(tt_Time, 0.0, 0.0)
+        def dummy_time_red(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(tt_Time, 0.0, 0.0, 1.0)
             return (c, c, 0)
         """
     )
@@ -231,8 +231,8 @@ class Test_ShaderPySetShaderDeltaTimeCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_dt_green(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(0.0, tt_DeltaTime, 0.0)
+        def dummy_dt_green(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(0.0, tt_DeltaTime, 0.0, 1.0)
             return (c, c, 0)
         """
     )
@@ -294,8 +294,8 @@ class Test_ShaderPySetShaderFrameCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_frame_glyph(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(0.0, 0.0, 0.0)
+        def dummy_frame_glyph(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
             return (c, c, tt_Frame)
         """
     )
@@ -356,8 +356,8 @@ class Test_ShaderPySetShaderResolutionCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_res_r(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(tt_Resolution.x / 100.0, 0.0, 0.0)
+        def dummy_res_r(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(tt_Resolution.x / 100.0, 0.0, 0.0, 1.0)
             return (c, c, 0)
         """
     )
@@ -421,8 +421,8 @@ class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
 
     _DUMMY_SRC = dedent(
         """
-        def dummy_clip(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(tt_Near, tt_Far / 400.0, 0.0)
+        def dummy_clip(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(tt_Near, tt_Far / 400.0, 0.0, 1.0)
             return (c, c, 0)
         """
     )
@@ -506,8 +506,8 @@ class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
 
     _SEED_SRC = dedent(
         """
-        def seed_ff(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        def seed_ff(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """
     )
 
@@ -539,10 +539,10 @@ class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
     def test_front_facing_bool_register_colors_material_output(self):
         _, reg_settings = all_passes_compilation(self._SEED_SRC, "seed_ff", {})
         _, ff_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
-        red_v3_reg = 10
-        green_v3_reg = 11
-        reg_settings.set_register(IRType.V3, red_v3_reg, glm.vec3(1.0, 0.0, 0.0))
-        reg_settings.set_register(IRType.V3, green_v3_reg, glm.vec3(0.0, 1.0, 0.0))
+        red_v4_reg = 10
+        green_v4_reg = 11
+        reg_settings.set_register(IRType.V4, red_v4_reg, glm.vec4(1.0, 0.0, 0.0, 1.0))
+        reg_settings.set_register(IRType.V4, green_v4_reg, glm.vec4(0.0, 1.0, 0.0, 1.0))
         seed_regs = reg_settings.get_register_list()
 
         bytecode = bytes(
@@ -555,14 +555,14 @@ class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
                 0,
                 OP_RET,
                 0,
-                red_v3_reg,
-                red_v3_reg,
+                red_v4_reg,
+                red_v4_reg,
                 0,
                 0,
                 OP_RET,
                 0,
-                green_v3_reg,
-                green_v3_reg,
+                green_v4_reg,
+                green_v4_reg,
                 0,
                 0,
             ]
@@ -595,8 +595,8 @@ class Test_ShaderPyPrimitiveIDFlow(unittest.TestCase):
 
     _SRC = dedent(
         """
-        def primid_glyph(tt_TexCoord0: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_PrimitiveID)
+        def primid_glyph(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_PrimitiveID)
         """
     )
 
@@ -656,8 +656,8 @@ class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):
 
     _SRC = dedent(
         """
-        def depth_red(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(tt_FragDepth, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        def depth_red(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(tt_FragDepth, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """
     )
 
@@ -710,8 +710,8 @@ class Test_ShaderPyLineCoordMaterialBridge(unittest.TestCase):
 
     _SRC = dedent(
         """
-        def line_red(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(tt_LineCoord, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        def line_red(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(tt_LineCoord, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """
     )
 
@@ -765,8 +765,8 @@ class Test_ShaderPyPointCoordMaterialBridge(unittest.TestCase):
 
     _SRC = dedent(
         """
-        def point_xy(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(tt_PointCoord.x, tt_PointCoord.y, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        def point_xy(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(tt_PointCoord.x, tt_PointCoord.y, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """
     )
 

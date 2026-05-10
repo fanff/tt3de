@@ -64,8 +64,8 @@ class Test_VariableContract(unittest.TestCase):
         """No implicit ``time`` or ``tt_Time`` slot — only ``globals_dict`` adds those."""
         src = dedent(
             """
-            def simple(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
+            def simple(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(1.0, 2.0, 3.0, 1.0), vec4(1.0, 2.0, 3.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "simple", {})
@@ -78,13 +78,13 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_pixel_builtins_plus_tt_Time_when_declared_in_globals(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 pulse: float = tt_Time
                 u0: vec2 = tt_TexCoord0
                 u1: vec2 = tt_TexCoord1
                 return (
-                    vec3(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x),
-                    vec3(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x),
+                    vec4(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x, 1.0),
+                    vec4(u0.x + u1.x + pulse * 0.0, u0.y, tt_FragCoord.x, 1.0),
                     0,
                 )
             """
@@ -108,12 +108,12 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_pixel_builtins_plus_tt_DeltaTime_when_declared_in_globals(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 dt: float = tt_DeltaTime
                 u0: vec2 = tt_TexCoord0
                 return (
-                    vec3(u0.x + dt * 0.0, u0.y, tt_FragCoord.x),
-                    vec3(u0.x + dt * 0.0, u0.y, tt_FragCoord.x),
+                    vec4(u0.x + dt * 0.0, u0.y, tt_FragCoord.x, 1.0),
+                    vec4(u0.x + dt * 0.0, u0.y, tt_FragCoord.x, 1.0),
                     0,
                 )
             """
@@ -128,9 +128,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         globs = {GLOBAL_VAR_TT_RESOLUTION: glm.vec2}
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 r: vec2 = tt_Resolution
-                return (vec3(r.x * 0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(r.x * 0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", globs)
@@ -142,9 +142,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         globs = {GLOBAL_VAR_TT_FRAME: int}
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 frame: int = tt_Frame
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), frame)
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), frame)
             """
         )
         cc = compile_ttsl(src, "shade", globs)
@@ -155,9 +155,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FragPos_used_in_shader_body_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 p: vec2 = tt_FragPos
-                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
+                return (vec4(p.x, p.y, 0.0, 1.0), vec4(p.x, p.y, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -166,10 +166,10 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FrontFacing_branching_shader_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 if tt_FrontFacing:
-                    return (vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), 0)
-                return (vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), 0)
+                    return (vec4(1.0, 0.0, 0.0, 1.0), vec4(1.0, 0.0, 0.0, 1.0), 0)
+                return (vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -178,9 +178,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_PrimitiveID_is_always_present_i32_pixel_input(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 pid: int = tt_PrimitiveID
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), pid)
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), pid)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -193,8 +193,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         """
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_PrimitiveID)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_PrimitiveID)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})
@@ -209,9 +209,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         """``tt_PrimitiveID`` is ``int`` (i32); annotating the receiving variable as float fails."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 pid: float = tt_PrimitiveID
-                return (vec3(pid, 0.0, 0.0), vec3(pid, 0.0, 0.0), 0)
+                return (vec4(pid, 0.0, 0.0, 1.0), vec4(pid, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError):
@@ -220,10 +220,10 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FrontFacing_register_seed_defaults_true(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 if tt_FrontFacing:
-                    return (vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), 0)
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                    return (vec4(1.0, 0.0, 0.0, 1.0), vec4(1.0, 0.0, 0.0, 1.0), 0)
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})
@@ -234,9 +234,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FragDepth_always_present_f32_pixel_input(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 d: float = tt_FragDepth
-                return (vec3(d, 0.0, 0.0), vec3(d, 0.0, 0.0), 0)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(d, 0.0, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -246,8 +246,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FragDepth_register_seed_defaults_zero(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_FragDepth, 0.0, 0.0), vec3(tt_FragDepth, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_FragDepth, 0.0, 0.0, 1.0), vec4(tt_FragDepth, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})
@@ -258,9 +258,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_FragDepth_wrong_annotation_raises(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 bad: vec2 = tt_FragDepth
-                return (vec3(bad.x, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(bad.x, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError):
@@ -269,9 +269,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_LineCoord_always_present_f32_pixel_input(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 t: float = tt_LineCoord
-                return (vec3(t, 0.0, 0.0), vec3(t, 0.0, 0.0), 0)
+                return (vec4(t, 0.0, 0.0, 1.0), vec4(t, 0.0, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -281,8 +281,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_LineCoord_register_seed_defaults_zero(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_LineCoord, 0.0, 0.0), vec3(tt_LineCoord, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_LineCoord, 0.0, 0.0, 1.0), vec4(tt_LineCoord, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})
@@ -293,9 +293,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_LineCoord_wrong_annotation_raises(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 bad: vec2 = tt_LineCoord
-                return (vec3(bad.x, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(bad.x, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError):
@@ -304,9 +304,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_PointCoord_always_present_v2_pixel_input(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 p: vec2 = tt_PointCoord
-                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
+                return (vec4(p.x, p.y, 0.0, 1.0), vec4(p.x, p.y, 0.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {})
@@ -316,8 +316,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_PointCoord_register_seed_defaults_zero_vec2(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_PointCoord.x, tt_PointCoord.y, 0.0), vec3(0.0, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_PointCoord.x, tt_PointCoord.y, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(src, "shade", {})
@@ -328,9 +328,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_PointCoord_wrong_annotation_raises(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 bad: float = tt_PointCoord
-                return (vec3(bad, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+                return (vec4(bad, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError):
@@ -339,8 +339,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Time_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_Time, 0.0, 0.0), vec3(tt_Time, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Time, 0.0, 0.0, 1.0), vec4(tt_Time, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -352,8 +352,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_DeltaTime_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_DeltaTime, 0.0, 0.0), vec3(tt_DeltaTime, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_DeltaTime, 0.0, 0.0, 1.0), vec4(tt_DeltaTime, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -365,9 +365,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Resolution_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 r: vec2 = tt_Resolution
-                return (vec3(r.x, r.y, 0.0), vec3(r.x, r.y, 0.0), 0)
+                return (vec4(r.x, r.y, 0.0, 1.0), vec4(r.x, r.y, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -379,8 +379,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Frame_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_Frame)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_Frame)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -392,8 +392,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Near_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_Near, 0.0, 0.0), vec3(tt_Near, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Near, 0.0, 0.0, 1.0), vec4(tt_Near, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -405,8 +405,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Far_requires_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_Far, 0.0, 0.0), vec3(tt_Far, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Far, 0.0, 0.0, 1.0), vec4(tt_Far, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -418,8 +418,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Near_tt_Far_globals_dict_seeded_defaults(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_Near, tt_Far, 0.0), vec3(tt_Near, tt_Far, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Near, tt_Far, 0.0, 1.0), vec4(tt_Near, tt_Far, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(
@@ -435,9 +435,9 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Resolution_globals_dict_seeded_to_one_by_default(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 r: vec2 = tt_Resolution
-                return (vec3(r.x, r.y, 0.0), vec3(r.x, r.y, 0.0), 0)
+                return (vec4(r.x, r.y, 0.0, 1.0), vec4(r.x, r.y, 0.0, 1.0), 0)
             """
         )
         _, reg_settings = all_passes_compilation(
@@ -451,8 +451,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_tt_Frame_globals_dict_seeded_to_zero_by_default(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_Frame)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_Frame)
             """
         )
         _, reg_settings = all_passes_compilation(
@@ -466,8 +466,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
     def test_empty_globals_dict_builtin_only(self):
         src = dedent(
             """
-            def simple(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
+            def simple(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(1.0, 2.0, 3.0, 1.0), vec4(1.0, 2.0, 3.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "simple", {})
@@ -479,12 +479,12 @@ class Test_UserGlobalsHappyPath(unittest.TestCase):
         globs = {"time": float, "position": glm.vec3}
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 t: float = time
                 p: vec3 = position
                 return (
-                    vec3(t + tt_FragCoord.x * 0.0, p.y, p.z),
-                    vec3(t + tt_FragCoord.x * 0.0, p.y, p.z),
+                    vec4(t + tt_FragCoord.x * 0.0, p.y, p.z, 1.0),
+                    vec4(t + tt_FragCoord.x * 0.0, p.y, p.z, 1.0),
                     0,
                 )
             """
@@ -499,10 +499,10 @@ class Test_ParameterVsBuiltinFragCoord(unittest.TestCase):
     def test_uv_parameter_distinct_from_tt_FragCoord_builtin(self):
         src = dedent(
             """
-            def shade(uv: vec2) -> tuple[vec3, vec3, int]:
+            def shade(uv: vec2) -> tuple[vec4, vec4, int]:
                 return (
-                    vec3(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0),
-                    vec3(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0),
+                    vec4(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0, 1.0),
+                    vec4(uv.x + tt_FragCoord.x, uv.y + tt_FragCoord.y, 0.0, 1.0),
                     0,
                 )
             """
@@ -521,36 +521,36 @@ class Test_ShadowBuiltinViaGlobalsDict(unittest.TestCase):
         """globals_dict chooses the IR type for ``tt_Time`` (here ``int`` vs default ``float``)."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 tick: int = tt_Time
-                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
+                return (vec4(1.0, 2.0, 3.0, 1.0), vec4(1.0, 2.0, 3.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {GLOBAL_VAR_TT_TIME: int})
         self.assertEqual(cc.named_variables[GLOBAL_VAR_TT_TIME].ty, IRType.I32)
 
-    def test_tt_Time_shadowed_as_int_breaks_float_vec3_mixing(self):
-        """sin(tt_Time) is I32; vec3(...) requires f32 components — CompileError."""
+    def test_tt_Time_shadowed_as_int_breaks_float_vec4_mixing(self):
+        """sin(tt_Time) is I32; vec4(...) requires f32 components — CompileError."""
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(sin(tt_Time), 0.0, 0.0), vec3(sin(tt_Time), 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(sin(tt_Time), 0.0, 0.0, 1.0), vec4(sin(tt_Time), 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
             compile_ttsl(src, "shade", {GLOBAL_VAR_TT_TIME: int})
         msg = str(ctx.exception)
-        # Root cause: globals_dict shadowed tt_Time as int, so sin(...) is I32 inside vec3(...)
-        self.assertIn("vec3", msg)
+        # Root cause: globals_dict shadowed tt_Time as int, so sin(...) is I32 inside vec4(...)
+        self.assertIn("vec4", msg)
         self.assertIn("f32", msg)
         self.assertIn("I32", msg)
 
     def test_tt_DeltaTime_shadowed_by_int_global_still_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 tick: int = tt_DeltaTime
-                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
+                return (vec4(1.0, 2.0, 3.0, 1.0), vec4(1.0, 2.0, 3.0, 1.0), 0)
             """
         )
         cc = compile_ttsl(src, "shade", {GLOBAL_VAR_TT_DELTA_TIME: int})
@@ -561,8 +561,8 @@ class Test_VariableFailures(unittest.TestCase):
     def test_typo_tt_Tim(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(tt_Tim, 0.0, 0.0), vec3(tt_Tim, 0.0, 0.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Tim, 0.0, 0.0, 1.0), vec4(tt_Tim, 0.0, 0.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -574,10 +574,10 @@ class Test_VariableFailures(unittest.TestCase):
     def test_typo_tt_fragcoord_case(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 return (
-                    vec3(tt_fragcoord.x, 0.0, 0.0),
-                    vec3(tt_fragcoord.x, 0.0, 0.0),
+                    vec4(tt_fragcoord.x, 0.0, 0.0, 1.0),
+                    vec4(tt_fragcoord.x, 0.0, 0.0, 1.0),
                     0,
                 )
             """
@@ -591,10 +591,10 @@ class Test_VariableFailures(unittest.TestCase):
     def test_undeclared_user_global(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 return (
-                    vec3(mystery_uniform, 0.0, 0.0),
-                    vec3(mystery_uniform, 0.0, 0.0),
+                    vec4(mystery_uniform, 0.0, 0.0, 1.0),
+                    vec4(mystery_uniform, 0.0, 0.0, 1.0),
                     0,
                 )
             """
@@ -608,8 +608,8 @@ class Test_VariableFailures(unittest.TestCase):
     def test_unsupported_global_type_in_globals_dict(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-                return (vec3(1.0, 2.0, 3.0), vec3(1.0, 2.0, 3.0), 0)
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(1.0, 2.0, 3.0, 1.0), vec4(1.0, 2.0, 3.0, 1.0), 0)
             """
         )
         with self.assertRaises(CompileError) as ctx:
@@ -625,9 +625,9 @@ class Test_DocParityBuiltins(unittest.TestCase):
     def test_doc_tt_FragPos_vec2_builtin_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 p: vec2 = tt_FragPos
-                return (vec3(p.x, p.y, 0.0), vec3(p.x, p.y, 0.0), 0)
+                return (vec4(p.x, p.y, 0.0, 1.0), vec4(p.x, p.y, 0.0, 1.0), 0)
             """
         )
         compile_ttsl(src, "shade", {})
@@ -637,9 +637,9 @@ class Test_TtDeltaTimeCompiles(unittest.TestCase):
     def test_tt_DeltaTime_float_with_globals_dict_compiles(self):
         src = dedent(
             """
-            def shade(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 d: float = tt_DeltaTime
-                return (vec3(d, 0.0, 0.0), vec3(d, 0.0, 0.0), 0)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(d, 0.0, 0.0, 1.0), 0)
             """
         )
         compile_ttsl(src, "shade", {GLOBAL_VAR_TT_DELTA_TIME: float})

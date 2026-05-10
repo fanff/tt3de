@@ -566,14 +566,14 @@ def generate_return_form() -> Form:
         {
             "name": "OP_RET",
             "type": None,
-            "input_types": [IRType.V3, IRType.V3, IRType.I32],
+            "input_types": [IRType.V4, IRType.V4, IRType.I32],
         }
     )
     return_form["rust_match_code"] = """
     OP_RET => {
             return Some((
-                regs.v3[a as usize],
-                regs.v3[b as usize],
+                regs.v4[a as usize],
+                regs.v4[b as usize],
                 regs.i32_[c as usize],
             ));
         }
@@ -787,7 +787,7 @@ def main() -> None:
         regs: &mut Registers,
         ip: &mut usize,
         tex: Option<&dyn TtslTextureEnv>,
-    ) -> Option<(Vec3, Vec3, i32)> {
+    ) -> Option<(Vec4, Vec4, i32)> {
         match opcode {
     %s
 

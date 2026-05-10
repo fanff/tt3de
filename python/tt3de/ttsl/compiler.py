@@ -265,7 +265,7 @@ class TTSLCompilerContext:
         if node.value is None:
             raise CompileError(
                 node,
-                "TTSL shader must return (front: vec3, back: vec3, glyph: int); "
+                "TTSL shader must return (front: vec4, back: vec4, glyph: int); "
                 "bare return is not allowed",
             )
         val = node.value
@@ -273,8 +273,8 @@ class TTSLCompilerContext:
             raise CompileError(
                 val,
                 "TTSL shader must return a 3-tuple (front, back, glyph) with types "
-                "(vec3, vec3, int), e.g. return (color, color, 0); "
-                "a single vec3 is no longer valid",
+                "(vec4, vec4, int), e.g. return (color, color, 0); "
+                "a single vec4 is no longer valid",
             )
         if len(val.elts) != 3:
             raise CompileError(
@@ -286,14 +286,14 @@ class TTSLCompilerContext:
         t_front = self.type_of(e_front)
         t_back = self.type_of(e_back)
         t_glyph = self.type_of(e_glyph)
-        if (t_front, t_back, t_glyph) != (IRType.V3, IRType.V3, IRType.I32):
+        if (t_front, t_back, t_glyph) != (IRType.V4, IRType.V4, IRType.I32):
             raise CompileError(
                 val,
-                "TTSL return element types must be (vec3, vec3, int); "
+                "TTSL return element types must be (vec4, vec4, int); "
                 f"got ({t_front}, {t_back}, {t_glyph})",
             )
-        r_front = self.compile_expr(e_front, forced_type=IRType.V3)
-        r_back = self.compile_expr(e_back, forced_type=IRType.V3)
+        r_front = self.compile_expr(e_front, forced_type=IRType.V4)
+        r_back = self.compile_expr(e_back, forced_type=IRType.V4)
         r_glyph = self.compile_expr(e_glyph, forced_type=IRType.I32)
         self.emit(
             OpCodes.RET,
@@ -986,7 +986,7 @@ def type_of_annotation(arg_annotation) -> IRType:
 
 
 def _validate_shader_returns_annotation(fn_node: ast.FunctionDef) -> None:
-    """If the shader function has a return annotation, require tuple[vec3, vec3, int]."""
+    """If the shader function has a return annotation, require tuple[vec4, vec4, int]."""
     ann = fn_node.returns
     if ann is None:
         return
@@ -1003,13 +1003,13 @@ def _validate_shader_returns_annotation(fn_node: ast.FunctionDef) -> None:
     if elts is None:
         raise CompileError(
             ann,
-            "TTSL shader return annotation must be tuple[vec3, vec3, int] "
-            "(or typing.Tuple[vec3, vec3, int]) when a return type is given",
+            "TTSL shader return annotation must be tuple[vec4, vec4, int] "
+            "(or typing.Tuple[vec4, vec4, int]) when a return type is given",
         )
     if len(elts) != 3:
         raise CompileError(
             ann,
-            f"TTSL return annotation must list exactly 3 types (vec3, vec3, int); "
+            f"TTSL return annotation must list exactly 3 types (vec4, vec4, int); "
             f"got {len(elts)}",
         )
     try:
@@ -1019,10 +1019,10 @@ def _validate_shader_returns_annotation(fn_node: ast.FunctionDef) -> None:
             elts[0],
             f"Unsupported type in shader return annotation: {ex}",
         ) from ex
-    if got != (IRType.V3, IRType.V3, IRType.I32):
+    if got != (IRType.V4, IRType.V4, IRType.I32):
         raise CompileError(
             ann,
-            "TTSL shader return annotation must be tuple[vec3, vec3, int]; "
+            "TTSL shader return annotation must be tuple[vec4, vec4, int]; "
             f"got ({', '.join(str(t) for t in got)})",
         )
 
@@ -2015,8 +2015,8 @@ class PassToByteCode(CompilationPass):
                 return form
             elif instr.op == OpCodes.RET and op_name == "OP_RET":
                 for label, op, expect in (
-                    ("src1", instr.src1, IRType.V3),
-                    ("src2", instr.src2, IRType.V3),
+                    ("src1", instr.src1, IRType.V4),
+                    ("src2", instr.src2, IRType.V4),
                     ("src3", instr.src3, IRType.I32),
                 ):
                     if not isinstance(op, Temp) or op.ty != expect:

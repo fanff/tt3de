@@ -37,7 +37,7 @@ class Test_OPCodes(unittest.TestCase):
     def test_returnshader(self):
         regs = [{}] * 6
 
-        regs[4] = {1: glm.vec3(0.5, 0.5, 0.0)}  # setting register 1 = something not 0
+        regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}  # setting register 1 = something not 0
 
         bytecode = bytes(
             [OP_RET, 0, 1, 1, 0, 0] + [OP_RET, 0, 0, 0, 0, 0]
@@ -46,14 +46,14 @@ class Test_OPCodes(unittest.TestCase):
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
-        assert front == glm.vec3(0.5, 0.5, 0.0)
-        assert back == glm.vec3(0.5, 0.5, 0.0)
+        assert front == glm.vec4(0.5, 0.5, 0.0, 1.0)
+        assert back == glm.vec4(0.5, 0.5, 0.0, 1.0)
         assert glyphidx == 0
 
     def test_jump(self):
         regs = [{}] * 6
 
-        regs[4] = {1: glm.vec3(0.5, 0.5, 0.0)}  # setting register 1 = something not 0
+        regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}  # setting register 1 = something not 0
 
         bytecode = bytes(
             [
@@ -77,8 +77,8 @@ class Test_OPCodes(unittest.TestCase):
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
-        assert front == glm.vec3(0.5, 0.5, 0.0)
-        assert back == glm.vec3(0.5, 0.5, 0.0)
+        assert front == glm.vec4(0.5, 0.5, 0.0, 1.0)
+        assert back == glm.vec4(0.5, 0.5, 0.0, 1.0)
         assert glyphidx == 0
 
 
@@ -122,20 +122,20 @@ class Test_RunTTSL(unittest.TestCase):
         assert len(run_result) == 3
 
         front, back, glyphidx = run_result
-        assert isinstance(front, glm.vec3)
-        assert isinstance(back, glm.vec3)
+        assert isinstance(front, glm.vec4)
+        assert isinstance(back, glm.vec4)
         assert isinstance(glyphidx, int)
 
-        assert front == glm.vec3(0.0, 1.0, 2.0)
-        assert back == glm.vec3(0.0, 1.0, 2.0)
+        assert front == glm.vec4(0.0, 1.0, 2.0, 3.0)
+        assert back == glm.vec4(0.0, 1.0, 2.0, 3.0)
         assert glyphidx == 2
 
     def test_with_compiled_code(self):
 
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(tt_TexCoord0.x, tt_TexCoord0.y, 0.0)
+        def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(tt_TexCoord0.x, tt_TexCoord0.y, 0.0, 1.0)
             return (c, c, 0)
         """
         )
@@ -152,15 +152,15 @@ class Test_RunTTSL(unittest.TestCase):
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
-        assert front == glm.vec3(0.5, 0.5, 0.0)
-        assert back == glm.vec3(0.5, 0.5, 0.0)
+        assert front == glm.vec4(0.5, 0.5, 0.0, 1.0)
+        assert back == glm.vec4(0.5, 0.5, 0.0, 1.0)
         assert glyphidx == 0
 
     def test_with_compiled_code_tt_FragPos_register(self):
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            c: vec3 = vec3(tt_FragPos.x, tt_FragPos.y, 0.0)
+        def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: vec4 = vec4(tt_FragPos.x, tt_FragPos.y, 0.0, 1.0)
             return (c, c, 0)
         """
         )
@@ -170,16 +170,16 @@ class Test_RunTTSL(unittest.TestCase):
 
         regs = reg_settings.get_register_list()
         front, back, glyphidx = ttsl_run(*regs, bytecode)
-        assert front == glm.vec3(0.25, -0.5, 0.0)
-        assert back == glm.vec3(0.25, -0.5, 0.0)
+        assert front == glm.vec4(0.25, -0.5, 0.0, 1.0)
+        assert back == glm.vec4(0.25, -0.5, 0.0, 1.0)
         assert glyphidx == 0
 
     def test_with_compiled_code_tt_Resolution_uniform(self):
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
+        def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             s: float = 0.1
-            c: vec3 = vec3(tt_Resolution.x * s, tt_Resolution.y * s, 0.0)
+            c: vec4 = vec4(tt_Resolution.x * s, tt_Resolution.y * s, 0.0, 1.0)
             return (c, c, 0)
         """
         )
@@ -189,15 +189,15 @@ class Test_RunTTSL(unittest.TestCase):
         reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(10.0, 20.0))
         regs = reg_settings.get_register_list()
         front, back, glyphidx = ttsl_run(*regs, bytecode)
-        assert front == glm.vec3(1.0, 2.0, 0.0)
-        assert back == glm.vec3(1.0, 2.0, 0.0)
+        assert front == glm.vec4(1.0, 2.0, 0.0, 1.0)
+        assert back == glm.vec4(1.0, 2.0, 0.0, 1.0)
         assert glyphidx == 0
 
     def test_with_compiled_code_tt_Frame_uniform(self):
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_Frame)
+        def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_Frame)
         """
         )
         bytecode, reg_settings = all_passes_compilation(
@@ -206,8 +206,8 @@ class Test_RunTTSL(unittest.TestCase):
         reg_settings.set_variable(GLOBAL_VAR_TT_FRAME, 17)
         regs = reg_settings.get_register_list()
         front, back, glyphidx = ttsl_run(*regs, bytecode)
-        assert front == glm.vec3(0.0, 0.0, 0.0)
-        assert back == glm.vec3(0.0, 0.0, 0.0)
+        assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
+        assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 17
 
     def test_with_compiled_code_tt_PrimitiveID_in_glyph(self):
@@ -216,16 +216,16 @@ class Test_RunTTSL(unittest.TestCase):
         ``PixInfo::primitive_id``. Returning it as the glyph proves end-to-end plumbing."""
         shader_code = dedent(
             """
-        def frag(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), tt_PrimitiveID)
+        def frag(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_PrimitiveID)
         """
         )
         bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 11)
         regs = reg_settings.get_register_list()
         front, back, glyphidx = ttsl_run(*regs, bytecode)
-        assert front == glm.vec3(0.0, 0.0, 0.0)
-        assert back == glm.vec3(0.0, 0.0, 0.0)
+        assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
+        assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 11
 
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 200)
@@ -242,14 +242,14 @@ class Test_RunTTSL(unittest.TestCase):
         """
         seed_src = dedent(
             """
-        def seed(tt_FragCoord: vec2) -> tuple[vec3, vec3, int]:
-            return (vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0)
+        def seed(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """
         )
         _, reg_settings = all_passes_compilation(seed_src, "seed", {})
         _, ff_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
-        red_v3_reg = 10
-        green_v3_reg = 11
+        red_v4_reg = 10
+        green_v4_reg = 11
         bytecode = bytes(
             [
                 OP_JMP_IF_FALSE,
@@ -260,21 +260,21 @@ class Test_RunTTSL(unittest.TestCase):
                 0,
                 OP_RET,
                 0,
-                red_v3_reg,
-                red_v3_reg,
+                red_v4_reg,
+                red_v4_reg,
                 0,
                 0,
                 OP_RET,
                 0,
-                green_v3_reg,
-                green_v3_reg,
+                green_v4_reg,
+                green_v4_reg,
                 0,
                 0,
             ]
         )
         regs = [{}, {}, {}, {}, {}, {}]
-        regs[4][red_v3_reg] = glm.vec3(1.0, 0.0, 0.0)
-        regs[4][green_v3_reg] = glm.vec3(0.0, 1.0, 0.0)
+        regs[5][red_v4_reg] = glm.vec4(1.0, 0.0, 0.0, 1.0)
+        regs[5][green_v4_reg] = glm.vec4(0.0, 1.0, 0.0, 1.0)
         regs[0][ff_reg] = True
         front, _back, _g = ttsl_run(*regs, bytecode)
         assert front.x > 0.99 and front.y < 0.01

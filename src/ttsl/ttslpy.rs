@@ -8,7 +8,7 @@ use pyo3::{
 
 use crate::{
     ttsl::{decode_instrs_256, run_ttsl as run_ttsl_vm, Registers},
-    utils::{from_pydict_int_v2, from_pydict_int_v3, from_pydict_int_v4, vec3_to_pyglm},
+    utils::{from_pydict_int_v2, from_pydict_int_v3, from_pydict_int_v4, vec4_to_pyglm},
 };
 
 pub fn convert_and_fill_register(
@@ -71,9 +71,9 @@ pub fn ttsl_run(
     let bytes: &[u8] = bytecode.extract(py).unwrap();
     let instrs = decode_instrs_256(bytes);
 
-    let (v3a, v3b, iret) = run_ttsl_vm(&instrs, &mut regs, None);
-    let a = vec3_to_pyglm(py, v3a);
-    let b = vec3_to_pyglm(py, v3b);
+    let (v4a, v4b, iret) = run_ttsl_vm(&instrs, &mut regs, None);
+    let a = vec4_to_pyglm(py, v4a);
+    let b = vec4_to_pyglm(py, v4b);
     let c = iret;
     return (a, b, c);
 }
