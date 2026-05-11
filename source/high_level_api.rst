@@ -77,6 +77,66 @@ You can create material entries dynamically via ``material_buffer``:
     )
 
 
+TTSL ``ShaderPy`` materials
+---------------------------
+
+Custom per-pixel shading uses **TTSL** (Python-syntax shaders compiled to bytecode)
+and ``materials.ShaderPy``, which the renderer runs like any other material. See
+:doc:`ttsl` for builtins and uniforms; :doc:`ttsl_compiler` covers compilation and
+register wiring in depth.
+
+Typical flow:
+
+1. Put shader source in a string and call ``all_passes_compilation(...)`` once.
+2. Keep **material slot 0** as a plain static fill (sentinel / cleared depth uses
+   ``material_id=0``; putting ``ShaderPy`` there would shade the whole canvas).
+3. Build ``ShaderPy`` with the bytecode, ``register_seed=reg_settings.get_register_list()``,
+   and optional ``*_reg`` fields for engine uniforms (for example ``time_f32_reg`` when the
+   shader reads ``tt_Time``).
+4. ``add_shader(...)`` returns a material id; assign it on 2D nodes or 3D meshes.
+
+.. code-block:: python
+
+    from tt3de.tt3de import find_glyph_indices_py, materials
+    from tt3de.ttsl.compiler import GLOBAL_VAR_TT_TIME, all_passes_compilation
+
+    SHADER_SRC = """
+    def my_shader(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+        rgb = vec4(tt_TexCoord0.x, tt_TexCoord0.y, 0.5 + 0.5 * glm.sin(tt_Time), 1.0)
+        return (rgb, rgb, 0)
+    """
+
+    bytecode, reg_settings = all_passes_compilation(
+        SHADER_SRC, "my_shader", {GLOBAL_VAR_TT_TIME: float}
+    )
+    _, time_reg = reg_settings.var_name_to_registers[GLOBAL_VAR_TT_TIME]
+
+    self.rc.material_buffer.add_static(
+        (0, 0, 0), (0, 0, 0), find_glyph_indices_py(" ")
+    )
+    shader_mat = materials.ShaderPy(
+        bytecode,
+        time_f32_reg=time_reg,
+        default_glyph=find_glyph_indices_py("█"),
+        register_seed=reg_settings.get_register_list(),
+    )
+    shader_mat_id = self.rc.material_buffer.add_shader(shader_mat)
+    # … attach shader_mat_id on TT2DUnitSquare(..., material_id=shader_mat_id), etc.
+
+Engine uniforms such as ``tt_Time`` update without recompiling via
+``MaterialBufferPy`` helpers — for example in ``before_render_step``:
+
+.. code-block:: python
+
+    def before_render_step(self) -> None:
+        self.rc.material_buffer.set_shader_time(
+            shader_mat_id, float(self.time_since_start())
+        )
+
+Working references: ``demos/2d/ttsl_square.py``, ``demos/3d/ttsl_texture_cube.py``,
+``demos/3d/ttsl_fog.py``, and the compiler playground ``demos/ttsl.py``.
+
+
 2D world
 --------
 
@@ -103,53 +163,69 @@ Adding points and lines
 .. code-block:: python
 
     from tt3de.points import Point3D
+    from tt3de.textual_standalone import TT3DViewStandAlone
     from tt3de.tt_2dnodes import TT2DNode, TT2DPoints, TT2DLines
 
-    root = TT2DNode()
-    root.add_child(TT2DPoints(point_list=[Point3D(0.0, 0.0, 0.0)], material_id=1))
-    root.add_child(
-        TT2DLines(
-            point_list=[Point3D(-0.5, -0.5, 0.0), Point3D(0.5, 0.5, 0.0)],
-            material_id=2,
-        )
-    )
-    self.rc.append_root(root)
+    class PointsAndLinesView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            root = TT2DNode()
+            root.add_child(TT2DPoints(point_list=[Point3D(0.0, 0.0, 0.0)], material_id=1))
+            root.add_child(
+                TT2DLines(
+                    point_list=[Point3D(-0.5, -0.5, 0.0), Point3D(0.5, 0.5, 0.0)],
+                    material_id=2,
+                )
+            )
+            self.rc.append_root(root)
 
 Adding polygons
 ^^^^^^^^^^^^^^^
 
-``TT2DPolygon`` expects vertices, triangle indices, and optionally UVs:
+``TT2DPolygon`` expects vertices, triangle indices, and optionally UVs.
 
 .. code-block:: python
 
     from tt3de.points import Point2D, Point3D
-    from tt3de.tt_2dnodes import TT2DPolygon
+    from tt3de.textual_standalone import TT3DViewStandAlone
+    from tt3de.tt_2dnodes import TT2DNode, TT2DPolygon
 
-    poly = TT2DPolygon(
-        point_list=[
-            Point3D(-0.5, -0.5, 0.0),
-            Point3D(0.0, 0.5, 0.0),
-            Point3D(0.5, -0.5, 0.0),
-        ],
-        triangles=[(0, 1, 2)],
-        uvmap=[(Point2D(0.0, 0.0), Point2D(0.5, 1.0), Point2D(1.0, 0.0))],
-        material_id=7,
-    )
+    class TexturedTriangleView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            poly = TT2DPolygon(
+                point_list=[
+                    Point3D(-0.5, -0.5, 0.0),
+                    Point3D(0.0, 0.5, 0.0),
+                    Point3D(0.5, -0.5, 0.0),
+                ],
+                triangles=[(0, 1, 2)],
+                uvmap=[(Point2D(0.0, 0.0), Point2D(0.5, 1.0), Point2D(1.0, 0.0))],
+                material_id=7,
+            )
+            root = TT2DNode()
+            root.add_child(poly)
+            self.rc.append_root(root)
 
 Animating 2D nodes
 ^^^^^^^^^^^^^^^^^^
 
-Use ``update_step`` to update transform/materials each frame:
+Use ``update_step`` on the same view class to update transforms or materials each frame.
 
 .. code-block:: python
 
     from pyglm import glm
 
-    def update_step(self, delta_time: float):
-        t = self.time_since_start()
-        x = glm.sin(t)
-        y = glm.cos(t)
-        self.some_node.set_local_transform(glm.translate(glm.vec3(x, y, 0.0)))
+    from tt3de.textual_standalone import TT3DViewStandAlone
+
+    class OrbitingGlyphView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            # Build self.some_node (for example a TT2DUnitSquare) and append its root here.
+            ...
+
+        def update_step(self, delta_time: float) -> None:
+            t = self.time_since_start()
+            x = glm.sin(t)
+            y = glm.cos(t)
+            self.some_node.set_local_transform(glm.translate(glm.vec3(x, y, 0.0)))
 
 
 3D world
@@ -176,15 +252,19 @@ Adding primitive meshes
 .. code-block:: python
 
     from pyglm import glm
+
     from tt3de.prefab3d import Prefab3D
+    from tt3de.textual_standalone import TT3DViewStandAlone
     from tt3de.tt_3dnodes import TT3DNode
 
-    root = TT3DNode()
-    tri = Prefab3D.unitary_triangle()
-    tri.material_id = 6
-    tri.local_transform = glm.translate(glm.vec3(0.0, 1.0, 0.0))
-    root.add_child(tri)
-    self.rc.append_root(root)
+    class ElevatedTriangleView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            root = TT3DNode()
+            tri = Prefab3D.unitary_triangle()
+            tri.material_id = 6
+            tri.local_transform = glm.translate(glm.vec3(0.0, 1.0, 0.0))
+            root.add_child(tri)
+            self.rc.append_root(root)
 
 Loading models
 ^^^^^^^^^^^^^^
@@ -192,10 +272,16 @@ Loading models
 .. code-block:: python
 
     from tt3de.asset_fastloader import fast_load
+    from tt3de.textual_standalone import TT3DViewStandAlone
+    from tt3de.tt_3dnodes import TT3DNode
 
-    mesh = fast_load("models/cube.obj", reverse_uv_v=False, flip_triangles=True)
-    mesh.material_id = 11
-    self.root3Dnode.add_child(mesh)
+    class ObjCubeRootView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            self.root3Dnode = TT3DNode()
+            mesh = fast_load("models/cube.obj", reverse_uv_v=False, flip_triangles=True)
+            mesh.material_id = 11
+            self.root3Dnode.add_child(mesh)
+            self.rc.append_root(self.root3Dnode)
 
 Animating 3D nodes
 ^^^^^^^^^^^^^^^^^^
@@ -204,8 +290,15 @@ Animating 3D nodes
 
     from pyglm import glm
 
-    def update_step(self, delta_time: float):
-        self.cube.apply_transform(glm.rotate(delta_time, glm.vec3(0, 1, 0)))
+    from tt3de.textual_standalone import TT3DViewStandAlone
+
+    class SpinningCubeView(TT3DViewStandAlone):
+        def initialize(self) -> None:
+            # Load or build self.cube and append a 3D root in this method.
+            ...
+
+        def update_step(self, delta_time: float) -> None:
+            self.cube.apply_transform(glm.rotate(delta_time, glm.vec3(0, 1, 0)))
 
 
 Camera, debug view, and events
@@ -221,5 +314,6 @@ Recommended reading order
 
 1. ``demos/2d/standalone.py`` (smallest setup)
 2. ``demos/2d/material_test.py`` (materials and geometry variety)
-3. ``demos/3d/triangle_test.py`` (basic 3D primitives)
-4. ``demos/3d/some_models.py`` (assets, texture materials, interaction)
+3. ``demos/2d/ttsl_square.py`` (compiled TTSL + ``ShaderPy`` on a quad)
+4. ``demos/3d/triangle_test.py`` (basic 3D primitives)
+5. ``demos/3d/some_models.py`` (assets, texture materials, interaction)
