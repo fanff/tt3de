@@ -1,125 +1,120 @@
-# Evolution: Transparency, depth layers, and primitive ordering
+# Evolution: Single-buffer draw path, vec4 blending, and transparency pass qualification
 
 ```yaml
 id: evol-transparency-depth-layers
 status: proposed
 created: 2026-05-11
+updated: 2026-05-11
 authors: []
 supersedes: []
 superseded-by: ""
 related:
-  - source/low_level_api.rst  # Drawing Buffer + Depth layer resolve (canonical today)
-  - src/raster/mod.rs         # raster_all: primitive iteration order
-  - src/drawbuffer/           # DrawBuffer<K>, set_depth_content, material resolve
+  - source/low_level_api.rst       # Drawing Buffer + depth resolve (update after implementation)
+  - src/drawbuffer/drawbuffer.rs    # DrawBuffer, DepthBufferCell<L>, CanvasCell
+  - src/drawbuffer/mod.rs           # DrawingBufferPy (currently L = 2)
+  - src/material/shader_material.rs # Fragment-style shading, vec4 registers → CanvasCell
+  - src/raster/mod.rs               # raster_all: primitive iteration order
 ```
 
 ## Summary
 
-Keep tt3de’s fixed two-layer per-terminal-cell depth stack as the default visibility and partial-transparency mechanism. Treat it explicitly as a small **K-buffer-style** resolve into a single `CanvasCell`, not as OpenGL’s one-depth-sample-plus-global-blend model. Document this consistently (including primitive submission order and material-defined compositing). Defer opaque/transparent material classification and an optional **second-pass** back-to-front transparent primitive sort until real scenes show artifacts the two-layer stack cannot handle.
+**Pivot:** Stop treating the terminal rasterizer’s multi-layer per-cell stack (`DepthBufferCell` with `L > 1`, K-buffer-style insertion and far-to-near resolve) as the primary transparency strategy. Evolve toward a **single stored fragment per cell** for depth-tested geometry, coupled with a **separate transparency pass** whose compositing is driven by **explicit color blending rules** applied when resolving **fragment shader output as `vec4`** (RGBA).
+
+This evolution scopes two concrete workstreams:
+
+1. **Draw buffer + fragment resolve redesign** — One depth winner per cell for the relevant pass(es), and a documented, code-central blending contract from shader `vec4` outputs ( Straight vs premultiplied alpha, destination conventions, and interaction with `CanvasCell` front/back/glyph channels should be pinned down in implementation and docs.)
+2. **Geometry qualification** — A clear, API-visible way to mark primitives (or materials / draw batches) as belonging to the **opaque pass** vs the **transparency pass**, so the rasterizer can apply the right depth and blend behavior without relying on implicit multi-layer stacking.
+
+Ordering artifacts for transparent overlap remain a known limitation unless a separate sort or heavier OIT is added later; this doc does **not** promise order-independent correctness.
 
 ## Motivation and context
 
-Today the pipeline projects geometry into a `PrimitiveBuffer`, then `raster_all` walks primitives in buffer index order (`0..current_size`) with **no global sort** by depth or transparency. Visibility and limited transparency are handled **per cell** in `DrawBuffer<DEPTHCOUNT, f32>` (currently `DEPTHCOUNT == 2` via `DrawingBufferPy`): fragments are inserted nearest-first, deeper slots shift, overflow fragments drop, then `apply_material_on` shades **far-to-near** into one glyph plus front/back colors.
+Today, visibility and partial transparency lean on **`DrawBuffer<L, _>` with `L == 2`** in Python (`DrawingBufferPy`): `set_depth_content` keeps nearest-first layers, overflow fragments drop, and `apply_material_on` resolves **far-to-near** into one `CanvasCell`. Materials toggle subsets of channels (`StaticColor`, `BaseTexture`, etc.). That is compact for ASCII-scale grids but couples transparency to a **fixed small K-buffer** and makes it harder to align mental models with “one depth sample + blend stage” pipelines.
 
-That differs from the common OpenGL recipe (opaque pass with depth write, then transparent pass sorted back-to-front with depth test on and depth write off). Users comparing to GL may misunderstand why ordering artifacts appear or why results depend on **material channel writes**, not a single blend equation.
-
-This evolution captures a deliberate **scope and sequencing** decision: stay local and ASCII-centric first; add heavier global sorting only when justified.
+Moving to a **single-buffer** model per pass clarifies semantics: each cell holds **at most one depth-associated fragment** for opaque geometry; transparent geometry is composed in a **second pass** with **explicit blend equations** fed by **shader `vec4` color output**, reducing reliance on multi-layer insertion policy for everyday transparency.
 
 ## Goals
 
-- **Clarity**: Readers of public docs understand (a) no primitive sort before rasterization, (b) two stored fragments per cell max, (c) resolve order and compositing are material-driven.
-- **Stability**: No breaking change to default rendering; optional features are additive.
-- **Future hook**: If implemented later, transparent pass design is **optional**, camera-depth-sorted, and clearly separated from the default path.
-- **Honest performance framing**: Document expected cost ordering (opaque single-sample vs two-layer vs sorted transparent pass) as hypotheses, not benchmarks.
+- **Single-layer draw storage (per pass):** Redesign the draw buffer path so the primary opaque resolve uses **one depth slot per cell** (conceptually `L == 1` for that pass, or equivalent semantics without multi-layer competition).
+- **Explicit blending:** Define and implement **deterministic blending rules** when applying fragment results to the canvas (including alpha), with fragment shaders contributing **`vec4`** colors whose interpretation (e.g. straight RGBA) is documented and tested.
+- **Transparency pass qualification:** Introduce a stable mechanism (primitive flag, material metadata, or batch/scene flag — TBD in design) so geometry is explicitly **opaque-pass** vs **transparency-pass**, enabling correct depth/blend stage selection without inferring from ad hoc material behavior alone.
+- **Documentation:** Update canonical docs (`source/low_level_api.rst` and cross-links) so the model is **discoverable** and contrasts clearly with the old multi-layer resolve where needed.
 
-## Non-goals
+## Non-goals (initial slice)
 
-- Replacing the two-layer model with full per-pixel A-buffer / depth peeling / “correct” order-independent transparency in the near term.
-- Guaranteeing correct transparency for all intersecting transparent triangles (global sort is still approximate there).
-- Changing `DEPTHCOUNT` in this evolution (remains a separate change with its own perf/test blast radius).
+- Full **order-independent transparency** (A-buffer, depth peeling, weighted blended OIT, etc.) as a default requirement.
+- **Increasing `L`** globally as the main fix for transparency (the old “more K-buffer layers” direction is deprecated relative to this evolution).
+- Perfect transparency for **intersecting** transparent triangles without an explicit sort or heavier technique (may remain documented limitation).
 
 ## User-visible functionality
 
-- **After documentation-only work**: Library consumers and demo authors gain accurate mental models; behavior unchanged.
-- **After optional transparent pass (future)**: Scenes that opt in could reduce some transparency ordering artifacts at the cost of sort + extra raster work; API surface TBD (e.g. render flag, material tags).
-- **After material metadata (future)**: Materials could declare opaque vs transparent / alpha-blended to drive passes automatically; migration would be additive if defaults preserve current behavior.
+- **Breaking / behavior change potential:** Default rendering may change where scenes depended on **two-layer stacking** or overflow-drop semantics; migration notes and optional compatibility shims (if any) belong in the implementation PR and docs.
+- **After implementation:** Authors can **tag** geometry or materials for opaque vs transparent passes; transparency compositing follows **documented vec4 blending** rather than implicit multi-layer material ordering alone.
 
 ## Technical approach
 
-**Baseline (current architecture)**
+### 1. Draw buffer and fragment resolve (single-buffer style)
 
-- **Primitive order**: Determined by geometry buffer iteration and primitive buffer append order during projection/build—not reordered for visibility (see `build_primitives`, then `raster_all` sequential loop over `primitivbuffer.content`).
-- **Per-cell stack**: `set_depth_content` maintains nearest-first layers; excess fragments discarded.
-- **Resolve**: `apply_material_on` iterates layers far-to-near; each material writes subsets of `CanvasCell` channels (`StaticColor` toggles, `BaseTexture` alpha blend paths, etc.)—already described under **Depth layer resolve** in `source/low_level_api.rst`.
+- **Opaque pass:** Standard **depth test + single winner per cell**; fragment output **`vec4`** writes into the resolved cell state under fixed rules (replacing or initializing canvas channels as specified).
+- **Transparency pass:** Second rasterization pass over **qualified** geometry with **depth test appropriate to transparency** (typically test-on, write-off vs opaque — exact mirror of chosen semantics must be documented), composing **`vec4`** results onto the existing canvas using the **explicit blend functions** (source/destination factors and order fixed in code + docs).
+- **Canvas mapping:** Preserve or intentionally evolve how **`vec4`** maps to `CanvasCell` (front/back/glyph). Any reduction from two physical depth layers may simplify far-to-near iteration in `apply_material_on`-style paths; implementation should **centralize** blend + channel writes so materials do not each reimplement alpha policy ad hoc.
 
-**Documentation alignment**
+### 2. Fragment shader / material output contract
 
-- Canonical technical description already lives in `source/low_level_api.rst` (**Depth layer resolve**). Close gaps by:
-  - Adding a short, user-facing pointer in `source/high_level_api.rst` (or README “rendering model” blurb) linking to that section so high-level readers do not miss it.
-  - Optionally noting explicitly in the **Primitive Buffer** subsection that rasterization consumes primitives **in buffer order** (no sort stage).
+- Treat the relevant fragment stage output as **`vec4` RGBA** (already present in register paths in places like `shader_material.rs`); lock **alpha convention** (straight vs premultiplied) project-wide for this pipeline.
+- **Explicit blending rules** live next to resolve code (Rust), not only in prose, so tests can assert behavior for representative alpha values and overwrite vs accumulate cases.
 
-**Future: material metadata**
+### 3. Geometry qualification for transparency pass
 
-- Extend material definitions (Rust enum + Python bindings) with flags or categories: e.g. opaque vs transparent / alpha-blended. Pipeline uses flags only when a multi-pass path exists; default single pass unchanged.
+- **Minimum viable:** A per-primitive or per-draw **boolean or enum** (`Opaque` / `Transparent`) carried from Python/Rust scene setup through primitive building into rasterization, filtering which pass runs which primitives.
+- **Alternative / additive:** Material-level defaults with per-instance override; document precedence (e.g. primitive wins over material default).
 
-**Future: optional transparent pass**
+### 4. Ordering
 
-1. Raster opaque (or all non-transparent) primitives as today.
-2. Collect transparent primitives (or indices) during build or mark in primitive buffer.
-3. Sort transparent primitives **back-to-front** by a chosen depth key (e.g. centroid or nearest vertex in camera space—document approximation limits).
-4. Second raster + resolve pass compositing on top of existing cell state (exact blend interaction with two-layer stack needs design if both apply).
+- Transparent pass may still require **back-to-front sort** by depth key for plausible results when multiple transparent fragments compete for the same cell; that can be a **follow-on** or a tightly scoped part of this evolution if included in the same milestone—call out in decision record.
 
-**Alternatives considered**
+### Alternatives considered
 
-- **Immediate GL-style sort for everything**: Rejected as default—`O(n log n)` sort, still wrong for intersections, conflicts with “small CPU scenes” simplicity unless needed.
-- **Increase layer count globally**: Deferred—linear cost in per-cell work and shading; only if profiling shows two layers as the bottleneck *and* user value is clear.
+- **Retain K-buffer as primary:** Rejected as the **target architecture** for this evolution (may remain internally for specialized modes unless fully removed).
+- **Infer transparency pass from alpha threshold only:** Rejected as sole mechanism — explicit qualification is required for stable pipeline control and API clarity.
 
 ## Usability and documentation
 
-- Prefer **one canonical deep dive** (`source/low_level_api.rst`) plus **brief cross-links** from high-level docs / README so newcomers see “terminal cell stack + material writes” early.
-- Demos that rely on transparency should mention ordering sensitivity (submission order + two-layer cap) in comments where non-obvious.
-- If a transparent pass ships later: document sort key, limitations (intersections), and how it interacts with materials.
+- One canonical section in **`source/low_level_api.rst`** describing: single-buffer opaque resolve, transparency pass, **`vec4`** alpha convention, and blend equations.
+- README or **`source/high_level_api.rst`** short pointer to that section (“rendering model”).
+- Demos using transparency should mention **pass tagging** and **sort limitations** in comments where relevant.
 
 ## Testability
 
-- **Documentation**: No automated tests; reviewers verify accuracy against `DrawBuffer` and `apply_material_on` behavior.
-- **Regression (existing)**: Extend or add tests under `tests/` if any doc-driven behavior is codified (e.g. two-layer drop policy, far-to-near resolve) — mirror patterns in `tests/tt3de/test_r_draw_buffer.py` and related Rust tests if present.
-- **Future transparent pass**: Golden or coarse asserts on fragment ordering (unit tests on sort key), plus one e2e scene where back-to-front order visibly fixes a known artifact vs single-pass.
-- **Edge cases to lock in**: Three overlapping transparent fragments at one cell (third drops); mixed materials where only some channels update; confirm primitive order dependence with a minimal scene.
+- **Unit / Rust tests:** Depth winner replacement vs transparent overlay; blend math edge cases (alpha 0/1, saturation).
+- **Python tests:** Mirror patterns in `tests/tt3de/test_r_draw_buffer.py` (and related) for regressions on canvas output when qualifying geometry.
+- **Contrast tests:** Scenes that previously relied on **two-layer** behavior get explicit expectations updated or marked deprecated.
 
 ## Complexity and scope
 
-- **Doc + cross-links**: **S** — low risk, immediate value.
-- **Material opaque/transparent metadata**: **M** — touches material enums, Python stubs, possibly prefabs.
-- **Optional transparent pass**: **M/L** — primitive tagging/collection, sort, second raster path, interaction with two-layer resolve and materials.
+- **Draw buffer + resolve + blending:** **L** — touches `drawbuffer`, raster insertion, material/shader resolve, possibly TTSL docs if register semantics are user-visible.
+- **Qualification API:** **M** — primitive buffer, bindings, materials, demos.
+- **Optional transparent sort in same milestone:** **M** — additional sort pass and interaction with buffer clears.
 
-Incremental shipping: document first; metadata second if multi-pass is planned; sort pass last behind an explicit opt-in.
-
-## A priori performance analysis
-
-**Hypothesized ranking (cheapest → expensive for typical ASCII-scale grids)**
-
-1. **Single depth winner per cell, shade once**: Fewest branches and shader invocations; not the current default for transparency flexibility.
-2. **Fixed two layers**: Extra insertion/shift work per covered fragment and up to two shades per cell—bounded by small `DEPTHCOUNT`, likely acceptable for modest triangle counts.
-3. **Transparent primitive sort + extra pass**: `O(n log n)` CPU sort per frame (or per dirty region if incrementally optimized later), plus duplicate raster work for transparent subset; worsens with many transparent primitives.
-
-**Validation ideas** (post-implementation): instrument frame time with dense transparent overlap; compare single-pass vs two-pass on stress demos; count `set_depth_content` hot-path hits under `perf` or Tracy if available.
+Incremental shipping is possible: introduce qualification + dual-pass framing first behind clear defaults, then remove or dead-code multi-layer paths once behavior is validated — exact sequencing is an implementation choice captured in the decision record.
 
 ## Risks and open questions
 
-- **Sort key choice**: Centroid vs min depth vs max depth yields different artifacts; must be documented.
-- **Interaction with two-layer stack**: Second pass might need rules for whether transparent fragments compete with opaque layers or replace resolve semantics.
-- **Python API churn**: Opt-in flags must avoid surprising defaults for existing apps.
-- **Correctness expectations**: Users may still expect GL-perfect transparency; docs must state non-goals clearly.
+- **Breaking visuals** for content depending on two-layer stacking or overflow drops.
+- **Alpha convention** inconsistency between materials unless centralized.
+- **Glyph / dual-channel (`front_color` / `back_color`)** interaction with single **`vec4`** blend — may need a small set of approved material modes rather than arbitrary per-material blend factors at first.
+- **Sort key** for transparent primitives if sort ships with this evolution (centroid vs min depth, etc.).
+- **Performance:** Second pass over transparent subset vs previous fixed `L=2` cost — profile on representative demos.
 
 ## Decision record
 
-- **Status**: proposed
-- **Resolution**: Adopt the two-layer K-buffer-like model as the ongoing default for visibility and lightweight transparency; prioritize making the model **discoverable and precise** in docs; treat OpenGL-style global transparent sorting and material classification as **optional later work** driven by demonstrated artifacts or product needs—not an immediate rewrite.
+- **Status:** proposed  
+- **Resolution (directional):** Adopt **single-buffer-per-pass** semantics with **explicit `vec4`-driven blending** and **explicit geometry qualification** for the transparency pass as the targeted evolution; deprecate reliance on multi-layer K-buffer behavior as the primary transparency mechanism. Final milestone boundaries (sort included or not, compatibility shims) to be set when implementation is scheduled.
 
 ## References
 
-- `source/index.rst` — CPU rasterization scope, small scenes
-- `source/low_level_api.rst` — **Drawing Buffer**, **Depth layer resolve**, material modes
+- `source/low_level_api.rst` — Drawing Buffer, depth resolve (to be revised)
+- `src/drawbuffer/drawbuffer.rs` — `DrawBuffer`, `DepthBufferCell`, `CanvasCell`
+- `src/drawbuffer/mod.rs` — `DrawingBufferPy`, `layer_count`
+- `src/material/shader_material.rs` — vec4 → cell mapping
 - `src/raster/mod.rs` — `raster_all` primitive iteration order
-- `src/drawbuffer/` — `DrawBuffer`, depth insertion, material application
