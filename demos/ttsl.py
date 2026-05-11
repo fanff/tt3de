@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
+"""TTSL compiler explorer with a live 2D shader preview.
+
+Dual-pane Textual app: edit TTSL source, compile off the UI thread, inspect AST /
+IR / bytecode / registers, and **render** the entry shader on a unit quad like
+``demos/2d/ttsl_square.py``.
+
+Run:
+    uv run python demos/ttsl.py
+"""
 import asyncio
 import ast
 import time
 import traceback
 from typing import Any
 
+from pyglm import glm
 from textual import widgets as txw
 from textual import work
 from textual import events
@@ -15,10 +25,25 @@ from textual.widget import Widget
 from textual.worker import Worker, WorkerState
 from rich.syntax import Syntax
 
+from tt3de.glm_camera import ViewportScaleMode
+from tt3de.textual_standalone import TT3DViewStandAlone
+from tt3de.tt3de import find_glyph_indices_py, materials  # type: ignore[reportMissingImports]
+from tt3de.tt_2dnodes import TT2DNode, TT2DUnitSquare
 from tt3de.ttsl.compiler import (
+    GLOBAL_VAR_TT_DELTA_TIME,
+    GLOBAL_VAR_TT_FRAME,
+    GLOBAL_VAR_TT_NEAR,
+    GLOBAL_VAR_TT_RESOLUTION,
     GLOBAL_VAR_TT_TIME,
+    GLOBAL_VAR_TT_FAR,
+    PIXELVAR_TT_FRAG_DEPTH,
+    PIXELVAR_TT_FRONT_FACING,
+    PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_POINT_COORD,
     CompilationStateResult,
+    RegisterSettings,
     all_passes_compilation_with_state,
+    shader_py_frag_depth_clip_kwargs,
 )
 from tt3de.ttsl.ttsl_assembly import IRType, OpCodes, Temp
 
@@ -43,6 +68,138 @@ def my_shader(tt_FragCoord: glm.vec2) -> tuple[glm.vec4, glm.vec4, int]:
             0,
         )
 """
+
+
+def _compile_editor_shader(source: str) -> CompilationStateResult:
+    try:
+        return all_passes_compilation_with_state(
+            src=source,
+            func_name="my_shader",
+            globals_dict={GLOBAL_VAR_TT_TIME: float},
+        )
+    except Exception as exc:
+        return CompilationStateResult(
+            last_completed_stage="worker_exception",
+            error=exc,
+            traceback_text=traceback.format_exc(),
+        )
+
+
+def _register_id_if_present(rs: RegisterSettings, name: str) -> int | None:
+    if name not in rs.var_name_to_registers:
+        return None
+    _ty, reg_id = rs.var_name_to_registers[name]
+    return reg_id
+
+
+def _build_shader_py(bytecode: bytes, rs: RegisterSettings) -> Any:
+    kwargs: dict[str, Any] = {
+        "default_glyph": find_glyph_indices_py("█"),
+        "register_seed": rs.get_register_list(),
+    }
+    try:
+        kwargs.update(shader_py_frag_depth_clip_kwargs(rs))
+    except ValueError:
+        pass
+    optional_regs = [
+        (GLOBAL_VAR_TT_TIME, "time_f32_reg"),
+        (GLOBAL_VAR_TT_DELTA_TIME, "delta_time_f32_reg"),
+        (GLOBAL_VAR_TT_FRAME, "frame_i32_reg"),
+        (GLOBAL_VAR_TT_RESOLUTION, "resolution_v2_reg"),
+        (GLOBAL_VAR_TT_NEAR, "near_f32_reg"),
+        (GLOBAL_VAR_TT_FAR, "far_f32_reg"),
+        (PIXELVAR_TT_FRONT_FACING, "front_facing_bool_reg"),
+        (PIXELVAR_TT_FRAG_DEPTH, "frag_depth_f32_reg"),
+        (PIXELVAR_TT_LINE_COORD, "line_coord_f32_reg"),
+        (PIXELVAR_TT_POINT_COORD, "point_coord_v2_reg"),
+    ]
+    for var_name, kw_name in optional_regs:
+        rid = _register_id_if_present(rs, var_name)
+        if rid is not None:
+            kwargs.setdefault(kw_name, rid)
+    return materials.ShaderPy(bytecode, **kwargs)
+
+
+class TTSLShaderPreview(TT3DViewStandAlone):
+    """2D quad preview using compiled bytecode (material slot 1; slot 0 is static)."""
+
+    def initialize(self) -> None:
+        self._shader_mat_id = 1
+        self._last_delta = 0.0
+        self._reset_uniform_registers()
+        self.camera.set_zoom_2D(0.5)
+        self.camera.set_viewport_scale_mode(ViewportScaleMode.FIT)
+
+        self._square = TT2DUnitSquare(
+            transform=glm.scale(glm.vec3(1.5, 1.5, 1.0)),
+            material_id=1,
+            centered=True,
+        )
+        self.root2Dnode = TT2DNode()
+        self.root2Dnode.add_child(self._square)
+        self.rc.append_root(self.root2Dnode)
+
+        initial = _compile_editor_shader(DEFAULT_SHADER_CODE)
+        if initial.ok:
+            self.apply_compilation_result(initial)
+        else:
+            self.rc.material_buffer.clear()
+            sp = find_glyph_indices_py(" ")
+            self.rc.material_buffer.add_static((0, 0, 0), (0, 0, 0), sp)
+            self.rc.material_buffer.add_static((64, 64, 64), (64, 64, 64), sp)
+            self._shader_mat_id = 1
+            self._reset_uniform_registers()
+
+    def _reset_uniform_registers(self) -> None:
+        self._time_f32_reg = None
+        self._delta_time_f32_reg = None
+        self._frame_i32_reg = None
+        self._resolution_v2_reg = None
+
+    def _capture_uniform_registers(self, rs: RegisterSettings) -> None:
+        self._reset_uniform_registers()
+        self._time_f32_reg = _register_id_if_present(rs, GLOBAL_VAR_TT_TIME)
+        self._delta_time_f32_reg = _register_id_if_present(rs, GLOBAL_VAR_TT_DELTA_TIME)
+        self._frame_i32_reg = _register_id_if_present(rs, GLOBAL_VAR_TT_FRAME)
+        self._resolution_v2_reg = _register_id_if_present(rs, GLOBAL_VAR_TT_RESOLUTION)
+
+    def apply_compilation_result(self, result: CompilationStateResult) -> None:
+        if (
+            not result.ok
+            or result.byte_array is None
+            or result.register_settings is None
+        ):
+            return
+        rs = result.register_settings
+        self.rc.material_buffer.clear()
+        self.rc.material_buffer.add_static(
+            (0, 0, 0),
+            (0, 0, 0),
+            find_glyph_indices_py(" "),
+        )
+        self.rc.material_buffer.add_shader(_build_shader_py(result.byte_array, rs))
+        self._shader_mat_id = 1
+        self._capture_uniform_registers(rs)
+
+    def update_step(self, delta_time: float) -> None:
+        self._last_delta = delta_time
+
+    def before_render_step(self) -> None:
+        mb = self.rc.material_buffer
+        mid = self._shader_mat_id
+        if self._time_f32_reg is not None:
+            mb.set_shader_time(mid, float(self.time_since_start()))
+        if self._delta_time_f32_reg is not None:
+            mb.set_shader_delta_time(mid, float(self._last_delta))
+        if self._frame_i32_reg is not None:
+            mb.set_shader_frame(mid, int(self.frame_idx))
+        if self._resolution_v2_reg is not None:
+            mb.set_shader_resolution(
+                mid, float(self.rc.width), float(self.rc.height)
+            )
+
+    def post_render_step(self) -> None:
+        pass
 
 
 class EditorPane(Widget):
@@ -82,16 +239,7 @@ class OutputTabsPane(Widget, can_focus=False):
     def compose(self) -> ComposeResult:
         with txw.TabbedContent(initial="render-tab", id="output-tabs"):
             with txw.TabPane("Render", id="render-tab"):
-                yield txw.Static(
-                    "Render wireframe placeholder\n\n"
-                    "+--------------------------+\n"
-                    "|                          |\n"
-                    "|      future preview      |\n"
-                    "|         viewport         |\n"
-                    "|                          |\n"
-                    "+--------------------------+",
-                    classes="output-panel",
-                )
+                yield TTSLShaderPreview(id="shader-preview")
             with txw.TabPane("AST", id="ast-tab"):
                 with VerticalScroll(id="ast-scroll", classes="output-panel"):
                     yield txw.Static("", id="ast-output", markup=False)
@@ -135,8 +283,24 @@ class MainLayout(Widget):
     #outputs-pane {
         width: 1fr;
         min-width: 45;
+        min-height: 0;
         border: round $primary;
         margin-left: 1;
+    }
+
+    #output-tabs {
+        min-height: 0;
+        height: 1fr;
+    }
+
+    #render-tab {
+        min-height: 0;
+    }
+
+    #shader-preview {
+        height: 1fr;
+        min-height: 10;
+        border: round $panel;
     }
 
     #editor-pane {
@@ -258,7 +422,7 @@ class MainLayout(Widget):
 class TTSLCompilerTesterApp(App):
     COMPILE_TIMEOUT_SECONDS = 8.0
     TITLE = "TTSL Compiler Shader Tester"
-    SUB_TITLE = "Layout scaffold"
+    SUB_TITLE = "Compile · inspect · preview"
     BINDINGS = [
         Binding("ctrl+enter", "compile", "Compile"),
         Binding("ctrl+r", "reset_source", "Reset Source"),
@@ -435,18 +599,7 @@ class TTSLCompilerTesterApp(App):
 
     @staticmethod
     def _sync_compile(source: str) -> CompilationStateResult:
-        try:
-            return all_passes_compilation_with_state(
-                src=source,
-                func_name="my_shader",
-                globals_dict={GLOBAL_VAR_TT_TIME: float},
-            )
-        except Exception as exc:
-            return CompilationStateResult(
-                last_completed_stage="worker_exception",
-                error=exc,
-                traceback_text=traceback.format_exc(),
-            )
+        return _compile_editor_shader(source)
 
     @work(exclusive=True, group="compile", exit_on_error=False)
     async def _compile_worker(self, source: str) -> None:
@@ -522,6 +675,9 @@ class TTSLCompilerTesterApp(App):
             self._set_status(f"Status: compile OK ({elapsed_ms} ms)", "ok")
             self._append_log(
                 f"Compilation succeeded in {elapsed_ms} ms. Bytecode size: {bytecode_size} bytes."
+            )
+            self.query_one("#shader-preview", TTSLShaderPreview).apply_compilation_result(
+                result
             )
         else:
             error = result.error
@@ -690,4 +846,6 @@ class TTSLCompilerTesterApp(App):
 
 
 if __name__ == "__main__":
-    TTSLCompilerTesterApp().run()
+    app = TTSLCompilerTesterApp()
+    app._disable_tooltips = True
+    app.run()
