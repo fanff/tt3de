@@ -131,7 +131,7 @@ class TTSLShaderPreview(TT3DViewStandAlone):
         self.camera.set_viewport_scale_mode(ViewportScaleMode.FIT)
 
         self._square = TT2DUnitSquare(
-            transform=glm.scale(glm.vec3(1.5, 1.5, 1.0)),
+            transform=glm.scale(glm.vec3(3.0, 3.0, 1.0)),
             material_id=1,
             centered=True,
         )
