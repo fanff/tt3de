@@ -8,9 +8,9 @@ It focuses on terminal-friendly rendering experiments while keeping the engine s
   <img src="source/_static/screenshots/dual_panel.svg" alt="TT3DE demo — taxi car and city block rendered in a terminal" width="100%">
 </p>
 
-<video src="source/demo_04_city02.mp4" controls style="max-width: 100%; height: auto;">
-  Your browser does not support the video tag.
-</video>
+<p align="center">
+  <img src="source/demo_02_half_block_cube.gif" alt="TT3DE demo — half block cube rendered in a terminal" width="100%">
+</p>
 
 ## Features
 
