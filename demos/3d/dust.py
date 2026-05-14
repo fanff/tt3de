@@ -116,11 +116,17 @@ def download_extract(url, dest, folder_name="Dust"):
     z.extractall(dest)
 
 
+download_extract(
+    "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
+    str(_DEMO_DIR),
+)
+
+download_extract(
+    "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
+    str(_DEMO_DIR),
+)
+
 if __name__ == "__main__":
-    download_extract(
-        "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
-        str(_DEMO_DIR),
-    )
     app = Demo3dView()
     app._disable_tooltips = True
     app.run()
