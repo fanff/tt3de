@@ -93,17 +93,32 @@ def download_extract(url, dest, folder_name="Dust"):
     import zipfile
     import io
 
-    if not os.path.exists(os.path.join(dest, folder_name)):
-        # download the zip file
-        r = requests.get(url)
-        # extract the file content in the current folder
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(dest)
+    target_dir = os.path.join(dest, folder_name)
+    if os.path.exists(target_dir):
+        return
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+
+    content_type = r.headers.get("Content-Type", "")
+    if "zip" not in content_type and not r.content[:4] == b"PK\x03\x04":
+        raise RuntimeError(
+            f"Download from {url} did not return a zip file "
+            f"(Content-Type: {content_type}). "
+            "The URL may have changed. Please update the download link."
+        )
+
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    z.extractall(dest)
 
 
 if __name__ == "__main__":
     download_extract(
-        "https://www.models-resource.com/download/28161/", str(_DEMO_DIR)
+        "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
+        str(_DEMO_DIR),
     )
     app = Demo3dView()
     app._disable_tooltips = True
