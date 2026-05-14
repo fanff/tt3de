@@ -67,9 +67,9 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 |---|---|---|---|---|
 | Shipped | tt_texture | `tt_texture(tex_index: int, coord: vec2) -> vec4` | 2D texture sample (filtered) | OpenGL **`texture(sampler2D, vec2)`**; pair `coord` with **`tt_TexCoord0`** / **`tt_TexCoord1`** like a varying |
 | Planned | tt_texelFetch | `tt_texelFetch(tex_index: int, texel: vec2) -> vec4` | Integer texel read (base mip) | Same role as **`texelFetch(..., ivec2 P, 0)`**; no lod parameter in TTSL; not implemented end-to-end in the compiler yet |
-| Planned | mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1], works on float/vec2/vec3/vec4 in GLSL; TTSL does not expose bare **`mix`** yet (`glm.mix` is not typable in `type_of` either—see compiler docs) |
-| Planned | clamp | clamp(x, lo, hi) -> T | Clamp into a range | Great for keeping colors in [0..1] |
-| Planned | min / max | min(a,b)->T, max(a,b)->T | Bounds / compare | Works component-wise on vectors |
+| Shipped | mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1]; TTSL: **`glm.mix`** (vec2/vec3/vec4 × vec2/vec3/vec4 × f32 → vecN). Bare **`mix`** not wired yet. |
+| Shipped | clamp | clamp(x, lo, hi) -> T | Clamp into a range | Bare **`clamp`** and **`glm.clamp`**; works on float/vec2/vec3/vec4 |
+| Shipped | min / max | min(a,b)->T, max(a,b)->T | Bounds / compare | **`max`** shipped (bare and **`glm.max`**); works on float/vec2/vec3/vec4. `min` deferred (not needed for lighting) |
 | Planned | smoothstep | smoothstep(e0, e1, x) -> T | Smooth threshold | Hermite curve; output in [0..1] when e0<e1 |
 | Planned | step | step(edge, x) -> T | Hard threshold | Returns 0 or 1 (component-wise) |
 | Shipped | abs / sign | abs(x)->T, sign(x)->T | Magnitude / sign | TTSL: **`abs`** only (unary opcode lowering). **`sign`** not implemented; GLSL defines `sign(0)=0` |
@@ -81,11 +81,11 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 | Shipped | sin / cos / tan | sin(x)->T, cos(x)->T, tan(x)->T | Oscillation / waves | TTSL: **`sin`** only (bare **`sin`** and **`glm.sin`**); input in radians. **`cos`** / **`tan`** are parsed on some paths but do not codegen yet |
 | Planned | asin / acos / atan | asin(x)->T, acos(x)->T, atan(y,x)->T | Angles from values | `asin/acos` domain [-1..1] |
 | Planned | radians / degrees | radians(deg)->T, degrees(rad)->T | Unit conversion | Convenience |
-| Planned | dot | dot(a,b)->float | Lighting, projections | For vec2/vec3/vec4 |
+| Shipped | dot | dot(a,b)->float | Lighting, projections | Bare **`dot`** and **`glm.dot`**; works on vec2/vec3/vec4 |
 | Planned | cross | cross(a,b)->vec3 | Perpendicular vector | Only vec3 |
-| Planned | length | length(v)->float | Vector magnitude | |
+| Shipped | length | length(v)->float | Vector magnitude | Bare **`length`** and **`glm.length`**; works on vec2/vec3/vec4 |
+| Shipped | normalize | normalize(v)->T | Unit-length vector | Bare **`normalize`** and **`glm.normalize`**; works on vec2/vec3/vec4. Zero-length input returns zero vector (guarded in Rust VM) |
 | Planned | distance | distance(a,b)->float | Metric distance | |
-| Planned | normalize | normalize(v)->T | Unit-length vector | Undefined for zero-length vectors (decide your behavior) |
 | Missing | tt_linear_depth | ``tt_linear_depth(z: float) -> float`` | Linear eye-space / clip-distance factor for fog and depth grading | Intended to convert a **stored depth** (e.g. ``tt_FragDepth`` or a reconstructed linear depth in engine units) into a stable **[0..1]** scalar using the active **``tt_Near``** / **``tt_Far``** uniforms supplied by Rust—so shaders avoid ad‑hoc formulas that duplicate projection constants. Exact mapping (hyperbolic vs linear clip space) will match whatever the renderer documents for ``tt_FragDepth`` once ``tt_Near`` / ``tt_Far`` ship; until then demos keep manual math. Not in the compiler or VM. |
 | Planned | reflect | reflect(I, N)->T | Reflection vector | `N` should be normalized |
 | Planned | refract | refract(I, N, eta)->T | Refraction vector | `eta` is n1/n2; returns 0-vector on total internal reflection (GLSL behavior) |

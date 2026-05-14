@@ -657,5 +657,402 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         self.assertAlmostEqual(front.x, 1.5, places=4)
 
 
+class Test_Normalize(unittest.TestCase):
+    """End-to-end tests for normalize builtin."""
+
+    def test_normalize_v3_happy_path(self):
+        """normalize(vec3) returns unit-length vector."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec3 = vec3(3.0, 0.0, 0.0)
+                n: vec3 = normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.0, places=5)
+        self.assertAlmostEqual(front.y, 0.0, places=5)
+        self.assertAlmostEqual(front.z, 0.0, places=5)
+
+    def test_normalize_v3_non_unit(self):
+        """normalize of a non-unit vector yields a unit vector."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec3 = vec3(2.0, 2.0, 1.0)
+                n: vec3 = normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        ref = glm.vec3(2.0, 2.0, 1.0)
+        expected = glm.normalize(ref)
+        self.assertAlmostEqual(front.x, expected.x, places=5)
+        self.assertAlmostEqual(front.y, expected.y, places=5)
+        self.assertAlmostEqual(front.z, expected.z, places=5)
+
+    def test_normalize_v3_zero_vector(self):
+        """normalize(zero) returns zero vector (guarded in Rust VM)."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec3 = vec3(0.0, 0.0, 0.0)
+                n: vec3 = normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+        self.assertAlmostEqual(front.y, 0.0, places=5)
+        self.assertAlmostEqual(front.z, 0.0, places=5)
+
+    def test_normalize_v2(self):
+        """normalize(vec2) works."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec2 = vec2(3.0, 4.0)
+                n: vec2 = normalize(v)
+                return (vec4(n.x, n.y, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = glm.normalize(glm.vec2(3.0, 4.0))
+        self.assertAlmostEqual(front.x, expected.x, places=5)
+        self.assertAlmostEqual(front.y, expected.y, places=5)
+
+    def test_normalize_v4(self):
+        """normalize(vec4) works."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec4 = vec4(1.0, 2.0, 2.0, 0.0)
+                n: vec4 = normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = glm.normalize(glm.vec4(1.0, 2.0, 2.0, 0.0))
+        self.assertAlmostEqual(front.x, expected.x, places=5)
+        self.assertAlmostEqual(front.y, expected.y, places=5)
+        self.assertAlmostEqual(front.z, expected.z, places=5)
+
+    def test_normalize_with_variable_input(self):
+        """normalize works with runtime (non-constant) inputs."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                x: float = tt_FragCoord.x
+                y: float = tt_FragCoord.y
+                v: vec3 = vec3(x, y, 0.0)
+                n: vec3 = normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(3.0, 4.0))
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = glm.normalize(glm.vec3(3.0, 4.0, 0.0))
+        self.assertAlmostEqual(front.x, expected.x, places=5)
+        self.assertAlmostEqual(front.y, expected.y, places=5)
+        self.assertAlmostEqual(front.z, expected.z, places=5)
+
+    def test_glm_normalize_spelling(self):
+        """glm.normalize(v) must compile identically to bare normalize(v)."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                v: vec3 = vec3(4.0, 0.0, 0.0)
+                n: vec3 = glm.normalize(v)
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.0, places=5)
+
+
+class Test_Dot(unittest.TestCase):
+    """End-to-end tests for dot builtin."""
+
+    def test_dot_v3_orthogonal(self):
+        """dot(orthogonal vectors) = 0."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec3 = vec3(1.0, 0.0, 0.0)
+                b: vec3 = vec3(0.0, 1.0, 0.0)
+                d: float = dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+
+    def test_dot_v3_parallel(self):
+        """dot(parallel unit vectors) = 1."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec3 = vec3(1.0, 0.0, 0.0)
+                b: vec3 = vec3(1.0, 0.0, 0.0)
+                d: float = dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.0, places=5)
+
+    def test_dot_v3_opposite(self):
+        """dot(opposite unit vectors) = -1."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec3 = vec3(1.0, 0.0, 0.0)
+                b: vec3 = vec3(-1.0, 0.0, 0.0)
+                d: float = dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, -1.0, places=5)
+
+    def test_dot_v2(self):
+        """dot(vec2, vec2) works."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec2 = vec2(1.0, 2.0)
+                b: vec2 = vec2(3.0, 4.0)
+                d: float = dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = glm.dot(glm.vec2(1.0, 2.0), glm.vec2(3.0, 4.0))
+        self.assertAlmostEqual(front.x, expected, places=5)
+
+    def test_dot_v4(self):
+        """dot(vec4, vec4) works."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec4 = vec4(1.0, 2.0, 3.0, 4.0)
+                b: vec4 = vec4(5.0, 6.0, 7.0, 8.0)
+                d: float = dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        expected = glm.dot(glm.vec4(1.0, 2.0, 3.0, 4.0), glm.vec4(5.0, 6.0, 7.0, 8.0))
+        self.assertAlmostEqual(front.x, expected, places=5)
+
+    def test_dot_with_variable_input(self):
+        """dot works with runtime (non-constant) vectors."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                x: float = tt_FragCoord.x
+                y: float = tt_FragCoord.y
+                v: vec3 = vec3(x, y, 0.0)
+                d: float = dot(v, v)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(3.0, 4.0))
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 25.0, places=5)
+
+    def test_glm_dot_spelling(self):
+        """glm.dot(a, b) must compile identically to bare dot(a, b)."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                a: vec3 = vec3(2.0, 0.0, 0.0)
+                b: vec3 = vec3(3.0, 0.0, 0.0)
+                d: float = glm.dot(a, b)
+                return (vec4(d, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 6.0, places=5)
+
+
+class Test_Length(unittest.TestCase):
+    """End-to-end tests for length builtin."""
+
+    def test_length_v3_unit(self):
+        """length(unit vector) = 1."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            v: vec3 = vec3(1.0, 0.0, 0.0)
+            l: float = length(v)
+            return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.0, places=5)
+
+    def test_length_v3_zero(self):
+        """length(zero) = 0."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            v: vec3 = vec3(0.0, 0.0, 0.0)
+            l: float = length(v)
+            return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+
+    def test_length_v2_v4(self):
+        """length(vec2) and length(vec4)."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            v2: vec2 = vec2(3.0, 4.0)
+            v4: vec4 = vec4(1.0, 2.0, 2.0, 0.0)
+            l2: float = length(v2)
+            l4: float = length(v4)
+            return (vec4(l2, l4, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 5.0, places=5)
+        self.assertAlmostEqual(front.y, 3.0, places=5)
+
+    def test_glm_length_spelling(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            l: float = glm.length(vec3(3.0, 4.0, 0.0))
+            return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 5.0, places=5)
+
+
+class Test_Max(unittest.TestCase):
+    """End-to-end tests for max builtin."""
+
+    def test_max_f32(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            m: float = max(3.0, 7.0)
+            return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 7.0, places=5)
+
+    def test_max_f32_negative(self):
+        """max with negative values."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            m: float = max(-2.0, -5.0)
+            return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, -2.0, places=5)
+
+    def test_max_vec3(self):
+        """max(vec3, vec3) component-wise."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            a: vec3 = vec3(1.0, 5.0, 3.0)
+            b: vec3 = vec3(4.0, 2.0, 6.0)
+            m: vec3 = max(a, b)
+            return (vec4(m.x, m.y, m.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 4.0, places=5)
+        self.assertAlmostEqual(front.y, 5.0, places=5)
+        self.assertAlmostEqual(front.z, 6.0, places=5)
+
+    def test_glm_max_spelling(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            m: float = glm.max(1.0, 2.0)
+            return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 2.0, places=5)
+
+
+class Test_Clamp(unittest.TestCase):
+    """End-to-end tests for clamp builtin."""
+
+    def test_clamp_f32_within_range(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: float = clamp(0.5, 0.0, 1.0)
+            return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.5, places=5)
+
+    def test_clamp_f32_below_lo(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: float = clamp(-1.0, 0.0, 1.0)
+            return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+
+    def test_clamp_f32_above_hi(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: float = clamp(5.0, 0.0, 1.0)
+            return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 1.0, places=5)
+
+    def test_clamp_vec3(self):
+        """clamp(vec3, vec3, vec3) component-wise."""
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            x: vec3 = vec3(-0.5, 0.5, 1.5)
+            lo: vec3 = vec3(0.0, 0.0, 0.0)
+            hi: vec3 = vec3(1.0, 1.0, 1.0)
+            c: vec3 = clamp(x, lo, hi)
+            return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+        self.assertAlmostEqual(front.y, 0.5, places=5)
+        self.assertAlmostEqual(front.z, 1.0, places=5)
+
+    def test_glm_clamp_spelling(self):
+        src = dedent("""
+        def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            c: float = glm.clamp(0.5, 0.0, 1.0)
+            return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        """)
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        front, _, _ = ttsl_run(*rs.get_register_list(), bytecode)
+        self.assertAlmostEqual(front.x, 0.5, places=5)
+
+
 if __name__ == "__main__":
     unittest.main()

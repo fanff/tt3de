@@ -89,6 +89,10 @@ NATIVE_UNI_OPS_TYPE = {
     "ceil": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
     "fract": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
     "norm": (IRType.V2, IRType.V3, IRType.V4),
+    "normalize": (IRType.V2, IRType.V3, IRType.V4),
+    "length": (IRType.V2, IRType.V3, IRType.V4),
+    "max": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
+    "clamp": (IRType.F32, IRType.V2, IRType.V3, IRType.V4),
 }
 
 GLM_TOOLS = {
@@ -444,7 +448,7 @@ class TTSLCompilerContext:
             func = node.func
             args = node.args
             if "id" in func._fields:
-                if func.id in ("sin", "abs", "cos", "floor", "ceil", "fract"):
+                if func.id in ("sin", "abs", "cos", "floor", "ceil", "fract", "normalize"):
                     assert len(args) == 1
                     return_type = self.type_of(args[0])
                     arg_reg = self.compile_expr(args[0], return_type)
@@ -472,10 +476,105 @@ class TTSLCompilerContext:
                     self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
                                 comment=f"mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
                     return result_reg
+                elif func.id == "dot":
+                    if len(args) != 2:
+                        raise CompileError(
+                            node,
+                            f"dot expects 2 arguments (a, b), got {len(args)}",
+                        )
+                    a_ty = self.type_of(args[0])
+                    b_ty = self.type_of(args[1])
+                    if a_ty != b_ty:
+                        raise CompileError(
+                            node,
+                            f"dot arguments must have the same type, got {a_ty} and {b_ty}",
+                        )
+                    if a_ty not in (IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"dot expects vector arguments (vec2/vec3/vec4), got {a_ty}",
+                        )
+                    a_reg = self.compile_expr(args[0], a_ty)
+                    b_reg = self.compile_expr(args[1], b_ty)
+                    result_reg = self.alloc_temp_for_type(IRType.F32)
+                    self.emit_2(OpCodes.DOT, a_reg, b_reg, result_reg,
+                                comment=f"dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)")
+                    return result_reg
                 elif func.id in VECTOR_CONSTRUCTORS:
                     return self.compile_vec_constructor(
                         node, vec_name=func.id, args=args
                     )
+                elif func.id == "length":
+                    if len(args) != 1:
+                        raise CompileError(
+                            node,
+                            f"length expects 1 argument (v), got {len(args)}",
+                        )
+                    v_ty = self.type_of(args[0])
+                    if v_ty not in (IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"length expects a vector argument (vec2/vec3/vec4), got {v_ty}",
+                        )
+                    v_reg = self.compile_expr(args[0], v_ty)
+                    result_reg = self.alloc_temp_for_type(IRType.F32)
+                    self.emit_1(OpCodes.LENGTH, v_reg, result_reg,
+                                comment=f"length r{v_reg.id} -> r{result_reg.id} (f32)")
+                    return result_reg
+                elif func.id == "max":
+                    if len(args) != 2:
+                        raise CompileError(
+                            node,
+                            f"max expects 2 arguments (a, b), got {len(args)}",
+                        )
+                    a_ty = self.type_of(args[0])
+                    b_ty = self.type_of(args[1])
+                    if a_ty != b_ty:
+                        raise CompileError(
+                            node,
+                            f"max arguments must have the same type, got {a_ty} and {b_ty}",
+                        )
+                    if a_ty not in (IRType.F32, IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"max expects float or vector arguments, got {a_ty}",
+                        )
+                    a_reg = self.compile_expr(args[0], a_ty)
+                    b_reg = self.compile_expr(args[1], b_ty)
+                    result_reg = self.alloc_temp_for_type(a_ty)
+                    self.emit_2(OpCodes.MAX, a_reg, b_reg, result_reg,
+                                comment=f"max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}")
+                    return result_reg
+                elif func.id == "clamp":
+                    if len(args) != 3:
+                        raise CompileError(
+                            node,
+                            f"clamp expects 3 arguments (x, lo, hi), got {len(args)}",
+                        )
+                    x_ty = self.type_of(args[0])
+                    lo_ty = self.type_of(args[1])
+                    hi_ty = self.type_of(args[2])
+                    if not (x_ty == lo_ty == hi_ty):
+                        raise CompileError(
+                            node,
+                            f"clamp arguments must all have the same type, got {x_ty}, {lo_ty}, {hi_ty}",
+                        )
+                    if x_ty not in (IRType.F32, IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"clamp expects float or vector arguments, got {x_ty}",
+                        )
+                    x_reg = self.compile_expr(args[0], x_ty)
+                    lo_reg = self.compile_expr(args[1], x_ty)
+                    hi_reg = self.compile_expr(args[2], x_ty)
+                    result_reg = self.alloc_temp_for_type(x_ty)
+                    self.emit(
+                        OpCodes.CLAMP,
+                        x_reg, lo_reg, hi_reg, None,
+                        result_reg,
+                        comment=f"clamp r{x_reg.id}, r{lo_reg.id}, r{hi_reg.id} -> r{result_reg.id}",
+                    )
+                    return result_reg
                 elif func.id in GLM_TOOLS:
                     return self.compile_glm_tool_call(node, func.id, args)
                 elif func.id == "tt_texture":
@@ -521,6 +620,67 @@ class TTSLCompilerContext:
                             return self.compile_vec_constructor(
                                 node, vec_name=func_name, args=args
                             )
+                        elif func_name == "length":
+                            if len(args) != 1:
+                                raise CompileError(
+                                    node,
+                                    f"glm.length expects 1 argument (v), got {len(args)}",
+                                )
+                            v_ty = self.type_of(args[0])
+                            if v_ty not in (IRType.V2, IRType.V3, IRType.V4):
+                                raise CompileError(
+                                    node,
+                                    f"glm.length expects vector argument, got {v_ty}",
+                                )
+                            v_reg = self.compile_expr(args[0], v_ty)
+                            result_reg = self.alloc_temp_for_type(IRType.F32)
+                            self.emit_1(OpCodes.LENGTH, v_reg, result_reg,
+                                        comment=f"glm.length r{v_reg.id} -> r{result_reg.id} (f32)")
+                            return result_reg
+                        elif func_name == "max":
+                            if len(args) != 2:
+                                raise CompileError(
+                                    node,
+                                    f"glm.max expects 2 arguments (a, b), got {len(args)}",
+                                )
+                            a_ty = self.type_of(args[0])
+                            b_ty = self.type_of(args[1])
+                            if a_ty != b_ty:
+                                raise CompileError(
+                                    node,
+                                    f"glm.max arguments must have the same type, got {a_ty} and {b_ty}",
+                                )
+                            a_reg = self.compile_expr(args[0], a_ty)
+                            b_reg = self.compile_expr(args[1], b_ty)
+                            result_reg = self.alloc_temp_for_type(a_ty)
+                            self.emit_2(OpCodes.MAX, a_reg, b_reg, result_reg,
+                                        comment=f"glm.max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}")
+                            return result_reg
+                        elif func_name == "clamp":
+                            if len(args) != 3:
+                                raise CompileError(
+                                    node,
+                                    f"glm.clamp expects 3 arguments (x, lo, hi), got {len(args)}",
+                                )
+                            x_ty = self.type_of(args[0])
+                            lo_ty = self.type_of(args[1])
+                            hi_ty = self.type_of(args[2])
+                            if not (x_ty == lo_ty == hi_ty):
+                                raise CompileError(
+                                    node,
+                                    f"glm.clamp arguments must all have the same type, got {x_ty}, {lo_ty}, {hi_ty}",
+                                )
+                            x_reg = self.compile_expr(args[0], x_ty)
+                            lo_reg = self.compile_expr(args[1], x_ty)
+                            hi_reg = self.compile_expr(args[2], x_ty)
+                            result_reg = self.alloc_temp_for_type(x_ty)
+                            self.emit(
+                                OpCodes.CLAMP,
+                                x_reg, lo_reg, hi_reg, None,
+                                result_reg,
+                                comment=f"glm.clamp r{x_reg.id}, r{lo_reg.id}, r{hi_reg.id} -> r{result_reg.id}",
+                            )
+                            return result_reg
                         elif func_name in NATIVE_UNI_OPS_TYPE:
                             assert len(args) == 1
                             return_type = self.type_of(args[0])  #
@@ -552,6 +712,30 @@ class TTSLCompilerContext:
                             result_reg = self.alloc_temp_for_type(x_ty)
                             self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
                                         comment=f"glm.mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
+                            return result_reg
+                        elif func_name == "dot":
+                            if len(args) != 2:
+                                raise CompileError(
+                                    node,
+                                    f"glm.dot expects 2 arguments (a, b), got {len(args)}",
+                                )
+                            a_ty = self.type_of(args[0])
+                            b_ty = self.type_of(args[1])
+                            if a_ty != b_ty:
+                                raise CompileError(
+                                    node,
+                                    f"glm.dot arguments must have the same type, got {a_ty} and {b_ty}",
+                                )
+                            if a_ty not in (IRType.V2, IRType.V3, IRType.V4):
+                                raise CompileError(
+                                    node,
+                                    f"glm.dot expects vector arguments (vec2/vec3/vec4), got {a_ty}",
+                                )
+                            a_reg = self.compile_expr(args[0], a_ty)
+                            b_reg = self.compile_expr(args[1], b_ty)
+                            result_reg = self.alloc_temp_for_type(IRType.F32)
+                            self.emit_2(OpCodes.DOT, a_reg, b_reg, result_reg,
+                                        comment=f"glm.dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)")
                             return result_reg
                         elif func_name in GLM_TOOLS:
                             return self.compile_glm_tool_call(node, func_name, args)
@@ -821,11 +1005,64 @@ class TTSLCompilerContext:
             if "id" in node._fields:
                 if node.id in self.named_variables:
                     return self.named_variables[node.id].ty
-                elif node.id in ("abs", "sin", "cos", "floor", "ceil", "fract"):
+                elif node.id in ("abs", "sin", "cos", "floor", "ceil", "fract", "normalize"):
                     if type_args is not None and len(type_args) == 1:
                         return type_args[0]
                     raise CompileError(
                         node, f"Cannot determine return type of function '{node.id}'"
+                    )
+                elif node.id == "dot":
+                    if type_args is not None and len(type_args) == 2:
+                        if type_args[0] != type_args[1]:
+                            raise CompileError(
+                                node,
+                                f"dot arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                            )
+                        if type_args[0] not in (IRType.V2, IRType.V3, IRType.V4):
+                            raise CompileError(
+                                node,
+                                f"dot expects vector arguments (vec2/vec3/vec4), got {type_args[0]}",
+                            )
+                        return IRType.F32
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of dot (need 2 vector arguments of the same type)",
+                    )
+                elif node.id == "length":
+                    if type_args is not None and len(type_args) == 1:
+                        if type_args[0] not in (IRType.V2, IRType.V3, IRType.V4):
+                            raise CompileError(
+                                node,
+                                f"length expects vector argument, got {type_args[0]}",
+                            )
+                        return IRType.F32
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of length (need 1 vector argument)",
+                    )
+                elif node.id == "max":
+                    if type_args is not None and len(type_args) == 2:
+                        if type_args[0] != type_args[1]:
+                            raise CompileError(
+                                node,
+                                f"max arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                            )
+                        return type_args[0]
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of max (need 2 same-type arguments)",
+                    )
+                elif node.id == "clamp":
+                    if type_args is not None and len(type_args) == 3:
+                        if not (type_args[0] == type_args[1] == type_args[2]):
+                            raise CompileError(
+                                node,
+                                f"clamp arguments must have the same type, got {type_args}",
+                            )
+                        return type_args[0]
+                    raise CompileError(
+                        node,
+                        "Cannot determine return type of clamp (need 3 same-type arguments)",
                     )
                 elif node.id == "mod":
                     if type_args is not None and len(type_args) == 2:
@@ -879,12 +1116,65 @@ class TTSLCompilerContext:
                     return IRType.F32
                 elif value_type == IRType.V4:
                     return IRType.F32
-            elif node.attr in ("sin", "cos", "floor", "ceil", "fract"):
+            elif node.attr in ("sin", "cos", "floor", "ceil", "fract", "normalize"):
                 if type_args is not None and len(type_args) == 1:
                     return type_args[0]
                 raise CompileError(
                     node,
                     f"Function '{node.attr}' expects one Typed argument, got {type_args}",
+                )
+            elif node.attr == "dot":
+                if type_args is not None and len(type_args) == 2:
+                    if type_args[0] != type_args[1]:
+                        raise CompileError(
+                            node,
+                            f"dot arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                        )
+                    if type_args[0] not in (IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"dot expects vector arguments (vec2/vec3/vec4), got {type_args[0]}",
+                        )
+                    return IRType.F32
+                raise CompileError(
+                    node,
+                    f"Function 'dot' expects 2 vector arguments of the same type, got {type_args}",
+                )
+            elif node.attr == "length":
+                if type_args is not None and len(type_args) == 1:
+                    if type_args[0] not in (IRType.V2, IRType.V3, IRType.V4):
+                        raise CompileError(
+                            node,
+                            f"length expects vector argument, got {type_args[0]}",
+                        )
+                    return IRType.F32
+                raise CompileError(
+                    node,
+                    f"Function 'length' expects 1 vector argument, got {type_args}",
+                )
+            elif node.attr == "max":
+                if type_args is not None and len(type_args) == 2:
+                    if type_args[0] != type_args[1]:
+                        raise CompileError(
+                            node,
+                            f"max arguments must have the same type, got {type_args[0]} and {type_args[1]}",
+                        )
+                    return type_args[0]
+                raise CompileError(
+                    node,
+                    f"Function 'max' expects 2 same-type arguments, got {type_args}",
+                )
+            elif node.attr == "clamp":
+                if type_args is not None and len(type_args) == 3:
+                    if not (type_args[0] == type_args[1] == type_args[2]):
+                        raise CompileError(
+                            node,
+                            f"clamp arguments must have the same type, got {type_args}",
+                        )
+                    return type_args[0]
+                raise CompileError(
+                    node,
+                    f"Function 'clamp' expects 3 same-type arguments, got {type_args}",
                 )
             elif node.attr == "mod":
                 if type_args is not None and len(type_args) == 2:
@@ -1053,6 +1343,7 @@ def opcode_for_uniop(op_name: str, operand_type: IRType) -> OpCodes:
             "floor": OpCodes.FLOOR,
             "ceil": OpCodes.CEIL,
             "fract": OpCodes.FRACT,
+            "normalize": OpCodes.NORMALIZE,
         }
         if op_name in name_to_op:
             return name_to_op[op_name]

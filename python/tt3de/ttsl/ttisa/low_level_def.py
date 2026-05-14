@@ -447,6 +447,59 @@ op_code_family = [OpCodes.ADD, OpCodes.MUL, OpCodes.SUB, OpCodes.DIV]
 # TODO add the unary cross type forms like the "norm" operation that vecn > f32
 
 
+def generate_normalize_forms() -> List[Form]:
+    """Generate NORMALIZE forms for V2, V3, V4 with zero-vector guard.
+
+    nalgebra_glm::normalize returns NaN for zero-length input. GLSL implementations
+    typically return zero; this guard matches that convention.
+    """
+    VEC_AXES = {
+        IRType.V2: ["x", "y"],
+        IRType.V3: ["x", "y", "z"],
+        IRType.V4: ["x", "y", "z", "w"],
+    }
+    VEC_NAMES = {
+        IRType.V2: "Vec2",
+        IRType.V3: "Vec3",
+        IRType.V4: "Vec4",
+    }
+
+    forms = []
+    for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
+        axes = VEC_AXES[ir_type]
+        vec_name = VEC_NAMES[ir_type]
+        regname = IRTYPE_TO_REGISTER_NAME[ir_type]
+
+        len_sq_terms = " + ".join(f"a_val.{ax} * a_val.{ax}" for ax in axes)
+
+        rust_body = Rustgen.unsafe_block(
+            "\n".join([
+                Rustgen.let_base_register_be(ir_type),
+                Rustgen.let_operand_register_be("a", ir_type),
+                f"let len_sq = {len_sq_terms};",
+                f"let result = if len_sq == 0.0 {{ {vec_name}::zeros() }} "
+                f"else {{ a_val / len_sq.sqrt() }};",
+                f"*base_{regname}.add(dst as usize) = result;",
+            ])
+        )
+
+        form = Form({
+            "name": f"NORMALIZE_{ir_type.name}",
+            "type": ir_type,
+            "input_types": [ir_type],
+            "bank": ir_type.name.lower() + "_",
+        })
+        form["rust_match_code"] = f"""
+                {form["name"]} => {{
+                    {rust_body}
+                None
+                }}
+                """
+        forms.append(form)
+
+    return forms
+
+
 def generate_read_axis_forms():
     read_axis_forms = []
     AXIS = ["X", "Y", "Z", "W"]
@@ -581,6 +634,176 @@ def generate_return_form() -> Form:
     return return_form
 
 
+def generate_dot_forms() -> List[Form]:
+    """Generate DOT forms: vecN × vecN → f32 for V2, V3, V4."""
+    forms = []
+    for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
+        form = Form({
+            "name": f"DOT_{ir_type.name}",
+            "type": IRType.F32,
+            "input_types": [ir_type, ir_type],
+            "bank": "f32_",
+        })
+        rust_body = Rustgen.generate_cross_type_binary_op(
+            ir_type, ir_type,
+            "nalgebra_glm::dot(&{a}, &{b})",
+            target_type=IRType.F32,
+        )
+        match_code = (
+            "                " + form["name"] + " => {\n"
+            "                    " + rust_body + "\n"
+            "                None\n"
+            "                }\n"
+        )
+        form["rust_match_code"] = match_code
+        forms.append(form)
+    return forms
+
+
+def generate_length_forms() -> List[Form]:
+    """Generate LENGTH forms: vecN → f32 for V2, V3, V4.
+
+    Uses custom unsafe block because generate_cross_type_unary_op only declares
+    the output bank's base register; length reads from a vector bank and writes to f32.
+    """
+    forms = []
+    for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
+        regname = IRTYPE_TO_REGISTER_NAME[ir_type]
+        rust_body = Rustgen.unsafe_block(
+            "\n".join([
+                Rustgen.let_base_register_be(ir_type),
+                Rustgen.let_base_register_be(IRType.F32),
+                Rustgen.let_operand_register_be("a", ir_type),
+                Rustgen.base_register_is(
+                    "glm_length(&a_val)", IRType.F32,
+                ),
+            ])
+        )
+        form = Form({
+            "name": f"LENGTH_{ir_type.name}",
+            "type": IRType.F32,
+            "input_types": [ir_type],
+            "bank": "f32_",
+        })
+        match_code = (
+            "                " + form["name"] + " => {\n"
+            "                    " + rust_body + "\n"
+            "                None\n"
+            "                }\n"
+        )
+        form["rust_match_code"] = match_code
+        forms.append(form)
+    return forms
+
+
+def _max_rust_body_vec(ir_type: IRType) -> str:
+    """Component-wise max for vectors: compare each element with f32::max."""
+    comp_count = {IRType.V2: 2, IRType.V3: 3, IRType.V4: 4}[ir_type]
+    vec_name = {IRType.V2: "Vec2", IRType.V3: "Vec3", IRType.V4: "Vec4"}[ir_type]
+    axes = ["x", "y", "z", "w"][:comp_count]
+    components = ", ".join(
+        f"a_val.{ax}.max(b_val.{ax})" for ax in axes
+    )
+    regname = IRTYPE_TO_REGISTER_NAME[ir_type]
+    return Rustgen.unsafe_block(
+        "\n".join([
+            Rustgen.let_base_register_be(ir_type),
+            Rustgen.let_operand_register_be("a", ir_type),
+            Rustgen.let_operand_register_be("b", ir_type),
+            f"*base_{regname}.add(dst as usize) = {vec_name}::new({components});",
+        ])
+    )
+
+
+def generate_max_forms() -> List[Form]:
+    """Generate MAX forms: T × T → T for F32, V2, V3, V4.
+
+    Uses f32::max for scalars, component-wise f32::max for vectors
+    (nalgebra_glm::max only supports (vec, scalar), not (vec, vec)).
+    """
+    forms = []
+    for ir_type in [IRType.F32, IRType.V2, IRType.V3, IRType.V4]:
+        if ir_type == IRType.F32:
+            rust_body = Rustgen.generate_binary_op(ir_type, "{a}.max({b})")
+        else:
+            rust_body = _max_rust_body_vec(ir_type)
+        form = Form({
+            "name": f"MAX_{ir_type.name}",
+            "type": ir_type,
+            "input_types": [ir_type, ir_type],
+            "bank": ir_type.name.lower() + "_",
+        })
+        match_code = (
+            "                " + form["name"] + " => {\n"
+            "                    " + rust_body + "\n"
+            "                None\n"
+            "                }\n"
+        )
+        form["rust_match_code"] = match_code
+        forms.append(form)
+    return forms
+
+
+def _clamp_rust_body_vec(ir_type: IRType) -> str:
+    """Component-wise clamp for vectors: clamp each element with f32::clamp."""
+    comp_count = {IRType.V2: 2, IRType.V3: 3, IRType.V4: 4}[ir_type]
+    vec_name = {IRType.V2: "Vec2", IRType.V3: "Vec3", IRType.V4: "Vec4"}[ir_type]
+    axes = ["x", "y", "z", "w"][:comp_count]
+    components = ", ".join(
+        f"a_val.{ax}.clamp(b_val.{ax}, c_val.{ax})" for ax in axes
+    )
+    regname = IRTYPE_TO_REGISTER_NAME[ir_type]
+    return Rustgen.unsafe_block(
+        "\n".join([
+            Rustgen.let_base_register_be(ir_type),
+            Rustgen.let_operand_register_be("a", ir_type),
+            Rustgen.let_operand_register_be("b", ir_type),
+            Rustgen.let_operand_register_be("c", ir_type),
+            f"*base_{regname}.add(dst as usize) = {vec_name}::new({components});",
+        ])
+    )
+
+
+def generate_clamp_forms() -> List[Form]:
+    """Generate CLAMP forms: T × T × T → T for F32, V2, V3, V4.
+
+    Uses f32::clamp for scalars, component-wise f32::clamp for vectors
+    (nalgebra_glm::clamp only supports (vec, scalar, scalar), not (vec, vec, vec)).
+    3-source operand layout (same pattern as MIX: a=x, b=lo, c=hi).
+    """
+    forms = []
+    for ir_type in [IRType.F32, IRType.V2, IRType.V3, IRType.V4]:
+        if ir_type == IRType.F32:
+            rust_block = Rustgen.unsafe_block(
+                "\n".join([
+                    Rustgen.let_base_register_be(ir_type),
+                    Rustgen.let_operand_register_be("a", ir_type),
+                    Rustgen.let_operand_register_be("b", ir_type),
+                    Rustgen.let_operand_register_be("c", ir_type),
+                    Rustgen.base_register_is(
+                        "a_val.clamp(b_val, c_val)", ir_type,
+                    ),
+                ])
+            )
+        else:
+            rust_block = _clamp_rust_body_vec(ir_type)
+        form = Form({
+            "name": f"CLAMP_{ir_type.name}",
+            "type": ir_type,
+            "input_types": [ir_type, ir_type, ir_type],
+            "bank": ir_type.name.lower() + "_",
+        })
+        match_code = (
+            "                " + form["name"] + " => {\n"
+            "                    " + rust_block + "\n"
+            "                None\n"
+            "                }\n"
+        )
+        form["rust_match_code"] = match_code
+        forms.append(form)
+    return forms
+
+
 def generate_glm_tool_mix_forms() -> List[Form]:
     # lets do mix (vecn, vecn, f32) -> vecn
     mix_forms = []
@@ -682,6 +905,11 @@ def generate_all_forms() -> List[CategoryGroup]:
                 [OpCodes.MUL],
             ),
         ),
+        CategoryGroup("Normalize", generate_normalize_forms()),
+        CategoryGroup("Dot Product", generate_dot_forms()),
+        CategoryGroup("Length", generate_length_forms()),
+        CategoryGroup("Max", generate_max_forms()),
+        CategoryGroup("Clamp", generate_clamp_forms()),
         CategoryGroup(
             "Unary Math",
             generate_unary_forms(
@@ -763,8 +991,8 @@ def main() -> None:
     // Generated with Love <3.
 
 
-    use nalgebra_glm::{abs, ceil, cos, exp, floor, fract, log, log2, sin,
-     mix, sqrt, tan, Vec2, Vec3, Vec4};
+    use nalgebra_glm::{abs, ceil, cos, exp, floor, fract, length as glm_length,
+     log, log2, mix, sin, sqrt, tan, Vec2, Vec3, Vec4};
 
     use crate::ttsl::{Registers, TtslTextureEnv};
 

@@ -96,6 +96,11 @@ class OpCodes(Enum):
     FRACT = "fract"
     MOD = "mod"
     MIX = "mix"
+    NORMALIZE = "normalize"
+    DOT = "dot"
+    LENGTH = "length"
+    MAX = "max"
+    CLAMP = "clamp"
     TT_TEXTURE = "tt_texture"
 
 

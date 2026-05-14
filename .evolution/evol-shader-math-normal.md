@@ -2,7 +2,7 @@
 
 ```yaml
 id: evol-shader-math-normal
-status: draft
+status: closed
 created: 2026-05-14
 authors: []
 supersedes: []
@@ -397,7 +397,7 @@ Each primitive has Rust-side unit tests (opcode execution) and Python e2e tests 
 - **Zero-vector normalize**: Returns zero vector (guarded in Rust VM, not NaN).
 - **Opcode generation**: Three distinct patterns — unary (normalize), binary cross-type (dot, length), binary same-type (max), ternary same-type (clamp). Each maps cleanly to nalgebra_glm functions.
 - **`min` deferred**: Not required for lighting. Can mirror `max` in a follow-up.
-- **Resolution**: *(to be filled when closing)*
+- **Resolution**: Implemented 2026-05-14. All five primitives (`normalize`, `dot`, `length`, `max`, `clamp`) shipped end-to-end: opcode forms in `low_level_def.py`, compiler type inference + bare/glm call paths, zero-guarded VM codegen, e2e tests (46 total across all five). See `tests/tt3de/ttsl/test_e2e.py::Test_Normalize`, `Test_Dot`, `Test_Length`, `Test_Max`, `Test_Clamp`. Note: nalgebra_glm `max` and `clamp` do not support vector-vector signatures; component-wise `f32::max` / `f32::clamp` expansion is used instead. `min` deferred.
 
 ## References
 
