@@ -44,8 +44,10 @@ class RustRenderContext:
         texture_buffer_size=32,
         material_buffer_size=32,
         material_parallel_threads: int | None = 8,
+        legacy_layers: bool = True,
     ):
-        """Create buffers for Rust-backed rasterization.
+        """
+        Create buffers for Rust-backed rasterization.
 
         ``material_parallel_threads``: ``None`` runs the material pass on one thread;
         a positive integer builds a per-context Rayon pool with that many threads (default ``8``).
@@ -56,6 +58,7 @@ class RustRenderContext:
         if material_parallel_threads is not None and material_parallel_threads < 1:
             material_parallel_threads = None
         self._material_parallel_threads = material_parallel_threads
+        self.legacy_layers = legacy_layers
 
         self.texture_buffer = TextureBufferPy(texture_buffer_size)
         self.material_buffer = MaterialBufferPy(material_buffer_size)
@@ -70,8 +73,11 @@ class RustRenderContext:
             max_row=self.height,
             max_col=self.width,
             material_parallel_threads=(
-                0 if self._material_parallel_threads is None else self._material_parallel_threads
+                0
+                if self._material_parallel_threads is None
+                else self._material_parallel_threads
             ),
+            legacy_layers=self.legacy_layers,
         )
 
         self.global_bit_size = 4
@@ -92,6 +98,7 @@ class RustRenderContext:
                     if self._material_parallel_threads is None
                     else self._material_parallel_threads
                 ),
+                legacy_layers=self.legacy_layers,
             )
             # self.drawing_buffer.set_bit_size_front(self.global_bit_size,self.global_bit_size,self.global_bit_size)
             # self.drawing_buffer.set_bit_size_back(self.global_bit_size,self.global_bit_size,self.global_bit_size)
@@ -123,32 +130,65 @@ class RustRenderContext:
             self.drawing_buffer,
             self.primitive_buffer,
         )
-        # raster all the primitives in the drawing buffer
-        raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
+        if self.legacy_layers:
+            raster_all_py(
+                self.primitive_buffer, self.vertex_buffer, self.drawing_buffer
+            )
+            if self._material_parallel_threads is None:
+                apply_material_py(
+                    self.material_buffer,
+                    self.texture_buffer,
+                    self.vertex_buffer,
+                    self.primitive_buffer,
+                    self.drawing_buffer,
+                )
+            else:
+                apply_material_py_parallel(
+                    self.material_buffer,
+                    self.texture_buffer,
+                    self.vertex_buffer,
+                    self.primitive_buffer,
+                    self.drawing_buffer,
+                )
+        else:
+            raster_all_py(
+                self.primitive_buffer,
+                self.vertex_buffer,
+                self.drawing_buffer,
+                pass_filter="opaque",
+            )
+            if self._material_parallel_threads is None:
+                apply_material_py(
+                    self.material_buffer,
+                    self.texture_buffer,
+                    self.vertex_buffer,
+                    self.primitive_buffer,
+                    self.drawing_buffer,
+                    pass_filter="opaque",
+                )
+            else:
+                apply_material_py_parallel(
+                    self.material_buffer,
+                    self.texture_buffer,
+                    self.vertex_buffer,
+                    self.primitive_buffer,
+                    self.drawing_buffer,
+                    pass_filter="opaque",
+                )
 
-        # apply_material_py(
-        #     self.material_buffer,
-        #     self.texture_buffer,
-        #     self.vertex_buffer,
-        #     self.primitive_buffer,
-        #     self.drawing_buffer,
-        # )
-        # material pass (parallel uses per-context Rayon pool on DrawingBufferPy)
-        if self._material_parallel_threads is None:
+            raster_all_py(
+                self.primitive_buffer,
+                self.vertex_buffer,
+                self.drawing_buffer,
+                pass_filter="transparent",
+            )
             apply_material_py(
                 self.material_buffer,
                 self.texture_buffer,
                 self.vertex_buffer,
                 self.primitive_buffer,
                 self.drawing_buffer,
-            )
-        else:
-            apply_material_py_parallel(
-                self.material_buffer,
-                self.texture_buffer,
-                self.vertex_buffer,
-                self.primitive_buffer,
-                self.drawing_buffer,
+                pass_filter="transparent",
             )
 
     def to_textual_2(self, region: Region) -> List[Strip]:

@@ -88,6 +88,7 @@ pub fn line3d_as_primitive<const PIXCOUNT: usize, DEPTHACC: Number>(
                 Vec4::new(point_b.x, point_b.y, pdivb.z, pdivb.w),
                 Vec3::new(0.0, 0.0, 1.0),
                 Vec2::new(1.0, 1.0).xy(),
+                geom_ref.transparent,
             );
         }
         None => {}

@@ -629,6 +629,7 @@ mod test_raster_duo_triangle {
                 material_id: 2,
                 node_id: 3,
                 primitive_id: 0,
+                transparent: false,
             },
         )
     }
@@ -649,6 +650,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(
@@ -688,6 +690,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(
@@ -727,6 +730,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(
@@ -767,6 +771,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(
@@ -806,6 +811,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(
@@ -845,6 +851,7 @@ mod test_raster_mono_triangle {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
 
         let pa = Vertex::new(

@@ -7,12 +7,53 @@ use pyo3::{
     Bound, Py, PyResult, Python,
 };
 
+use crate::drawbuffer::blend::{BlendMode, GlyphPolicy};
 use crate::material::materials::Material;
 use crate::material::shader_material::{ShaderMaterial, ShaderSeedRegisters};
 use crate::ttsl::{ttslpy::convert_and_fill_register, Registers};
 use crate::material::textured::BaseTexture;
 use crate::texturebuffer;
 use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
+
+fn parse_blend_mode(input: &str) -> PyResult<BlendMode> {
+    match input {
+        "replace" => Ok(BlendMode::Replace),
+        "alpha_blend" => Ok(BlendMode::AlphaBlend),
+        "additive" => Ok(BlendMode::Additive),
+        "glyph_dither" => Ok(BlendMode::GlyphDither),
+        "half_block_composite" => Ok(BlendMode::HalfBlockComposite),
+        _ => Err(PyValueError::new_err(
+            "blend_mode must be one of: replace, alpha_blend, additive, glyph_dither, half_block_composite",
+        )),
+    }
+}
+
+fn blend_mode_to_str(mode: BlendMode) -> &'static str {
+    match mode {
+        BlendMode::Replace => "replace",
+        BlendMode::AlphaBlend => "alpha_blend",
+        BlendMode::Additive => "additive",
+        BlendMode::GlyphDither => "glyph_dither",
+        BlendMode::HalfBlockComposite => "half_block_composite",
+    }
+}
+
+fn parse_glyph_policy(input: &str) -> PyResult<GlyphPolicy> {
+    match input {
+        "preserve_existing" => Ok(GlyphPolicy::PreserveExisting),
+        "replace_from_shader" => Ok(GlyphPolicy::ReplaceFromShader),
+        _ => Err(PyValueError::new_err(
+            "glyph_policy must be one of: preserve_existing, replace_from_shader",
+        )),
+    }
+}
+
+fn glyph_policy_to_str(policy: GlyphPolicy) -> &'static str {
+    match policy {
+        GlyphPolicy::PreserveExisting => "preserve_existing",
+        GlyphPolicy::ReplaceFromShader => "replace_from_shader",
+    }
+}
 
 #[pyclass(subclass)]
 #[derive(Clone)]
@@ -57,6 +98,8 @@ pub struct BaseTexturePy {
     pub back_uv_0: bool,
     #[pyo3(get, set)]
     pub glyph_method: ToGlyphMethodPy,
+    blend_mode: BlendMode,
+    glyph_policy: GlyphPolicy,
 }
 impl BaseTexturePy {
     pub fn to_native(&self) -> BaseTexture {
@@ -72,13 +115,15 @@ impl BaseTexturePy {
             back_uv_0: self.back_uv_0,
             glyph_uv_0: self.glyph_uv_0,
             to_glyph_method: self.glyph_method.to_method(), //self.glyph_method.to_method(),
+            blend_mode: self.blend_mode,
+            glyph_policy: self.glyph_policy,
         }
     }
 }
 #[pymethods]
 impl BaseTexturePy {
     #[new]
-    #[pyo3(signature = (albedo_texture_idx=0, albedo_texture_subid=0, glyph_texture_idx=0, glyph_texture_subid=0, front=true, back=true, glyph=true, front_uv_0=true, back_uv_0=true, glyph_uv_0=true, glyph_method=None))]
+    #[pyo3(signature = (albedo_texture_idx=0, albedo_texture_subid=0, glyph_texture_idx=0, glyph_texture_subid=0, front=true, back=true, glyph=true, front_uv_0=true, back_uv_0=true, glyph_uv_0=true, glyph_method=None, blend_mode=None, glyph_policy=None))]
     fn new(
         albedo_texture_idx: usize,
         albedo_texture_subid: usize,
@@ -91,8 +136,20 @@ impl BaseTexturePy {
         back_uv_0: bool,
         glyph_uv_0: bool,
         glyph_method: Option<ToGlyphMethodPy>,
+        blend_mode: Option<&str>,
+        glyph_policy: Option<&str>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
+        let blend_mode = blend_mode
+            .map(parse_blend_mode)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(BlendMode::Replace);
+        let glyph_policy = glyph_policy
+            .map(parse_glyph_policy)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(GlyphPolicy::PreserveExisting);
         let glyph_method = match glyph_method {
             Some(gm) => gm,
             None => ToGlyphMethodPy {
@@ -113,7 +170,31 @@ impl BaseTexturePy {
             back_uv_0,
             glyph_uv_0,
             glyph_method: glyph_method,
+            blend_mode,
+            glyph_policy,
         })
+    }
+
+    #[getter]
+    fn blend_mode(&self) -> String {
+        blend_mode_to_str(self.blend_mode).to_string()
+    }
+
+    #[setter]
+    fn set_blend_mode(&mut self, value: &str) -> PyResult<()> {
+        self.blend_mode = parse_blend_mode(value)?;
+        Ok(())
+    }
+
+    #[getter]
+    fn glyph_policy(&self) -> String {
+        glyph_policy_to_str(self.glyph_policy).to_string()
+    }
+
+    #[setter]
+    fn set_glyph_policy(&mut self, value: &str) -> PyResult<()> {
+        self.glyph_policy = parse_glyph_policy(value)?;
+        Ok(())
     }
 }
 
@@ -134,11 +215,14 @@ pub struct StaticColorPy {
 
     #[pyo3(get, set)]
     glyph_idx: u8,
+    blend_mode: BlendMode,
+    glyph_policy: GlyphPolicy,
 }
 
 #[pymethods]
 impl StaticColorPy {
     #[new]
+    #[pyo3(signature = (front, back, glyph, front_color, back_color, glyph_idx, blend_mode=None, glyph_policy=None))]
     fn new(
         front: bool,
         back: bool,
@@ -146,8 +230,20 @@ impl StaticColorPy {
         front_color: (u8, u8, u8, u8),
         back_color: (u8, u8, u8, u8),
         glyph_idx: u8,
+        blend_mode: Option<&str>,
+        glyph_policy: Option<&str>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
+        let blend_mode = blend_mode
+            .map(parse_blend_mode)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(BlendMode::Replace);
+        let glyph_policy = glyph_policy
+            .map(parse_glyph_policy)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(GlyphPolicy::PreserveExisting);
         PyClassInitializer::from(parent).add_subclass(StaticColorPy {
             front,
             back,
@@ -155,6 +251,8 @@ impl StaticColorPy {
             front_color,
             back_color,
             glyph_idx,
+            blend_mode,
+            glyph_policy,
         })
     }
 }
@@ -177,6 +275,8 @@ impl StaticColorPy {
                 a: self.back_color.3,
             },
             glyph_idx: self.glyph_idx,
+            blend_mode: self.blend_mode,
+            glyph_policy: self.glyph_policy,
         }
     }
 }
@@ -195,6 +295,8 @@ pub struct ShaderPy {
     pub line_coord_f32_reg: Option<usize>,
     pub point_coord_v2_reg: Option<usize>,
     pub default_glyph: Option<u8>,
+    pub blend_mode: BlendMode,
+    pub glyph_policy: GlyphPolicy,
     /// Same layout as ``RegisterSettings.get_register_list()`` (list of 6 dicts), or ``None``.
     #[pyo3(get, set)]
     pub register_seed: Option<Py<PyAny>>,
@@ -245,7 +347,9 @@ impl ShaderPy {
             .with_frag_depth_f32_reg(self.frag_depth_f32_reg)
             .with_line_coord_f32_reg(self.line_coord_f32_reg)
             .with_point_coord_v2_reg(self.point_coord_v2_reg)
-            .with_default_glyph(self.default_glyph);
+            .with_default_glyph(self.default_glyph)
+            .with_blend_mode(self.blend_mode)
+            .with_glyph_policy(self.glyph_policy);
         if let Some(regs) = seed_registers {
             mat = mat.with_seed_registers(ShaderSeedRegisters::from_registers(regs));
         }
@@ -256,7 +360,7 @@ impl ShaderPy {
 #[pymethods]
 impl ShaderPy {
     #[new]
-    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None))]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None, blend_mode=None, glyph_policy=None))]
     fn new(
         bytecode: &Bound<'_, PyBytes>,
         time_f32_reg: Option<usize>,
@@ -271,9 +375,21 @@ impl ShaderPy {
         frame_i32_reg: Option<usize>,
         near_f32_reg: Option<usize>,
         far_f32_reg: Option<usize>,
+        blend_mode: Option<&str>,
+        glyph_policy: Option<&str>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
         let bytes = bytecode.as_bytes();
+        let blend_mode = blend_mode
+            .map(parse_blend_mode)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(BlendMode::Replace);
+        let glyph_policy = glyph_policy
+            .map(parse_glyph_policy)
+            .transpose()
+            .unwrap_or(None)
+            .unwrap_or(GlyphPolicy::PreserveExisting);
         PyClassInitializer::from(parent).add_subclass(ShaderPy {
             bytecode: bytes.to_vec(),
             time_f32_reg,
@@ -287,6 +403,8 @@ impl ShaderPy {
             line_coord_f32_reg,
             point_coord_v2_reg,
             default_glyph,
+            blend_mode,
+            glyph_policy,
             register_seed,
         })
     }
@@ -409,6 +527,28 @@ impl ShaderPy {
     #[setter]
     fn set_default_glyph(&mut self, value: Option<u8>) {
         self.default_glyph = value;
+    }
+
+    #[getter]
+    fn blend_mode(&self) -> String {
+        blend_mode_to_str(self.blend_mode).to_string()
+    }
+
+    #[setter]
+    fn set_blend_mode(&mut self, value: &str) -> PyResult<()> {
+        self.blend_mode = parse_blend_mode(value)?;
+        Ok(())
+    }
+
+    #[getter]
+    fn glyph_policy(&self) -> String {
+        glyph_policy_to_str(self.glyph_policy).to_string()
+    }
+
+    #[setter]
+    fn set_glyph_policy(&mut self, value: &str) -> PyResult<()> {
+        self.glyph_policy = parse_glyph_policy(value)?;
+        Ok(())
     }
 }
 

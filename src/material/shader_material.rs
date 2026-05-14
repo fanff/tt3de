@@ -4,7 +4,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use nalgebra_glm::{vec2, vec3, Vec2, Vec3, Vec4};
 
 use crate::{
-    drawbuffer::drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
+    drawbuffer::{
+        blend::{BlendMode, GlyphPolicy},
+        drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
+    },
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::texture_buffer::TextureBuffer,
     ttsl::{decode_instrs_256, run_ttsl, Instr, Registers},
@@ -28,6 +31,8 @@ pub struct ShaderMaterial {
     pub seed_regs: ShaderSeedRegisters,
     pub input_binding: ShaderInputBinding,
     pub default_glyph: Option<u8>,
+    pub blend_mode: BlendMode,
+    pub glyph_policy: GlyphPolicy,
 }
 
 #[derive(Clone)]
@@ -228,6 +233,8 @@ impl ShaderMaterial {
             seed_regs: ShaderSeedRegisters::default(),
             input_binding: ShaderInputBinding::default(),
             default_glyph: None,
+            blend_mode: BlendMode::Replace,
+            glyph_policy: GlyphPolicy::PreserveExisting,
         }
     }
 
@@ -338,6 +345,16 @@ impl ShaderMaterial {
 
     pub fn with_default_glyph(mut self, default_glyph: Option<u8>) -> Self {
         self.default_glyph = default_glyph;
+        self
+    }
+
+    pub fn with_blend_mode(mut self, blend_mode: BlendMode) -> Self {
+        self.blend_mode = blend_mode;
+        self
+    }
+
+    pub fn with_glyph_policy(mut self, glyph_policy: GlyphPolicy) -> Self {
+        self.glyph_policy = glyph_policy;
         self
     }
 }

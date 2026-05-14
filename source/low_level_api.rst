@@ -107,43 +107,27 @@ Depth Buffer:
 Depth layer resolve
 ^^^^^^^^^^^^^^^^^^^
 
-The drawing buffer is not a single OpenGL-style depth sample per terminal
-cell. It stores a small fixed stack of depth layers per cell (currently two
-layers through ``DrawingBufferPy`` / ``DrawBuffer<2, f32>``). Each layer keeps
-both a depth value and a reference to the matching ``PixInfo`` entry for that
-fragment: UVs, normal, material id, primitive id, and other per-pixel data.
+``DrawingBufferPy`` now supports two rendering models:
 
-During rasterization, ``DrawBuffer::set_depth_content`` inserts each covered
-fragment into the cell's depth stack if it is closer than an existing layer.
-The stack is kept sorted nearest-first: layer ``0`` is the closest stored
-fragment, layer ``1`` is the next closest fragment, and any fragment beyond the
-available layer count is dropped.
+- ``legacy_layers=True`` (default): legacy ``DrawBuffer<2, f32>`` K-buffer-like
+  resolve behavior for compatibility.
+- ``legacy_layers=False``: two-pass model with one depth winner per pass.
 
-After rasterization, ``apply_material_on`` resolves each cell by shading layers
-from farthest to nearest:
+New two-pass behavior (``legacy_layers=False``):
 
-.. code-block:: rust
+1. **Opaque pass** rasterizes non-transparent primitives into ``DrawBuffer<1, f32>``.
+2. **Opaque material resolve** writes full ``CanvasCell`` state (front/back/glyph).
+3. **Transparent pass** rasterizes transparent primitives into another
+   ``DrawBuffer<1, f32>``.
+4. **Transparent composite** blends only ``front_color`` onto the opaque canvas.
 
-    for depth_layer in (0..DEPTHLAYER).rev() {
-        // shade this layer into the same CanvasCell
-    }
+Blend/composite is centralized through ``BlendMode`` (``replace``,
+``alpha_blend``, ``additive``, ``glyph_dither``, ``half_block_composite``),
+while glyph behavior in transparent compositing is explicit through
+``GlyphPolicy`` (``preserve_existing`` / ``replace_from_shader``).
 
-All layers write into the same final ``CanvasCell`` fields: ``front_color``,
-``back_color``, and ``glyph``. There is no single global blend equation at this
-stage. The effective compositing behavior is material-defined:
-
-- ``StaticColor`` copies only the channels enabled by its ``front``, ``back``,
-  and ``glyph`` toggles.
-- ``BaseTexture`` can alpha-blend front/back colors and can choose a glyph from
-  texture data or a fixed glyph method.
-- ``Textured`` and many shader paths overwrite the channels they produce.
-- Glyph composition is usually last-writer-wins for whichever nearer material
-  writes a glyph.
-
-This makes tt3de closer to a tiny fixed-size **K-buffer** / order-independent
-transparency approach than to the classic OpenGL default framebuffer model. The
-engine stores a few visible fragments first, then resolves them into one ASCII
-cell.
+Depth ordering of overlapping transparent primitives remains raster-order
+dependent in this milestone (no transparent sort yet).
 
 For comparison, classic OpenGL normally has one depth value per pixel. A
 fragment passes or fails the depth test against that single value; if it passes,

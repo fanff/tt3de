@@ -22,6 +22,27 @@ use raster_triangle_tomato::*;
 pub mod vertex;
 use vertex::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PassTag {
+    Opaque,
+    Transparent,
+}
+
+fn primitive_matches_pass(element: &PrimitiveElements, pass: Option<PassTag>) -> bool {
+    let is_transparent = match element {
+        PrimitiveElements::Line { fds, .. } => fds.transparent,
+        PrimitiveElements::Point { fds, .. } => fds.transparent,
+        PrimitiveElements::Static { fds, .. } => fds.transparent,
+        PrimitiveElements::Triangle3D(t) => t.primitive_reference.transparent,
+        PrimitiveElements::Rect(r) => r.primitive_reference.transparent,
+    };
+    match pass {
+        None => true,
+        Some(PassTag::Opaque) => !is_transparent,
+        Some(PassTag::Transparent) => is_transparent,
+    }
+}
+
 // function that "set stuff" in the drawing buffer; assuming its a double raster
 fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
     prim_ref: &PrimitivReferences,
@@ -137,23 +158,52 @@ pub fn raster_all<const DEPTHCOUNT: usize>(
     primitivbuffer: &PrimitiveBuffer,
     vertexbuffer: &VertexBuffer<Vec4>,
     drawing_buffer: &mut DrawBuffer<DEPTHCOUNT, f32>,
+    pass_filter: Option<PassTag>,
 ) {
     for primitiv_idx in 0..primitivbuffer.current_size {
         let element = primitivbuffer.content[primitiv_idx];
-
-        raster_element(&element, vertexbuffer, drawing_buffer)
+        if primitive_matches_pass(&element, pass_filter) {
+            raster_element(&element, vertexbuffer, drawing_buffer)
+        }
     }
 }
 
 #[pyfunction]
+#[pyo3(signature = (pb, vbuffpy, db, pass_filter=None))]
 pub fn raster_all_py(
     _py: Python,
     pb: &PrimitiveBufferPy,
     vbuffpy: &VertexBufferPy,
     mut db: PyRefMut<'_, DrawingBufferPy>,
+    pass_filter: Option<&str>,
 ) {
     let primitivbuffer = &pb.content;
 
-    let drawing_buffer = &mut db.db;
-    raster_all(primitivbuffer, &vbuffpy.buffer3d, drawing_buffer);
+    let pass = match pass_filter {
+        Some("opaque") => Some(PassTag::Opaque),
+        Some("transparent") => Some(PassTag::Transparent),
+        _ => None,
+    };
+    if db.legacy_layers {
+        raster_all(primitivbuffer, &vbuffpy.buffer3d, &mut db.db, pass);
+    } else {
+        match pass {
+            Some(PassTag::Transparent) => {
+                raster_all(
+                    primitivbuffer,
+                    &vbuffpy.buffer3d,
+                    &mut db.transparent_db,
+                    Some(PassTag::Transparent),
+                );
+            }
+            _ => {
+                raster_all(
+                    primitivbuffer,
+                    &vbuffpy.buffer3d,
+                    &mut db.opaque_db,
+                    Some(PassTag::Opaque),
+                );
+            }
+        }
+    }
 }

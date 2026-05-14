@@ -101,6 +101,7 @@ class TT3DPolygonFan(WithMaterialID, TT3DNode):
         self.vertex_list: List[Point3D] = []
         self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
         self.geom_id = None
+        self.transparent: bool = False
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
@@ -127,6 +128,7 @@ class TT3DPolygonFan(WithMaterialID, TT3DNode):
             self.node_id,
             self.material_id,
             start_uv,
+            self.transparent,
         )
 
 
@@ -143,6 +145,7 @@ class TT3DPolygon(WithMaterialID, TT3DNode):
         self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
         self.geom_id = None
         self.flipped_normals: bool = False
+        self.transparent: bool = False
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
@@ -197,6 +200,7 @@ class TT3DPolygon(WithMaterialID, TT3DNode):
             triangle_count,
             self.node_id,
             self.material_id,
+            self.transparent,
         )
 
 
@@ -211,6 +215,7 @@ class TT3DPoint(WithMaterialID, TT3DNode):
         self.vertex_list: List[Point3D] = []
         self.uvmap: List[tuple[Point2D, Point2D, Point2D]] = []
         self.geom_id = None
+        self.transparent: bool = False
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
@@ -232,7 +237,7 @@ class TT3DPoint(WithMaterialID, TT3DNode):
         assert start_idx is not None
         assert start_uv is not None
         self.geom_id = rc.geometry_buffer.add_point_3d(
-            start_idx, start_uv, self.node_id, self.material_id
+            start_idx, start_uv, self.node_id, self.material_id, self.transparent
         )
 
 
@@ -247,6 +252,7 @@ class TT3DLine(WithMaterialID, TT3DNode):
         self.vertex_list: List[Point3D] = []
         self.segment_uv: List[Tuple[Point2D, Point2D]] = []
         self.geom_id = None
+        self.transparent: bool = False
 
     def insert_in(self, rc: "RustRenderContext"):
         super().insert_in(rc)
@@ -267,4 +273,5 @@ class TT3DLine(WithMaterialID, TT3DNode):
             self.segment_idx[0],
             self.node_id,
             self.material_id,
+            self.transparent,
         )

@@ -116,6 +116,7 @@ pub struct PrimitivReferences {
     pub material_id: usize,
     pub geometry_id: usize,
     pub primitive_id: usize,
+    pub transparent: bool,
 }
 
 impl PrimitivReferences {
@@ -124,12 +125,14 @@ impl PrimitivReferences {
         material_id: usize,
         geometry_id: usize,
         primitive_id: usize,
+        transparent: bool,
     ) -> Self {
         Self {
             node_id,
             material_id,
             geometry_id,
             primitive_id,
+            transparent,
         }
     }
 }
@@ -205,6 +208,7 @@ impl PrimitiveBuffer {
         material_id: usize,
         top_left: Vertex,
         bottom_right: Vertex,
+        transparent: bool,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
@@ -215,6 +219,7 @@ impl PrimitiveBuffer {
             material_id,
             node_id,
             primitive_id: self.current_size,
+            transparent,
         };
 
         self.content[self.current_size] =
@@ -232,6 +237,7 @@ impl PrimitiveBuffer {
         pa: Vertex,
         pb: Vertex,
         pc: Vertex,
+        transparent: bool,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
@@ -242,6 +248,7 @@ impl PrimitiveBuffer {
             material_id,
             node_id,
             primitive_id: self.current_size,
+            transparent,
         };
 
         self.content[self.current_size] =
@@ -261,6 +268,7 @@ impl PrimitiveBuffer {
         col: f32,
         depth: f32,
         uv: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size == self.max_size {
             return self.current_size;
@@ -270,6 +278,7 @@ impl PrimitiveBuffer {
             material_id,
             node_id,
             primitive_id: self.current_size,
+            transparent,
         };
 
         let apoint = PrimitiveElements::Point {
@@ -294,6 +303,7 @@ impl PrimitiveBuffer {
         pos_b: Vec4,
         normal_b: Vec3,
         uv_b: Vec2,
+        transparent: bool,
     ) -> usize {
         let elem = PrimitiveElements::Line {
             fds: PrimitivReferences {
@@ -301,6 +311,7 @@ impl PrimitiveBuffer {
                 material_id,
                 node_id,
                 primitive_id: self.current_size,
+                transparent,
             },
             pa: Vertex::new(pos_a, normal_a, uv_a),
             pb: Vertex::new(pos_b, normal_b, uv_b),

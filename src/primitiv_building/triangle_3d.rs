@@ -102,6 +102,7 @@ pub fn polygon3d_as_primitive_triangles<const PIXCOUNT: usize, DEPTHACC: Number>
                     normal_view,
                     uvs[2] * vccdiv.w,
                 ),
+                polygon.geom_ref.transparent,
             );
         }
     }
