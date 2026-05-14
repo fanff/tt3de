@@ -10,7 +10,7 @@ use crate::{
     texturebuffer::{
         texture_buffer::TextureBuffer,
         toglyph_methods::{ToGlyphIndex, ToGlyphMethod},
-        RGBA,
+        FilterMode, RGBA,
     },
     vertexbuffer::uv_buffer::UVBuffer,
 };
@@ -359,6 +359,7 @@ mod tests {
             ],
             false,
             false,
+            FilterMode::Bilinear,
         );
 
         // Create the Texture instance

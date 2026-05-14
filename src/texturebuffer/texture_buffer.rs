@@ -2,7 +2,7 @@ use nalgebra_glm::{Vec2, Vec4};
 
 use crate::texturebuffer::UvMapper;
 
-use super::{NoiseTexture, Texture, TextureAtlas, TextureCustom, TextureType, RGBA};
+use super::{FilterMode, NoiseTexture, Texture, TextureAtlas, TextureCustom, TextureType, RGBA};
 
 pub struct TextureBuffer<const SIZE: usize> {
     pub max_size: usize,
@@ -16,12 +16,14 @@ fn make_texture<const SIZE: usize>(
     input: impl IntoIterator<Item = RGBA>,
     repeat_width: bool,
     repeat_height: bool,
+    filter_mode: FilterMode,
 ) -> TextureType<SIZE> {
     let texture_type = if width == SIZE && height == SIZE {
         TextureType::Fixed(Texture::<SIZE>::from_iter(
             input,
             repeat_width,
             repeat_height,
+            filter_mode,
         ))
     } else {
         TextureType::Custom(TextureCustom::<SIZE>::new(
@@ -30,6 +32,7 @@ fn make_texture<const SIZE: usize>(
             height,
             repeat_width,
             repeat_height,
+            filter_mode,
         ))
     };
     texture_type
@@ -42,7 +45,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
             b: 0,
             a: 255,
         };
-        let init_texture = TextureType::Fixed(Texture::<SIZE>::new(init_color, true, true));
+        let init_texture = TextureType::Fixed(Texture::<SIZE>::new(init_color, true, true, FilterMode::Bilinear));
         // Create a fixed-size array of None values
         let textures = vec![init_texture; max_size].into_boxed_slice();
 
@@ -83,12 +86,13 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
         input: I,
         repeat_width: bool,
         repeat_height: bool,
+        filter_mode: FilterMode,
     ) -> usize {
         if self.current_size >= self.max_size {
             panic!("Texture buffer is full");
         }
 
-        let texture_type = make_texture::<SIZE>(width, height, input, repeat_width, repeat_height);
+        let texture_type = make_texture::<SIZE>(width, height, input, repeat_width, repeat_height, filter_mode);
 
         self.textures[self.current_size] = texture_type;
         self.current_size += 1;
@@ -113,6 +117,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
         pix_size_width: usize,
         pix_size_height: usize,
         input: I,
+        filter_mode: FilterMode,
     ) -> usize {
         if self.current_size >= self.max_size {
             panic!("Texture buffer is full");
@@ -120,7 +125,7 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
 
         if width == SIZE && height == SIZE {
             let text = TextureType::Atlas(TextureAtlas {
-                texture: Texture::<SIZE>::from_iter(input, false, false),
+                texture: Texture::<SIZE>::from_iter(input, false, false, filter_mode),
                 pix_size_width,
                 pix_size_height,
             });
@@ -134,6 +139,34 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
                         height,
                         false,
                         false,
+                        filter_mode,
+                    ),
+                    pix_size_width,
+                    pix_size_height,
+                },
+
+            );
+
+            self.textures[self.current_size] = text;
+        }
+
+        if width == SIZE && height == SIZE {
+            let text = TextureType::Atlas(TextureAtlas {
+                texture: Texture::<SIZE>::from_iter(input, false, false, filter_mode),
+                pix_size_width,
+                pix_size_height,
+            });
+            self.textures[self.current_size] = text;
+        } else {
+            let text = TextureType::AtlasCustom(
+                TextureAtlas {
+                    texture: TextureCustom::<SIZE>::new(
+                        input,
+                        width,
+                        height,
+                        false,
+                        false,
+                        filter_mode,
                     ),
                     pix_size_width,
                     pix_size_height,
