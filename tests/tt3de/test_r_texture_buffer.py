@@ -77,3 +77,27 @@ class Test_TextureArray(unittest.TestCase):
             texture_array.get_rgba_at(0, 0.4, 0.4),
             texture_array.get_rgba_at(0, 1.4, 1.4),
         )
+
+    def test_mapping_repeat_negative_uv_custom_texture(self):
+        texture_array = TextureBufferPy(12)
+        self.assertEqual(texture_array.size(), 0)
+        sky1: ImageTexture = fast_load("models/sky1.bmp")
+
+        texture_array.add_texture(
+            sky1.image_width,
+            sky1.image_height,
+            sky1.chained_data(),
+            repeat_width=True,
+            repeat_height=True,
+        )
+        self.assertEqual(texture_array.size(), 1)
+        self.assertEqual(texture_array.get_wh_of(0), (256, 114))
+
+        self.assertEqual(
+            texture_array.get_rgba_at(0, 0.25, 0.75),
+            texture_array.get_rgba_at(0, -0.75, -0.25),
+        )
+        self.assertEqual(
+            texture_array.get_rgba_at(0, 0.25, 0.75),
+            texture_array.get_rgba_at(0, -1.75, -2.25),
+        )
