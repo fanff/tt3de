@@ -6,7 +6,6 @@ description: >-
   Runs a short discovery pass first (what to showcase, 2d vs 3d, TTSL vs geometry, etc.) with
   suggested answers the user can accept via shorthand. Use when the user asks for a demo,
   example app, standalone viewer, or demos/2d or demos/3d scripts.
-disable-model-invocation: true
 ---
 
 # tt3de demomaker
@@ -17,7 +16,7 @@ Orchestrate **new or edited demos** in `demos/`: run discovery, then implement f
 
 **Technical** (layout, ShaderPy, scene graph, textures, docstrings, comments, checklist): `.cursor/rules/demos-standards.mdc` (globs `demos/**/*.py`). **General Python**: `.cursor/rules/python-standards.mdc`.
 
-**TTSL** (language, compiler, opcodes, ABI): `.cursor/skills/ttsl-implementation/SKILL.md`, plus `source/ttsl.md` and `source/ttsl_compiler.md`.
+**TTSL** (language, compiler, opcodes, ABI): `.opencode/skills/ttsl-implementation/SKILL.md`, plus `source/ttsl.md` and `source/ttsl_compiler.md`.
 
 **Textual-heavy demos** (especially `demos/ttsl.py`): `.cursor/rules/textual-ui-helper.mdc`.
 

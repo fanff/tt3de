@@ -1,7 +1,6 @@
 ---
 name: ttsl-implementation
-description: Implements or changes Tiny Tiny Shader Language (TTSL) shaders, compiler, VM opcodes, or TTSL-related docs in tt3de. Use when writing TTSL source, editing python/tt3de/ttsl/, Rust TTSL VM/material paths,   or when the user mentions TTSL, shader materials, bytecode, builtins (tt_FragCoord, tt_Time), all_passes_compilation, ttsl_run, ShaderPy, gen-opcodes, low_level_def, or opcode definitions.
-disable-model-invocation: true
+description: Implements or changes Tiny Tiny Shader Language (TTSL) shaders, compiler, VM opcodes, or TTSL-related docs in tt3de. Use when writing TTSL source, editing python/tt3de/ttsl/, Rust TTSL VM/material paths, or when the user mentions TTSL, shader materials, bytecode, builtins (tt_FragCoord, tt_Time), all_passes_compilation, ttsl_run, ShaderPy, gen-opcodes, low_level_def, or opcode definitions.
 ---
 
 # TTSL implementation
@@ -12,9 +11,9 @@ Read these before changing behavior; they are the contract:
 
 | Topic | File |
 |-------|------|
-| Builtins, uniforms, texture ABI, material bridge | [source/ttsl.md](../../../source/ttsl.md) |
-| Compiler API, `globals_dict`, supported syntax | [source/ttsl_compiler.md](../../../source/ttsl_compiler.md) |
-| Opcode numbers and operand types (generated) | [source/opcode_reference.md](../../../source/opcode_reference.md) |
+| Builtins, uniforms, texture ABI, material bridge | [source/ttsl.md](../../source/ttsl.md) |
+| Compiler API, `globals_dict`, supported syntax | [source/ttsl_compiler.md](../../source/ttsl_compiler.md) |
+| Opcode numbers and operand types (generated) | [source/opcode_reference.md](../../source/opcode_reference.md) |
 
 ## Authoring shader source
 
