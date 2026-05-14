@@ -355,7 +355,7 @@ pub fn build_primitives_py(
         &vbpy.triangle_buffer3d,
         &trbuffer_py.data,
         &vbpy.uv_array,
-        &dbpy.db,
+        &dbpy.opaque_db,
         prim_content,
     );
 }
@@ -371,16 +371,6 @@ pub fn apply_material_py(
     pass_filter: Option<&str>,
 ) {
     let draw_buf: &mut DrawingBufferPy = &mut draw_buffer_py;
-    if draw_buf.legacy_layers {
-        apply_material_on(
-            &mut draw_buf.db,
-            &material_buffer.content,
-            &texturebuffer.data,
-            &vertex_buffer.uv_array,
-            &primitivbuffer.content,
-        );
-        return;
-    }
 
     match pass_filter {
         Some("transparent") => {
@@ -423,18 +413,6 @@ pub fn apply_material_py_parallel(
              use apply_material_py for serial shading",
         )
     })?;
-    if draw_buf.legacy_layers {
-        apply_material_on_parallel(
-            pool.as_ref(),
-            &mut draw_buf.db,
-            &material_buffer.content,
-            &texturebuffer.data,
-            &vertex_buffer.uv_array,
-            &primitivbuffer.content,
-        );
-        return Ok(());
-    }
-
     if matches!(pass_filter, Some("transparent")) {
         let transparent_db = &draw_buf.transparent_db;
         let opaque_db = &mut draw_buf.opaque_db;

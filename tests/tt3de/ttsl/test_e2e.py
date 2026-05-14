@@ -32,6 +32,68 @@ from tt3de.ttsl.compiler import (
 
 
 class Test_EndToEndCompilation(unittest.TestCase):
+    def test_bouncing_clock_shader_and_condition_compiles(self):
+        """
+        Regression: mirrors demos/2d/bouncing_clock.py `clock_tex` where the
+        condition uses boolean `and` between two comparisons.
+        """
+        src = dedent(
+            """
+            def clock_tex(tt_TexCoord0: vec2, tt_TexCoord1: vec2) -> tuple[vec4, vec4, int]:
+                sampled_top: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
+                sampled_bottom: vec4 = tt_texture(u_TextureIndex, tt_TexCoord1)
+                if sampled_top.w < 0.5 and sampled_bottom.w < 0.5:
+                    return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+                top_rgb: vec4 = vec4(sampled_top.x, sampled_top.y, sampled_top.z, 1.0)
+                bottom_rgb: vec4 = vec4(sampled_bottom.x, sampled_bottom.y, sampled_bottom.z, 1.0)
+                return (top_rgb, bottom_rgb, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            src, "clock_tex", {"u_TextureIndex": int}
+        )
+        self.assertIsInstance(bytecode, bytes)
+        self.assertGreater(len(bytecode), 0)
+
+        reg_settings.set_variable("u_TextureIndex", 0)
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.5, 0.5))
+        reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.0, 0.0))
+        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertEqual(glyph, 0)
+        self.assertEqual(front, back)
+
+    def test_bouncing_clock_shader_branch_assign_then_return_compiles(self):
+        """
+        Regression: mirrors demos/2d/bouncing_clock.py `clock_tex`.
+        A branch with an early return followed by an assignment+return in the
+        fallthrough path previously crashed SSA rename with:
+        "no current version for var 'rgb' when filling phi operand".
+        """
+        src = dedent(
+            """
+            def clock_tex(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+                sampled: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
+                if sampled.w < 0.5:
+                    return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+                rgb: vec4 = vec4(sampled.x, sampled.y, sampled.z, 1.0)
+                return (rgb, rgb, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(
+            src, "clock_tex", {"u_TextureIndex": int}
+        )
+        self.assertIsInstance(bytecode, bytes)
+        self.assertGreater(len(bytecode), 0)
+
+        reg_settings.set_variable("u_TextureIndex", 0)
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
+        reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
+        reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.0, 0.0))
+        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+        self.assertEqual(glyph, 0)
+        self.assertEqual(front, back)
+
     def test_uv_pulse_branching_shader_compiles_to_bytecode(self):
         """
         Regression: if/else with returns on both branches uses builtins (tt_TexCoord0,
@@ -69,9 +131,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(10.0, 20.0))
 
     def test_ttsl_square_demo_shader_compiles_to_bytecode(self):
-        """
-        Mirrors demos/2d/ttsl_square.py shader source.
-        """
+        """Mirrors demos/2d/ttsl_square.py shader source."""
         src = dedent(
             """
             def my_shader(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
@@ -98,11 +158,10 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(12.0, 8.0))
 
     def test_ttsl_square_demo_shader_time_changes_pixels_material_apply(self):
-        """
-        Same shader as ``demos/2d/ttsl_square.py``: compiled bytecode plus constant seed
-        registers, ``MaterialBufferPy.set_shader_time``, then sequential and parallel
-        ``apply_material_*`` must reflect changing ``tt_Time`` in the raster output.
-        """
+        """Same shader as ``demos/2d/ttsl_square.py``: compiled bytecode plus constant
+        seed registers, ``MaterialBufferPy.set_shader_time``, then sequential and
+        parallel ``apply_material_*`` must reflect changing ``tt_Time`` in the raster
+        output."""
         src = dedent(
             """
             def my_shader(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
@@ -169,7 +228,8 @@ class Test_EndToEndCompilation(unittest.TestCase):
         )
 
     def test_tt_texture_shader_samples_bound_texture(self):
-        """Bytecode ``tt_texture`` must read the live ``TextureBuffer`` during apply_material."""
+        """Bytecode ``tt_texture`` must read the live ``TextureBuffer`` during
+        apply_material."""
         src = dedent(
             """
             def shade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
@@ -311,7 +371,8 @@ class Test_EndToEndCompilation(unittest.TestCase):
             self.assertEqual(glyph, 0, msg=f"glyph should be 0 at ndc={ndc}")
 
     def test_depth_fog_glyph_shader_vm_vs_python_reference(self):
-        """Mirror ``depth_fog_glyph`` (demos fog + quantized glyph bands): VM vs Python.
+        """
+        Mirror ``depth_fog_glyph`` (demos fog + quantized glyph bands): VM vs Python.
 
         Regression: cascading ``if cond: return ...`` (no ``else``) used to flow
         through every conditional and run the final return because
@@ -432,7 +493,8 @@ class Test_EndToEndCompilation(unittest.TestCase):
             )
 
     def test_user_uniforms_vec3_vec2_ttsl_run(self):
-        """User globals from globals_dict occupy VM registers; seed via RegisterSettings."""
+        """User globals from globals_dict occupy VM registers; seed via
+        RegisterSettings."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -590,7 +652,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         self.assertAlmostEqual(front.x, expected, places=4)
 
     def test_floor_with_variable_input(self):
-        """floor applied to a runtime uniform, not just a compile-time constant."""
+        """Floor applied to a runtime uniform, not just a compile-time constant."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -611,7 +673,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             )
 
     def test_mod_with_variable_wrapping(self):
-        """mod wraps a computed index back into [0, 4) — the fog-band use case."""
+        """Mod wraps a computed index back into [0, 4) — the fog-band use case."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -661,7 +723,7 @@ class Test_Normalize(unittest.TestCase):
     """End-to-end tests for normalize builtin."""
 
     def test_normalize_v3_happy_path(self):
-        """normalize(vec3) returns unit-length vector."""
+        """Normalize(vec3) returns unit-length vector."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -677,7 +739,7 @@ class Test_Normalize(unittest.TestCase):
         self.assertAlmostEqual(front.z, 0.0, places=5)
 
     def test_normalize_v3_non_unit(self):
-        """normalize of a non-unit vector yields a unit vector."""
+        """Normalize of a non-unit vector yields a unit vector."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -695,7 +757,7 @@ class Test_Normalize(unittest.TestCase):
         self.assertAlmostEqual(front.z, expected.z, places=5)
 
     def test_normalize_v3_zero_vector(self):
-        """normalize(zero) returns zero vector (guarded in Rust VM)."""
+        """Normalize(zero) returns zero vector (guarded in Rust VM)."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -711,7 +773,7 @@ class Test_Normalize(unittest.TestCase):
         self.assertAlmostEqual(front.z, 0.0, places=5)
 
     def test_normalize_v2(self):
-        """normalize(vec2) works."""
+        """Normalize(vec2) works."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -727,7 +789,7 @@ class Test_Normalize(unittest.TestCase):
         self.assertAlmostEqual(front.y, expected.y, places=5)
 
     def test_normalize_v4(self):
-        """normalize(vec4) works."""
+        """Normalize(vec4) works."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -744,7 +806,7 @@ class Test_Normalize(unittest.TestCase):
         self.assertAlmostEqual(front.z, expected.z, places=5)
 
     def test_normalize_with_variable_input(self):
-        """normalize works with runtime (non-constant) inputs."""
+        """Normalize works with runtime (non-constant) inputs."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -782,7 +844,7 @@ class Test_Dot(unittest.TestCase):
     """End-to-end tests for dot builtin."""
 
     def test_dot_v3_orthogonal(self):
-        """dot(orthogonal vectors) = 0."""
+        """Dot(orthogonal vectors) = 0."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -797,7 +859,7 @@ class Test_Dot(unittest.TestCase):
         self.assertAlmostEqual(front.x, 0.0, places=5)
 
     def test_dot_v3_parallel(self):
-        """dot(parallel unit vectors) = 1."""
+        """Dot(parallel unit vectors) = 1."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -812,7 +874,7 @@ class Test_Dot(unittest.TestCase):
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_dot_v3_opposite(self):
-        """dot(opposite unit vectors) = -1."""
+        """Dot(opposite unit vectors) = -1."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -827,7 +889,7 @@ class Test_Dot(unittest.TestCase):
         self.assertAlmostEqual(front.x, -1.0, places=5)
 
     def test_dot_v2(self):
-        """dot(vec2, vec2) works."""
+        """Dot(vec2, vec2) works."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -843,7 +905,7 @@ class Test_Dot(unittest.TestCase):
         self.assertAlmostEqual(front.x, expected, places=5)
 
     def test_dot_v4(self):
-        """dot(vec4, vec4) works."""
+        """Dot(vec4, vec4) works."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -859,7 +921,7 @@ class Test_Dot(unittest.TestCase):
         self.assertAlmostEqual(front.x, expected, places=5)
 
     def test_dot_with_variable_input(self):
-        """dot works with runtime (non-constant) vectors."""
+        """Dot works with runtime (non-constant) vectors."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -895,7 +957,7 @@ class Test_Length(unittest.TestCase):
     """End-to-end tests for length builtin."""
 
     def test_length_v3_unit(self):
-        """length(unit vector) = 1."""
+        """Length(unit vector) = 1."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             v: vec3 = vec3(1.0, 0.0, 0.0)
@@ -907,7 +969,7 @@ class Test_Length(unittest.TestCase):
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_length_v3_zero(self):
-        """length(zero) = 0."""
+        """Length(zero) = 0."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             v: vec3 = vec3(0.0, 0.0, 0.0)
@@ -919,7 +981,7 @@ class Test_Length(unittest.TestCase):
         self.assertAlmostEqual(front.x, 0.0, places=5)
 
     def test_length_v2_v4(self):
-        """length(vec2) and length(vec4)."""
+        """Length(vec2) and length(vec4)."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             v2: vec2 = vec2(3.0, 4.0)
@@ -958,7 +1020,7 @@ class Test_Max(unittest.TestCase):
         self.assertAlmostEqual(front.x, 7.0, places=5)
 
     def test_max_f32_negative(self):
-        """max with negative values."""
+        """Max with negative values."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             m: float = max(-2.0, -5.0)
@@ -969,7 +1031,7 @@ class Test_Max(unittest.TestCase):
         self.assertAlmostEqual(front.x, -2.0, places=5)
 
     def test_max_vec3(self):
-        """max(vec3, vec3) component-wise."""
+        """Max(vec3, vec3) component-wise."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             a: vec3 = vec3(1.0, 5.0, 3.0)
@@ -1028,7 +1090,7 @@ class Test_Clamp(unittest.TestCase):
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_clamp_vec3(self):
-        """clamp(vec3, vec3, vec3) component-wise."""
+        """Clamp(vec3, vec3, vec3) component-wise."""
         src = dedent("""
         def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
             x: vec3 = vec3(-0.5, 0.5, 1.5)

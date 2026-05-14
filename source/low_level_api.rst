@@ -107,13 +107,7 @@ Depth Buffer:
 Depth layer resolve
 ^^^^^^^^^^^^^^^^^^^
 
-``DrawingBufferPy`` now supports two rendering models:
-
-- ``legacy_layers=True`` (default): legacy ``DrawBuffer<2, f32>`` K-buffer-like
-  resolve behavior for compatibility.
-- ``legacy_layers=False``: two-pass model with one depth winner per pass.
-
-New two-pass behavior (``legacy_layers=False``):
+``DrawingBufferPy`` uses one canonical two-pass model with one depth winner per pass:
 
 1. **Opaque pass** rasterizes non-transparent primitives into ``DrawBuffer<1, f32>``.
 2. **Opaque material resolve** writes full ``CanvasCell`` state (front/back/glyph).
@@ -136,6 +130,13 @@ Transparent rendering is usually handled separately by drawing opaque geometry
 first, then drawing transparent geometry back-to-front with blending enabled
 and depth writes disabled, or by using advanced techniques such as depth
 peeling, A-buffers, or K-buffers.
+
+Migration note
+^^^^^^^^^^^^^^
+
+The ``legacy_layers`` constructor kwarg was removed from ``DrawingBufferPy``.
+Update existing code by deleting that kwarg and validating scenes that relied
+on legacy two-layer stacking artifacts.
 
 
 Material modes

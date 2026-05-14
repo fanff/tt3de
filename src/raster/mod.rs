@@ -184,26 +184,22 @@ pub fn raster_all_py(
         Some("transparent") => Some(PassTag::Transparent),
         _ => None,
     };
-    if db.legacy_layers {
-        raster_all(primitivbuffer, &vbuffpy.buffer3d, &mut db.db, pass);
-    } else {
-        match pass {
-            Some(PassTag::Transparent) => {
-                raster_all(
-                    primitivbuffer,
-                    &vbuffpy.buffer3d,
-                    &mut db.transparent_db,
-                    Some(PassTag::Transparent),
-                );
-            }
-            _ => {
-                raster_all(
-                    primitivbuffer,
-                    &vbuffpy.buffer3d,
-                    &mut db.opaque_db,
-                    Some(PassTag::Opaque),
-                );
-            }
+    match pass {
+        Some(PassTag::Transparent) => {
+            raster_all(
+                primitivbuffer,
+                &vbuffpy.buffer3d,
+                &mut db.transparent_db,
+                Some(PassTag::Transparent),
+            );
+        }
+        _ => {
+            raster_all(
+                primitivbuffer,
+                &vbuffpy.buffer3d,
+                &mut db.opaque_db,
+                Some(PassTag::Opaque),
+            );
         }
     }
 }
