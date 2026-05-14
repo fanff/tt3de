@@ -163,10 +163,13 @@ pub struct LightSlot {
 }
 ```
 
-**`LightBuffer`**:
+**LightBuffer capacity**: The buffer uses a fixed compile-time capacity — **no const generic parameter**. (Unlike `TextureBuffer`, the LightBuffer is only consumed through `&dyn TtslLightEnv` inside the TTSL VM, never through the material trait dispatch. A const generic would propagate into `RenderMaterial<const TEXTURE_BUFFER_SIZE, const LIGHT_CAPACITY, ...>`, exploding the generic parameter count across ~18 trait impls and function signatures for zero benefit.)
+
 ```rust
-pub struct LightBuffer<const CAPACITY: usize> {
-    slots: [LightSlot; CAPACITY],
+pub const MAX_LIGHTS: usize = 32;
+
+pub struct LightBuffer {
+    slots: [LightSlot; MAX_LIGHTS],
     count: usize,
 }
 ```
@@ -174,6 +177,8 @@ pub struct LightBuffer<const CAPACITY: usize> {
 Methods:
 - `set_ambient(index, color)`, `set_directional(index, color, direction)`, `set_point(index, color, position, attenuation)`, `clear(index)`, `count() -> usize`
 - `update_view_space(view_matrix: &Mat4)` — called once per frame before material application. Transforms `world_direction` and `world_position` to view space for each active slot. For directional lights: `view_dir = (view_matrix * vec4(world_dir, 0.0)).xyz()`. For point lights: `view_pos = (view_matrix * vec4(world_pos, 1.0)).xyz()`. Ambient lights are space-independent (color only).
+
+The Python constructor `LightBufferPy(capacity=16)` accepts a `capacity` parameter but it is a runtime validation cap: the actual slot array is always `MAX_LIGHTS` (32), and the Python constructor raises `ValueError` if `capacity > MAX_LIGHTS`. This avoids generic propagation across the PyO3 boundary while giving users a sensible default display limit.
 
 Direction is normalized on write (`set_directional` normalizes `world_direction` internally).
 
@@ -190,7 +195,19 @@ Direction is normalized on write (`set_directional` normalizes `world_direction`
 | `tt_lightPosition(i: int)` | `(int) → vec3` | `TT_LIGHT_POSITION` | **View-space** position |
 | `tt_lightAttenuation(i: int)` | `(int) → vec3` | `TT_LIGHT_ATTENUATION` | (constant, linear, quadratic) — space-independent |
 
-**VM execution**: Introduce `TtslLightEnv` trait (mirrors `TtslTextureEnv`):
+**VM environment — bundled `TtslEnv`**: To avoid proliferating optional trait parameters in `run_ttsl` (one per future env type: texture, light, clip, etc.), bundle the texture and light environments into a single struct:
+
+```rust
+/// Bundle of host-provided environments available to TTSL opcodes.
+/// Passed as `Option<&TtslEnv>` to avoid churning the run_ttsl signature
+/// every time a new env type is added.
+pub struct TtslEnv<'a> {
+    pub tex: Option<&'a dyn TtslTextureEnv>,
+    pub light: Option<&'a dyn TtslLightEnv>,
+}
+```
+
+Where `TtslLightEnv` is the new trait for light data access:
 
 ```rust
 pub trait TtslLightEnv {
@@ -205,16 +222,38 @@ pub trait TtslLightEnv {
 
 `LightBuffer` implements `TtslLightEnv`, returning view-space values from the `view_direction` / `view_position` fields (populated by `update_view_space`). Out-of-range indices return zero vectors / 0.
 
-The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting to `None`).
+The `run_ttsl` function signature changes from a standalone `tex: Option<&dyn TtslTextureEnv>` to a single bundled parameter:
 
-**Opcode code generation**: New `"Light Accessors"` category in `low_level_def.py` with hand-written `rust_match_code` blocks (like `TT_TEXTURE`) that access the `light` env pointer.
+```rust
+// Before
+pub fn run_ttsl(instrs: &[Instr; 256], regs: &mut Registers,
+    tex: Option<&dyn TtslTextureEnv>) -> (Vec4, Vec4, i32);
+
+// After
+pub fn run_ttsl(instrs: &[Instr; 256], regs: &mut Registers,
+    env: Option<&TtslEnv>) -> (Vec4, Vec4, i32);
+```
+
+**Impact on call sites**: The existing `tex` parameter is folded into the struct. ~6 call sites must be updated, but the change is mechanical:
+
+```rust
+// Old:   run_ttsl(instrs, regs, Some(&texture_buffer))
+// New:   run_ttsl(instrs, regs, Some(&TtslEnv { tex: Some(&texture_buffer), light: None }))
+// New+:  run_ttsl(instrs, regs, Some(&TtslEnv { tex: Some(&texture_buffer), light: Some(&light_buffer) }))
+```
+
+This is a one-time migration but future-proof against additional env types (simply add a field to `TtslEnv`).
+
+**Note**: Because LightBuffer is only consumed through `&dyn TtslLightEnv` inside `run_ttsl`, it does **not** need to thread through `RenderMaterial`, `apply_material_on`, or `apply_material` — those traits and functions remain unchanged. The conversion from concrete buffer to trait object happens locally in `ShaderMaterial::render_mat`.
+
+**Opcode code generation**: New `"Light Accessors"` category in `low_level_def.py` with hand-written `rust_match_code` blocks (like `TT_TEXTURE`) that access `env.light`.
 
 ### Phase 3: Engine integration
 
 1. **`RustRenderContext`**: Add a `light_buffer` field (defaulting to an empty buffer or `None`).
 2. **Per-frame view-space update**: In the render path, after the camera's view matrix is set and before material application, call `light_buffer.update_view_space(&transform_pack.view_matrix_3d)`. This mirrors how `glLightfv` transformed light data by the active modelview matrix.
-3. **`ShaderMaterial::render_mat`**: Pass the light buffer reference to `run_ttsl` as `TtslLightEnv`.
-4. **`DrawBuffer::apply_material_on`**: Thread the light buffer through to material application (same pattern as `TextureBuffer`).
+3. **`ShaderMaterial::render_mat`**: Construct a `TtslEnv` with both `tex` and `light` pointers, and pass it to `run_ttsl`. The conversion from `&LightBuffer` to `&dyn TtslLightEnv` happens here — no generics on `ShaderMaterial` are needed.
+4. **No changes to `RenderMaterial` trait or `apply_material_on`**: Unlike `TextureBuffer`, the LightBuffer is only consumed inside the TTSL VM (`run_ttsl` → `exec_opcode`). Neither the `RenderMaterial` trait nor the `apply_material` dispatch chain needs to carry it. This significantly reduces the blast radius vs threading it through the entire material pipeline.
 5. **Python `RustRenderContext`**: Expose `light_buffer` property for assignment.
 
 ### Phase 4: Compiler support
@@ -225,6 +264,8 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 4. These are **not** `globals_dict` entries or implicit pixel vars — they are global callable built-ins (like `tt_texture`).
 
 ### Phase 5: Reference shader + demo
+
+> **Prerequisite**: The reference shader depends on `dot`, `normalize`, `length`, `max`, and `clamp` — these are not part of this evolution. They must be delivered by `evol-shader-math-normal` first. The shader below is the **target**; during implementation of Phases 1-4, use a simplified shader that outputs raw light properties (e.g., `return (vec4(tt_lightColor(0), 1.0), ...)`) for testing.
 
 1. **Reference shader source**: A TTSL function implementing (see User-visible functionality above):
    - Ambient: `result += albedo * tt_lightColor(i)`
@@ -244,11 +285,10 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 
 - `src/lightbuffer/mod.rs` (new) — `LightBuffer`, `LightSlot`, `LightType`, `update_view_space`, `TtslLightEnv` impl
 - `src/lightbuffer/light_buffer_py.rs` (new) — PyO3 `LightBufferPy`
-- `src/ttsl/mod.rs` — `TtslLightEnv` trait, `run_ttsl` signature update
+- `src/ttsl/mod.rs` — `TtslLightEnv` trait, `TtslEnv` struct, `run_ttsl` signature update (tex folded into struct)
 - `src/ttsl/opcodes.rs` — auto-generated (new light opcodes)
-- `src/material/shader_material.rs` — pass light env to `run_ttsl`
-- `src/material/mod.rs` — `apply_material` gains light env parameter
-- `src/drawbuffer/drawbuffer.rs` — thread light buffer through `apply_material_on`
+- `src/material/shader_material.rs` — construct `TtslEnv` and pass to `run_ttsl` (only production call site affected)
+- *(No changes to `RenderMaterial` trait, `apply_material_on`, or `apply_material` — LightBuffer is consumed only inside the VM)*
 - `src/lib.rs` — expose `LightBufferPy`, register `lightbuffer` module
 - `python/tt3de/render_context_rust.py` — call `update_view_space` in render path, expose `light_buffer`
 - `python/tt3de/ttsl/ttisa/low_level_def.py` — new opcode generators for light accessors
@@ -289,13 +329,13 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 |-------|------|------|---------------------|
 | Phase 1: LightBuffer (Rust) | M | Low — new module, no existing code touched | Yes (inert until opcodes exist) |
 | Phase 2: Accessor opcodes | M | Medium — `run_ttsl` signature change propagates | Yes, with Phase 1 |
-| Phase 3: Engine integration | M | Medium — view-space auto-transform in render path, threading through apply_material | Requires Phase 1+2 |
+| Phase 3: Engine integration | M | Low — view-space auto-transform in render path, local `TtslEnv` construction in `ShaderMaterial::render_mat` only; no material dispatch changes | Requires Phase 1+2 |
 | Phase 4: Compiler support | M | Medium — new built-in function category | Requires Phase 2 |
 | Phase 5: Reference shader + demo | S | Low — pure TTSL + Python | Requires all above |
 
 **Dependency**: This evolution depends on `evol-shader-math-normal` (`tt_Normal`, `tt_ViewPos`, smooth normals, `dot`, `normalize`, `length`, `max`, `clamp`) being shipped first.
 
-**Rollback**: LightBuffer is additive. If it lands behind a feature flag or simply unused, existing behavior is unchanged.
+**Rollback**: The LightBuffer data structure and opcodes are additive (no behavioral change when unused). However, the `TtslEnv` struct refactor (folding `tex` into the bundled struct) touches all `run_ttsl` call sites (~6). Rolling back LightBuffer requires reverting the `TtslEnv` refactor across those sites. The per-frame `update_view_space` call is a new side effect in the render path — if the LightBuffer is empty, it's a no-op, but the call itself must be removed on rollback.
 
 ## A priori performance analysis
 
@@ -304,7 +344,7 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 - **Light accessor opcodes**: For a reference shader with 3 lights and ~5 accessors per light = ~15 opcode dispatches per pixel. Each is a bounds-checked array index + field read. For 12K cells × 15 = ~180K accessor calls/frame. Sub-millisecond on modern CPUs.
 - **Per-frame view-space update** (`update_view_space`): 16 lights × 2 matrix-vector multiplies (direction + position) = 32 operations per frame. Negligible.
 - **LightBuffer memory**: 16 slots × ~120 bytes (world + view fields) ≈ 1.9 KB. L1 cache.
-- **`run_ttsl` signature**: One extra `Option<&dyn Trait>` pointer-sized argument.
+- **`run_ttsl` signature**: The `tex` and `light` envs are bundled into a single `&TtslEnv` pointer (same size as the old single-optional parameter — unchanged register pressure).
 
 **Relative cost ranking** (cheapest → expensive):
 
@@ -316,8 +356,8 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 
 ## Risks and open questions
 
-- **`run_ttsl` signature change**: Adding `Option<&dyn TtslLightEnv>` touches every call site. Mitigate by bundling textures and lights into a single `TtslEnv` struct or trait.
-- **TTSL loop support**: The reference shader needs to iterate over lights. If TTSL doesn't support `while` or `for` loops yet, the reference shader must unroll manually for a fixed count. Document this limitation. Loop support could be a separate evolution.
+- **`run_ttsl` signature change**: The existing `tex: Option<&dyn TtslTextureEnv>` parameter is folded into a new `TtslEnv` struct alongside the new `light` field. This is a one-time change that touches ~6 call sites (1 production, 1 Python binding, 4 tests). Once migrated, future env types only add a field to `TtslEnv` — no more signature churn. **This is NOT additive**: rolling back LightBuffer requires reverting the `TtslEnv` refactor across all 6 call sites.
+- **TTSL loop support**: TTSL already supports `while` loops (not `for`). The reference shader can iterate lights with `i = 0; while i < tt_lightCount(): ... i = i + 1`. The doc's earlier draft was too pessimistic — this is not a risk, just verify `i32` comparison operators work in the compiled output.
 - **HDR and clamping**: Light color × albedo can exceed 1.0. The reference shader clamps to [0, 1] before output. The convention is: shaders are responsible for tone mapping / clamping.
 - **Directional light direction convention**: In OpenGL, `GL_POSITION` with `w=0` is a direction *toward* the light (not from the light). The reference shader should document whether `tt_lightDirection` is "toward light" or "from light" — suggest "toward light" (positive dot product with N means lit).
 - **Opcode numbering stability**: Adding opcodes shifts subsequent indices. Not a problem today (no bytecode persistence).
@@ -331,6 +371,9 @@ The `run_ttsl` function signature gains `Option<&dyn TtslLightEnv>` (defaulting 
 - **Lighting model**: Reference TTSL shader, not a Rust `LitMaterial` mode.
 - **Point lights enabled**: `tt_ViewPos` from prerequisite evolution provides the fragment position needed for distance/direction computation.
 - **Direction convention**: `tt_lightDirection` returns the direction **toward** the light source (positive `dot(N, L)` = lit surface).
+- **LightBuffer capacity**: Fixed compile-time `MAX_LIGHTS = 32` (no const generic). Python `capacity` is a runtime validation cap.
+- **Env bundling**: `TtslEnv` struct bundles `tex` + `light` to avoid signature churn. One-time migration of ~6 call sites, then stable.
+- **Material dispatch untouched**: LightBuffer is consumed only inside the TTSL VM (`run_ttsl`). No changes to `RenderMaterial`, `apply_material_on`, or `apply_material`.
 - **Resolution**: *(to be filled when closing)*
 
 ## References
