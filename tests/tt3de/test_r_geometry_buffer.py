@@ -78,7 +78,11 @@ class Test_GeometryBuffer(unittest.TestCase):
             elem0,
             {
                 "_type": "Polygon3D",
-                "geom_ref": {"material_id": 202, "node_id": 102},
+                "geom_ref": {
+                    "material_id": 202,
+                    "node_id": 102,
+                    "transparent": False,
+                },
                 "p_start": 0,
                 "triangle_count": 1,
                 "uv_start": 3,
@@ -109,7 +113,11 @@ class Test_GeometryBuffer(unittest.TestCase):
             elem0,
             {
                 "_type": "Polygon2D",
-                "geom_ref": {"material_id": 202, "node_id": 102},
+                "geom_ref": {
+                    "material_id": 202,
+                    "node_id": 102,
+                    "transparent": False,
+                },
                 "p_start": 2,
                 "triangle_count": 23,
                 "uv_start": 32,

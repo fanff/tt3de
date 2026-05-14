@@ -16,7 +16,7 @@ related:
 
 ## Summary
 
-Add real light capability to the tt3de engine. Introduce a **LightBuffer** — a new engine-level buffer holding a fixed-capacity set of typed light sources (ambient, directional, point) — and TTSL **accessor opcodes** that let shaders query individual light properties by index. The LightBuffer stores light data in **world space** (user-friendly); the engine **auto-transforms** positions and directions to **view space** each frame before material application, following the OpenGL `glLightfv` convention. Provide a **reference TTSL shader** demonstrating ambient illumination, Lambert diffuse from a directional light, and point-light distance attenuation — all computed in view space using `tt_Normal`, `tt_ViewPos`, and the light accessors. Spot lights, shadows, and specular effects are explicitly excluded from this first iteration.
+Add real light capability to the tt3de engine. Introduce a **LightBuffer** — a new engine-level buffer holding a fixed-capacity set of typed light sources (ambient, directional, point) — and TTSL **accessor opcodes** that let shaders query individual light properties by index. The LightBuffer stores light data in **world space** (user-friendly); the engine **auto-transforms** positions and directions to **view space** each frame before material application, following the OpenGL `glLightfv` convention. The integration follows the current drawing model: opaque shading into `opaque_db`, then transparent shading from `transparent_db` composited onto opaque canvas. Provide a **reference TTSL shader** demonstrating ambient illumination, Lambert diffuse from a directional light, and point-light distance attenuation — all computed in view space using `tt_Normal`, `tt_ViewPos`, and the light accessors. Spot lights, shadows, and specular effects are explicitly excluded from this first iteration.
 
 ## Motivation and context
 
@@ -124,7 +124,9 @@ None. Existing apps that do not create a `LightBufferPy` are unaffected. The ren
 |-----------|--------------|
 | Light sources | None — no concept in the engine |
 | Shader data access | TextureBuffer via `tt_texture(slot, uv)` opcode; user uniforms via register seeds |
-| `RustRenderContext` | Holds `transform_buffer`, `geometry_buffer`, `primitive_buffer`, `drawing_buffer`, `texture_buffer`, `material_buffer` |
+| Drawing pipeline | Two-pass routing via `pass_filter`: raster/apply opaque first, then raster/apply transparent |
+| `DrawingBufferPy` | Holds `opaque_db: DrawBuffer<1, f32>` and `transparent_db: DrawBuffer<1, f32>`; transparent composite writes onto opaque canvas |
+| `RustRenderContext` | Holds `transform_buffer`, `geometry_buffer`, `primitive_buffer`, `drawing_buffer`, `texture_buffer`, `material_buffer`; orchestrates pass-filtered raster/material calls |
 | `run_ttsl` / `ShaderMaterial::render_mat` | Receives `&TextureBuffer` via `TtslTextureEnv` trait; no light env |
 | `TransformPack` | Has unused `environment_light: Vec3` field — placeholder, not wired |
 
@@ -251,10 +253,12 @@ This is a one-time migration but future-proof against additional env types (simp
 ### Phase 3: Engine integration
 
 1. **`RustRenderContext`**: Add a `light_buffer` field (defaulting to an empty buffer or `None`).
-2. **Per-frame view-space update**: In the render path, after the camera's view matrix is set and before material application, call `light_buffer.update_view_space(&transform_pack.view_matrix_3d)`. This mirrors how `glLightfv` transformed light data by the active modelview matrix.
-3. **`ShaderMaterial::render_mat`**: Construct a `TtslEnv` with both `tex` and `light` pointers, and pass it to `run_ttsl`. The conversion from `&LightBuffer` to `&dyn TtslLightEnv` happens here — no generics on `ShaderMaterial` are needed.
-4. **No changes to `RenderMaterial` trait or `apply_material_on`**: Unlike `TextureBuffer`, the LightBuffer is only consumed inside the TTSL VM (`run_ttsl` → `exec_opcode`). Neither the `RenderMaterial` trait nor the `apply_material` dispatch chain needs to carry it. This significantly reduces the blast radius vs threading it through the entire material pipeline.
-5. **Python `RustRenderContext`**: Expose `light_buffer` property for assignment.
+2. **Per-frame view-space update**: In the render path, after the camera's view matrix is set and before the first material pass, call `light_buffer.update_view_space(&transform_pack.view_matrix_3d)`. This mirrors how `glLightfv` transformed light data by the active modelview matrix.
+3. **Pass-model alignment**: Keep one view-space snapshot per frame and reuse it for both shading passes (`pass_filter="opaque"` and `pass_filter="transparent"`). No per-pass re-transform is needed unless camera/lights mutate mid-frame.
+4. **`ShaderMaterial::render_mat`**: Construct a `TtslEnv` with both `tex` and `light` pointers, and pass it to `run_ttsl`. The conversion from `&LightBuffer` to `&dyn TtslLightEnv` happens here — no generics on `ShaderMaterial` are needed.
+5. **No changes to `RenderMaterial` trait or apply-dispatch shape**: Unlike `TextureBuffer`, the LightBuffer is consumed inside the TTSL VM (`run_ttsl` → `exec_opcode`). The material dispatch path (`apply_material_on` for opaque and `apply_material_transparent_on` for transparent) stays structurally unchanged.
+6. **Transparent composite semantics unchanged**: Lighting affects shader output, but transparent compositing remains front-color blend + optional glyph replacement over opaque canvas according to `BlendMode` and `GlyphPolicy`.
+7. **Python `RustRenderContext`**: Expose `light_buffer` property for assignment.
 
 ### Phase 4: Compiler support
 
@@ -290,7 +294,8 @@ This is a one-time migration but future-proof against additional env types (simp
 - `src/material/shader_material.rs` — construct `TtslEnv` and pass to `run_ttsl` (only production call site affected)
 - *(No changes to `RenderMaterial` trait, `apply_material_on`, or `apply_material` — LightBuffer is consumed only inside the VM)*
 - `src/lib.rs` — expose `LightBufferPy`, register `lightbuffer` module
-- `python/tt3de/render_context_rust.py` — call `update_view_space` in render path, expose `light_buffer`
+- `python/tt3de/render_context_rust.py` — call `update_view_space` once per frame before material passes; expose `light_buffer`
+- `src/primitiv_building/mod.rs` — keep pass-filtered apply path wired (opaque + transparent) while threading LightBuffer access through shader execution
 - `python/tt3de/ttsl/ttisa/low_level_def.py` — new opcode generators for light accessors
 - `python/tt3de/ttsl/ttsl_assembly.py` — new `OpCodes` members
 - `python/tt3de/ttsl/compiler.py` — light accessor built-in functions
@@ -321,6 +326,8 @@ This is a one-time migration but future-proof against additional env types (simp
 - **Compiler tests** (Python): Compile shaders using `tt_lightCount()`, `tt_lightColor(0)`, etc. Verify bytecode generation succeeds.
 - **E2E tests** (Python): A shader that reads light properties and returns them as pixel colors; verify output matches the configured LightBuffer after view-space transform.
 - **Integration test**: Full render pipeline with a LightBuffer attached; verify that a triangle facing the directional light is brighter than one facing away.
+- **Pass parity test**: Attach LightBuffer and render one opaque + one transparent primitive using the same shader. Verify both passes see the same light values and transparent output composites correctly over opaque output.
+- **Opaque serial/parallel parity**: With LightBuffer-enabled shaders, assert `apply_material_py` and `apply_material_py_parallel(pass_filter="opaque")` produce equivalent canvas output.
 - **Regression**: All existing tests pass. Shaders that don't use light accessors must be unaffected.
 
 ## Complexity and scope
@@ -343,6 +350,7 @@ This is a one-time migration but future-proof against additional env types (simp
 
 - **Light accessor opcodes**: For a reference shader with 3 lights and ~5 accessors per light = ~15 opcode dispatches per pixel. Each is a bounds-checked array index + field read. For 12K cells × 15 = ~180K accessor calls/frame. Sub-millisecond on modern CPUs.
 - **Per-frame view-space update** (`update_view_space`): 16 lights × 2 matrix-vector multiplies (direction + position) = 32 operations per frame. Negligible.
+- **Two-pass shading impact**: Light accessor cost applies wherever shader materials run; transparent pass pays the same per-fragment accessor overhead before front-color compositing.
 - **LightBuffer memory**: 16 slots × ~120 bytes (world + view fields) ≈ 1.9 KB. L1 cache.
 - **`run_ttsl` signature**: The `tex` and `light` envs are bundled into a single `&TtslEnv` pointer (same size as the old single-optional parameter — unchanged register pressure).
 
@@ -360,6 +368,7 @@ This is a one-time migration but future-proof against additional env types (simp
 - **TTSL loop support**: TTSL already supports `while` loops (not `for`). The reference shader can iterate lights with `i = 0; while i < tt_lightCount(): ... i = i + 1`. The doc's earlier draft was too pessimistic — this is not a risk, just verify `i32` comparison operators work in the compiled output.
 - **HDR and clamping**: Light color × albedo can exceed 1.0. The reference shader clamps to [0, 1] before output. The convention is: shaders are responsible for tone mapping / clamping.
 - **Directional light direction convention**: In OpenGL, `GL_POSITION` with `w=0` is a direction *toward* the light (not from the light). The reference shader should document whether `tt_lightDirection` is "toward light" or "from light" — suggest "toward light" (positive dot product with N means lit).
+- **Transparent pass interactions**: Lighting is evaluated before transparent compositing, but visual results still depend on blend mode and glyph policy (`preserve_existing` vs `replace_from_shader`). Document this clearly in demo and docs to avoid confusion when lit transparent layers look muted.
 - **Opcode numbering stability**: Adding opcodes shifts subsequent indices. Not a problem today (no bytecode persistence).
 - **`TransformPack.environment_light`**: Existing unused field. Consider removing or repurposing it now that a proper LightBuffer exists, to avoid confusion.
 

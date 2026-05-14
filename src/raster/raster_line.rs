@@ -91,6 +91,7 @@ mod tests {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
         let pav = Vertex {
             pos: nalgebra_glm::vec4(0.0, 1.0, 1.0, 1.0),
@@ -116,6 +117,7 @@ mod tests {
             material_id: 2,
             node_id: 3,
             primitive_id: 0,
+            transparent: false,
         };
         let pav = Vertex {
             pos: nalgebra_glm::vec4(0.0, 0.0, 1.0, 1.0),

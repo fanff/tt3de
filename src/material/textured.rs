@@ -2,6 +2,7 @@ use nalgebra_glm::Vec3;
 
 use crate::{
     drawbuffer::{
+        blend::{BlendMode, GlyphPolicy},
         drawbuffer::{CanvasCell, Color, DepthBufferCell, PixInfo},
         glyphset::HALF_UPPER_BLOCK,
     },
@@ -30,6 +31,8 @@ pub struct BaseTexture {
     pub back_uv_0: bool,
     pub glyph_uv_0: bool,
     pub to_glyph_method: ToGlyphMethod,
+    pub blend_mode: BlendMode,
+    pub glyph_policy: GlyphPolicy,
 }
 impl BaseTexture {
     pub fn new(
@@ -44,6 +47,8 @@ impl BaseTexture {
         back_uv_0: bool,
         glyph_uv_0: bool,
         to_glyph_method: ToGlyphMethod,
+        blend_mode: BlendMode,
+        glyph_policy: GlyphPolicy,
     ) -> Self {
         Self {
             albedo_texture_idx,
@@ -57,6 +62,8 @@ impl BaseTexture {
             back_uv_0,
             glyph_uv_0,
             to_glyph_method: to_glyph_method,
+            blend_mode,
+            glyph_policy,
         }
     }
 }
@@ -250,12 +257,16 @@ fn blend_color_to_cell_single(cell_color: &mut Color, color: &RGBA) {
 pub struct Textured {
     pub albedo_texture_idx: usize,
     pub glyph_idx: u8,
+    pub blend_mode: BlendMode,
+    pub glyph_policy: GlyphPolicy,
 }
 impl Textured {
     pub fn new(albedo_texture_idx: usize, glyph_idx: u8) -> Self {
         Self {
             albedo_texture_idx,
             glyph_idx,
+            blend_mode: BlendMode::Replace,
+            glyph_policy: GlyphPolicy::PreserveExisting,
         }
     }
 }

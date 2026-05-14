@@ -14,6 +14,15 @@ def rust_version(primitive_buffer, vertex_buffer, drawing_buffer):
     raster_all_py(primitive_buffer, vertex_buffer, drawing_buffer)
 
 
+def rust_transparent_pass(primitive_buffer, vertex_buffer, drawing_buffer):
+    raster_all_py(
+        primitive_buffer,
+        vertex_buffer,
+        drawing_buffer,
+        pass_filter="transparent",
+    )
+
+
 sizes = [32, 64, 128, 256, 512, 2048, 4096]
 
 
@@ -43,6 +52,35 @@ def test_bench_rust_triangle_raster(benchmark, size):
         )
 
     benchmark(rust_version, primitive_buffer, vertex_buffer, drawing_buffer)
+
+
+@pytest.mark.parametrize("size", [64, 256, 512])
+@pytest.mark.benchmark(group="triangle_raster_transparent_pass")
+def test_bench_rust_triangle_raster_transparent_pass(benchmark, size):
+    drawing_buffer = DrawingBufferPy(256, 256)
+    drawing_buffer.hard_clear(1000)
+
+    primitive_buffer = PrimitiveBufferPy(2000)
+    vertex_buffer = VertexBufferPy(32, 32, 32)
+
+    for i in range(1000):
+        primitive_buffer.add_triangle(
+            102,  # node
+            i,  # geom
+            303,  # material
+            2,  # row col
+            2,
+            1.0,
+            5,  # top
+            size,  # right
+            1.0,
+            6,  # bottom
+            size,  # left
+            1.0,
+            transparent=True,
+        )
+
+    benchmark(rust_transparent_pass, primitive_buffer, vertex_buffer, drawing_buffer)
 
 
 TRI_MODE = ["STACK", "SAME", "BELLOW"]
@@ -114,5 +152,5 @@ def test_bench_rust_triangle_raster_mode(benchmark, mode, tri_count):
                 size,  # left
                 depth,
             )
-    assert (primitive_buffer.primitive_count(), tri_count)
+    assert primitive_buffer.primitive_count() == tri_count
     benchmark(rust_version, primitive_buffer, vertex_buffer, drawing_buffer)

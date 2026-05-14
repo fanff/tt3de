@@ -3,6 +3,7 @@ use super::texturebuffer::RGBA;
 use crate::vertexbuffer::uv_buffer::UVBuffer;
 use crate::{
     drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo},
+    drawbuffer::blend::{BlendMode, GlyphPolicy},
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     utils::convert_tuple_rgba,
 };
@@ -69,6 +70,8 @@ impl MaterialBuffer {
             front_color,
             back_color,
             glyph_idx,
+            blend_mode: BlendMode::Replace,
+            glyph_policy: GlyphPolicy::PreserveExisting,
         };
 
         self.current_size += 1;

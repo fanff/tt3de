@@ -17,6 +17,7 @@ use crate::material::MaterialBuffer;
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
 use crate::texturebuffer::RGBA;
 use crate::vertexbuffer::uv_buffer::UVBuffer;
+use super::blend::{blend_front, GlyphPolicy};
 
 /// Twice the signed area of triangle `(a,b,c)` in the plane with **X = column**, **Y = row**
 /// (same axes as vertex `pos.x` / `pos.y` during rasterization).
@@ -780,4 +781,55 @@ pub fn apply_material_on_parallel<const TEXTURESIZE: usize, const DEPTHLAYER: us
                 }
             });
     });
+}
+
+fn color_to_vec4(color: &Color) -> Vec4 {
+    Vec4::new(
+        color.r as f32 / 255.0,
+        color.g as f32 / 255.0,
+        color.b as f32 / 255.0,
+        color.a as f32 / 255.0,
+    )
+}
+
+pub fn apply_material_transparent_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
+    transparent_buffer: &DrawBuffer<DEPTHLAYER, f32>,
+    opaque_buffer: &mut DrawBuffer<1, f32>,
+    material_buffer: &MaterialBuffer,
+    texture_buffer: &TextureBuffer<TEXTURESIZE>,
+    uv_buffer: &UVBuffer<f32>,
+    primitive_buffer: &PrimitiveBuffer,
+) {
+    bump_material_apply_generation_for_pass();
+    for idx in 0..transparent_buffer.depthbuffer.len() {
+        let trans_cell = transparent_buffer.depthbuffer[idx];
+        let opaque_depth = opaque_buffer.depthbuffer[idx].depth[0];
+        let dst_cell = &mut opaque_buffer.canvas[idx];
+
+        for depth_layer in (0..DEPTHLAYER).rev() {
+            let pixinfo = transparent_buffer.pixbuffer[trans_cell.pixinfo[depth_layer]];
+            let trans_depth = trans_cell.depth[depth_layer];
+            if trans_depth >= opaque_depth {
+                continue;
+            }
+
+            let mut src_cell = CanvasCell::default();
+            apply_material(
+                pixinfo,
+                material_buffer,
+                texture_buffer,
+                uv_buffer,
+                primitive_buffer,
+                &trans_cell,
+                depth_layer,
+                &mut src_cell,
+            );
+            let mat = &material_buffer.mats[pixinfo.material_id];
+            let src_front = color_to_vec4(&src_cell.front_color);
+            dst_cell.front_color = blend_front(&dst_cell.front_color, &src_front, mat.blend_mode());
+            if mat.glyph_policy() == GlyphPolicy::ReplaceFromShader {
+                dst_cell.glyph = src_cell.glyph;
+            }
+        }
+    }
 }

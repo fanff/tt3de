@@ -49,6 +49,9 @@ Most demos start by loading a default texture/material set:
 
 Then assign ``material_id`` on each node/mesh.
 
+For transparency layers, see ``source/low_level_api.rst`` (canonical two-pass
+model and blend semantics).
+
 
 Custom materials
 ^^^^^^^^^^^^^^^^
@@ -73,8 +76,13 @@ You can create material entries dynamically via ``material_buffer``:
             front_uv_0=True,
             back_uv_0=False,
             glyph_method=...,
+            blend_mode="alpha_blend",
+            glyph_policy="preserve_existing",
         )
     )
+
+To route geometry to the transparent pass, set ``node.transparent = True`` on
+``TT2D*`` / ``TT3D*`` primitives before inserting them in the render context.
 
 
 TTSL ``ShaderPy`` materials

@@ -199,6 +199,7 @@ class WithMaterialID(DirtyProcessor):
         super().__init__(**kwargs)
         self.material_id = material_id
         self.dirty_material = True
+        self.transparent: bool = False
         # will be set when inserted in the render context
         self.geom_id = None
 
@@ -247,6 +248,7 @@ class TT2DPoints(WithMaterialID, TT2DNode):
             0,
             self.node_id,
             self.material_id,
+            self.transparent,
         )
 
 
@@ -270,6 +272,7 @@ class TT2DLines(TT2DNode):
             ]
         )
         self.material_id = material_id
+        self.transparent: bool = False
 
         # will be set when inserted in the render context
         self.geom_id = None
@@ -296,6 +299,7 @@ class TT2DLines(TT2DNode):
             self.segment_idx[0],
             self.node_id,
             self.material_id,
+            self.transparent,
         )
 
 
@@ -365,6 +369,7 @@ class TT2DPolygon(WithMaterialID, TT2DNode):
             triangle_count,
             self.node_id,
             self.material_id,
+            self.transparent,
         )
 
 
@@ -409,6 +414,7 @@ class TT2DRect(TT2DNode):
         self.width = width
         self.height = height
         self.material_id = material_id
+        self.transparent: bool = False
 
         # will be set when inserted in the render context
         self.geom_id = None
@@ -432,4 +438,5 @@ class TT2DRect(TT2DNode):
             uv_start_index,
             self.node_id,
             self.material_id,
+            self.transparent,
         )

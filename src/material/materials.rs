@@ -1,4 +1,5 @@
 use crate::drawbuffer::drawbuffer::{CanvasCell, DepthBufferCell, PixInfo};
+use crate::drawbuffer::blend::{BlendMode, GlyphPolicy};
 use crate::material::textured::BaseTexture;
 use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
 use crate::texturebuffer::texture_buffer::TextureBuffer;
@@ -21,6 +22,8 @@ pub enum Material<T = ()> {
         front_color: RGBA,
         back_color: RGBA,
         glyph_idx: u8,
+        blend_mode: BlendMode,
+        glyph_policy: GlyphPolicy,
     },
 
     StaticGlyph {
@@ -51,6 +54,26 @@ impl Material {
                 t.albedo_texture_subid = _subid;
             }
             _ => {}
+        }
+    }
+
+    pub fn blend_mode(&self) -> BlendMode {
+        match self {
+            Material::Texture(t) => t.blend_mode,
+            Material::BaseTexture(t) => t.blend_mode,
+            Material::StaticColor { blend_mode, .. } => *blend_mode,
+            Material::Shader(s) => s.blend_mode,
+            _ => BlendMode::Replace,
+        }
+    }
+
+    pub fn glyph_policy(&self) -> GlyphPolicy {
+        match self {
+            Material::Texture(t) => t.glyph_policy,
+            Material::BaseTexture(t) => t.glyph_policy,
+            Material::StaticColor { glyph_policy, .. } => *glyph_policy,
+            Material::Shader(s) => s.glyph_policy,
+            _ => GlyphPolicy::PreserveExisting,
         }
     }
 }
@@ -169,6 +192,8 @@ impl<
                 front_color,
                 back_color,
                 glyph_idx,
+                blend_mode: _,
+                glyph_policy: _,
             } => {
                 if *front {
                     cell.front_color.copy_from(front_color);

@@ -8,6 +8,7 @@ use pyo3::{
 use rayon::ThreadPool;
 use std::sync::Arc;
 pub mod drawbuffer;
+pub mod blend;
 use drawbuffer::*;
 use pyo3::types::PyDict;
 pub mod glyphset;
@@ -18,10 +19,10 @@ use segment_cache::*;
 
 #[pyclass]
 pub struct DrawingBufferPy {
-    pub db: DrawBuffer<2, f32>,
+    pub opaque_db: DrawBuffer<1, f32>,
+    pub transparent_db: DrawBuffer<1, f32>,
     max_row: usize,
     max_col: usize,
-    layer_count: usize,
 
     /// When `Some(n)`, parallel material shading uses `n` Rayon threads; `None` means serial-only.
     #[pyo3(get)]
@@ -104,10 +105,10 @@ impl DrawingBufferPy {
         );
         let (material_parallel_threads, material_pool) = material_parallelism_from_py(spec);
         Ok(DrawingBufferPy {
-            db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),
+            opaque_db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),
+            transparent_db: DrawBuffer::new(max_row, max_col, 10.0, flip_x, flip_y),
             max_row,
             max_col,
-            layer_count: 2,
             material_parallel_threads,
             material_pool,
             segment_class: segment_class.into(),
@@ -123,27 +124,29 @@ impl DrawingBufferPy {
         self.seg_cache.get_cache_size()
     }
     pub fn layer_count(&self) -> usize {
-        self.layer_count
+        1
     }
     pub fn get_flip_x(&self) -> bool {
-        self.db.flip_x
+        self.opaque_db.flip_x
     }
     pub fn set_flip_x(&mut self, v: bool) {
-        self.db.set_flip_x(v);
+        self.opaque_db.set_flip_x(v);
+        self.transparent_db.set_flip_x(v);
     }
     pub fn get_flip_y(&self) -> bool {
-        self.db.flip_y
+        self.opaque_db.flip_y
     }
 
     pub fn set_flip_y(&mut self, v: bool) {
-        self.db.set_flip_y(v);
+        self.opaque_db.set_flip_y(v);
+        self.transparent_db.set_flip_y(v);
     }
 
     pub fn get_row_count(&self) -> usize {
-        self.db.row_count
+        self.opaque_db.row_count
     }
     pub fn get_col_count(&self) -> usize {
-        self.db.col_count
+        self.opaque_db.col_count
     }
     //set the number of bit for every channel of the front color.
     pub fn set_bit_size_front(&mut self, r: u8, g: u8, b: u8) {
@@ -155,12 +158,16 @@ impl DrawingBufferPy {
     }
 
     fn hard_clear(&mut self, init_value: f32) {
-        self.db.clear_depth(init_value);
-        self.db.clear_pixinfo();
+        self.opaque_db.clear_depth(init_value);
+        self.opaque_db.clear_pixinfo();
+        self.opaque_db.canvas.fill(CANVAS_CELL_INIT);
+        self.transparent_db.clear_depth(init_value);
+        self.transparent_db.clear_pixinfo();
+        self.transparent_db.canvas.fill(CANVAS_CELL_INIT);
     }
 
-    fn get_min_max_depth(&self, py: Python, layer: usize) -> Py<PyTuple> {
-        let mima = self.db.get_min_max_depth(layer);
+    fn get_min_max_depth(&self, py: Python, _layer: usize) -> Py<PyTuple> {
+        let mima = self.opaque_db.get_min_max_depth(0);
         let tt = PyTuple::new(py, [mima.0, mima.1]).unwrap();
         tt.into()
     }
@@ -191,25 +198,14 @@ impl DrawingBufferPy {
             .map(|p| convert_glm_vec2(py, p))
             .unwrap_or_else(Vec2::zeros);
 
-        self.db.set_depth_content(
-            row,
-            col,
-            depth,
-            normal,
-            uv,
-            uv_1,
-            node_id,
-            geom_id,
-            material_id,
-            primitive_id,
-            front_facing,
-            line_coord,
-            point_coord_v,
-        )
+        self.opaque_db.set_depth_content(
+            row, col, depth, normal, uv, uv_1, node_id, geom_id, material_id, primitive_id,
+            front_facing, line_coord, point_coord_v,
+        );
     }
 
     fn get_pix_info_element(&self, py: Python, idx: usize) -> Py<PyDict> {
-        let pix_info_element = self.db.pixbuffer[idx];
+        let pix_info_element = self.opaque_db.pixbuffer[idx];
         let dict = PyDict::new(py);
 
         let wslice = pix_info_element.uv.as_slice();
@@ -244,14 +240,17 @@ impl DrawingBufferPy {
         col: usize,
         layer: usize,
     ) -> Py<PyDict> {
-        let cell = self.db.get_depth_buffer_cell(row, col);
+        if layer > 0 {
+            return PyDict::new(py).into();
+        }
+        let cell = self.opaque_db.get_depth_buffer_cell(row, col);
         let dict = PyDict::new(py);
 
-        let pix_info_element = self.db.pixbuffer[cell.pixinfo[layer]];
+        let pix_info_element = self.opaque_db.pixbuffer[cell.pixinfo[0]];
 
         // Assuming DepthBufferCell has some fields `field1` and `field2`
-        dict.set_item("depth", cell.depth[layer]).unwrap();
-        dict.set_item("pix_info", cell.pixinfo[layer]).unwrap();
+        dict.set_item("depth", cell.depth[0]).unwrap();
+        dict.set_item("pix_info", cell.pixinfo[0]).unwrap();
 
         dict.set_item("uv", pix_info_element.uv.as_slice()).unwrap();
         dict.set_item("uv_1", pix_info_element.uv_1.as_slice())
@@ -297,11 +296,11 @@ impl DrawingBufferPy {
             a: back_color_tuple[3],
         };
 
-        self.db.set_canvas_content(row, col, frontc, backc, glyph)
+        self.opaque_db.set_canvas_content(row, col, frontc, backc, glyph)
     }
 
     fn get_canvas_cell(&self, py: Python, r: usize, c: usize) -> Py<PyDict> {
-        let cell = self.db.get_canvas_cell(r, c);
+        let cell = self.opaque_db.get_canvas_cell(r, c);
         let dict = PyDict::new(py); // this will be super slow
         dict.set_item("f_r", cell.front_color.r).unwrap();
         dict.set_item("f_g", cell.front_color.g).unwrap();
@@ -328,7 +327,7 @@ impl DrawingBufferPy {
         min_y: usize,
         max_y: usize,
     ) -> Py<PyList> {
-        let canvas = &self.db.canvas;
+        let canvas = &self.opaque_db.canvas;
         let dict = PyDict::new(py);
 
         let ncols = max_x.saturating_sub(min_x);

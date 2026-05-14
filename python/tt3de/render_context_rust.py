@@ -45,7 +45,8 @@ class RustRenderContext:
         material_buffer_size=32,
         material_parallel_threads: int | None = 8,
     ):
-        """Create buffers for Rust-backed rasterization.
+        """
+        Create buffers for Rust-backed rasterization.
 
         ``material_parallel_threads``: ``None`` runs the material pass on one thread;
         a positive integer builds a per-context Rayon pool with that many threads (default ``8``).
@@ -70,7 +71,9 @@ class RustRenderContext:
             max_row=self.height,
             max_col=self.width,
             material_parallel_threads=(
-                0 if self._material_parallel_threads is None else self._material_parallel_threads
+                0
+                if self._material_parallel_threads is None
+                else self._material_parallel_threads
             ),
         )
 
@@ -123,17 +126,12 @@ class RustRenderContext:
             self.drawing_buffer,
             self.primitive_buffer,
         )
-        # raster all the primitives in the drawing buffer
-        raster_all_py(self.primitive_buffer, self.vertex_buffer, self.drawing_buffer)
-
-        # apply_material_py(
-        #     self.material_buffer,
-        #     self.texture_buffer,
-        #     self.vertex_buffer,
-        #     self.primitive_buffer,
-        #     self.drawing_buffer,
-        # )
-        # material pass (parallel uses per-context Rayon pool on DrawingBufferPy)
+        raster_all_py(
+            self.primitive_buffer,
+            self.vertex_buffer,
+            self.drawing_buffer,
+            pass_filter="opaque",
+        )
         if self._material_parallel_threads is None:
             apply_material_py(
                 self.material_buffer,
@@ -141,6 +139,7 @@ class RustRenderContext:
                 self.vertex_buffer,
                 self.primitive_buffer,
                 self.drawing_buffer,
+                pass_filter="opaque",
             )
         else:
             apply_material_py_parallel(
@@ -149,7 +148,23 @@ class RustRenderContext:
                 self.vertex_buffer,
                 self.primitive_buffer,
                 self.drawing_buffer,
+                pass_filter="opaque",
             )
+
+        raster_all_py(
+            self.primitive_buffer,
+            self.vertex_buffer,
+            self.drawing_buffer,
+            pass_filter="transparent",
+        )
+        apply_material_py(
+            self.material_buffer,
+            self.texture_buffer,
+            self.vertex_buffer,
+            self.primitive_buffer,
+            self.drawing_buffer,
+            pass_filter="transparent",
+        )
 
     def to_textual_2(self, region: Region) -> List[Strip]:
         res = self.drawing_buffer.to_textual_2(

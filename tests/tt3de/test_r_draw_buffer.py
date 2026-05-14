@@ -40,25 +40,9 @@ class Test_DrawBuffer(unittest.TestCase):
 
         layer = 1
         v = gb.get_depth_buffer_cell(0, 0, layer)
-        self.assertEqual(
-            v,
-            {
-                "depth": 10.0,
-                "pix_info": layer,
-                "uv": [0.0, 0.0],
-                "uv_1": [0.0, 0.0],
-                "frag_pos": [0.0, 0.0],
-                "material_id": 0,
-                "geometry_id": 0,
-                "node_id": 0,
-                "primitive_id": 0,
-                "front_facing": True,
-                "line_coord": 0.0,
-                "point_coord": [0.0, 0.0],
-            },
-        )
+        self.assertEqual(v, {})
 
-        for pix_idx in range(10 * 10 * 2):
+        for pix_idx in range(10 * 10):
             self.assertEqual(
                 gb.get_pix_info_element(pix_idx),
                 {
@@ -132,25 +116,9 @@ class Test_DrawBuffer(unittest.TestCase):
 
         layer = 1
         v = drawbuffer.get_depth_buffer_cell(0, 0, layer)
-        self.assertEqual(
-            v,
-            {
-                "depth": 12.0,
-                "pix_info": layer,
-                "uv": [0.0, 0.0],
-                "uv_1": [0.0, 0.0],
-                "frag_pos": [0.0, 0.0],
-                "material_id": 0,
-                "geometry_id": 0,
-                "node_id": 0,
-                "primitive_id": 0,
-                "front_facing": True,
-                "line_coord": 0.0,
-                "point_coord": [0.0, 0.0],
-            },
-        )
+        self.assertEqual(v, {})
 
-        for pix_idx in range(10 * 10 * 2):
+        for pix_idx in range(10 * 10):
             self.assertEqual(
                 drawbuffer.get_pix_info_element(pix_idx),
                 {
@@ -174,7 +142,6 @@ class Test_DrawBuffer(unittest.TestCase):
         self.assertEqual(maxd, 12.0)
 
         mind, maxd = drawbuffer.get_min_max_depth(1)
-
         self.assertEqual(mind, 12.0)
         self.assertEqual(maxd, 12.0)
 
@@ -256,9 +223,8 @@ class Test_DrawBuffer(unittest.TestCase):
 
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple)
 
-        ### since we set depth at 0 0 ; the pixel idx 0 is moved to back
-        ### therefore we "rolled" the buffer and put ourself in the index 1.
-        pix_info1 = drawbuffer.get_pix_info_element(1)
+        # In the canonical single-layer buffer, the winning sample stays at pix index 0.
+        pix_info1 = drawbuffer.get_pix_info_element(0)
         assertPixInfoEqual(
             pix_info1,
             {
@@ -271,28 +237,13 @@ class Test_DrawBuffer(unittest.TestCase):
             },
         )
 
-        # this one is actually the one that was before me :)
-        pix_info0 = drawbuffer.get_pix_info_element(0)
-        assertPixInfoEqual(
-            pix_info0,
-            {
-                "uv": [0.0, 0.0],
-                "uv_1": [0.0, 0.0],
-                "primitive_id": 0,
-                "geometry_id": 0,
-                "node_id": 0,
-                "material_id": 0,
-            },
-        )
-
-        # Layer 0 has changed, and Layer 1 has not;
-        # at layer 0; we have pix_info 1
+        # Layer 0 has changed; layer 1 is not exposed in canonical mode.
         db_return = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
         self.assertEqual(
             db_return,
             {
                 "depth": 1.0,
-                "pix_info": 1,
+                "pix_info": 0,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
                 "frag_pos": _FRAG_POS_NDC_32_R0_C0,
@@ -306,36 +257,21 @@ class Test_DrawBuffer(unittest.TestCase):
             },
         )
 
-        # at layer 1; we have pix_info 0
+        # no legacy layer-1 view in canonical mode
         db_return_layer1 = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(
-            db_return_layer1,
-            {
-                "depth": 10.0,
-                "pix_info": 0,
-                "uv": [0.0, 0.0],
-                "uv_1": [0.0, 0.0],
-                "frag_pos": [0.0, 0.0],
-                "primitive_id": 0,
-                "geometry_id": 0,
-                "node_id": 0,
-                "material_id": 0,
-                "front_facing": True,
-                "line_coord": 0.0,
-                "point_coord": [0.0, 0.0],
-            },
-        )
-        mind, maxd = drawbuffer.get_min_max_depth(layer=0)
+        self.assertEqual(db_return_layer1, {})
+        mind, maxd = drawbuffer.get_min_max_depth(0)
 
         self.assertEqual(mind, 1.0)
         self.assertEqual(maxd, 10.0)
 
-        mind, maxd = drawbuffer.get_min_max_depth(layer=1)
-        self.assertEqual(mind, 10.0)
+        mind, maxd = drawbuffer.get_min_max_depth(1)
+        self.assertEqual(mind, 1.0)
         self.assertEqual(maxd, 10.0)
 
     def test_set_depth_content_frag_pos_matches_cell_center_ndc(self):
-        """``frag_pos`` is cell-center NDC (feeds TTSL ``tt_FragPos`` in ``ShaderMaterial``)."""
+        """``frag_pos`` is cell-center NDC (feeds TTSL ``tt_FragPos`` in
+        ``ShaderMaterial``)."""
         w, h = 32, 32
         drawbuffer = DrawingBufferPy(w, h)
         drawbuffer.hard_clear(10.0)
@@ -351,7 +287,7 @@ class Test_DrawBuffer(unittest.TestCase):
             0,
         ]
         drawbuffer.set_depth_content(row, col, *payload)
-        pix = drawbuffer.get_pix_info_element(1)
+        pix = drawbuffer.get_pix_info_element(0)
         half_x = w / 2.0
         half_y = h / 2.0
         sx = 1.0
@@ -378,7 +314,7 @@ class Test_DrawBuffer(unittest.TestCase):
             0,
         ]
         drawbuffer.set_depth_content(row, col, *payload, line_coord=0.375)
-        pix = drawbuffer.get_pix_info_element(1)
+        pix = drawbuffer.get_pix_info_element(0)
         self.assertAlmostEqual(pix["line_coord"], 0.375, places=6)
 
     def test_set_depth_content_point_coord_kwarg(self):
@@ -397,11 +333,11 @@ class Test_DrawBuffer(unittest.TestCase):
         ]
         pc = glm.vec2(0.25, 0.625)
         drawbuffer.set_depth_content(row, col, *payload, point_coord=pc)
-        pix = drawbuffer.get_pix_info_element(1)
+        pix = drawbuffer.get_pix_info_element(0)
         self.assertAlmostEqual(pix["point_coord"][0], 0.25, places=6)
         self.assertAlmostEqual(pix["point_coord"][1], 0.625, places=6)
 
-    def test_set_depth_movelayer_diffent_depth(self):
+    def test_set_depth_overwrites_when_closer(self):
         w, h = 32, 32
         drawbuffer = DrawingBufferPy(w, h)
 
@@ -425,22 +361,20 @@ class Test_DrawBuffer(unittest.TestCase):
             _0_primitiv_id,
         ]
 
-        # we set at 3; this will be in layer 0, 1 is at 10
-        # this will create a roll operation, rolling the pix_info
+        # first set at depth 3
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple_0)
 
-        # we check here the rolling operation
+        # first write lands in layer 0
         db_return0 = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
-        self.assertEqual(db_return0["pix_info"], 1)
-        db_return1 = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(db_return1["pix_info"], 0)
+        self.assertEqual(db_return0["pix_info"], 0)
+        self.assertEqual(drawbuffer.get_depth_buffer_cell(0, 0, layer=1), {})
 
         # and here we check that at layer0; the current tuple values
         self.assertEqual(
             db_return0,
             {
                 "depth": 3.0,
-                "pix_info": 1,
+                "pix_info": 0,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
                 "frag_pos": _FRAG_POS_NDC_32_R0_C0,
@@ -471,15 +405,13 @@ class Test_DrawBuffer(unittest.TestCase):
             _1_primitiv_id,
         ]
 
-        # After this, layer 0 is at 1.0 and layer 1 at 3.0;
-        # we operated the rolling operation once more
+        # second write is closer (depth 1), so it replaces layer 0
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple_1)
 
-        # we check here the rolling operation once again,
+        # layer 0 now contains the newer closer value
         db_return0_second = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
         self.assertEqual(db_return0_second["pix_info"], 0)
-        db_return1_second = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(db_return1_second["pix_info"], 1)
+        self.assertEqual(drawbuffer.get_depth_buffer_cell(0, 0, layer=1), {})
 
         # the layer 0 contains the new values; the one
         self.assertEqual(
@@ -500,27 +432,7 @@ class Test_DrawBuffer(unittest.TestCase):
             },
         )
 
-        # the layer 1 contains the bellow this, at depth 3
-        # we just set the value on the layer 1; leaving 0 untouched.
-        self.assertEqual(
-            db_return1_second,
-            {
-                "depth": 3.0,
-                "pix_info": 1,
-                "uv": [2.0, 3.0],
-                "uv_1": [5.0, 6.0],
-                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
-                "primitive_id": _0_primitiv_id,
-                "geometry_id": _0_geom_id,
-                "node_id": _0_node_id,
-                "material_id": _0_material_id,
-                "front_facing": True,
-                "line_coord": 0.0,
-                "point_coord": [0.0, 0.0],
-            },
-        )
-
-    def test_set_depth_different_depth(self):
+    def test_set_depth_keeps_closer_sample(self):
         w, h = 32, 32
         drawbuffer = DrawingBufferPy(w, h)
 
@@ -543,22 +455,20 @@ class Test_DrawBuffer(unittest.TestCase):
             _0_material_id,
             _0_primitiv_id,
         ]
-        # setting at 0,0  the value;
-        # since this is lower than the current layer; this will create a roll operation
+        # first write is closest
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple_0)
 
-        # we check here the rolling operation
+        # layer 0 stores first write
         db_return0 = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
-        self.assertEqual(db_return0["pix_info"], 1)
-        db_return1 = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(db_return1["pix_info"], 0)
+        self.assertEqual(db_return0["pix_info"], 0)
+        self.assertEqual(drawbuffer.get_depth_buffer_cell(0, 0, layer=1), {})
 
         # and here we check that at layer0; the current tuple values
         self.assertEqual(
             db_return0,
             {
                 "depth": 1.0,
-                "pix_info": 1,
+                "pix_info": 0,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
                 "frag_pos": _FRAG_POS_NDC_32_R0_C0,
@@ -589,22 +499,20 @@ class Test_DrawBuffer(unittest.TestCase):
             _1_primitiv_id,
         ]
 
-        # We set; but, its after the existing point .
-        # so; there is no rolling operation with the layer0
+        # second write is farther (depth 3), so existing sample remains
         drawbuffer.set_depth_content(0, 0, *inpuut_tuple_1)
 
-        # we check here the rolling operation has not changed since the last insert
+        # layer 0 still points to first write
         db_return0 = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
-        self.assertEqual(db_return0["pix_info"], 1)
-        db_return1 = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(db_return1["pix_info"], 0)
+        self.assertEqual(db_return0["pix_info"], 0)
+        self.assertEqual(drawbuffer.get_depth_buffer_cell(0, 0, layer=1), {})
 
         db_return = drawbuffer.get_depth_buffer_cell(0, 0, layer=0)
         self.assertEqual(
             db_return,
             {
                 "depth": 1.0,
-                "pix_info": 1,
+                "pix_info": 0,
                 "uv": [2.0, 3.0],
                 "uv_1": [5.0, 6.0],
                 "frag_pos": _FRAG_POS_NDC_32_R0_C0,
@@ -618,24 +526,11 @@ class Test_DrawBuffer(unittest.TestCase):
             },
         )
 
-        db_return_layer1 = drawbuffer.get_depth_buffer_cell(0, 0, layer=1)
-        self.assertEqual(
-            db_return_layer1,
-            {
-                "depth": 3.0,
-                "pix_info": 0,
-                "uv": [20.0, 30.0],
-                "uv_1": [50.0, 60.0],
-                "frag_pos": _FRAG_POS_NDC_32_R0_C0,
-                "primitive_id": _1_primitiv_id,
-                "geometry_id": _1_geom_id,
-                "node_id": _1_node_id,
-                "material_id": _1_material_id,
-                "front_facing": True,
-                "line_coord": 0.0,
-                "point_coord": [0.0, 0.0],
-            },
-        )
+        self.assertEqual(drawbuffer.get_depth_buffer_cell(0, 0, layer=1), {})
+
+    def test_constructor_rejects_legacy_layers_kwarg(self):
+        with pytest.raises(TypeError):
+            DrawingBufferPy(8, 8, legacy_layers=True)
 
 
 class Test_totextual(unittest.TestCase):
@@ -727,10 +622,11 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(len(res[0]), 178)
 
     def test_to_textual_2_glyph_indices_zero_one_two(self) -> None:
-        """GLYPH_STATIC_STR[0], [1], [2] must round-trip through ``to_textual_2``.
+        """
+        GLYPH_STATIC_STR[0], [1], [2] must round-trip through ``to_textual_2``.
 
-        Regression guard for reports that glyph index 0 mis-extracts (e.g. black /
-        wrong segment) after segment-cache reduction.
+        Regression guard for reports that glyph index 0 mis-extracts (e.g. black / wrong
+        segment) after segment-cache reduction.
         """
         gb = DrawingBufferPy(max_row=1, max_col=3)
         gb.hard_clear(100.0)
@@ -784,7 +680,8 @@ class Test_totextual(unittest.TestCase):
         self.assertEqual(seg.style.bgcolor.triplet.blue, 15)
 
     def test_to_textual_2_same_colors_distinct_glyphs_no_wrong_cache_share(self) -> None:
-        """Identical reduced fg/bg must still yield different segments per glyph index."""
+        """Identical reduced fg/bg must still yield different segments per glyph
+        index."""
         gb = DrawingBufferPy(max_row=1, max_col=2, material_parallel_threads=0)
         gb.hard_clear(100.0)
         gb.set_bit_size_front(8, 8, 8)

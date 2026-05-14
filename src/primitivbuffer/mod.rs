@@ -38,6 +38,7 @@ impl PrimitiveBufferPy {
         self.content.current_size
     }
 
+    #[pyo3(signature = (node_id, geometry_id, material_id, row, col, depth, uv, transparent=false))]
     fn add_point(
         &mut self,
         node_id: usize,
@@ -47,10 +48,21 @@ impl PrimitiveBufferPy {
         col: f32,
         depth: f32,
         uv: usize,
+        transparent: bool,
     ) -> usize {
         self.content
-            .add_point(node_id, geometry_id, material_id, row, col, depth, uv)
+            .add_point(
+                node_id,
+                geometry_id,
+                material_id,
+                row,
+                col,
+                depth,
+                uv,
+                transparent,
+            )
     }
+    #[pyo3(signature = (node_id, geometry_id, material_id, pa, normal_a, uv_a, pb, normal_b, uv_b, transparent=false))]
     fn add_line(
         &mut self,
         py: Python,
@@ -63,6 +75,7 @@ impl PrimitiveBufferPy {
         pb: Py<PyAny>,
         normal_b: Py<PyAny>,
         uv_b: Py<PyAny>,
+        transparent: bool,
     ) -> usize {
         self.content.add_line(
             node_id,
@@ -74,9 +87,11 @@ impl PrimitiveBufferPy {
             convert_glm_vec4(py, pb),
             convert_glm_vec3(py, normal_b),
             convert_glm_vec2(py, uv_b),
+            transparent,
         )
     }
 
+    #[pyo3(signature = (node_id, geometry_id, material_id, p_a_row, p_a_col, p_a_depth, p_b_row, p_b_col, p_b_depth, p_c_row, p_c_col, p_c_depth, transparent=false))]
     fn add_triangle(
         &mut self,
         node_id: usize,
@@ -91,6 +106,7 @@ impl PrimitiveBufferPy {
         p_c_row: f32,
         p_c_col: f32,
         p_c_depth: f32,
+        transparent: bool,
     ) -> usize {
         let va = Vertex::new(
             vec4(p_a_col, p_a_row, p_a_depth, 1.0),
@@ -109,11 +125,11 @@ impl PrimitiveBufferPy {
         );
 
         self.content
-            .add_triangle(node_id, geometry_id, material_id, va, vb, vc)
+            .add_triangle(node_id, geometry_id, material_id, va, vb, vc, transparent)
     }
 
     #[pyo3(signature = ( node_id, geometry_id, material_id, top, left, top_left_depth, bottom, right, bottom_right_depth,
-        top_left_uv= (0.0, 0.0), bottom_right_uv= (1.0, 1.0) ))]
+        top_left_uv= (0.0, 0.0), bottom_right_uv= (1.0, 1.0), transparent=false ))]
     fn add_rect(
         &mut self,
         node_id: usize,
@@ -127,6 +143,7 @@ impl PrimitiveBufferPy {
         bottom_right_depth: f32,
         top_left_uv: (f32, f32),
         bottom_right_uv: (f32, f32),
+        transparent: bool,
     ) -> usize {
         let top_left = Vertex::new(
             vec4(left, top, top_left_depth, 1.0),
@@ -139,7 +156,14 @@ impl PrimitiveBufferPy {
             vec2(bottom_right_uv.0, bottom_right_uv.1),
         );
         self.content
-            .add_rect(node_id, geometry_id, material_id, top_left, bottom_right)
+            .add_rect(
+                node_id,
+                geometry_id,
+                material_id,
+                top_left,
+                bottom_right,
+                transparent,
+            )
     }
 
     fn get_primitive(&self, py: Python, idx: usize) -> Py<PyDict> {
@@ -207,6 +231,7 @@ fn into_dict(_py: Python, primitive_ref: &PrimitivReferences, dict: &Bound<PyDic
         .unwrap();
     dict.set_item("primitive_id", primitive_ref.primitive_id)
         .unwrap();
+    dict.set_item("transparent", primitive_ref.transparent).unwrap();
 }
 
 #[allow(dead_code)]

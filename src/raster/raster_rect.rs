@@ -118,6 +118,7 @@ mod test_raster_rect {
             material_id: 2,
             node_id: 3,
             primitive_id: 4,
+            transparent: false,
         };
 
         let top_left = Vertex {
@@ -161,6 +162,7 @@ mod test_raster_rect {
             material_id: 2,
             node_id: 3,
             primitive_id: 4,
+            transparent: false,
         };
 
         let top_left = Vertex {

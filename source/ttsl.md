@@ -148,6 +148,57 @@ material mode is `Shader`, the material owns compiled TTSL bytecode and executes
 it during material application so shader output directly drives final cell
 channels (`front_color`, `back_color`, `glyph`).
 
+### Transparency in TTSL shaders
+
+Shader materials write final terminal cell channels directly. There is no extra
+alpha compositing pass after your shader returns `(front, back, glyph)`.
+Because of that, transparent texels must be handled in shader code by masking
+their output color (for example, returning black background color).
+
+#### 1) Single raster path (one UV, no double raster)
+
+Use one sampled texel and apply one alpha test. If transparent, zero both
+returned colors.
+
+```python
+def sprite_single(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+    sampled: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
+    if sampled.w < 0.5:
+        return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+    rgb: vec4 = vec4(sampled.x, sampled.y, sampled.z, 1.0)
+    return (rgb, rgb, 0)
+```
+
+This is the safest default for normal sprite quads where one sample drives both
+foreground/background halves of the terminal cell.
+
+#### 2) Double raster path (two UVs, like the bouncing clock demo)
+
+When top and bottom halves come from different UV interpolations (`tt_TexCoord0`
+and `tt_TexCoord1`), mask each half independently. Do not only test the combined
+condition, or key-color fringes can appear at transparent boundaries.
+
+```python
+def clock_tex(tt_TexCoord0: vec2, tt_TexCoord1: vec2) -> tuple[vec4, vec4, int]:
+    sampled_top: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
+    sampled_bottom: vec4 = tt_texture(u_TextureIndex, tt_TexCoord1)
+    # Shader materials write final colors directly (no alpha compositing pass), so
+    # each half-cell must black out its own transparent texels to avoid key-color
+    # fringes from the sprite sheet at glyph boundaries.
+    if sampled_top.w < 0.5:
+        top_rgb: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
+    else:
+        top_rgb: vec4 = vec4(sampled_top.x, sampled_top.y, sampled_top.z, 1.0)
+    if sampled_bottom.w < 0.5:
+        bottom_rgb: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
+    else:
+        bottom_rgb: vec4 = vec4(sampled_bottom.x, sampled_bottom.y, sampled_bottom.z, 1.0)
+    return (top_rgb, bottom_rgb, 0)
+```
+
+This is the recommended pattern whenever your material uses two raster samples
+per terminal cell.
+
 ### TTSL Python compiler surface syntax
 
 The TTSL compiler requires the shader to ``return`` a 3-tuple ``(front, back, glyph)``

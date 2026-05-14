@@ -4,6 +4,7 @@ use pyo3::{prelude::*, types::PyDict};
 pub struct GeomReferences {
     pub node_id: usize,
     pub material_id: usize,
+    pub transparent: bool,
 }
 
 #[derive(Debug)]
@@ -65,6 +66,7 @@ impl Polygon {
             geom_ref: GeomReferences {
                 node_id: 0,
                 material_id: 0,
+                transparent: false,
             },
             p_start: 0,
             p_count: 0,
@@ -102,6 +104,7 @@ impl GeometryBuffer {
         uv_start: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -110,6 +113,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             point_start: p_start,
             point_count: point_count,
@@ -126,6 +130,7 @@ impl GeometryBuffer {
         uv_start: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -135,6 +140,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             point_start: top_left,
             point_count: 2,
@@ -152,6 +158,7 @@ impl GeometryBuffer {
         uv_idx: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -161,6 +168,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             point_start,
             point_count: point_count,
@@ -177,6 +185,7 @@ impl GeometryBuffer {
         uv_idx: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -186,6 +195,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             point_start: pidx,
             uv_idx,
@@ -203,6 +213,7 @@ impl GeometryBuffer {
         node_id: usize,
         material_id: usize,
         uv_start: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -211,6 +222,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             point_start: p_start,
             point_count: point_count,
@@ -231,6 +243,7 @@ impl GeometryBuffer {
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -240,6 +253,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             p_start,
             p_count,
@@ -262,6 +276,7 @@ impl GeometryBuffer {
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         if self.current_size >= self.max_size {
             return self.current_size;
@@ -271,6 +286,7 @@ impl GeometryBuffer {
             geom_ref: GeomReferences {
                 node_id,
                 material_id,
+                transparent,
             },
             p_start,
             p_count,
@@ -311,6 +327,7 @@ impl GeometryBufferPy {
             },
         }
     }
+    #[pyo3(signature = (p_start, point_count, uv_start, node_id, material_id, transparent=false))]
     fn add_line2d(
         &mut self,
         p_start: usize,
@@ -318,19 +335,22 @@ impl GeometryBufferPy {
         uv_start: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer
-            .add_line2d(p_start, point_count, uv_start, node_id, material_id)
+            .add_line2d(p_start, point_count, uv_start, node_id, material_id, transparent)
     }
+    #[pyo3(signature = (top_left, uv_start, node_id, material_id, transparent=false))]
     fn add_rect2d(
         &mut self,
         top_left: usize,
         uv_start: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer
-            .add_rect2d(top_left, uv_start, node_id, material_id)
+            .add_rect2d(top_left, uv_start, node_id, material_id, transparent)
     }
     fn get_element(&self, py: Python, idx: usize) -> Py<PyDict> {
         geometry_into_dict(py, &self.buffer.content[idx])
@@ -343,6 +363,7 @@ impl GeometryBufferPy {
     fn geometry_count(&self) -> usize {
         self.buffer.current_size
     }
+    #[pyo3(signature = (p_idx, uv_idx, node_id, material_id, transparent=false))]
     fn add_point_3d(
         &mut self,
         _py: Python,
@@ -350,10 +371,12 @@ impl GeometryBufferPy {
         uv_idx: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer
-            .add_point_3d(p_idx, uv_idx, node_id, material_id)
+            .add_point_3d(p_idx, uv_idx, node_id, material_id, transparent)
     }
+    #[pyo3(signature = (p_idx, point_count, uv_idx, node_id, material_id, transparent=false))]
     fn add_points_2d(
         &mut self,
         _py: Python,
@@ -362,10 +385,12 @@ impl GeometryBufferPy {
         uv_idx: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer
-            .add_points_2d(p_idx, point_count, uv_idx, node_id, material_id)
+            .add_points_2d(p_idx, point_count, uv_idx, node_id, material_id, transparent)
     }
+    #[pyo3(signature = (p_start, p_count, uv_start, triangle_start, triangle_count, node_id, material_id, transparent=false))]
     fn add_polygon2d(
         &mut self,
         p_start: usize,
@@ -375,6 +400,7 @@ impl GeometryBufferPy {
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer.add_polygon2d(
             p_start,
@@ -384,9 +410,11 @@ impl GeometryBufferPy {
             triangle_count,
             node_id,
             material_id,
+            transparent,
         )
     }
 
+    #[pyo3(signature = (p_start, p_count, uv_start, triangle_start, triangle_count, node_id, material_id, transparent=false))]
     fn add_polygon_3d(
         &mut self,
         p_start: usize,
@@ -396,6 +424,7 @@ impl GeometryBufferPy {
         triangle_count: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer.add_polygon_3d(
             p_start,
@@ -405,11 +434,12 @@ impl GeometryBufferPy {
             triangle_count,
             node_id,
             material_id,
+            transparent,
         )
     }
 
     /// Add a 3D line to the geometry buffer
-    #[pyo3(signature = (p_start, point_count, uv_start, node_id, material_id))]
+    #[pyo3(signature = (p_start, point_count, uv_start, node_id, material_id, transparent=false))]
     fn add_line3d(
         &mut self,
         p_start: usize,
@@ -417,9 +447,10 @@ impl GeometryBufferPy {
         uv_start: usize,
         node_id: usize,
         material_id: usize,
+        transparent: bool,
     ) -> usize {
         self.buffer
-            .add_line3d(p_start, point_count, node_id, material_id, uv_start)
+            .add_line3d(p_start, point_count, node_id, material_id, uv_start, transparent)
     }
 
     pub fn update_geometry_material(&mut self, geom_idx: usize, new_material_id: usize) {
@@ -520,6 +551,7 @@ fn geometry_ref_into_dict(py: Python, pi: &GeomReferences) -> Py<PyDict> {
 
     dict.set_item("node_id", pi.node_id).unwrap();
     dict.set_item("material_id", pi.material_id).unwrap();
+    dict.set_item("transparent", pi.transparent).unwrap();
 
     dict.into()
 }

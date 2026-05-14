@@ -27,7 +27,7 @@ impl PTriangle3D {
     }
     pub fn zero() -> Self {
         Self {
-            primitive_reference: PrimitivReferences::new(0, 0, 0, 0),
+            primitive_reference: PrimitivReferences::new(0, 0, 0, 0, false),
             pa: Vertex::zero(),
             pb: Vertex::zero(),
             pc: Vertex::zero(),

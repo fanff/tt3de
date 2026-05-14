@@ -169,17 +169,21 @@ class TTSLCompilerContext:
 
     @classmethod
     def always_present_variables(cls) -> Dict[str, IRType]:
-        """Per-cell inputs only (including ``tt_FrontFacing`` as ``bool``, winding-based,
+        """
+        Per-cell inputs only (including ``tt_FrontFacing`` as ``bool``, winding-based,
         ``tt_FragDepth`` as ``float`` (depth value for the shaded depth layer from the
-        depth buffer), ``tt_LineCoord`` as ``float`` (parametric coordinate along rasterized
-        line segments, ``0.0`` when not a line), ``tt_PointCoord`` as ``glm.vec2`` (coordinates
-        within a point sprite, ``(0, 0)`` when not a point), and ``tt_PrimitiveID`` as ``int``: per-pixel
-        index of the depth-winning primitive,
-        ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL ``gl_PrimitiveID``).
+        depth buffer), ``tt_LineCoord`` as ``float`` (parametric coordinate along
+        rasterized line segments, ``0.0`` when not a line), ``tt_PointCoord`` as
+        ``glm.vec2`` (coordinates within a point sprite, ``(0, 0)`` when not a point),
+        and ``tt_PrimitiveID`` as ``int``: per-pixel index of the depth-winning
+        primitive, ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL
+        ``gl_PrimitiveID``).
+
         Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
         (``int``), ``tt_Resolution`` (``glm.vec2``: width_cells, height_cells), and
         ``tt_Near`` / ``tt_Far`` (``float``: clip distances) must be
-        passed via ``globals_dict`` when referenced."""
+        passed via ``globals_dict`` when referenced.
+        """
         return dict(PIXEL_VARIABLES_STR_TYPE)
 
     def comment(self, text: str):
@@ -237,6 +241,23 @@ class TTSLCompilerContext:
             comment=comment,
         )
         return self.code.append(instr)
+
+    def emit_label(self) -> int:
+        label = f"S_{self.code.label_counter}"
+        self.code.label_counter += 1
+        return self.code.append(
+            IRInstr(
+                op=OpCodes.LABEL,
+                dst=None,
+                src1=None,
+                src2=None,
+                src3=None,
+                src4=None,
+                imm=None,
+                label=label,
+                comment=" ",
+            )
+        )
 
     def alloc_temp_for_type(self, ty: IRType) -> Temp:
         reg = Temp(id=self.next_temp_id, ty=ty)
@@ -448,7 +469,15 @@ class TTSLCompilerContext:
             func = node.func
             args = node.args
             if "id" in func._fields:
-                if func.id in ("sin", "abs", "cos", "floor", "ceil", "fract", "normalize"):
+                if func.id in (
+                    "sin",
+                    "abs",
+                    "cos",
+                    "floor",
+                    "ceil",
+                    "fract",
+                    "normalize",
+                ):
                     assert len(args) == 1
                     return_type = self.type_of(args[0])
                     arg_reg = self.compile_expr(args[0], return_type)
@@ -473,8 +502,13 @@ class TTSLCompilerContext:
                     x_reg = self.compile_expr(args[0], x_ty)
                     y_reg = self.compile_expr(args[1], y_ty)
                     result_reg = self.alloc_temp_for_type(x_ty)
-                    self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
-                                comment=f"mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
+                    self.emit_2(
+                        OpCodes.MOD,
+                        x_reg,
+                        y_reg,
+                        result_reg,
+                        comment=f"mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}",
+                    )
                     return result_reg
                 elif func.id == "dot":
                     if len(args) != 2:
@@ -497,8 +531,13 @@ class TTSLCompilerContext:
                     a_reg = self.compile_expr(args[0], a_ty)
                     b_reg = self.compile_expr(args[1], b_ty)
                     result_reg = self.alloc_temp_for_type(IRType.F32)
-                    self.emit_2(OpCodes.DOT, a_reg, b_reg, result_reg,
-                                comment=f"dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)")
+                    self.emit_2(
+                        OpCodes.DOT,
+                        a_reg,
+                        b_reg,
+                        result_reg,
+                        comment=f"dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)",
+                    )
                     return result_reg
                 elif func.id in VECTOR_CONSTRUCTORS:
                     return self.compile_vec_constructor(
@@ -518,8 +557,12 @@ class TTSLCompilerContext:
                         )
                     v_reg = self.compile_expr(args[0], v_ty)
                     result_reg = self.alloc_temp_for_type(IRType.F32)
-                    self.emit_1(OpCodes.LENGTH, v_reg, result_reg,
-                                comment=f"length r{v_reg.id} -> r{result_reg.id} (f32)")
+                    self.emit_1(
+                        OpCodes.LENGTH,
+                        v_reg,
+                        result_reg,
+                        comment=f"length r{v_reg.id} -> r{result_reg.id} (f32)",
+                    )
                     return result_reg
                 elif func.id == "max":
                     if len(args) != 2:
@@ -542,8 +585,13 @@ class TTSLCompilerContext:
                     a_reg = self.compile_expr(args[0], a_ty)
                     b_reg = self.compile_expr(args[1], b_ty)
                     result_reg = self.alloc_temp_for_type(a_ty)
-                    self.emit_2(OpCodes.MAX, a_reg, b_reg, result_reg,
-                                comment=f"max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}")
+                    self.emit_2(
+                        OpCodes.MAX,
+                        a_reg,
+                        b_reg,
+                        result_reg,
+                        comment=f"max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}",
+                    )
                     return result_reg
                 elif func.id == "clamp":
                     if len(args) != 3:
@@ -570,7 +618,10 @@ class TTSLCompilerContext:
                     result_reg = self.alloc_temp_for_type(x_ty)
                     self.emit(
                         OpCodes.CLAMP,
-                        x_reg, lo_reg, hi_reg, None,
+                        x_reg,
+                        lo_reg,
+                        hi_reg,
+                        None,
                         result_reg,
                         comment=f"clamp r{x_reg.id}, r{lo_reg.id}, r{hi_reg.id} -> r{result_reg.id}",
                     )
@@ -634,8 +685,12 @@ class TTSLCompilerContext:
                                 )
                             v_reg = self.compile_expr(args[0], v_ty)
                             result_reg = self.alloc_temp_for_type(IRType.F32)
-                            self.emit_1(OpCodes.LENGTH, v_reg, result_reg,
-                                        comment=f"glm.length r{v_reg.id} -> r{result_reg.id} (f32)")
+                            self.emit_1(
+                                OpCodes.LENGTH,
+                                v_reg,
+                                result_reg,
+                                comment=f"glm.length r{v_reg.id} -> r{result_reg.id} (f32)",
+                            )
                             return result_reg
                         elif func_name == "max":
                             if len(args) != 2:
@@ -653,8 +708,13 @@ class TTSLCompilerContext:
                             a_reg = self.compile_expr(args[0], a_ty)
                             b_reg = self.compile_expr(args[1], b_ty)
                             result_reg = self.alloc_temp_for_type(a_ty)
-                            self.emit_2(OpCodes.MAX, a_reg, b_reg, result_reg,
-                                        comment=f"glm.max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}")
+                            self.emit_2(
+                                OpCodes.MAX,
+                                a_reg,
+                                b_reg,
+                                result_reg,
+                                comment=f"glm.max r{a_reg.id}, r{b_reg.id} -> r{result_reg.id}",
+                            )
                             return result_reg
                         elif func_name == "clamp":
                             if len(args) != 3:
@@ -676,7 +736,10 @@ class TTSLCompilerContext:
                             result_reg = self.alloc_temp_for_type(x_ty)
                             self.emit(
                                 OpCodes.CLAMP,
-                                x_reg, lo_reg, hi_reg, None,
+                                x_reg,
+                                lo_reg,
+                                hi_reg,
+                                None,
                                 result_reg,
                                 comment=f"glm.clamp r{x_reg.id}, r{lo_reg.id}, r{hi_reg.id} -> r{result_reg.id}",
                             )
@@ -710,8 +773,13 @@ class TTSLCompilerContext:
                             x_reg = self.compile_expr(args[0], x_ty)
                             y_reg = self.compile_expr(args[1], y_ty)
                             result_reg = self.alloc_temp_for_type(x_ty)
-                            self.emit_2(OpCodes.MOD, x_reg, y_reg, result_reg,
-                                        comment=f"glm.mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}")
+                            self.emit_2(
+                                OpCodes.MOD,
+                                x_reg,
+                                y_reg,
+                                result_reg,
+                                comment=f"glm.mod r{x_reg.id}, r{y_reg.id} -> r{result_reg.id}",
+                            )
                             return result_reg
                         elif func_name == "dot":
                             if len(args) != 2:
@@ -734,8 +802,13 @@ class TTSLCompilerContext:
                             a_reg = self.compile_expr(args[0], a_ty)
                             b_reg = self.compile_expr(args[1], b_ty)
                             result_reg = self.alloc_temp_for_type(IRType.F32)
-                            self.emit_2(OpCodes.DOT, a_reg, b_reg, result_reg,
-                                        comment=f"glm.dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)")
+                            self.emit_2(
+                                OpCodes.DOT,
+                                a_reg,
+                                b_reg,
+                                result_reg,
+                                comment=f"glm.dot r{a_reg.id}, r{b_reg.id} -> r{result_reg.id} (f32)",
+                            )
                             return result_reg
                         elif func_name in GLM_TOOLS:
                             return self.compile_glm_tool_call(node, func_name, args)
@@ -896,6 +969,108 @@ class TTSLCompilerContext:
         )
 
     def compile_if(self, node: ast.If):
+        # Special-case boolean short-circuit in conditions. We model control flow
+        # directly (jumps) instead of materializing bool expressions into registers.
+        if isinstance(node.test, ast.BoolOp):
+            values = node.test.values
+            if len(values) < 2:
+                raise CompileError(
+                    node.test, "Boolean operation requires at least 2 operands"
+                )
+            for value in values:
+                value_type = self.type_of(value)
+                if value_type != IRType.BOOL:
+                    raise CompileError(
+                        value,
+                        f"If boolean condition operands must be bool, got {value_type}",
+                    )
+
+            if isinstance(node.test.op, ast.And):
+                jmp_false_positions: list[int] = []
+                for idx, value in enumerate(values):
+                    cond_reg = self.compile_expr(value, IRType.BOOL)
+                    jmp_false_positions.append(
+                        self.emit_2(
+                            OpCodes.JMP_IF_FALSE,
+                            cond_reg,
+                            None,
+                            None,
+                            comment=f"if-and short-circuit false on r{cond_reg.id}",
+                        )
+                    )
+                    if idx < len(values) - 1:
+                        self.emit_label()
+
+                self.compile_block(node.body)
+                jmp_end_pos: Optional[int] = None
+                if self._last_meaningful_ir_op() != OpCodes.RET:
+                    jmp_end_pos = self.emit_2(OpCodes.JMP, None, None, None)
+
+                else_start = self.code.instructions_count()
+                self.compile_block(node.orelse)
+
+                for jmp_false_pos in jmp_false_positions:
+                    self.code.patch_target(jmp_false_pos, else_start)
+                if jmp_end_pos is not None:
+                    end_pos = self.code.instructions_count()
+                    self.code.patch_target(jmp_end_pos, end_pos)
+                return
+
+            if isinstance(node.test.op, ast.Or):
+                jmp_true_to_then_positions: list[int] = []
+                for value in values[:-1]:
+                    cond_reg = self.compile_expr(value, IRType.BOOL)
+                    jmp_next_pos = self.emit_2(
+                        OpCodes.JMP_IF_FALSE,
+                        cond_reg,
+                        None,
+                        None,
+                        comment=f"if-or evaluate next on false r{cond_reg.id}",
+                    )
+                    self.emit_label()
+                    jmp_true_to_then_positions.append(
+                        self.emit_2(
+                            OpCodes.JMP,
+                            None,
+                            None,
+                            None,
+                            comment="if-or short-circuit true",
+                        )
+                    )
+                    self.emit_label()
+                    next_pos = self.code.instructions_count()
+                    self.code.patch_target(jmp_next_pos, next_pos)
+
+                last_reg = self.compile_expr(values[-1], IRType.BOOL)
+                jmp_false_pos = self.emit_2(
+                    OpCodes.JMP_IF_FALSE,
+                    last_reg,
+                    None,
+                    None,
+                    comment=f"if-or last operand false on r{last_reg.id}",
+                )
+
+                then_start = self.code.instructions_count()
+                self.compile_block(node.body)
+                for jmp_true_pos in jmp_true_to_then_positions:
+                    self.code.patch_target(jmp_true_pos, then_start)
+
+                jmp_end_pos: Optional[int] = None
+                if self._last_meaningful_ir_op() != OpCodes.RET:
+                    jmp_end_pos = self.emit_2(OpCodes.JMP, None, None, None)
+
+                else_start = self.code.instructions_count()
+                self.compile_block(node.orelse)
+                self.code.patch_target(jmp_false_pos, else_start)
+                if jmp_end_pos is not None:
+                    end_pos = self.code.instructions_count()
+                    self.code.patch_target(jmp_end_pos, end_pos)
+                return
+
+            raise CompileError(
+                node.test, f"Unsupported boolean operator {type(node.test.op).__name__}"
+            )
+
         # 1. condition
         test_type = self.type_of(node.test)
         if test_type != IRType.BOOL:
@@ -1005,7 +1180,15 @@ class TTSLCompilerContext:
             if "id" in node._fields:
                 if node.id in self.named_variables:
                     return self.named_variables[node.id].ty
-                elif node.id in ("abs", "sin", "cos", "floor", "ceil", "fract", "normalize"):
+                elif node.id in (
+                    "abs",
+                    "sin",
+                    "cos",
+                    "floor",
+                    "ceil",
+                    "fract",
+                    "normalize",
+                ):
                     if type_args is not None and len(type_args) == 1:
                         return type_args[0]
                     raise CompileError(
@@ -1216,6 +1399,22 @@ class TTSLCompilerContext:
             return func_type
         elif isinstance(node, ast.Compare):
             return IRType.BOOL
+        elif isinstance(node, ast.BoolOp):
+            if len(node.values) < 2:
+                raise CompileError(
+                    node,
+                    "Boolean operation requires at least 2 operands",
+                )
+            for value in node.values:
+                value_type = self.type_of(value)
+                if value_type != IRType.BOOL:
+                    raise CompileError(
+                        value,
+                        f"Boolean operation operands must be bool, got {value_type}",
+                    )
+            if isinstance(node.op, (ast.And, ast.Or)):
+                return IRType.BOOL
+            raise NotImplementedError(f"Unsupported boolean operator: {node.op}")
         # elif isinstance(node, ast.Return):
         elif isinstance(node, ast.UnaryOp):
             operand_type = self.type_of(node.operand)
@@ -1255,7 +1454,9 @@ def compile_ttsl_function(
     return sc
 
 
-def parse_ttsl_source(src: str, function_name: str) -> Tuple[ast.Module, ast.FunctionDef]:
+def parse_ttsl_source(
+    src: str, function_name: str
+) -> Tuple[ast.Module, ast.FunctionDef]:
     tree = ast.parse(src)
     fn_node: Optional[ast.FunctionDef] = None
     for node in tree.body:
@@ -1276,7 +1477,8 @@ def type_of_annotation(arg_annotation) -> IRType:
 
 
 def _validate_shader_returns_annotation(fn_node: ast.FunctionDef) -> None:
-    """If the shader function has a return annotation, require tuple[vec4, vec4, int]."""
+    """If the shader function has a return annotation, require tuple[vec4, vec4,
+    int]."""
     ann = fn_node.returns
     if ann is None:
         return
@@ -1530,10 +1732,11 @@ class SSARenamer:
             for var, phi in succ_node.phis.items():
                 cur = self.top(var)
                 if cur is None:
-                    raise ValueError(
-                        f"SSA rename: no current version for var {var!r} "
-                        f"when filling phi operand from pred {block_idx} -> {succ_idx}"
-                    )
+                    # Cytron insertion here is unpruned (no liveness filtering), so a
+                    # successor can carry dead phi(var) where `var` is not defined
+                    # on all incoming edges. Skip the missing edge operand; phi
+                    # lowering only emits copies for present operands.
+                    continue
                 assert isinstance(phi.phi_operands, Dict)
                 phi.phi_operands[block_idx] = cur
 
@@ -1953,9 +2156,9 @@ class RegisterAllocatorPass(CompilationPass):
                 # Pin to ``regs.i32_[0]`` so ``ShaderInputBinding::primitive_id_i32_reg`` (default
                 # ``0``) and ``ShaderMaterial::render_mat`` write ``PixInfo::primitive_id`` into the
                 # exact register the bytecode reads from.
-                assert temp.ty == IRType.I32, (
-                    "tt_PrimitiveID must be IRType.I32 (declared in PIXEL_VARIABLES_STR_TYPE)"
-                )
+                assert (
+                    temp.ty == IRType.I32
+                ), "tt_PrimitiveID must be IRType.I32 (declared in PIXEL_VARIABLES_STR_TYPE)"
                 idx = 0
                 allocated_registers.setdefault(IRType.I32, set()).add(0)
             else:
@@ -2423,7 +2626,8 @@ class RegisterSettings:
         return regs
 
     def fork(self) -> "RegisterSettings":
-        """Copy allocation maps so per-material ``set_variable`` calls do not alias state.
+        """
+        Copy allocation maps so per-material ``set_variable`` calls do not alias state.
 
         Used when one compiled bytecode is shared across multiple ``ShaderPy`` instances
         with different register seeds (for example per-instance ``u_albedo``).
@@ -2435,7 +2639,9 @@ class RegisterSettings:
 
 
 def shader_py_frag_depth_clip_kwargs(reg_settings: RegisterSettings) -> Dict[str, int]:
-    """Keyword arguments for ``ShaderPy`` when the shader uses ``tt_FragDepth``, ``tt_Near``, and ``tt_Far``.
+    """
+    Keyword arguments for ``ShaderPy`` when the shader uses ``tt_FragDepth``,
+    ``tt_Near``, and ``tt_Far``.
 
     Call after ``all_passes_compilation`` with a ``globals_dict`` that includes
     ``GLOBAL_VAR_TT_NEAR`` and ``GLOBAL_VAR_TT_FAR`` so clip uniforms are allocated.
@@ -2451,7 +2657,9 @@ def shader_py_frag_depth_clip_kwargs(reg_settings: RegisterSettings) -> Dict[str
         (GLOBAL_VAR_TT_NEAR, "near_f32_reg"),
         (GLOBAL_VAR_TT_FAR, "far_f32_reg"),
     ]
-    missing = [name for name, _ in bindings if name not in reg_settings.var_name_to_registers]
+    missing = [
+        name for name, _ in bindings if name not in reg_settings.var_name_to_registers
+    ]
     if missing:
         raise ValueError(
             "Register allocation is missing depth/clip bindings for shader_py_frag_depth_clip_kwargs: "
@@ -2465,7 +2673,8 @@ def shader_py_frag_depth_clip_kwargs(reg_settings: RegisterSettings) -> Dict[str
 
 
 def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> None:
-    """Seed registers for globals / always-present builtins that have a documented default.
+    """
+    Seed registers for globals / always-present builtins that have a documented default.
 
     ``tt_Frame`` defaults to ``0`` until the host writes a frame counter. ``tt_Resolution``
     defaults to ``(1, 1)`` cells when the host has not written a size yet; components ``<= 0``
@@ -2600,8 +2809,13 @@ def all_passes_compilation_with_state(
         final_byte_code = PassToByteCode(cc).run(result.register_allocation)
         result.final_byte_code = final_byte_code
 
-        reg_settings = RegisterSettings(result.register_allocation.var_names_to_registers)
-        for (ty, reg_id), value in result.register_allocation.const_id_to_registers.values():
+        reg_settings = RegisterSettings(
+            result.register_allocation.var_names_to_registers
+        )
+        for (
+            ty,
+            reg_id,
+        ), value in result.register_allocation.const_id_to_registers.values():
             reg_settings.set_register(ty, reg_id, value)
         apply_engine_uniform_register_defaults(reg_settings)
         result.register_settings = reg_settings

@@ -505,6 +505,7 @@ class Test_PrimitivBuilding(unittest.TestCase):
                 "col": 256,
                 "depth": 1.0,
                 "uv_idx": 0,
+                "transparent": False,
             },
         )
 
