@@ -184,12 +184,14 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
 
     pub fn uv_map_inline(&self, u: f32, v: f32) -> RGBA {
         let u_val = if self.repeat_x {
-            u % 1.0
+            // Keep wrapped UVs in [0,1) so negative tiled UVs sample correctly.
+            u.rem_euclid(1.0)
         } else {
             u.clamp(0.0, 1.0)
         };
         let v_val = if self.repeat_y {
-            v % 1.0
+            // Keep wrapped UVs in [0,1) so negative tiled UVs sample correctly.
+            v.rem_euclid(1.0)
         } else {
             v.clamp(0.0, 1.0)
         };
