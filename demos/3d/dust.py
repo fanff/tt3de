@@ -93,12 +93,13 @@ def download_extract(url, dest, folder_name="Dust"):
     import zipfile
     import io
 
-    target_dir = os.path.join(dest, folder_name)
-    if os.path.exists(target_dir):
+    target_obj = os.path.join(dest, folder_name, "Dust.obj")
+    if os.path.exists(target_obj):
         return
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://models.spriters-resource.com/",
     }
     r = requests.get(url, headers=headers)
     r.raise_for_status()
