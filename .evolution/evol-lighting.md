@@ -8,21 +8,24 @@ authors: []
 supersedes: []
 superseded-by: ""
 related:
-  - .evolution/evol-shader-math-normal.md  # Prerequisite: tt_Normal, tt_ViewPos, smooth normals, math primitives
-  - source/ttsl.md                         # TTSL built-in variables and primitives
-  - source/low_level_api.rst               # Pipeline, buffers, material modes
-  - source/high_level_api.rst              # User-facing API surface
+  - .evolution/evol-ttsl-fragment-normal.md        # Prerequisite: tt_Normal (PixInfo → VM)
+  - .evolution/evol-ttsl-fragment-view-position.md # Prerequisite: tt_ViewPos (view-space varying)
+  - source/ttsl.md                                 # Built-ins + shipped math (`dot`, `normalize`, …)
+  - source/low_level_api.rst                       # Pipeline, buffers, material modes
+  - source/high_level_api.rst                      # User-facing API surface
 ```
 
 ## Summary
 
-Add real light capability to the tt3de engine. Introduce a **LightBuffer** — a new engine-level buffer holding a fixed-capacity set of typed light sources (ambient, directional, point) — and TTSL **accessor opcodes** that let shaders query individual light properties by index. The LightBuffer stores light data in **world space** (user-friendly); the engine **auto-transforms** positions and directions to **view space** each frame before material application, following the OpenGL `glLightfv` convention. The integration follows the current drawing model: opaque shading into `opaque_db`, then transparent shading from `transparent_db` composited onto opaque canvas. Provide a **reference TTSL shader** demonstrating ambient illumination, Lambert diffuse from a directional light, and point-light distance attenuation — all computed in view space using `tt_Normal`, `tt_ViewPos`, and the light accessors. Spot lights, shadows, and specular effects are explicitly excluded from this first iteration.
+Add real light capability to the tt3de engine: a **LightBuffer** (new Rust + Python buffer) plus TTSL **light accessor** opcodes so shaders can query lights by index. Lights are authored in **world space**; the engine **auto-transforms** to **view space** each frame (`view_matrix_3d`), matching the OpenGL `glLightfv` mental model. Shading stays in the existing two-pass draw model (`opaque_db` then `transparent_db`). A **reference TTSL shader** demonstrates ambient + Lambert directional + attenuated point lights in view space using **`tt_Normal`**, **`tt_ViewPos`**, and the accessors.
+
+**Prerequisites (tracked as separate evolutions)** — Interpolated **`tt_Normal`** and **`tt_ViewPos`** (see linked `.evolution/` files). **Vector math** for the reference shader (`dot`, `normalize`, `length`, `max`, `clamp`) is already **Shipped** on the TTSL surface per `source/ttsl.md` — not part of this lighting work item.
 
 ## Motivation and context
 
-**Current behavior** — tt3de renders all surfaces with flat color driven by material modes (StaticColor, BaseTexture, Textured) or arbitrary TTSL shader logic. There is no concept of light sources anywhere in the engine: no light storage, no light uniforms, no shading model. Every surface receives identical illumination regardless of orientation or position.
+**Current behavior** — tt3de renders surfaces via material modes (StaticColor, BaseTexture, Textured) or TTSL shaders with **texture-only** VM host support: `run_ttsl` accepts `Option<&dyn TtslTextureEnv>` today (`src/ttsl/mod.rs`); there is **no `LightBuffer`**, no light uniforms, and no light opcodes. Shaders cannot query scene lights.
 
-The `evol-shader-math-normal` prerequisite wires `tt_Normal` (view-space interpolated normal), `tt_ViewPos` (view-space fragment position), smooth per-vertex normals, and the essential math primitives (`dot`, `normalize`, `length`, `max`, `clamp`) into TTSL. What's missing is the **data delivery mechanism** — a way to define lights in Python and access their properties from TTSL.
+**After prerequisites** — With `tt_Normal` + `tt_ViewPos` bridged from raster data, TTSL can evaluate view-space lighting **if** light parameters are delivered by the engine. This evolution covers that **data path** (buffer + opcodes + render-context wiring), not the varyings themselves.
 
 **Reference comparison** — In classic OpenGL, `glLightfv(GL_LIGHT0, GL_POSITION, pos)` transformed the light position by the current modelview matrix, placing it in eye (view) space automatically. Fragment shaders then received view-space light data alongside view-space normals and positions. tt3de follows this convention: the user specifies lights in world space, the engine transforms them to view space, and TTSL shaders compute lighting in view space.
 
@@ -127,8 +130,11 @@ None. Existing apps that do not create a `LightBufferPy` are unaffected. The ren
 | Drawing pipeline | Two-pass routing via `pass_filter`: raster/apply opaque first, then raster/apply transparent |
 | `DrawingBufferPy` | Holds `opaque_db: DrawBuffer<1, f32>` and `transparent_db: DrawBuffer<1, f32>`; transparent composite writes onto opaque canvas |
 | `RustRenderContext` | Holds `transform_buffer`, `geometry_buffer`, `primitive_buffer`, `drawing_buffer`, `texture_buffer`, `material_buffer`; orchestrates pass-filtered raster/material calls |
-| `run_ttsl` / `ShaderMaterial::render_mat` | Receives `&TextureBuffer` via `TtslTextureEnv` trait; no light env |
+| `run_ttsl` (`src/ttsl/mod.rs`) | `tex: Option<&dyn TtslTextureEnv>` only — **no light env**; `exec_opcode` threads the texture reference |
+| `LightBuffer` / `LightBufferPy` | **Not in tree** at this draft — described below as proposed work |
 | `TransformPack` | Has unused `environment_light: Vec3` field — placeholder, not wired |
+
+**Engine snapshot (this draft)** — The phases below are the **target design** for lighting. They are **not implemented** yet: no `src/lightbuffer/`, no `TT_LIGHT_*` opcodes, and `ShaderMaterial::render_mat` is still the sole **textured** production caller of `run_ttsl`. Prerequisite varyings `tt_Normal` / `tt_ViewPos` are likewise **not shipped** until their evolutions land.
 
 ### Phase 1: LightBuffer (Rust)
 
@@ -236,7 +242,7 @@ pub fn run_ttsl(instrs: &[Instr; 256], regs: &mut Registers,
     env: Option<&TtslEnv>) -> (Vec4, Vec4, i32);
 ```
 
-**Impact on call sites**: The existing `tex` parameter is folded into the struct. ~6 call sites must be updated, but the change is mechanical:
+**Impact on call sites**: The existing `tex` parameter is folded into the struct. As of the current codebase there are **five** direct Rust call sites to update when changing the `run_ttsl` signature: `ShaderMaterial::render_mat` (production, passes `Some(texture_buffer)`), `ttsl_run` in `src/ttsl/ttslpy.rs` (passes `None`), and **three** unit-test invocations under `src/ttsl/mod.rs` (plus the `TTPU::run` helper that forwards to `run_ttsl`). Any new tests added later must follow the same pattern.
 
 ```rust
 // Old:   run_ttsl(instrs, regs, Some(&texture_buffer))
@@ -269,7 +275,9 @@ This is a one-time migration but future-proof against additional env types (simp
 
 ### Phase 5: Reference shader + demo
 
-> **Prerequisite**: The reference shader depends on `dot`, `normalize`, `length`, `max`, and `clamp` — these are not part of this evolution. They must be delivered by `evol-shader-math-normal` first. The shader below is the **target**; during implementation of Phases 1-4, use a simplified shader that outputs raw light properties (e.g., `return (vec4(tt_lightColor(0), 1.0), ...)`) for testing.
+> **Prerequisites**: **`tt_Normal`** and **`tt_ViewPos`** (see `.evolution/evol-ttsl-fragment-normal.md` and `.evolution/evol-ttsl-fragment-view-position.md`). **Math**: `dot`, `normalize`, `length`, `max`, and `clamp` are already **Shipped** in TTSL per `source/ttsl.md` — no separate opcode evolution is required for the reference math. **Smooth normals**: mesh authoring / per-vertex normals are orthogonal; today’s `triangle_3d` path duplicates a **single** triangle normal per corner (flat shading) until mesh data improves.
+>
+> The shader below is the **target**. During Phases 1–4, use a simplified shader that outputs raw light properties (e.g. `return (vec4(tt_lightColor(0), 1.0), ...)`) for testing.
 
 1. **Reference shader source**: A TTSL function implementing (see User-visible functionality above):
    - Ambient: `result += albedo * tt_lightColor(i)`
@@ -291,7 +299,7 @@ This is a one-time migration but future-proof against additional env types (simp
 - `src/lightbuffer/light_buffer_py.rs` (new) — PyO3 `LightBufferPy`
 - `src/ttsl/mod.rs` — `TtslLightEnv` trait, `TtslEnv` struct, `run_ttsl` signature update (tex folded into struct)
 - `src/ttsl/opcodes.rs` — auto-generated (new light opcodes)
-- `src/material/shader_material.rs` — construct `TtslEnv` and pass to `run_ttsl` (only production call site affected)
+- `src/material/shader_material.rs` — construct `TtslEnv` and pass to `run_ttsl` (only **shader material** production path; see call-site note above for full list)
 - *(No changes to `RenderMaterial` trait, `apply_material_on`, or `apply_material` — LightBuffer is consumed only inside the VM)*
 - `src/lib.rs` — expose `LightBufferPy`, register `lightbuffer` module
 - `python/tt3de/render_context_rust.py` — call `update_view_space` once per frame before material passes; expose `light_buffer`
@@ -340,9 +348,9 @@ This is a one-time migration but future-proof against additional env types (simp
 | Phase 4: Compiler support | M | Medium — new built-in function category | Requires Phase 2 |
 | Phase 5: Reference shader + demo | S | Low — pure TTSL + Python | Requires all above |
 
-**Dependency**: This evolution depends on `evol-shader-math-normal` (`tt_Normal`, `tt_ViewPos`, smooth normals, `dot`, `normalize`, `length`, `max`, `clamp`) being shipped first.
+**Dependencies**: Ship **`evol-ttsl-fragment-normal`** and **`evol-ttsl-fragment-view-position`** before (or in lockstep with) the reference lighting demo. Vector builtins listed above are already available.
 
-**Rollback**: The LightBuffer data structure and opcodes are additive (no behavioral change when unused). However, the `TtslEnv` struct refactor (folding `tex` into the bundled struct) touches all `run_ttsl` call sites (~6). Rolling back LightBuffer requires reverting the `TtslEnv` refactor across those sites. The per-frame `update_view_space` call is a new side effect in the render path — if the LightBuffer is empty, it's a no-op, but the call itself must be removed on rollback.
+**Rollback**: The LightBuffer data structure and opcodes are additive (no behavioral change when unused). However, the `TtslEnv` struct refactor (folding `tex` into the bundled struct) touches all `run_ttsl` call sites (see **five** Rust sites today). Rolling back LightBuffer requires reverting the `TtslEnv` refactor across those sites. The per-frame `update_view_space` call is a new side effect in the render path — if the LightBuffer is empty, it's a no-op, but the call itself must be removed on rollback.
 
 ## A priori performance analysis
 
@@ -364,7 +372,7 @@ This is a one-time migration but future-proof against additional env types (simp
 
 ## Risks and open questions
 
-- **`run_ttsl` signature change**: The existing `tex: Option<&dyn TtslTextureEnv>` parameter is folded into a new `TtslEnv` struct alongside the new `light` field. This is a one-time change that touches ~6 call sites (1 production, 1 Python binding, 4 tests). Once migrated, future env types only add a field to `TtslEnv` — no more signature churn. **This is NOT additive**: rolling back LightBuffer requires reverting the `TtslEnv` refactor across all 6 call sites.
+- **`run_ttsl` signature change**: The existing `tex: Option<&dyn TtslTextureEnv>` parameter is folded into a new `TtslEnv` struct alongside the new `light` field. This is a one-time change that touches **five** Rust call sites today (`ShaderMaterial`, `ttsl_run`, three tests in `src/ttsl/mod.rs`; re-count after new tests land). Once migrated, future env types only add a field to `TtslEnv` — no more signature churn. **This is NOT additive**: rolling back LightBuffer requires reverting the `TtslEnv` refactor across every caller.
 - **TTSL loop support**: TTSL already supports `while` loops (not `for`). The reference shader can iterate lights with `i = 0; while i < tt_lightCount(): ... i = i + 1`. The doc's earlier draft was too pessimistic — this is not a risk, just verify `i32` comparison operators work in the compiled output.
 - **HDR and clamping**: Light color × albedo can exceed 1.0. The reference shader clamps to [0, 1] before output. The convention is: shaders are responsible for tone mapping / clamping.
 - **Directional light direction convention**: In OpenGL, `GL_POSITION` with `w=0` is a direction *toward* the light (not from the light). The reference shader should document whether `tt_lightDirection` is "toward light" or "from light" — suggest "toward light" (positive dot product with N means lit).
@@ -378,17 +386,19 @@ This is a one-time migration but future-proof against additional env types (simp
 - **Coordinate space**: View space for shader computation. LightBuffer stores world-space data; engine auto-transforms to view space each frame using `view_matrix_3d`, following the OpenGL `glLightfv` convention.
 - **Light delivery**: LightBuffer with per-property accessor opcodes (not plain uniforms).
 - **Lighting model**: Reference TTSL shader, not a Rust `LitMaterial` mode.
-- **Point lights enabled**: `tt_ViewPos` from prerequisite evolution provides the fragment position needed for distance/direction computation.
+- **Point lights enabled**: `tt_ViewPos` from `.evolution/evol-ttsl-fragment-view-position.md` provides the fragment position needed for distance/direction computation.
+- **Normals**: `tt_Normal` from `.evolution/evol-ttsl-fragment-normal.md`; flat vs smooth caveats documented there and in `source/ttsl.md` once shipped.
 - **Direction convention**: `tt_lightDirection` returns the direction **toward** the light source (positive `dot(N, L)` = lit surface).
 - **LightBuffer capacity**: Fixed compile-time `MAX_LIGHTS = 32` (no const generic). Python `capacity` is a runtime validation cap.
-- **Env bundling**: `TtslEnv` struct bundles `tex` + `light` to avoid signature churn. One-time migration of ~6 call sites, then stable.
+- **Env bundling**: `TtslEnv` struct bundles `tex` + `light` to avoid signature churn. One-time migration of **five** Rust call sites (current tree), then stable.
 - **Material dispatch untouched**: LightBuffer is consumed only inside the TTSL VM (`run_ttsl`). No changes to `RenderMaterial`, `apply_material_on`, or `apply_material`.
 - **Resolution**: *(to be filled when closing)*
 
 ## References
 
-- `.evolution/evol-shader-math-normal.md` — Prerequisite: `tt_Normal`, `tt_ViewPos`, smooth normals, `dot`, `normalize`, `length`, `max`, `clamp`
-- `source/ttsl.md` — TTSL built-in variables and primitives
+- `.evolution/evol-ttsl-fragment-normal.md` — Prerequisite: `tt_Normal` (`PixInfo::normal` → TTSL)
+- `.evolution/evol-ttsl-fragment-view-position.md` — Prerequisite: `tt_ViewPos` (view-space varying)
+- `source/ttsl.md` — TTSL built-in variables; shipped `dot` / `normalize` / `length` / `max` / `clamp`
 - `source/low_level_api.rst` — Pipeline overview, buffer descriptions, material modes
 - `source/ttsl_compiler.md` — Compiler pipeline and extension guide
 - `src/ttsl/mod.rs` — `TtslTextureEnv` trait (pattern for `TtslLightEnv`)
