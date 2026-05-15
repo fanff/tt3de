@@ -15,7 +15,7 @@ Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelC
 **Implicit per-cell inputs** — **omit from `globals_dict`**. The compiler already knows these names and types; the material bridge fills them **per shaded cell** (not as globals):
 
 - `tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1` (`vec2`)
-- `tt_ViewPos` (`vec3`)
+- `tt_Normal`, `tt_ViewPos` (`vec3`)
 - `tt_FrontFacing` (`bool`)
 - `tt_FragDepth` (`float`)
 - `tt_LineCoord` (`float`)

@@ -27,6 +27,7 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_NORMAL,
     PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
@@ -48,6 +49,7 @@ ALWAYS_PRESENT_BUILTIN_NAMES = (
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_FRAG_DEPTH,
     PIXELVAR_TT_LINE_COORD,
+    PIXELVAR_TT_NORMAL,
     PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_VIEW_POS,
@@ -105,6 +107,7 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         self.assertEqual(cc.named_variables[PIXELVAR_TT_FRAG_DEPTH].ty, IRType.F32)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_LINE_COORD].ty, IRType.F32)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_PRIMITIVE_ID].ty, IRType.I32)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_NORMAL].ty, IRType.V3)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_VIEW_POS].ty, IRType.V3)
         self.assertEqual(cc.globals, {GLOBAL_VAR_TT_TIME: IRType.F32})
 
@@ -176,6 +179,66 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         )
         cc = compile_ttsl(src, "shade", {})
         self.assertIn(PIXELVAR_TT_VIEW_POS, cc.named_variables)
+
+    def test_tt_Normal_used_in_shader_body_compiles(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                n: vec3 = tt_Normal
+                return (vec4(n.x, n.y, n.z, 1.0), vec4(n.x, n.y, n.z, 1.0), 0)
+            """
+        )
+        cc = compile_ttsl(src, "shade", {})
+        self.assertIn(PIXELVAR_TT_NORMAL, cc.named_variables)
+
+    def test_tt_Normal_register_allocation_pins_v3_slot_2(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Normal.x, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_NORMAL]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(reg_id, 2)
+
+    def test_tt_Normal_register_seed_defaults_match_pixinfo_normal(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_Normal.x, tt_Normal.y, tt_Normal.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_NORMAL]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(reg_id, 2)
+        v = reg_settings.regs[IRType.V3][reg_id]
+        self.assertAlmostEqual(v.x, 0.0)
+        self.assertAlmostEqual(v.y, 0.0)
+        self.assertAlmostEqual(v.z, 1.0)
+
+    def test_user_vec3_global_does_not_alias_reserved_tt_normal_tt_view_pos_slots(self):
+        globs = {"u_tint": glm.vec3}
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                t: vec3 = u_tint
+                return (
+                    vec4(tt_Normal.x + t.x * 0.0, tt_ViewPos.x, 0.0, 1.0),
+                    vec4(0.0, 0.0, 0.0, 1.0),
+                    0,
+                )
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", globs)
+        _, n_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_NORMAL]
+        _, vp_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_VIEW_POS]
+        _, u_reg = reg_settings.var_name_to_registers["u_tint"]
+        self.assertEqual(n_reg, 2)
+        self.assertEqual(vp_reg, 3)
+        self.assertGreaterEqual(u_reg, 4)
 
     def test_tt_ViewPos_register_allocation_pins_v3_slot_3(self):
         src = dedent(

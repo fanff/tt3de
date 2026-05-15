@@ -26,6 +26,7 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_VIEW_POS,
+    PIXELVAR_TT_NORMAL,
     all_passes_compilation,
 )
 from tt3de.ttsl.ttsl_assembly import IRType
@@ -703,6 +704,59 @@ class Test_ShaderPyViewPosMaterialBridge(unittest.TestCase):
         self.assertAlmostEqual(cell["f_r"] / 255.0, vp.x, places=2)
         self.assertAlmostEqual(cell["f_g"] / 255.0, vp.y, places=2)
         self.assertAlmostEqual(cell["f_b"] / 255.0, vp.z, places=2)
+
+
+class Test_ShaderPyNormalMaterialBridge(unittest.TestCase):
+    """``tt_Normal`` flows from ``DrawingBufferPy.set_depth_content`` (first ``glm.vec3`` arg)
+    through ``PixInfo::normal`` into ``regs.v3[2]`` (``ShaderInputBinding::normal_v3_reg``).
+    """
+
+    _SRC = dedent(
+        """
+        def n_rgb(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (
+                vec4(tt_Normal.x, tt_Normal.y, tt_Normal.z, 1.0),
+                vec4(0.0, 0.0, 0.0, 1.0),
+                0,
+            )
+        """
+    )
+
+    def test_normal_flows_into_front_color(self):
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "n_rgb", {})
+        ty, rid = reg_settings.var_name_to_registers[PIXELVAR_TT_NORMAL]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(rid, 2)
+
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        n = glm.vec3(0.25, 0.5, 0.75)
+        draw.set_depth_content(
+            0,
+            0,
+            n,
+            1.0,
+            glm.vec2(0.25, 0.75),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+        )
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(bytecode, default_glyph=None)
+        mat_idx = mb.add_shader(shader_mat)
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(256),
+            draw,
+        )
+        cell = draw.get_canvas_cell(0, 0)
+        self.assertAlmostEqual(cell["f_r"] / 255.0, n.x, places=2)
+        self.assertAlmostEqual(cell["f_g"] / 255.0, n.y, places=2)
+        self.assertAlmostEqual(cell["f_b"] / 255.0, n.z, places=2)
 
 
 class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):
