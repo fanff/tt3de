@@ -14,7 +14,6 @@ Run:
     uv run python demos/3d/ttsl_normal_viewpos.py
 """
 
-import math
 from textwrap import dedent
 
 from pyglm import glm
@@ -22,10 +21,10 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header
 
 from tt3de.glm_camera import ViewportScaleMode
-from tt3de.points import Point2D, Point3D
+from tt3de.prefab3d import Prefab3D
 from tt3de.textual_standalone import TT3DViewStandAlone
 from tt3de.tt3de import find_glyph_indices_py, materials  # type: ignore[reportMissingImports]
-from tt3de.tt_3dnodes import TT3DPolygon, TT3DNode
+from tt3de.tt_3dnodes import TT3DNode
 from tt3de.ttsl.compiler import RegisterSettings, all_passes_compilation
 
 CAM_NEAR = 0.1
@@ -86,48 +85,6 @@ SHADER_SPHERE_GLYPHS_SRC = dedent(
         return (fr, bg, u_g_hash)
     """
 )
-
-
-def _low_poly_uv_sphere(radius: float, stacks: int, slices: int) -> TT3DPolygon:
-    """Faceted sphere: each triangle has a single flat normal (typical engine path)."""
-    if stacks < 1 or slices < 3:
-        raise ValueError("stacks must be >= 1 and slices >= 3")
-    verts: list[Point3D] = []
-    for stack in range(stacks + 1):
-        v = stack / stacks
-        theta = v * math.pi
-        st = math.sin(theta)
-        ct = math.cos(theta)
-        for sl in range(slices + 1):
-            u = sl / slices
-            phi = u * 2.0 * math.pi
-            x = radius * st * math.cos(phi)
-            y = radius * ct
-            z = radius * st * math.sin(phi)
-            verts.append(Point3D(x, y, z))
-
-    tris: list[tuple[int, int, int]] = []
-    uvs: list[tuple[Point2D, Point2D, Point2D]] = []
-    for stack in range(stacks):
-        for sl in range(slices):
-            i0 = stack * (slices + 1) + sl
-            i1 = stack * (slices + 1) + sl + 1
-            i2 = (stack + 1) * (slices + 1) + sl
-            i3 = (stack + 1) * (slices + 1) + sl + 1
-            ua = Point2D(sl / slices, stack / stacks)
-            ub = Point2D((sl + 1) / slices, stack / stacks)
-            uc = Point2D(sl / slices, (stack + 1) / stacks)
-            ud = Point2D((sl + 1) / slices, (stack + 1) / stacks)
-            tris.append((i0, i2, i1))
-            uvs.append((ua, uc, ub))
-            tris.append((i1, i2, i3))
-            uvs.append((ub, uc, ud))
-
-    m = TT3DPolygon()
-    m.vertex_list = verts
-    m.triangles = tris
-    m.uvmap = uvs
-    return m
 
 
 def _add_sphere_material(
@@ -221,13 +178,13 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
 
         self.spin_root = TT3DNode()
 
-        sphere = _low_poly_uv_sphere(0.42, stacks=4, slices=10)
+        sphere = Prefab3D.latlong_uv_sphere(0.42, stacks=4, slices=10)
         sphere.material_id = mat_sphere
         sphere.local_transform = glm.translate(glm.vec3(-1.05, 0.0, 0.0))
         self.spin_root.add_child(sphere)
 
         # Second mesh: same low-poly sphere with ``sphere_glyphs`` TTSL.
-        glyph_sphere = _low_poly_uv_sphere(0.5, stacks=6, slices=12)
+        glyph_sphere = Prefab3D.latlong_uv_sphere(0.5, stacks=6, slices=12)
         glyph_sphere.material_id = mat_glyphs
         glyph_sphere.local_transform = glm.translate(glm.vec3(1.05, 0.0, 0.0))
         self.spin_root.add_child(glyph_sphere)

@@ -126,6 +126,64 @@ class Prefab3D:
         return m
 
     @staticmethod
+    def latlong_uv_sphere(
+        radius: float = 1.0, stacks: int = 4, slices: int = 10
+    ) -> TT3DPolygon:
+        """Faceted UV-mapped sphere via latitude–longitude tessellation.
+
+        Each triangle carries a single **flat (faceted) normal** — the mesh is
+        appropriate for ``tt_Normal`` lighting demos where per-face normals are
+        expected, not smooth per-vertex interpolation.
+
+        **Axis convention**: Y-up, poles on ±Y.  **UV range**: [0, 1] on each
+        triangle, laid out as a lat-long strip (U wraps horizontally, V from
+        bottom to top pole).
+
+        ``stacks`` must be >= 1 and ``slices`` >= 3.
+
+        Returns a ``TT3DPolygon`` with ``(stacks + 1) * (slices + 1)`` vertices
+        and ``2 * stacks * slices`` triangles.
+        """
+        if stacks < 1 or slices < 3:
+            raise ValueError("stacks must be >= 1 and slices >= 3")
+        verts: list[Point3D] = []
+        for stack in range(stacks + 1):
+            v = stack / stacks
+            theta = v * math.pi
+            st = math.sin(theta)
+            ct = math.cos(theta)
+            for sl in range(slices + 1):
+                u = sl / slices
+                phi = u * 2.0 * math.pi
+                x = radius * st * math.cos(phi)
+                y = radius * ct
+                z = radius * st * math.sin(phi)
+                verts.append(Point3D(x, y, z))
+
+        tris: list[tuple[int, int, int]] = []
+        uvs: list[tuple[Point2D, Point2D, Point2D]] = []
+        for stack in range(stacks):
+            for sl in range(slices):
+                i0 = stack * (slices + 1) + sl
+                i1 = stack * (slices + 1) + sl + 1
+                i2 = (stack + 1) * (slices + 1) + sl
+                i3 = (stack + 1) * (slices + 1) + sl + 1
+                ua = Point2D(sl / slices, stack / stacks)
+                ub = Point2D((sl + 1) / slices, stack / stacks)
+                uc = Point2D(sl / slices, (stack + 1) / stacks)
+                ud = Point2D((sl + 1) / slices, (stack + 1) / stacks)
+                tris.append((i0, i2, i1))
+                uvs.append((ua, uc, ub))
+                tris.append((i1, i2, i3))
+                uvs.append((ub, uc, ud))
+
+        m = TT3DPolygon()
+        m.vertex_list = verts
+        m.triangles = tris
+        m.uvmap = uvs
+        return m
+
+    @staticmethod
     def unitary_circle(segment_count=3) -> TT3DPolygon:
         vertices = [Point3D(0.0, 0.0, 0.0)]
         triangles = []
