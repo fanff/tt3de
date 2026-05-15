@@ -82,6 +82,7 @@ pub fn raster_prect<const DEPTHCOUNT: usize>(
                 col,
                 0.01,
                 Vec3::new(0.0, 0.0, 1.0),
+                Vec3::zeros(),
                 uv,
                 vec2(0.0, 0.0),
                 prim_ref.node_id,
@@ -125,12 +126,14 @@ mod test_raster_rect {
             pos: vec4(0.0, 0.0, 1.0, 1.0),
             normal: vec3(0.0, 0.0, 0.0),
             uv: vec2(0.0, 0.0),
+            view_pos: vec3(0.0, 0.0, 0.0),
         };
 
         let bottom_right = Vertex {
             pos: vec4(3.0, 4.0, 1.0, 1.0),
             normal: vec3(0.0, 0.0, 0.0),
             uv: vec2(1.0, 1.0),
+            view_pos: vec3(0.0, 0.0, 0.0),
         };
         let rect = super::PRect {
             top_left,
@@ -169,12 +172,14 @@ mod test_raster_rect {
             pos: vec4(-5.0, -6.0, 1.0, 1.0),
             normal: vec3(0.0, 0.0, 0.0),
             uv: vec2(0.0, 0.0),
+            view_pos: vec3(0.0, 0.0, 0.0),
         };
 
         let bottom_right = Vertex {
             pos: vec4(13.0, 14.0, 1.0, 1.0),
             normal: vec3(0.0, 0.0, 0.0),
             uv: vec2(1.0, 1.0),
+            view_pos: vec3(0.0, 0.0, 0.0),
         };
         let rect = super::PRect {
             top_left,

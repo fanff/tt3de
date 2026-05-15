@@ -313,8 +313,8 @@ impl PrimitiveBuffer {
                 primitive_id: self.current_size,
                 transparent,
             },
-            pa: Vertex::new(pos_a, normal_a, uv_a),
-            pb: Vertex::new(pos_b, normal_b, uv_b),
+            pa: Vertex::new(pos_a, normal_a, uv_a, Vec3::zeros()),
+            pb: Vertex::new(pos_b, normal_b, uv_b, Vec3::zeros()),
         };
         self.content[self.current_size] = elem;
 

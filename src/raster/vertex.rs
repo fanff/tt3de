@@ -8,6 +8,8 @@ use nalgebra_glm::{Vec2, Vec3, Vec4};
 /// - `pos`: The position of the vertex in 4D space.
 /// - `normal`: The normal vector at the vertex, used for lighting calculations.
 /// - `uv`: The texture coordinates for mapping textures onto the surface.
+/// - `view_pos`: View-space position premultiplied by NDC `w` (same perspective convention as `uv`);
+///   raster divides by `pos.w` for per-pixel Cartesian view position.
 ///
 /// This struct is `Clone` and `Copy` for easy duplication and efficient use.
 #[derive(Clone, Copy)]
@@ -15,6 +17,7 @@ pub struct Vertex {
     pub pos: Vec4,
     pub normal: Vec3,
     pub uv: Vec2,
+    pub view_pos: Vec3,
 }
 
 impl Vertex {
@@ -24,11 +27,17 @@ impl Vertex {
     /// - `pos`: The position of the vertex in 4D space.
     /// - `normal`: The normal vector at the vertex.
     /// - `uv`: The texture coordinates for the vertex.
+    /// - `view_pos`: View-space `xyz * pos.w` for perspective-correct interpolation (use `Vec3::zeros()` when N/A).
     ///
     /// # Returns
     /// A new `Vertex` with the specified attributes.
-    pub fn new(pos: Vec4, normal: Vec3, uv: Vec2) -> Self {
-        Self { pos, normal, uv }
+    pub fn new(pos: Vec4, normal: Vec3, uv: Vec2, view_pos: Vec3) -> Self {
+        Self {
+            pos,
+            normal,
+            uv,
+            view_pos,
+        }
     }
 
     pub fn zero() -> Self {
@@ -36,6 +45,7 @@ impl Vertex {
             pos: Vec4::zeros(),
             normal: Vec3::zeros(),
             uv: Vec2::zeros(),
+            view_pos: Vec3::zeros(),
         }
     }
 }
@@ -48,6 +58,7 @@ impl std::ops::Add for Vertex {
             pos: self.pos + rhs.pos,
             normal: self.normal + rhs.normal,
             uv: self.uv + rhs.uv,
+            view_pos: self.view_pos + rhs.view_pos,
         }
     }
 }
@@ -59,6 +70,7 @@ impl std::ops::Sub for Vertex {
             pos: self.pos - rhs.pos,
             normal: self.normal - rhs.normal,
             uv: self.uv - rhs.uv,
+            view_pos: self.view_pos - rhs.view_pos,
         }
     }
 }
@@ -70,6 +82,7 @@ impl std::ops::Div<f32> for Vertex {
             pos: self.pos / rhs,
             normal: self.normal / rhs,
             uv: self.uv / rhs,
+            view_pos: self.view_pos / rhs,
         }
     }
 }
@@ -81,6 +94,7 @@ impl std::ops::Mul<f32> for Vertex {
             pos: self.pos * rhs,
             normal: self.normal * rhs,
             uv: self.uv * rhs,
+            view_pos: self.view_pos * rhs,
         }
     }
 }
@@ -90,6 +104,7 @@ impl std::ops::AddAssign for Vertex {
         self.pos += rhs.pos;
         self.normal += rhs.normal;
         self.uv += rhs.uv;
+        self.view_pos += rhs.view_pos;
     }
 }
 impl std::ops::SubAssign for Vertex {
@@ -97,6 +112,7 @@ impl std::ops::SubAssign for Vertex {
         self.pos -= rhs.pos;
         self.normal -= rhs.normal;
         self.uv -= rhs.uv;
+        self.view_pos -= rhs.view_pos;
     }
 }
 impl std::fmt::Debug for Vertex {
@@ -105,6 +121,10 @@ impl std::fmt::Debug for Vertex {
             .field("pos", &(&self.pos.x, &self.pos.y, &self.pos.z, &self.pos.w))
             .field("normal", &(&self.normal.x, &self.normal.y, &self.normal.z))
             .field("uv", &(&self.uv.x, &self.uv.y))
+            .field(
+                "view_pos",
+                &(&self.view_pos.x, &self.view_pos.y, &self.view_pos.z),
+            )
             .finish()
     }
 }
@@ -125,11 +145,13 @@ mod test_vertext {
             Vec4::new(1.0, 2.0, 3.0, 4.0),
             Vec3::new(1.0, 2.0, 3.0),
             Vec2::new(1.0, 2.0),
+            Vec3::zeros(),
         ));
         let b = super::Vertex::new(
             Vec4::new(1.0, 2.0, 3.0, 4.0),
             Vec3::new(1.0, 2.0, 3.0),
             Vec2::new(1.0, 2.0),
+            Vec3::zeros(),
         );
 
         let c = a + b;

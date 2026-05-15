@@ -64,6 +64,7 @@ fn set_pixel_double_weights<DEPTHACC: RealNumber, const DEPTHCOUNT: usize>(
         col,
         depth,
         normal,
+        Vec3::zeros(),
         w,
         w_alt,
         prim_ref.node_id,

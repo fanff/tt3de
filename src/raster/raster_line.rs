@@ -29,6 +29,7 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 col as usize,
                 depth,
                 normal,
+                pa.view_pos,
                 uv,
                 uv_1,
                 prim_ref.node_id,
@@ -63,6 +64,7 @@ pub fn raster_line<const DEPTHCOUNT: usize>(
                 col as usize,
                 depth,
                 normal,
+                current_value.view_pos,
                 uv,
                 uv_1,
                 prim_ref.node_id,
@@ -97,11 +99,13 @@ mod tests {
             pos: nalgebra_glm::vec4(0.0, 1.0, 1.0, 1.0),
             normal: nalgebra_glm::vec3(0.0, 0.0, 1.0),
             uv: nalgebra_glm::vec2(1.0, 0.0),
+            view_pos: nalgebra_glm::vec3(0.0, 0.0, 0.0),
         };
         let pbv = Vertex {
             pos: nalgebra_glm::vec4(8.0, 9.0, 3.0, 1.0),
             normal: nalgebra_glm::vec3(0.0, 0.0, 1.0),
             uv: nalgebra_glm::vec2(0.0, 1.0),
+            view_pos: nalgebra_glm::vec3(0.0, 0.0, 0.0),
         };
 
         raster_line(&mut drawing_buffer, &prim_ref, &pav, &pbv);
@@ -123,11 +127,13 @@ mod tests {
             pos: nalgebra_glm::vec4(0.0, 0.0, 1.0, 1.0),
             normal: nalgebra_glm::vec3(0.0, 0.0, 1.0),
             uv: nalgebra_glm::vec2(1.0, 0.0),
+            view_pos: nalgebra_glm::vec3(0.0, 0.0, 0.0),
         };
         let pbv = Vertex {
             pos: nalgebra_glm::vec4(1.0, 0.0, 3.0, 1.0),
             normal: nalgebra_glm::vec3(0.0, 0.0, 1.0),
             uv: nalgebra_glm::vec2(0.0, 1.0),
+            view_pos: nalgebra_glm::vec3(0.0, 0.0, 0.0),
         };
         raster_line(&mut drawing_buffer, &prim_ref, &pav, &pbv);
 

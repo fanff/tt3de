@@ -1,5 +1,5 @@
 pub mod primitivbuffer;
-use nalgebra_glm::{vec2, vec3, vec4};
+use nalgebra_glm::{vec2, vec3, vec4, Vec3};
 use primitivbuffer::{PointInfo, PrimitivReferences, PrimitiveBuffer, PrimitiveElements};
 use pyo3::{prelude::*, pyclass, pymethods, types::PyDict, Py, Python};
 
@@ -112,16 +112,19 @@ impl PrimitiveBufferPy {
             vec4(p_a_col, p_a_row, p_a_depth, 1.0),
             vec3(1.0, 0.0, 0.0),
             vec2(0.0, 0.0),
+            Vec3::zeros(),
         );
         let vb = Vertex::new(
             vec4(p_b_col, p_b_row, p_b_depth, 1.0),
             vec3(0.0, 1.0, 0.0),
             vec2(1.0, 0.0),
+            Vec3::zeros(),
         );
         let vc = Vertex::new(
             vec4(p_c_col, p_c_row, p_c_depth, 1.0),
             vec3(0.0, 0.0, 1.0),
             vec2(1.0, 1.0),
+            Vec3::zeros(),
         );
 
         self.content
@@ -149,11 +152,13 @@ impl PrimitiveBufferPy {
             vec4(left, top, top_left_depth, 1.0),
             vec3(1.0, 0.0, 0.0),
             vec2(top_left_uv.0, top_left_uv.1),
+            Vec3::zeros(),
         );
         let bottom_right = Vertex::new(
             vec4(right, bottom, bottom_right_depth, 1.0),
             vec3(0.0, 1.0, 0.0),
             vec2(bottom_right_uv.0, bottom_right_uv.1),
+            Vec3::zeros(),
         );
         self.content
             .add_rect(
@@ -249,6 +254,8 @@ fn vertex_into_dict(py: Python, pi: &Vertex) -> Py<PyDict> {
     dict.set_item("normal", vec3_as_pylist(py, pi.normal))
         .unwrap();
     dict.set_item("uv", vec2_as_pylist(py, pi.uv)).unwrap();
+    dict.set_item("view_pos", vec3_as_pylist(py, pi.view_pos))
+        .unwrap();
 
     dict.into()
 }

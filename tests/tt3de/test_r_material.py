@@ -25,6 +25,7 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_LINE_COORD,
     PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
+    PIXELVAR_TT_VIEW_POS,
     all_passes_compilation,
 )
 from tt3de.ttsl.ttsl_assembly import IRType
@@ -156,10 +157,8 @@ class Test_ShaderPyAccessors(unittest.TestCase):
 
 
 class Test_ShaderPySetShaderTimeCompiled(unittest.TestCase):
-    """
-    Compiled TTSL + ``ShaderPy`` + ``MaterialBufferPy.set_shader_time`` updates the
-    VM seed register so ``apply_material_py`` sees ``tt_Time``.
-    """
+    """Compiled TTSL + ``ShaderPy`` + ``MaterialBufferPy.set_shader_time`` updates the
+    VM seed register so ``apply_material_py`` sees ``tt_Time``."""
 
     _DUMMY_SRC = dedent(
         """
@@ -224,10 +223,8 @@ class Test_ShaderPySetShaderTimeCompiled(unittest.TestCase):
 
 
 class Test_ShaderPySetShaderDeltaTimeCompiled(unittest.TestCase):
-    """
-    ``MaterialBufferPy.set_shader_delta_time`` updates the VM seed register for
-    ``tt_DeltaTime`` (same seed-based contract as ``tt_Time``).
-    """
+    """``MaterialBufferPy.set_shader_delta_time`` updates the VM seed register for
+    ``tt_DeltaTime`` (same seed-based contract as ``tt_Time``)."""
 
     _DUMMY_SRC = dedent(
         """
@@ -290,7 +287,8 @@ class Test_ShaderPySetShaderDeltaTimeCompiled(unittest.TestCase):
 
 
 class Test_ShaderPySetShaderFrameCompiled(unittest.TestCase):
-    """``MaterialBufferPy.set_shader_frame`` updates the VM seed register for ``tt_Frame``."""
+    """``MaterialBufferPy.set_shader_frame`` updates the VM seed register for
+    ``tt_Frame``."""
 
     _DUMMY_SRC = dedent(
         """
@@ -352,7 +350,8 @@ class Test_ShaderPySetShaderFrameCompiled(unittest.TestCase):
 
 
 class Test_ShaderPySetShaderResolutionCompiled(unittest.TestCase):
-    """``MaterialBufferPy.set_shader_resolution`` updates ``tt_Resolution`` like ``tt_Time``."""
+    """``MaterialBufferPy.set_shader_resolution`` updates ``tt_Resolution`` like
+    ``tt_Time``."""
 
     _DUMMY_SRC = dedent(
         """
@@ -417,7 +416,8 @@ class Test_ShaderPySetShaderResolutionCompiled(unittest.TestCase):
 
 
 class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
-    """``set_shader_near`` / ``set_shader_far`` update ``tt_Near`` / ``tt_Far`` seed registers."""
+    """``set_shader_near`` / ``set_shader_far`` update ``tt_Near`` / ``tt_Far`` seed
+    registers."""
 
     _DUMMY_SRC = dedent(
         """
@@ -497,7 +497,9 @@ class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
 
 
 class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
-    """``ShaderPy.front_facing_bool_reg`` matches ``PixInfo.front_facing`` from ``set_depth_content``.
+    """
+    ``ShaderPy.front_facing_bool_reg`` matches ``PixInfo.front_facing`` from
+    ``set_depth_content``.
 
     Uses hand-written branch bytecode (same minimal shape as ``test_runttsl`` and the Rust
     ``jmp_if_false_routes_to_else_ret_without_phi`` test) because compiled TTSL ``if`` /
@@ -647,6 +649,60 @@ class Test_ShaderPyPrimitiveIDFlow(unittest.TestCase):
                 primitive_id,
                 f"shader glyph must mirror primitive_id={primitive_id}",
             )
+
+
+class Test_ShaderPyViewPosMaterialBridge(unittest.TestCase):
+    """``tt_ViewPos`` flows from ``DrawingBufferPy.set_depth_content(..., view_pos=...)`` through
+    ``PixInfo::view_pos`` into the VM (``ShaderInputBinding::view_pos_v3_reg`` default ``3``).
+    """
+
+    _SRC = dedent(
+        """
+        def vp_rgb(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            return (
+                vec4(tt_ViewPos.x, tt_ViewPos.y, tt_ViewPos.z, 1.0),
+                vec4(0.0, 0.0, 0.0, 1.0),
+                0,
+            )
+        """
+    )
+
+    def test_view_pos_flows_into_front_color(self):
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "vp_rgb", {})
+        ty, rid = reg_settings.var_name_to_registers[PIXELVAR_TT_VIEW_POS]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(rid, 3)
+
+        draw = DrawingBufferPy(4, 4)
+        draw.hard_clear(10.0)
+        vp = glm.vec3(0.1, 0.2, 0.3)
+        draw.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.25, 0.75),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+            view_pos=vp,
+        )
+        mb = MaterialBufferPy()
+        shader_mat = materials.ShaderPy(bytecode, default_glyph=None)
+        mat_idx = mb.add_shader(shader_mat)
+        apply_material_py(
+            mb,
+            TextureBufferPy(4),
+            VertexBufferPy(16, 16, 16),
+            PrimitiveBufferPy(256),
+            draw,
+        )
+        cell = draw.get_canvas_cell(0, 0)
+        self.assertAlmostEqual(cell["f_r"] / 255.0, vp.x, places=2)
+        self.assertAlmostEqual(cell["f_g"] / 255.0, vp.y, places=2)
+        self.assertAlmostEqual(cell["f_b"] / 255.0, vp.z, places=2)
 
 
 class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):

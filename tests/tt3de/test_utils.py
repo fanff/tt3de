@@ -30,6 +30,9 @@ def assertPixInfoEqual(pix0, pix1, uv_tol=0.01):
     for key in ["uv", "uv_1"]:
         assert math.isclose(pix0[key][0], pix1[key][0], abs_tol=uv_tol)
         assert math.isclose(pix0[key][1], pix1[key][1], abs_tol=uv_tol)
+    if "view_pos" in pix1:
+        for i in range(3):
+            assert math.isclose(pix0["view_pos"][i], pix1["view_pos"][i], abs_tol=uv_tol)
 
 
 def assertPolygon3DEqual(poly0, poly1):

@@ -172,7 +172,7 @@ impl DrawingBufferPy {
         tt.into()
     }
 
-    #[pyo3(signature = (row, col, normal_py, depth, uv_py, uv_1_py, node_id, geom_id, material_id, primitive_id, front_facing=true, line_coord=0.0, point_coord=None))]
+    #[pyo3(signature = (row, col, normal_py, depth, uv_py, uv_1_py, node_id, geom_id, material_id, primitive_id, front_facing=true, line_coord=0.0, point_coord=None, view_pos=None))]
     fn set_depth_content(
         &mut self,
         py: Python,
@@ -189,6 +189,7 @@ impl DrawingBufferPy {
         front_facing: bool,
         line_coord: f32,
         point_coord: Option<Py<PyAny>>,
+        view_pos: Option<Py<PyAny>>,
     ) {
         let uv: Vec2 = convert_glm_vec2(py, uv_py);
         let uv_1: Vec2 = convert_glm_vec2(py, uv_1_py);
@@ -197,10 +198,25 @@ impl DrawingBufferPy {
         let point_coord_v = point_coord
             .map(|p| convert_glm_vec2(py, p))
             .unwrap_or_else(Vec2::zeros);
+        let view_pos_v = view_pos
+            .map(|p| convert_glm_vec3(py, p))
+            .unwrap_or_else(Vec3::zeros);
 
         self.opaque_db.set_depth_content(
-            row, col, depth, normal, uv, uv_1, node_id, geom_id, material_id, primitive_id,
-            front_facing, line_coord, point_coord_v,
+            row,
+            col,
+            depth,
+            normal,
+            view_pos_v,
+            uv,
+            uv_1,
+            node_id,
+            geom_id,
+            material_id,
+            primitive_id,
+            front_facing,
+            line_coord,
+            point_coord_v,
         );
     }
 
@@ -215,6 +231,8 @@ impl DrawingBufferPy {
         dict.set_item("frag_pos", pix_info_element.frag_pos.as_slice())
             .unwrap();
         dict.set_item("normal", pix_info_element.normal.as_slice())
+            .unwrap();
+        dict.set_item("view_pos", pix_info_element.view_pos.as_slice())
             .unwrap();
 
         dict.set_item("material_id", pix_info_element.material_id)

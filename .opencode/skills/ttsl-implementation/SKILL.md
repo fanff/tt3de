@@ -18,7 +18,7 @@ Read these before changing behavior; they are the contract:
 ## Authoring shader source
 
 - **Return type**: `(front, back, glyph)` as `(vec4, vec4, int)`, matching VM `OP_RET`. Annotate `tuple[vec4, vec4, int]` (or `typing.Tuple[...]`) when typing the entry function.
-- **Per-cell builtins** (`tt_FragCoord`, `tt_FragPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_PrimitiveID`): known to the compiler; see `ttsl_compiler.md` for parameter declarations vs implicit slots.
+- **Per-cell builtins** (`tt_FragCoord`, `tt_FragPos`, `tt_ViewPos`, `tt_TexCoord0`, `tt_TexCoord1`, `tt_FrontFacing`, `tt_FragDepth`, `tt_LineCoord`, `tt_PointCoord`, `tt_PrimitiveID`): known to the compiler; see `ttsl_compiler.md` for parameter declarations vs implicit slots.
 - **Engine uniforms** (`tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`, `tt_Near`, `tt_Far`): include in `globals_dict` with the types documented in `ttsl.md` / `ttsl_compiler.md`; wire runtime setters and `ShaderPy.*_reg` to match `RegisterSettings` after `all_passes_compilation`.
 - **Naming**: `tt_` + CamelCase, analogous to GLSL `gl_`.
 - **Sampling**: only `tt_texture(index: int, coord: vec2) -> vec4` (and `tt_texelFetch` when implemented end-to-end—confirm opcode + compiler + tests). Use `tt_TexCoord*` for interpolated coords. Standalone Python `ttsl_run` does not bind textures; expect black or engine-defined fallback unless exercising through `Shader` + `TextureBuffer`.

@@ -128,6 +128,8 @@ pub struct ShaderInputBinding {
     pub fragpos_v2_reg: usize,
     pub uv_v3_reg: usize,
     pub uv1_v3_reg: usize,
+    /// Register for ``tt_ViewPos`` (``vec3``, view-space fragment position); default ``3``.
+    pub view_pos_v3_reg: usize,
     pub primitive_id_i32_reg: usize,
     pub material_id_i32_reg: usize,
     pub node_id_i32_reg: usize,
@@ -162,14 +164,14 @@ impl Default for ShaderInputBinding {
         // `tt_PrimitiveID` is pinned by the allocator to `regs.i32_[0]`; the remaining PixInfo
         // i32 IDs (material_id / node_id / geometry_id) are not yet TTSL-named and live in the
         // i32 indices the allocator reserves (1..=3) so they cannot alias user temps.
+        // `v3` bank: UV bridge uses 0–1; index 2 is reserved for future `tt_Normal`; `tt_ViewPos` uses 3.
         Self {
             uv_v2_reg: 2,
             uv1_v2_reg: 3,
             fragpos_v2_reg: 4,
-            // Must stay aligned with `RegisterAllocatorPass` in `compiler.py`, which skips
-            // these `v3` indices so TTSL temps cannot collide before `render_mat` fills UVs.
             uv_v3_reg: 0,
             uv1_v3_reg: 1,
+            view_pos_v3_reg: 3,
             primitive_id_i32_reg: 0,
             material_id_i32_reg: 1,
             node_id_i32_reg: 2,
@@ -200,6 +202,7 @@ pub(crate) fn write_per_pixel_inputs_to_registers<const DEPTHLAYER: usize>(
     regs.v2[bind.fragpos_v2_reg] = pixinfo.frag_pos;
     regs.v3[bind.uv_v3_reg] = vec3(pixinfo.uv.x, pixinfo.uv.y, 0.0);
     regs.v3[bind.uv1_v3_reg] = vec3(pixinfo.uv_1.x, pixinfo.uv_1.y, 0.0);
+    regs.v3[bind.view_pos_v3_reg] = pixinfo.view_pos;
     regs.i32_[bind.primitive_id_i32_reg] = pixinfo.primitive_id as i32;
     regs.i32_[bind.material_id_i32_reg] = pixinfo.material_id as i32;
     regs.i32_[bind.node_id_i32_reg] = pixinfo.node_id as i32;
@@ -600,6 +603,18 @@ mod tests {
         super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
         assert_eq!(regs.i32_[bind.primitive_id_i32_reg], 42);
         assert_eq!(regs.i32_[bind.material_id_i32_reg], 7);
+    }
+
+    #[test]
+    fn test_write_per_pixel_inputs_sets_tt_view_pos_v3_register() {
+        let bind = ShaderInputBinding::default();
+        assert_eq!(bind.view_pos_v3_reg, 3);
+        let mut pixinfo = PixInfo::new();
+        pixinfo.view_pos = vec3(1.0, 2.0, -5.0);
+        let mut regs = Registers::new();
+        let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
+        super::write_per_pixel_inputs_to_registers(&bind, &pixinfo, &depth_cell, 0, &mut regs);
+        assert_eq!(regs.v3[bind.view_pos_v3_reg], vec3(1.0, 2.0, -5.0));
     }
 
     #[test]

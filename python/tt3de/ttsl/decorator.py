@@ -17,6 +17,7 @@ tt_Far: float = 100.0  # noqa: N816 — far clip distance; must exceed near in r
 # Per-fragment (cell) input variables:
 tt_FragCoord: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_FragPos: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
+tt_ViewPos: glm.vec3 = glm.vec3(0.0, 0.0, 0.0)  # noqa: N816 — view-space fragment position; see PixInfo / ShaderMaterial
 tt_TexCoord0: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_TexCoord1: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816
 tt_FrontFacing: bool = True  # noqa: N816

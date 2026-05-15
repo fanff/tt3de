@@ -252,6 +252,7 @@ pub fn draw_flat_triangle<const DEPTHCOUNT: usize>(
                 col,
                 current_scanline_interpolant.pos.z,
                 current_scanline_interpolant.normal,
+                attr.view_pos,
                 attr.uv,
                 TVec2::new(0.0, 0.0),
                 prim_ref.node_id,
@@ -485,6 +486,7 @@ pub fn draw_flat_triangle_double_raster<const DEPTHCOUNT: usize>(
                 col,
                 current_upper_scanline_interpolant.pos.z,
                 upper_attr.normal,
+                upper_attr.view_pos,
                 upper_attr.uv,
                 lower_attr.uv,
                 prim_ref.node_id,
@@ -585,17 +587,20 @@ mod test_raster_duo_triangle {
             Vec4::new(7.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         let pb = Vertex::new(
             Vec4::new(2.0, 4.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 1.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(6.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(1.0, 1.0),
+        Vec3::zeros(),
         );
         (pa, pb, pc)
     }
@@ -605,18 +610,21 @@ mod test_raster_duo_triangle {
             Vec4::new(2.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         let pb = Vertex::new(
             Vec4::new(4.0, 6.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         let pc = Vertex::new(
             Vec4::new(7.0, 3.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         (pa, pb, pc)
     }
@@ -657,16 +665,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(0.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
@@ -697,16 +708,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(0.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pb, &pc, &pa);
@@ -737,16 +751,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(0.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pc, &pa, &pb);
@@ -778,16 +795,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pa, &pb, &pc);
@@ -818,16 +838,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pb, &pc, &pa);
@@ -858,16 +881,19 @@ mod test_raster_mono_triangle {
             Vec4::new(0.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pb = Vertex::new(
             Vec4::new(9.0, 7.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
         let pc = Vertex::new(
             Vec4::new(9.0, 0.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 0.0),
             Vec2::new(0.0, 0.0),
+        Vec3::zeros(),
         );
 
         tomato_draw_triangle(&mut drawing_buffer, &prim_ref, &pc, &pa, &pb);

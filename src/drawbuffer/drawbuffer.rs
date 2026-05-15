@@ -64,6 +64,7 @@ pub fn triangle_front_facing_submission_order_xy(
 /// - `node_id`: An identifier for the node, possibly in a scene graph or spatial partitioning structure.
 /// - `geometry_id`: An identifier for the geometry, which could refer to a specific geometric object or model.
 /// - `frag_pos`: Cell-center position in normalized device coordinates [-1, 1] (see [`DrawBuffer::cell_center_to_ndc`]).
+/// - `view_pos`: Interpolated fragment position in **view (eye) space** (Cartesian `vec3`); see TTSL ``tt_ViewPos``.
 /// - `front_facing`: Per-cell flag from rasterization; triangles use winding in projected screen space
 ///   (see [`triangle_front_facing_submission_order`]). Non-triangle paths use an engine-defined
 ///   deterministic default (`true`).
@@ -77,6 +78,7 @@ pub struct PixInfo<InfoAccuracy: nalgebra_glm::Number> {
     pub uv_1: TVec2<InfoAccuracy>,
     pub frag_pos: Vec2,
     pub normal: Vec3,
+    pub view_pos: Vec3,
     pub front_facing: bool,
     pub line_coord: f32,
     pub point_coord: Vec2,
@@ -99,6 +101,7 @@ impl<T: nalgebra_glm::Number> PixInfo<T> {
             uv_1: TVec2::zeros(),
             frag_pos: Vec2::zeros(),
             normal: Vec3::new(0.0, 0.0, 1.0),
+            view_pos: Vec3::zeros(),
             front_facing: true,
             line_coord: 0.0,
             point_coord: Vec2::zeros(),
@@ -216,6 +219,7 @@ mod test_frag_pos_ndc {
             2,
             0.5,
             Vec3::new(0.0, 0.0, 1.0),
+            Vec3::zeros(),
             vec2(0.0, 0.0),
             vec2(0.0, 0.0),
             0,
@@ -315,6 +319,7 @@ mod test_front_facing_winding {
             1,
             0.1,
             nalgebra_glm::Vec3::new(0.0, 0.0, 1.0),
+            nalgebra_glm::Vec3::zeros(),
             vec2(0.0, 0.0),
             vec2(0.0, 0.0),
             0,
@@ -617,6 +622,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
         col: usize,
         depth: DEPTHACC,
         normal: Vec3,
+        view_pos: Vec3,
         uv: Vec2,
         uv_1: Vec2,
         node_id: usize,
@@ -659,6 +665,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     let pix_info_dest = &mut (self.pixbuffer[last_pix_index]);
                     the_cell.depth[the_layer] = depth; // Set the depth
                     pix_info_dest.normal = normal;
+                    pix_info_dest.view_pos = view_pos;
                     pix_info_dest.front_facing = front_facing;
                     pix_info_dest.line_coord = line_coord;
                     pix_info_dest.point_coord = point_coord;
@@ -678,6 +685,7 @@ impl<const L: usize, DEPTHACC: Number> DrawBuffer<L, DEPTHACC> {
                     the_cell.depth[the_layer] = depth; // Set the depth
                     let pix_info_dest = (self.pixbuffer[the_cell.pixinfo[the_layer]]).borrow_mut();
                     pix_info_dest.normal = normal;
+                    pix_info_dest.view_pos = view_pos;
                     pix_info_dest.front_facing = front_facing;
                     pix_info_dest.line_coord = line_coord;
                     pix_info_dest.point_coord = point_coord;

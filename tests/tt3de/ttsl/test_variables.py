@@ -8,7 +8,6 @@ and other engine uniforms are optional via ``globals_dict``;
 see `source/ttsl_compiler.md`. The broader catalog in `source/ttsl.md` includes names
 not yet present in the Python compiler; some tests use `@unittest.expectedFailure`
 only where noted for constructs still missing from the compiler surface.
-
 """
 
 from textwrap import dedent
@@ -32,6 +31,7 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
     PIXELVAR_TT_TEXCOORD1,
+    PIXELVAR_TT_VIEW_POS,
     TTSLCompilerContext,
     CompileError,
     all_passes_compilation,
@@ -50,6 +50,7 @@ ALWAYS_PRESENT_BUILTIN_NAMES = (
     PIXELVAR_TT_LINE_COORD,
     PIXELVAR_TT_POINT_COORD,
     PIXELVAR_TT_PRIMITIVE_ID,
+    PIXELVAR_TT_VIEW_POS,
 )
 
 
@@ -61,7 +62,8 @@ class Test_VariableContract(unittest.TestCase):
         self.assertEqual(ref, set(ALWAYS_PRESENT_BUILTIN_NAMES))
 
     def test_lowercase_time_and_tt_Time_not_registered_by_default(self):
-        """No implicit ``time`` or ``tt_Time`` slot — only ``globals_dict`` adds those."""
+        """No implicit ``time`` or ``tt_Time`` slot — only ``globals_dict`` adds
+        those."""
         src = dedent(
             """
             def simple(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -103,6 +105,7 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         self.assertEqual(cc.named_variables[PIXELVAR_TT_FRAG_DEPTH].ty, IRType.F32)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_LINE_COORD].ty, IRType.F32)
         self.assertEqual(cc.named_variables[PIXELVAR_TT_PRIMITIVE_ID].ty, IRType.I32)
+        self.assertEqual(cc.named_variables[PIXELVAR_TT_VIEW_POS].ty, IRType.V3)
         self.assertEqual(cc.globals, {GLOBAL_VAR_TT_TIME: IRType.F32})
 
     def test_pixel_builtins_plus_tt_DeltaTime_when_declared_in_globals(self):
@@ -163,6 +166,45 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         cc = compile_ttsl(src, "shade", {})
         self.assertIn(PIXELVAR_TT_FRAGPOS, cc.named_variables)
 
+    def test_tt_ViewPos_used_in_shader_body_compiles(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                p: vec3 = tt_ViewPos
+                return (vec4(p.x, p.y, p.z, 1.0), vec4(p.x, p.y, p.z, 1.0), 0)
+            """
+        )
+        cc = compile_ttsl(src, "shade", {})
+        self.assertIn(PIXELVAR_TT_VIEW_POS, cc.named_variables)
+
+    def test_tt_ViewPos_register_allocation_pins_v3_slot_3(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_ViewPos.x, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_VIEW_POS]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(reg_id, 3)
+
+    def test_tt_ViewPos_register_seed_defaults_zero_vec3(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(tt_ViewPos.x, tt_ViewPos.y, tt_ViewPos.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, reg_settings = all_passes_compilation(src, "shade", {})
+        ty, reg_id = reg_settings.var_name_to_registers[PIXELVAR_TT_VIEW_POS]
+        self.assertEqual(ty, IRType.V3)
+        self.assertEqual(reg_id, 3)
+        v = reg_settings.regs[IRType.V3][reg_id]
+        self.assertAlmostEqual(v.x, 0.0)
+        self.assertAlmostEqual(v.y, 0.0)
+        self.assertAlmostEqual(v.z, 0.0)
+
     def test_tt_FrontFacing_branching_shader_compiles(self):
         src = dedent(
             """
@@ -206,7 +248,8 @@ class Test_BuiltinsHappyPath(unittest.TestCase):
         self.assertEqual(reg_settings.regs[IRType.I32][reg_id], 0)
 
     def test_tt_PrimitiveID_wrong_annotation_raises(self):
-        """``tt_PrimitiveID`` is ``int`` (i32); annotating the receiving variable as float fails."""
+        """``tt_PrimitiveID`` is ``int`` (i32); annotating the receiving variable as
+        float fails."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -518,7 +561,8 @@ class Test_ParameterVsBuiltinFragCoord(unittest.TestCase):
 
 class Test_ShadowBuiltinViaGlobalsDict(unittest.TestCase):
     def test_tt_Time_shadowed_by_int_global_still_compiles(self):
-        """globals_dict chooses the IR type for ``tt_Time`` (here ``int`` vs default ``float``)."""
+        """globals_dict chooses the IR type for ``tt_Time`` (here ``int`` vs default
+        ``float``)."""
         src = dedent(
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:

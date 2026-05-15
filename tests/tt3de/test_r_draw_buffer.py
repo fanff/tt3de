@@ -54,6 +54,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "node_id": 0,
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
+                    "view_pos": [0.0, 0.0, 0.0],
                     "front_facing": True,
                     "line_coord": 0.0,
                     "point_coord": [0.0, 0.0],
@@ -130,6 +131,7 @@ class Test_DrawBuffer(unittest.TestCase):
                     "node_id": 0,
                     "material_id": 0,
                     "normal": [0.0, 0.0, 1.0],
+                    "view_pos": [0.0, 0.0, 0.0],
                     "front_facing": True,
                     "line_coord": 0.0,
                     "point_coord": [0.0, 0.0],
@@ -298,6 +300,29 @@ class Test_DrawBuffer(unittest.TestCase):
         exp_y = (cy / half_y - 1.0) / sy
         self.assertAlmostEqual(pix["frag_pos"][0], exp_x, places=5)
         self.assertAlmostEqual(pix["frag_pos"][1], exp_y, places=5)
+
+    def test_set_depth_content_view_pos_kwarg(self):
+        """``view_pos`` is stored on ``PixInfo`` (feeds TTSL ``tt_ViewPos``)."""
+        drawbuffer = DrawingBufferPy(8, 8)
+        drawbuffer.hard_clear(10.0)
+        vp = glm.vec3(0.125, -0.5, 2.25)
+        drawbuffer.set_depth_content(
+            0,
+            0,
+            glm.vec3(0.0, 0.0, 1.0),
+            1.0,
+            glm.vec2(0.0, 0.0),
+            glm.vec2(0.0, 0.0),
+            0,
+            0,
+            0,
+            0,
+            view_pos=vp,
+        )
+        pix = drawbuffer.get_pix_info_element(0)
+        self.assertAlmostEqual(pix["view_pos"][0], vp.x, places=5)
+        self.assertAlmostEqual(pix["view_pos"][1], vp.y, places=5)
+        self.assertAlmostEqual(pix["view_pos"][2], vp.z, places=5)
 
     def test_set_depth_content_line_coord_kwarg(self):
         drawbuffer = DrawingBufferPy(8, 8)

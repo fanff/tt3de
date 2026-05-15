@@ -108,6 +108,7 @@ pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
                         ),
                         vec3(0.0, 0.0, 1.0),
                         uv_start,
+                        Vec3::zeros(),
                     );
                     let bottom_right_vertex = Vertex::new(
                         Vec4::new(
@@ -118,6 +119,7 @@ pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
                         ),
                         vec3(0.0, 0.0, 1.0),
                         uv_end,
+                        Vec3::zeros(),
                     );
 
                     // add two triangles to make the rectangle
@@ -290,7 +292,7 @@ pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
                     let mut output_buffer: SmallTriangleBuffer<8> = SmallTriangleBuffer::new();
                     clip_triangle_to_clip_space_xy(&va, &vb, &vc, uvs, &mut output_buffer);
 
-                    for (t, uvs) in output_buffer.iter() {
+                    for (t, uvs, _view_pos) in output_buffer.iter() {
                         // convert from ndc to screen space
                         let point_a = drawbuffer.ndc_to_screen_floating_with_clamp(&t[0].xy());
                         let point_b = drawbuffer.ndc_to_screen_floating_with_clamp(&t[1].xy());
@@ -308,16 +310,19 @@ pub fn build_primitives<const PIXCOUNT: usize, DEPTHACC: Number>(
                                 pos: pa_pos,
                                 normal: normal_vec,
                                 uv: uvs[0],
+                                view_pos: Vec3::zeros(),
                             },
                             Vertex {
                                 pos: pb_pos,
                                 normal: normal_vec,
                                 uv: uvs[1],
+                                view_pos: Vec3::zeros(),
                             },
                             Vertex {
                                 pos: pc_pos,
                                 normal: normal_vec,
                                 uv: uvs[2],
+                                view_pos: Vec3::zeros(),
                             },
                             polygon.geom_ref.transparent,
                         );

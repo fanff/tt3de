@@ -61,6 +61,7 @@ PIXELVAR_TT_FRAGCOORD: str = "tt_FragCoord"
 PIXELVAR_TT_TEXCOORD0: str = "tt_TexCoord0"
 PIXELVAR_TT_TEXCOORD1: str = "tt_TexCoord1"
 PIXELVAR_TT_FRAGPOS: str = "tt_FragPos"
+PIXELVAR_TT_VIEW_POS: str = "tt_ViewPos"
 PIXELVAR_TT_FRONT_FACING: str = "tt_FrontFacing"
 PIXELVAR_TT_FRAG_DEPTH: str = "tt_FragDepth"
 PIXELVAR_TT_LINE_COORD: str = "tt_LineCoord"
@@ -72,6 +73,7 @@ PIXEL_VARIABLES_STR_TYPE = {
     PIXELVAR_TT_TEXCOORD0: IRType.V2,
     PIXELVAR_TT_TEXCOORD1: IRType.V2,
     PIXELVAR_TT_FRAGPOS: IRType.V2,
+    PIXELVAR_TT_VIEW_POS: IRType.V3,
     PIXELVAR_TT_POINT_COORD: IRType.V2,
     PIXELVAR_TT_FRONT_FACING: IRType.BOOL,
     PIXELVAR_TT_FRAG_DEPTH: IRType.F32,
@@ -175,8 +177,9 @@ class TTSLCompilerContext:
         depth buffer), ``tt_LineCoord`` as ``float`` (parametric coordinate along
         rasterized line segments, ``0.0`` when not a line), ``tt_PointCoord`` as
         ``glm.vec2`` (coordinates within a point sprite, ``(0, 0)`` when not a point),
-        and ``tt_PrimitiveID`` as ``int``: per-pixel index of the depth-winning
-        primitive, ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL
+        ``tt_ViewPos`` as ``glm.vec3`` (fragment position in view space; ``(0, 0, 0)``
+        when not supplied), and ``tt_PrimitiveID`` as ``int``: per-pixel index of the
+        depth-winning primitive, ``[0..PrimitiveBuffer.current_size-1]``; mirrors GLSL
         ``gl_PrimitiveID``).
 
         Engine uniforms such as ``tt_Time`` / ``tt_DeltaTime`` (``float``), ``tt_Frame``
@@ -2122,7 +2125,7 @@ class RegisterAllocatorPass(CompilationPass):
         # ``ShaderInputBinding`` defaults in ``shader_material.rs`` write PixInfo UVs into
         # ``regs.v3[0]`` and ``regs.v3[1]`` before ``run_ttsl``. Reserve those indices so
         # shader temps (e.g. ``vec3`` locals / ``OP_RET`` payloads) never alias them.
-        allocated_registers[IRType.V3] = {0, 1}
+        allocated_registers[IRType.V3] = {0, 1, 2}
         # Mirror ``ShaderInputBinding::default()`` in ``shader_material.rs``: per-pixel
         # ``tt_PrimitiveID`` is pinned (below) to ``regs.i32_[0]`` so the Rust side can write
         # ``PixInfo::primitive_id`` into a fixed slot. The remaining shadow PixInfo i32 IDs
@@ -2161,6 +2164,14 @@ class RegisterAllocatorPass(CompilationPass):
                 ), "tt_PrimitiveID must be IRType.I32 (declared in PIXEL_VARIABLES_STR_TYPE)"
                 idx = 0
                 allocated_registers.setdefault(IRType.I32, set()).add(0)
+            elif var_name == PIXELVAR_TT_VIEW_POS:
+                # Pin to ``regs.v3_[3]`` (see ``ShaderInputBinding::view_pos_v3_reg``); reserve
+                # ``v3`` indices ``0``/``1`` for the UV bridge and ``2`` for the future ``tt_Normal`` builtin.
+                assert (
+                    temp.ty == IRType.V3
+                ), "tt_ViewPos must be IRType.V3 (declared in PIXEL_VARIABLES_STR_TYPE)"
+                idx = 3
+                allocated_registers.setdefault(IRType.V3, set()).add(3)
             else:
                 idx = next_free_register(temp.ty)
             var_names_to_registers[var_name] = (temp.ty, idx)
@@ -2703,6 +2714,9 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
     ``tt_PointCoord`` defaults to ``(0, 0)`` (non-point primitives and standalone VM runs);
     ``ShaderMaterial`` writes ``PixInfo::point_coord`` when ``ShaderPy.point_coord_v2_reg`` is set
     (point rasterization supplies ``(0.5, 0.5)`` for the single-cell sprite path).
+
+    ``tt_ViewPos`` defaults to ``(0, 0, 0)`` for standalone VM runs; ``ShaderMaterial`` writes
+    ``PixInfo::view_pos`` each pixel (``ShaderInputBinding::view_pos_v3_reg``, default ``3``).
     """
     names = reg_settings.var_name_to_registers
     if GLOBAL_VAR_TT_FRAME in names:
@@ -2719,6 +2733,8 @@ def apply_engine_uniform_register_defaults(reg_settings: RegisterSettings) -> No
         reg_settings.set_variable(PIXELVAR_TT_POINT_COORD, glm.vec2(0.0, 0.0))
     if PIXELVAR_TT_PRIMITIVE_ID in names:
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 0)
+    if PIXELVAR_TT_VIEW_POS in names:
+        reg_settings.set_variable(PIXELVAR_TT_VIEW_POS, glm.vec3(0.0, 0.0, 0.0))
     if GLOBAL_VAR_TT_NEAR in names:
         # Documented default clip distances (see `source/ttsl.md`); host should overwrite
         # from the active projection. Matches the common 0.1 / 100 hyperbolic depth scale

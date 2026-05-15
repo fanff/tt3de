@@ -3,11 +3,11 @@ use nalgebra_glm::{vec4, Number, Vec3, Vec4};
 use crate::{
     drawbuffer::drawbuffer::DrawBuffer,
     geombuffer::Polygon,
-    raster::vertex::Vertex,
     primitiv_building::{
         perspective_divide_triplet, tomato_triangle_clipping::tomato_clip_triangle_to_clip_space,
         triangle_clipping::SmallTriangleBuffer,
     },
+    raster::vertex::Vertex,
     primitivbuffer::primitivbuffer::PrimitiveBuffer,
     vertexbuffer::{
         transform_pack::TransformPack,
@@ -15,6 +15,16 @@ use crate::{
         vertex_buffer::{TriangleBuffer, VertexBuffer},
     },
 };
+
+#[inline]
+fn view_space_xyz(v: &Vec4) -> Vec3 {
+    let w = v.w;
+    if w.abs() > 1e-20 {
+        v.xyz() / w
+    } else {
+        v.xyz()
+    }
+}
 
 pub fn polygon3d_as_primitive_triangles<const PIXCOUNT: usize, DEPTHACC: Number>(
     polygon: &Polygon,
@@ -62,6 +72,9 @@ pub fn polygon3d_as_primitive_triangles<const PIXCOUNT: usize, DEPTHACC: Number>
 
         let vb = vertex_buffer.get_calculated(pb_idx);
         let vc = vertex_buffer.get_calculated(pc_idx);
+        let eye_a = view_space_xyz(&va);
+        let eye_b = view_space_xyz(&vb);
+        let eye_c = view_space_xyz(&vc);
         // get the uv coordinates
         let uvs = uv_array.get_uv(polygon.uv_start + triangle_id);
 
@@ -72,9 +85,16 @@ pub fn polygon3d_as_primitive_triangles<const PIXCOUNT: usize, DEPTHACC: Number>
 
         // clip the triangle
         let mut output_buffer: SmallTriangleBuffer<12> = SmallTriangleBuffer::new();
-        tomato_clip_triangle_to_clip_space(&va_clip, &vb_clip, &vc_clip, uvs, &mut output_buffer);
+        tomato_clip_triangle_to_clip_space(
+            &va_clip,
+            &vb_clip,
+            &vc_clip,
+            uvs,
+            (&eye_a, &eye_b, &eye_c),
+            &mut output_buffer,
+        );
 
-        for (t, uvs) in output_buffer.iter() {
+        for (t, uvs, view_corners) in output_buffer.iter() {
             // perform the perspective division to get in the ndc space
             let (vacdiv, vbcdiv, vccdiv) = perspective_divide_triplet(&t[0], &t[1], &t[2]);
             // convert from ndc to screen space
@@ -91,16 +111,19 @@ pub fn polygon3d_as_primitive_triangles<const PIXCOUNT: usize, DEPTHACC: Number>
                     vec4(point_a.x, point_a.y, vacdiv.z, vacdiv.w),
                     normal_view,
                     uvs[0] * vacdiv.w,
+                    view_corners[0] * vacdiv.w,
                 ),
                 Vertex::new(
                     vec4(point_b.x, point_b.y, vbcdiv.z, vbcdiv.w),
                     normal_view,
                     uvs[1] * vbcdiv.w,
+                    view_corners[1] * vbcdiv.w,
                 ),
                 Vertex::new(
                     vec4(point_c.x, point_c.y, vccdiv.z, vccdiv.w),
                     normal_view,
                     uvs[2] * vccdiv.w,
+                    view_corners[2] * vccdiv.w,
                 ),
                 polygon.geom_ref.transparent,
             );

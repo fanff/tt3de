@@ -788,6 +788,7 @@ class DrawingBufferPy:
         front_facing: bool = True,
         line_coord: float = 0.0,
         point_coord: glm.vec2 | None = None,
+        view_pos: glm.vec3 | None = None,
     ) -> None:
         """
         Sets the depth content for a specific cell in the drawing buffer.
