@@ -1,8 +1,9 @@
 use crate::utils::convert_tuple_texture_rgba;
 use pyo3::{
+    exceptions::PyValueError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyList},
-    Bound, Py, PyAny, Python,
+    Bound, Py, PyAny, PyResult, Python,
 };
 
 pub mod noise_texture;
@@ -286,189 +287,6 @@ impl<const SIZE: usize> TextureCustom<SIZE> {
     }
 }
 
-impl<const SIZE: usize> Texture<SIZE> {
-    pub fn new(data: RGBA, repeat_x: bool, repeat_y: bool, filter_mode: FilterMode) -> Self {
-        let d = vec![data; SIZE * SIZE].into_boxed_slice();
-        Texture {
-            data: d,
-            repeat_x,
-            repeat_y,
-            filter_mode,
-        }
-    }
-    pub fn from_iter<I: IntoIterator<Item = RGBA>>(
-        iter: I,
-        repeat_x: bool,
-        repeat_y: bool,
-        filter_mode: FilterMode,
-    ) -> Self {
-        let data: Vec<RGBA> = iter.into_iter().collect();
-        Texture {
-            data: data.into_boxed_slice(),
-            repeat_x,
-            repeat_y,
-            filter_mode,
-        }
-    }
-    #[inline(always)]
-    pub fn uv_map_inline(&self, u: f32, v: f32) -> RGBA {
-        let tx = u * (SIZE as f32);
-        let ty = v * (SIZE as f32);
-
-        let ix = tx.floor() as isize;
-        let iy = ty.floor() as isize;
-        let fx = tx - (ix as f32);
-        let fy = ty - (iy as f32);
-
-        let ix0 = if self.repeat_x {
-            (ix & (SIZE as isize - 1)) as usize
-        } else {
-            ix.clamp(0, (SIZE - 1) as isize) as usize
-        };
-
-        if self.filter_mode == FilterMode::Nearest {
-            let iy0 = if self.repeat_y {
-                (iy & (SIZE as isize - 1)) as usize
-            } else {
-                iy.clamp(0, (SIZE - 1) as isize) as usize
-            };
-            let shift = SIZE.trailing_zeros() as usize;
-            return self.data[(iy0 << shift) + ix0];
-        }
-
-        let ix1 = if self.repeat_x {
-            ((ix + 1) & (SIZE as isize - 1)) as usize
-        } else {
-            (ix + 1).clamp(0, (SIZE - 1) as isize) as usize
-        };
-        let iy0 = if self.repeat_y {
-            (iy & (SIZE as isize - 1)) as usize
-        } else {
-            iy.clamp(0, (SIZE - 1) as isize) as usize
-        };
-        let iy1 = if self.repeat_y {
-            ((iy + 1) & (SIZE as isize - 1)) as usize
-        } else {
-            (iy + 1).clamp(0, (SIZE - 1) as isize) as usize
-        };
-
-        let shift = SIZE.trailing_zeros() as usize;
-        let row0 = iy0 << shift;
-        let row1 = iy1 << shift;
-
-        let c00 = self.data[row0 + ix0];
-        let c10 = self.data[row0 + ix1];
-        let c01 = self.data[row1 + ix0];
-        let c11 = self.data[row1 + ix1];
-
-        lerp_rgba(lerp_rgba(c00, c10, fx), lerp_rgba(c01, c11, fx), fy)
-    }
-}
-
-#[derive(Clone)]
-pub struct TextureCustom<const SIZE: usize> {
-    texture: Texture<SIZE>,
-    width: usize,
-    height: usize,
-    repeat_x: bool,
-    repeat_y: bool,
-    filter_mode: FilterMode,
-}
-
-impl<const SIZE: usize> TextureCustom<SIZE> {
-    pub fn new<I: IntoIterator<Item = RGBA>>(
-        iter: I,
-        width: usize,
-        height: usize,
-        repeat_x: bool,
-        repeat_y: bool,
-        filter_mode: FilterMode,
-    ) -> Self {
-        let data: Vec<RGBA> = iter.into_iter().collect();
-        assert!(
-            data.len() == width * height,
-            "Data array size must be width * height"
-        );
-        TextureCustom {
-            texture: Texture {
-                data: data.into_boxed_slice(),
-                repeat_x,
-                repeat_y,
-                filter_mode,
-            },
-            width,
-            height,
-            repeat_x,
-            repeat_y,
-            filter_mode,
-        }
-    }
-
-    pub fn uv_map_inline(&self, u: f32, v: f32) -> RGBA {
-        let u_val = if self.repeat_x {
-            u.rem_euclid(1.0)
-        } else {
-            u.clamp(0.0, 1.0)
-        };
-        let v_val = if self.repeat_y {
-            v.rem_euclid(1.0)
-        } else {
-            v.clamp(0.0, 1.0)
-        };
-
-        let tx = u_val * self.width as f32;
-        let ty = v_val * self.height as f32;
-
-        let ix = tx.floor() as isize;
-        let iy = ty.floor() as isize;
-        let fx = tx - (ix as f32);
-        let fy = ty - (iy as f32);
-
-        let w = self.width as isize;
-        let h = self.height as isize;
-        let wm1 = w - 1;
-        let hm1 = h - 1;
-
-        let ix0 = if self.repeat_x {
-            ix.rem_euclid(w) as usize
-        } else {
-            ix.clamp(0, wm1) as usize
-        };
-
-        if self.filter_mode == FilterMode::Nearest {
-            let iy0 = if self.repeat_y {
-                iy.rem_euclid(h) as usize
-            } else {
-                iy.clamp(0, hm1) as usize
-            };
-            return self.texture.data[iy0 * self.width + ix0];
-        }
-
-        let ix1 = if self.repeat_x {
-            (ix + 1).rem_euclid(w) as usize
-        } else {
-            (ix + 1).clamp(0, wm1) as usize
-        };
-        let iy0 = if self.repeat_y {
-            iy.rem_euclid(h) as usize
-        } else {
-            iy.clamp(0, hm1) as usize
-        };
-        let iy1 = if self.repeat_y {
-            (iy + 1).rem_euclid(h) as usize
-        } else {
-            (iy + 1).clamp(0, hm1) as usize
-        };
-
-        let c00 = self.texture.data[iy0 * self.width + ix0];
-        let c10 = self.texture.data[iy0 * self.width + ix1];
-        let c01 = self.texture.data[iy1 * self.width + ix0];
-        let c11 = self.texture.data[iy1 * self.width + ix1];
-
-        lerp_rgba(lerp_rgba(c00, c10, fx), lerp_rgba(c01, c11, fx), fy)
-    }
-}
-
 #[derive(Clone)]
 pub enum TextureType<const SIZE: usize> {
     Custom(TextureCustom<SIZE>),
@@ -510,10 +328,16 @@ impl<const SIZE: usize> UvMapper for TextureType<SIZE> {
     }
 }
 
-/// START of the python stufff
-///
-///
-///
+fn parse_filter_mode(mode: &str) -> PyResult<FilterMode> {
+    match mode.to_lowercase().as_str() {
+        "nearest" => Ok(FilterMode::Nearest),
+        "bilinear" => Ok(FilterMode::Bilinear),
+        _ => Err(PyValueError::new_err(format!(
+            "Unknown filter_mode: '{mode}'. Expected 'nearest' or 'bilinear'."
+        ))),
+    }
+}
+
 pub struct TextureIterator<'a> {
     py: Python<'a>,
     pix_list: &'a Bound<'a, PyList>,
@@ -580,31 +404,22 @@ impl TextureBufferPy {
         repeat_width: bool,
         repeat_height: bool,
         filter_mode: &str,
-    ) -> usize {
-        let fm = parse_filter_mode(filter_mode);
+    ) -> PyResult<usize> {
+        let fm = parse_filter_mode(filter_mode)?;
         let pixel_iter = pixels.bind(py).cast::<PyList>().unwrap();
         let texture_iter = TextureIterator::new(py, pixel_iter);
 
-        self.data
-            .add_texture_from_iter(width, height, texture_iter, repeat_width, repeat_height, fm)
+        Ok(self.data.add_texture_from_iter(
+            width,
+            height,
+            texture_iter,
+            repeat_width,
+            repeat_height,
+            fm,
+        ))
     }
 
-fn parse_filter_mode(mode: &str) -> FilterMode {
-    match mode.to_lowercase().as_str() {
-        "nearest" => FilterMode::Nearest,
-        "bilinear" => FilterMode::Bilinear,
-        _ => panic!("Unknown filter_mode: '{}'. Expected 'nearest' or 'bilinear'.", mode),
-    }
-}
-
-fn parse_filter_mode(mode: &str) -> FilterMode {
-    match mode.to_lowercase().as_str() {
-        "nearest" => FilterMode::Nearest,
-        "bilinear" => FilterMode::Bilinear,
-        _ => panic!("Unknown filter_mode: '{}'. Expected 'nearest' or 'bilinear'.", mode),
-    }
-}
-
+    #[pyo3(signature = (width, height, pixels, pix_size_width, pix_size_height, filter_mode="bilinear"))]
     fn add_atlas_texture_from_iter(
         &mut self,
         py: Python,
@@ -614,19 +429,19 @@ fn parse_filter_mode(mode: &str) -> FilterMode {
         pix_size_width: usize,
         pix_size_height: usize,
         filter_mode: &str,
-    ) -> usize {
-        let fm = parse_filter_mode(filter_mode);
+    ) -> PyResult<usize> {
+        let fm = parse_filter_mode(filter_mode)?;
         let pixel_iter = pixels.bind(py).cast::<PyList>().unwrap();
         let texture_iter = TextureIterator::new(py, pixel_iter);
 
-        self.data.add_atlas_texture_from_iter(
+        Ok(self.data.add_atlas_texture_from_iter(
             width,
             height,
             pix_size_width,
             pix_size_height,
             texture_iter,
             fm,
-        )
+        ))
     }
     fn add_noise_texture(&mut self, seed: i32, int_config: i32) -> usize {
         self.data.add_noise_texture(seed, int_config)
@@ -721,6 +536,35 @@ mod tests {
         // Average of (10, 20, 30, 40) = 25
         let result = tex.uv_map_inline(0.25, 0.25);
         assert_eq!(result, RGBA::new(25, 0, 0, 255));
+    }
+
+    #[test]
+    fn test_texture_nearest_skips_bilinear_blend() {
+        let data = vec![
+            RGBA::new(10, 0, 0, 255), // (0,0)
+            RGBA::new(20, 0, 0, 255), // (1,0)
+            RGBA::new(30, 0, 0, 255), // (0,1)
+            RGBA::new(40, 0, 0, 255), // (1,1)
+        ];
+        let tex = Texture::<2>::from_iter(data, true, true, FilterMode::Nearest);
+
+        // Same UV as test_texture_bilinear_repeat_wrap: bilinear would return 25.
+        let result = tex.uv_map_inline(0.25, 0.25);
+        assert_eq!(result, RGBA::new(10, 0, 0, 255));
+    }
+
+    #[test]
+    fn test_texture_custom_nearest_skips_bilinear_blend() {
+        let data = vec![
+            RGBA::new(10, 0, 0, 255), // (0,0)
+            RGBA::new(20, 0, 0, 255), // (1,0)
+            RGBA::new(30, 0, 0, 255), // (0,1)
+            RGBA::new(40, 0, 0, 255), // (1,1)
+        ];
+        let tex = TextureCustom::<8>::new(data, 2, 2, true, true, FilterMode::Nearest);
+
+        let result = tex.uv_map_inline(1.25, 0.25);
+        assert_eq!(result, RGBA::new(10, 0, 0, 255));
     }
 
     #[test]

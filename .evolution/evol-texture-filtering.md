@@ -2,7 +2,7 @@
 
 ```yaml
 id: evol-texture-filtering
-status: in-progress
+status: completed
 created: 2026-05-14
 authors: []
 supersedes: []
@@ -15,7 +15,7 @@ related:
 
 ## Summary
 
-Add a per-texture **filter mode** — `Nearest` (point sampling) or `Bilinear` (4-texel linear interpolation) — stored on each texture and respected by all sampling paths: the `Textured`/`BaseTexture` material renderer and the TTSL `tt_texture` builtin. The filter mode is a **texture property**, set at creation time, not a per-sample shader parameter. The default is `Bilinear`, fixing aliasing from nearest-neighbor undersampling (the "pointy/sharp" look when large textures render small). Implementation is **partially started** in `src/texturebuffer/` — the `FilterMode` enum, storage fields, `uv_map_inline` branching, texture-buffer plumbing, and Python binding parameter all exist but the code is in an inconsistent state (duplicate code blocks, missing `cargo check --all-targets` verification). No TTSL builtin changes are needed.
+Add a per-texture **filter mode** — `Nearest` (point sampling) or `Bilinear` (4-texel linear interpolation) — stored on each texture and respected by all sampling paths: the `Textured`/`BaseTexture` material renderer and the TTSL `tt_texture` builtin. The filter mode is a **texture property**, set at creation time, not a per-sample shader parameter. The default is `Bilinear`, fixing aliasing from nearest-neighbor undersampling (the "pointy/sharp" look when large textures render small). **Shipped**: duplicate definitions in `src/texturebuffer/mod.rs` and duplicate atlas registration in `texture_buffer.rs` were removed; Python parsing raises `ValueError` on bad `filter_mode`; tests and `source/low_level_api.rst` document the API.
 
 ## Motivation and context
 
@@ -41,7 +41,8 @@ Add a per-texture **filter mode** — `Nearest` (point sampling) or `Bilinear` (
 
 ## User-visible functionality
 
-- Python users can create nearest-neighbor textures:
+- Python users can create nearest-neighbor textures (use the keyword so the binding resolves correctly):
+
   ```python
   texture_buffer.add_texture(w, h, pixels, filter_mode="nearest")
   ```
@@ -87,29 +88,13 @@ Add a per-texture **filter mode** — `Nearest` (point sampling) or `Bilinear` (
 | Python | `python/tt3de/asset_fastloader.py` | Zero changes — gets bilinear default |
 | Demo | `demos/3d/dust.py` | Zero changes — gets bilinear default |
 
-### Current implementation state (in-progress)
+### Current implementation state (completed)
 
-The following has been written but is in an **inconsistent, non-compiling state**:
-
-- `FilterMode` enum: **added** (`mod.rs`)
-- `filter_mode` field on `Texture` and `TextureCustom`: **added**
-- `uv_map_inline` branching (nearest / bilinear): **written** for both structs
-- `lerp_rgba`: **written**
-- `make_texture`, `add_texture_from_iter`, `add_atlas_texture_from_iter` plumbing: **updated** (`texture_buffer.rs`)
-- `parse_filter_mode`: **written** (duplicate copies exist)
-- `TextureBufferPy.add_texture` `filter_mode` param: **added**
-- `TextureBufferPy.add_atlas_texture_from_iter` `filter_mode` param: **added**
-- **Remaining issues**:
-  - Duplicate `impl` blocks and duplicate `parse_filter_mode` functions in `mod.rs`
-  - `FilterMode` import needed in `src/material/textured.rs` tests
-  - Test call sites need `FilterMode::Bilinear` parameter added
-  - `add_atlas_texture_from_iter` missing `#[pyo3(signature)]` for `filter_mode` default
-  - `parse_filter_mode` placed outside the `#[pymethods] impl` block
-  - Has not passed `cargo check --all-targets`
+- Rust: `FilterMode`, `uv_map_inline` branching, `lerp_rgba`, buffer plumbing, deduplicated `add_atlas_texture_from_iter`.
+- Python: `TextureBufferPy.add_texture` / `add_atlas_texture_from_iter` with `#[pyo3(signature)]` defaults; `parse_filter_mode` → `ValueError` on invalid strings.
+- Tests: `texturebuffer` unit tests for nearest; `test_r_texture_buffer.py`; TTSL e2e nearest path.
 
 ### Future / optional phases
-
-- **Nearest-neighbor tests**: Unit tests verifying exact texel return without interpolation for `FilterMode::Nearest`.
 - **TTSL `tt_setTextureFilter` builtin**: If runtime filter switching is needed, add a new opcode and `set_filter` method on `TtslTextureEnv`. Deferred until a concrete use case emerges.
 
 ### Alternatives considered
@@ -148,14 +133,12 @@ The following has been written but is in an **inconsistent, non-compiling state*
 
 ## Risks and open questions
 
-- **Duplicate code cleanup**: The `mod.rs` file has duplicate `impl` blocks and duplicate `parse_filter_mode` from partial edits. Needs a clean rewrite of the affected section.
-- **`add_atlas_texture_from_iter` signature**: Missing `#[pyo3(signature)]` for the `filter_mode` default and may be improperly indented.
-- **Default behavior change**: The pre-evolution code used nearest-neighbor. The evolution defaults to bilinear. All existing demos switch from nearest to bilinear — this is the desired behavior (fixes the Dust demo), but worth documenting.
+- **Default behavior change**: The pre-evolution code used nearest-neighbor only. The shipped default is bilinear. Existing demos pick up bilinear unless they pass ``filter_mode="nearest"`` — intended for visual quality (e.g. Dust demo).
 
 ## Decision record
 
-- **Status**: in-progress
-- **Resolution**: Implementation partially written. Core logic is sound (`FilterMode` enum, `uv_map_inline` branching, plumbing, Python binding parameter). Remaining work: clean up duplicate code blocks in `mod.rs`, add `#[pyo3(signature)]` for `add_atlas_texture_from_iter`, move `parse_filter_mode` into correct scope, fix test call sites, verify `cargo check --all-targets && cargo test && uv run maturin develop`.
+- **Status**: completed
+- **Resolution**: Duplicate `Texture` / `TextureCustom` impls and duplicate atlas slot writes removed; PyO3 bindings return `ValueError` for bad `filter_mode`; docs and tests updated.
 
 ## References
 
@@ -166,4 +149,4 @@ The following has been written but is in an **inconsistent, non-compiling state*
 - `src/material/textured.rs` — `Textured`, `BaseTexture` material renderers
 - `src/ttsl/mod.rs` — `TtslTextureEnv::sample_tt_texture` trait method
 - `python/tt3de/obj_loader.py` — `OBJMaterial.load_texture` (no changes needed)
-- `source/low_level_api.rst` — Texture buffer documentation (to update)
+- `source/low_level_api.rst` — Texture buffer section documents `filter_mode`.

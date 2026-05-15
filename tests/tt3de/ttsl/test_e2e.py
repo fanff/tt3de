@@ -285,6 +285,77 @@ class Test_EndToEndCompilation(unittest.TestCase):
             self.assertGreater(b, 40, msg=f"expected blue channel from texture ({apply_fn})")
             self.assertLess(b, 120, msg=f"expected bounded blue ({apply_fn})")
 
+    def test_tt_texture_nearest_filter_samples_single_texel(self):
+        """``tt_texture`` uses the texture's filter mode (nearest = no blending)."""
+        src = dedent(
+            """
+            def shade(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
+                sample: vec4 = tt_texture(0, tt_TexCoord0)
+                rgb: vec4 = vec4(sample.x, sample.y, sample.z, 1.0)
+                return (rgb, rgb, 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        tb = TextureBufferPy(8)
+        tb.add_texture(
+            2,
+            2,
+            [
+                (255, 0, 0, 255),
+                (0, 255, 0, 255),
+                (0, 0, 255, 255),
+                (255, 255, 0, 255),
+            ],
+            True,
+            True,
+            filter_mode="nearest",
+        )
+
+        mb = MaterialBufferPy()
+        mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                default_glyph=None,
+                register_seed=reg_settings.get_register_list(),
+            )
+        )
+
+        def sample_rgb(apply_fn) -> tuple[int, int, int]:
+            draw = DrawingBufferPy(4, 4)
+            draw.hard_clear(10.0)
+            draw.set_depth_content(
+                0,
+                0,
+                glm.vec3(0.0, 0.0, 1.0),
+                1.0,
+                glm.vec2(0.25, 0.25),
+                glm.vec2(0.0, 0.0),
+                0,
+                0,
+                mat_idx,
+                0,
+            )
+            apply_fn(
+                mb,
+                tb,
+                VertexBufferPy(16, 16, 16),
+                PrimitiveBufferPy(8),
+                draw,
+            )
+            cell = draw.get_canvas_cell(0, 0)
+            return (cell["f_r"], cell["f_g"], cell["f_b"])
+
+        for apply_fn in (apply_material_py, apply_material_py_parallel):
+            r, g, b = sample_rgb(apply_fn)
+            self.assertGreater(
+                r,
+                240,
+                msg=f"expected full red from corner texel ({apply_fn})",
+            )
+            self.assertLess(g, 30, msg=f"expected near-zero green ({apply_fn})")
+            self.assertLess(b, 30, msg=f"expected near-zero blue ({apply_fn})")
 
     def test_duplicate_float_constant_seeded_in_all_allocated_registers(self):
         """Regression: when the front-end emits two ``LOAD_CONST`` for the same

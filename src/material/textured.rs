@@ -10,7 +10,7 @@ use crate::{
     texturebuffer::{
         texture_buffer::TextureBuffer,
         toglyph_methods::{ToGlyphIndex, ToGlyphMethod},
-        FilterMode, RGBA,
+        RGBA,
     },
     vertexbuffer::uv_buffer::UVBuffer,
 };
@@ -329,7 +329,7 @@ mod tests {
     use crate::primitivbuffer::primitiv_triangle::PTriangle3D;
     use crate::primitivbuffer::primitivbuffer::PrimitiveElements;
     use crate::texturebuffer::texture_buffer::TextureBuffer;
-    use crate::texturebuffer::RGBA;
+    use crate::texturebuffer::FilterMode;
     use crate::vertexbuffer::uv_buffer::UVBuffer;
 
     #[test]

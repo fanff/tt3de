@@ -70,6 +70,13 @@ Textures typically contain:
 
 Textures are referenced by entries in the **Material Buffer**.
 
+``TextureBufferPy.add_texture(width, height, pixels, …)`` accepts an optional
+keyword ``filter_mode`` (default ``"bilinear"``): use ``"nearest"`` for
+point-sampled (pixel-art) lookups or ``"bilinear"`` for four-texel interpolation.
+The same option applies to ``add_atlas_texture_from_iter``. Invalid values raise
+``ValueError``. Sampling from materials and from TTSL ``tt_texture`` follows the
+mode stored on each texture slot.
+
 
 Material Buffer
 ^^^^^^^^^^^^^^^

@@ -149,33 +149,6 @@ impl<const SIZE: usize> TextureBuffer<SIZE> {
 
             self.textures[self.current_size] = text;
         }
-
-        if width == SIZE && height == SIZE {
-            let text = TextureType::Atlas(TextureAtlas {
-                texture: Texture::<SIZE>::from_iter(input, false, false, filter_mode),
-                pix_size_width,
-                pix_size_height,
-            });
-            self.textures[self.current_size] = text;
-        } else {
-            let text = TextureType::AtlasCustom(
-                TextureAtlas {
-                    texture: TextureCustom::<SIZE>::new(
-                        input,
-                        width,
-                        height,
-                        false,
-                        false,
-                        filter_mode,
-                    ),
-                    pix_size_width,
-                    pix_size_height,
-                },
-
-            );
-
-            self.textures[self.current_size] = text;
-        }
         self.current_size += 1;
         self.current_size - 1
     }
