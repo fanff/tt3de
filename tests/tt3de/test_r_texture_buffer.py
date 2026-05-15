@@ -101,3 +101,31 @@ class Test_TextureArray(unittest.TestCase):
             texture_array.get_rgba_at(0, 0.25, 0.75),
             texture_array.get_rgba_at(0, -1.75, -2.25),
         )
+
+    def test_add_texture_filter_mode_nearest_vs_bilinear(self):
+        """Nearest must return a single texel; bilinear blends at fractional UV."""
+        pixels = [
+            (255, 0, 0, 255),
+            (0, 255, 0, 255),
+            (0, 0, 255, 255),
+            (255, 255, 0, 255),
+        ]
+        nearest_tb = TextureBufferPy(4)
+        nearest_tb.add_texture(2, 2, pixels, True, True, filter_mode="nearest")
+        bilinear_tb = TextureBufferPy(4)
+        bilinear_tb.add_texture(2, 2, pixels, True, True, filter_mode="bilinear")
+
+        n = nearest_tb.get_rgba_at(0, 0.25, 0.25)
+        b = bilinear_tb.get_rgba_at(0, 0.25, 0.25)
+        self.assertEqual(n, (255, 0, 0, 255))
+        self.assertEqual(b, (128, 128, 64, 255))
+
+    def test_add_texture_filter_mode_case_insensitive(self):
+        tb = TextureBufferPy(4)
+        tb.add_texture(1, 1, [(10, 20, 30, 255)], True, True, filter_mode="BILINEAR")
+        self.assertEqual(tb.get_rgba_at(0, 0.0, 0.0), (10, 20, 30, 255))
+
+    def test_add_texture_unknown_filter_mode_raises(self):
+        tb = TextureBufferPy(4)
+        with self.assertRaises(ValueError):
+            tb.add_texture(1, 1, [(0, 0, 0, 255)], True, True, filter_mode="trilinear")
