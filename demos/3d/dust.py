@@ -29,7 +29,7 @@ class GLMTester(TT3DFpsView):
             texture_buffer_size=64,
             transform_buffer_size=4096 * 2,
             primitive_buffer_size=4096 * 20,
-            use_left_hand_perspective=True,
+            use_left_hand_perspective=False,
         )
 
     def initialize(self):
