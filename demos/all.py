@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Launch any demo under ``demos/2d/`` or ``demos/3d/`` from a Textual menu.
+"""
+Launch any demo under ``demos/2d/`` or ``demos/3d/`` from a Textual menu.
 
 Demos are listed in **two side-by-side panels** (``demos/2d`` and ``demos/3d``). Select
 with Enter (Tab moves between panels). Escape returns from a running demo. A rolling
@@ -23,7 +24,7 @@ from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Literal
+from typing import Callable, Literal
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -31,6 +32,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Header, OptionList, Rule, Static
 from textual.widgets.option_list import Option
+from textual.widget import Widget
 
 from tt3de.textual_standalone import TT3DViewStandAlone
 
@@ -88,25 +90,50 @@ class DemoEntry:
     path: Path
     label: str
     view_cls: type[TT3DViewStandAlone] | None
+    widget_factory: Callable[[], Widget] | None
     load_error: str | None
+
+
+def find_launcher_widget_factory(
+    module,
+) -> tuple[Callable[[], Widget] | None, str | None]:
+    """Return optional ``build_demo_widget`` factory for launcher-only wrappers."""
+    factory = getattr(module, "build_demo_widget", None)
+    if factory is None:
+        return None, None
+    if not callable(factory):
+        return None, "`build_demo_widget` exists but is not callable."
+    return factory, None
 
 
 def analyze_demo(category: Literal["2d", "3d"], path: Path) -> DemoEntry:
     label = f"{category}/{path.name}"
     try:
         mod = load_demo_module(category, path)
+        factory, factory_err = find_launcher_widget_factory(mod)
+        if factory_err:
+            return DemoEntry(category, path, label, None, None, factory_err)
         cls, err = find_standalone_view_class(mod)
+        if factory is not None:
+            # If the module offers a launcher wrapper, use it and keep optional direct
+            # TT3DView class metadata when available.
+            return DemoEntry(
+                category,
+                path,
+                label,
+                None if err else cls,
+                factory,
+                None,
+            )
         if err:
-            return DemoEntry(category, path, label, None, err)
-        return DemoEntry(category, path, label, cls, None)
+            return DemoEntry(category, path, label, None, None, err)
+        return DemoEntry(category, path, label, cls, None, None)
     except Exception as exc:  # noqa: BLE001 — surface loader failures in the UI
-        return DemoEntry(category, path, label, None, str(exc))
+        return DemoEntry(category, path, label, None, None, str(exc))
 
 
 def build_demo_entries(repo_root: Path) -> list[DemoEntry]:
-    return [
-        analyze_demo(cat, p) for cat, p in discover_demo_paths(repo_root)
-    ]
+    return [analyze_demo(cat, p) for cat, p in discover_demo_paths(repo_root)]
 
 
 class DemoRunnerPane(Container):
@@ -158,13 +185,14 @@ class DemoRunnerPane(Container):
         yield Container(id="demo-slot")
 
     async def on_mount(self) -> None:
-        assert self._entry.view_cls is not None
-        demo = self._entry.view_cls()
+        if self._entry.widget_factory is not None:
+            root_widget = self._entry.widget_factory()
+        else:
+            assert self._entry.view_cls is not None
+            root_widget = self._entry.view_cls()
         slot = self.query_one("#demo-slot")
-        await slot.mount(demo)
-        demo.focus()
-        self._last_frame_idx = demo.frame_idx
-        self._last_sample_t = perf_counter()
+        await slot.mount(root_widget)
+        root_widget.focus()
         self._primed = True
         self.set_interval(1 / 120.0, self._tick_fps)
 
@@ -189,9 +217,7 @@ class DemoRunnerPane(Container):
         render_ms = demo.frame_timings.render_duration * 1000.0
         if self._fps_samples:
             fps_median = statistics.median(self._fps_samples)
-            overlay.update(
-                f"{w}x{h}  FPS: {fps_median:.1f}  r: {render_ms:.2f} ms"
-            )
+            overlay.update(f"{w}x{h}  FPS: {fps_median:.1f}  r: {render_ms:.2f} ms")
         else:
             overlay.update(f"{w}x{h}  FPS: …  r: {render_ms:.2f} ms")
 
@@ -288,11 +314,11 @@ class DemoMenuScreen(Screen):
             Option(
                 (
                     f"[dim]{e.label}[/] — {e.load_error}"
-                    if e.view_cls is None
+                    if e.view_cls is None and e.widget_factory is None
                     else e.label
                 ),
                 id=str(i),
-                disabled=e.view_cls is None,
+                disabled=(e.view_cls is None and e.widget_factory is None),
             )
             for i, e in enumerate(entries)
         ]
@@ -348,7 +374,7 @@ class DemoMenuScreen(Screen):
         else:
             return
         entry = entries[event.option_index]
-        if entry.view_cls is None:
+        if entry.view_cls is None and entry.widget_factory is None:
             self.app.notify(
                 entry.load_error or "Demo unavailable",
                 title="Cannot load demo",
