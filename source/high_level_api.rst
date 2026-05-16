@@ -251,7 +251,7 @@ Core classes
 ^^^^^^^^^^^^
 
 - ``TT3DNode``: 3D scene graph container
-- ``Prefab3D``: helper constructors for test geometry (triangle, square, gizmos, circle)
+- ``Prefab3D``: helper constructors for test geometry (triangle, square, gizmos, circle, cube, lat-long sphere)
 - ``fast_load(...)``: loads meshes/textures from files
 
 Adding primitive meshes
@@ -273,6 +273,22 @@ Adding primitive meshes
             tri.local_transform = glm.translate(glm.vec3(0.0, 1.0, 0.0))
             root.add_child(tri)
             self.rc.append_root(root)
+
+Lat-long UV sphere
+^^^^^^^^^^^^^^^^^^
+
+``Prefab3D.latlong_uv_sphere(radius=1.0, stacks=4, slices=10)`` returns a
+faceted (flat-shaded) ``TT3DPolygon`` with a latitude–longitude tessellation
+and per-triangle UVs in [0, 1].  Y-up, poles on ±Y.  Useful for ``tt_Normal``
+lighting demos where per-face normals are expected.
+
+.. code-block:: python
+
+    from tt3de.prefab3d import Prefab3D
+
+    sphere = Prefab3D.latlong_uv_sphere(0.5, stacks=6, slices=12)
+    sphere.material_id = shader_mat_id
+    root.add_child(sphere)
 
 Loading models
 ^^^^^^^^^^^^^^
