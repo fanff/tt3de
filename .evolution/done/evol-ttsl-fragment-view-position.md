@@ -2,7 +2,6 @@
 
 ```yaml
 id: evol-ttsl-fragment-view-position
-status: draft
 created: 2026-05-15
 authors: []
 supersedes: []
@@ -126,7 +125,6 @@ Introduce a TTSL implicit per-fragment built-in **`tt_ViewPos`: `vec3`** represe
 
 ## Decision record
 
-- **Status**: draft
 - **Builtin name**: **`tt_ViewPos`** (`vec3`), aligned with `evol-lighting.md` draft shader.
 - **Space**: **View (eye) space**, consistent with directional/point light auto-transform in `evol-lighting.md`.
 - **Coexistence with `tt_FragPos`**: No semantic overlap; docs must state both are available.

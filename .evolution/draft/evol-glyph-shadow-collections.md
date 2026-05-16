@@ -1,6 +1,5 @@
 ---
 id: evol-glyph-shadow-collections
-status: proposed
 created: 2026-05-16
 authors: [franc, codex]
 supersedes: []
@@ -111,7 +110,6 @@ This evolution proposes a **small, explicit “glyph band collection” API** (a
 
 ## Decision record
 
-- **Status**: proposed
 - **Resolution**: Pending — agree on phase-1 surface (palette + dict + register apply) and uniform naming flexibility, then implement helper + demo refactors.
 
 ## References

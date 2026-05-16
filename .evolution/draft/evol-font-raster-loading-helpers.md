@@ -1,6 +1,5 @@
 ---
 id: evol-font-raster-loading-helpers
-status: proposed
 created: 2026-05-15
 authors: [franc, codex]
 supersedes: []
@@ -120,7 +119,6 @@ The `bouncing_clock` demo currently proves that TT3DE can render sprite-sheet gl
 
 ## Decision record
 
-- **Status**: proposed
 - **Resolution**: Accepted direction for extracting reusable raster-glyph loading helpers in Python and applying them first to `bouncing_clock`, while preserving existing rendering behavior in the initial slice.
 
 ## References

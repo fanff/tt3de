@@ -2,7 +2,6 @@
 
 ```yaml
 id: evol-ttsl-fragment-normal
-status: draft
 created: 2026-05-15
 authors: []
 supersedes: []
@@ -180,22 +179,21 @@ Phases are ordered to reduce **silent register mismatch** (compiler vs Rust). Ph
 
 ## Decision record
 
-- **Status**: draft (implementation landed; keep doc until release notes / changelog entry)
 - **Builtin name**: **`tt_Normal`** (`vec3`), consistent with `evol-lighting.md` and `tt_` convention in `source/ttsl.md`.
 - **Space**: Document as **view-space** to match current 3D primitive path (`triangle_3d` applies normal matrix then passes `normal_view`).
 - **Register**: Default **`regs.v3[2]`** with `ShaderInputBinding::normal_v3_reg == 2` and compiler reservation of index **2** for the builtin (must stay aligned with Phase 2–3).
 - **Reservation policy (frozen for MVP)** — Once the material path writes `PixInfo::normal` into `regs.v3[2]` every shaded pixel, the compiler **must** treat **`v3[2]` as engine-reserved** for that path (same idea as UV slots `0`/`1`), so user temporaries start at **`v3[3]`**. Shaders need not reference `tt_Normal` to be safe from overwrites.
-- **Phase status**
+- **Phase checkpoints**
 
-| Phase | Status |
-|-------|--------|
+| Phase | Outcome |
+|-------|---------|
 | 1 Contract freeze | Documented (this revision) |
 | 2 Compiler | Implemented (`tt_Normal`, `v3[2]` pin, seeds) |
 | 3 Rust bridge | Implemented (`normal_v3_reg`, per-pixel write) |
 | 4 Tests | Implemented (Rust + Python) |
 | 5 Docs + stubs | Implemented (`source/ttsl.md`, `ttsl_compiler.md`, `decorator.py`) |
 
-- **Resolution**: *(fill when closing the evolution / shipping the feature)*
+- **Resolution**: Implementation landed; keep this doc until release notes / changelog entry capture the shipped surface.
 
 ## References
 

@@ -2,7 +2,6 @@
 
 ```yaml
 id: evol-lighting
-status: draft
 created: 2026-05-11
 authors: []
 supersedes: []
@@ -382,7 +381,6 @@ This is a one-time migration but future-proof against additional env types (simp
 
 ## Decision record
 
-- **Status**: draft
 - **Coordinate space**: View space for shader computation. LightBuffer stores world-space data; engine auto-transforms to view space each frame using `view_matrix_3d`, following the OpenGL `glLightfv` convention.
 - **Light delivery**: LightBuffer with per-property accessor opcodes (not plain uniforms).
 - **Lighting model**: Reference TTSL shader, not a Rust `LitMaterial` mode.

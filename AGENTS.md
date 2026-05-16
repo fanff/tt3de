@@ -56,6 +56,7 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 ## Conventions
 
 - **Python GLM imports**: use `from pyglm import glm` (not `import glm` or `import pyglm as glm`). For TTSL shader source strings, the compiler injects the same prelude.
+- **Evolution documents** (`.evolution/`): one markdown per proposal. Use subfolders for lifecycle — `draft/` (active), `done/` (landed or closed narrative kept for history), `to_implement/` (queued follow-ups) — and **move files** between them instead of embedding a `status` field in the document. Authoring flow: `.cursor/skills/tt3de-evol/SKILL.md`.
 - Keep changes scoped; avoid unrelated refactors in the same edit.
 - Run `cargo check --all-targets` after Rust edits to verify zero warnings.
 - Run `uv run pytest` after changes that touch Python bindings.

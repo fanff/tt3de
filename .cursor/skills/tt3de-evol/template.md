@@ -7,7 +7,6 @@ Strong evolutions usually **name the baseline**, **contrast with a familiar refe
 ```yaml
 # Optional frontmatter (recommended for tooling and cross-links)
 id: evol-<short-slug>
-status: draft   # draft | proposed | accepted | superseded
 created: YYYY-MM-DD
 authors: [<names or handles>]
 supersedes: []  # list of other evolution ids this replaces
@@ -84,8 +83,7 @@ Structure this section so implementers see **today vs tomorrow**:
 
 ## Decision record
 
-- **Status**: draft | proposed | accepted | superseded
-- **Resolution**: one paragraph once decided (fill when closing the evolution).
+- **Resolution**: one paragraph once decided (fill when closing the evolution). Track lifecycle by moving the file between `.evolution/draft/`, `.evolution/done/`, and `.evolution/to_implement/` rather than encoding state in the body.
 
 ## References
 

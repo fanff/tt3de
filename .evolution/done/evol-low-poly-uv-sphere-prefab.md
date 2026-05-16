@@ -1,6 +1,5 @@
 ---
 id: evol-low-poly-uv-sphere-prefab
-status: proposed
 created: 2026-05-16
 authors: [franc, codex]
 supersedes: []
@@ -98,7 +97,6 @@ The `ttsl_normal_viewpos` demo proves TTSL **view-space varyings** (`tt_Normal`,
 
 ## Decision record
 
-- **Status**: proposed
 - **Resolution**: Pending — accepted direction is to consolidate the `ttsl_normal_viewpos` low-poly sphere into `Prefab3D` (or equivalent `python/tt3de/` prefab module) with equivalent geometry and tests, then slim the demo.
 
 ## References

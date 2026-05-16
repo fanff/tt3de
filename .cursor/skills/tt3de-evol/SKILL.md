@@ -35,20 +35,21 @@ Skim further `source/*.rst` / `*.md` if the evolution touches those areas. Repo-
 
 Pick one at the start (confirm with the user if unclear):
 
-1. **From scratch** — New evolution; copy structure from [template.md](template.md); choose a new slug/filename under `.evolution/`.
-2. **Recover** — User points to an existing `.evolution/*.md` draft; identify empty or vague sections and drivefill them.
+1. **From scratch** — New evolution; copy structure from [template.md](template.md); choose a new slug/filename under `.evolution/draft/` (or another lifecycle folder if the user directs).
+2. **Recover** — User points to an existing evolution markdown under `.evolution/` (for example `.evolution/draft/*.md`); identify empty or vague sections and drivefill them.
 3. **Reference** — User names one or more existing evolutions to mirror for tone, section depth, or decision format; still tailor content to the new proposal.
 
-If `.evolution/` is missing, create it when writing the first evolution file.
+If `.evolution/` is missing, create it (including `draft/`, `done/`, and `to_implement/` subfolders) when writing the first evolution file.
 
 ## Document standard
 
 - One markdown file per evolution, named with a **short kebab-case slug** (example: `evol-msaa-outline.md`). Adjust naming if the repo already established a pattern—stay consistent with siblings.
-- Follow section order and intent in [template.md](template.md). Frontmatter is optional but recommended for `id`, `status`, and links.
+- **Lifecycle folders** — Store files under `.evolution/draft/` while the proposal is active, `.evolution/done/` when the narrative is complete or the work has landed and the doc is kept for history, and `.evolution/to_implement/` when the team queues agreed next steps. **Move the file** between folders to reflect lifecycle; do **not** duplicate that as a `status` field inside the markdown.
+- Follow section order and intent in [template.md](template.md). Frontmatter is optional but recommended for `id`, dates, authors, and links (`related`, `supersedes`).
 
 ## Session scope (one evolution file)
 
-Treat each collaboration as centered on **one target** `.evolution/*.md` (the file being written or recovered). **Do not** audit or reconcile **all** evolution documents in the repo for mutual consistency unless the **user explicitly asks** (e.g. supersede chain review, roadmap alignment across proposals).
+Treat each collaboration as centered on **one target** evolution markdown under `.evolution/` (any subfolder; the file being written or recovered). **Do not** audit or reconcile **all** evolution documents in the repo for mutual consistency unless the **user explicitly asks** (e.g. supersede chain review, roadmap alignment across proposals).
 
 - **In scope**: internal consistency *within* that single file ([Evolution consistency (user edits)](#evolution-consistency-user-edits)); reading `source/` and materials the user links or pastes.
 - **Reference mode**: only read **user-named** evolution files for tone or structure—still not a blanket cross-check of every sibling unless requested.
@@ -60,8 +61,8 @@ If the user switches to a different evolution path, treat that file as the new s
 
 When the **user updates** the evolution—directly in the file, via free-text replies, or by narrowing/expanding scope—**keep the document internally consistent**:
 
-- **Re-read** the current `.evolution/*.md` before emitting the next revision; do not assume an older in-chat snapshot is still accurate.
-- **Propagate** the change across dependent sections: Summary, Goals, Non-goals, User-visible functionality, Technical approach (baseline vs phases), Complexity and scope, Testability, Performance, Risks, **Decision record**, and frontmatter (`status`, `related`, dates if policy requires).
+- **Re-read** the current evolution markdown path before emitting the next revision; do not assume an older in-chat snapshot is still accurate.
+- **Propagate** the change across dependent sections: Summary, Goals, Non-goals, User-visible functionality, Technical approach (baseline vs phases), Complexity and scope, Testability, Performance, Risks, **Decision record**, and frontmatter (`related`, `supersedes`, dates if policy requires).
 - **Resolve contradictions**: if one section claims “docs-only” and another still describes shipped API behavior, align wording or mark deferred work explicitly.
 - **Phase alignment**: sequencing bullets (e.g. doc → metadata → optional pass) should match Complexity / Testability expectations for each slice.
 
@@ -105,13 +106,13 @@ For performance, stay honest: **hypotheses and guardrails**, not fake benchmarks
 2. If recover/reference: read the cited `.evolution/` files (and any linked PRs/issues if provided).
 3. Summarize understanding in **≤5 lines**; ask the first 1–2 gap questions with suggestions.
 4. Iterate until sections in [template.md](template.md) can be filled without hand-waving.
-5. Emit or update the markdown file under `.evolution/` with complete sections; set `status` appropriately. After **user edits** to the evolution, apply [Evolution consistency (user edits)](#evolution-consistency-user-edits) before saving.
+5. Emit or update the markdown under `.evolution/` with complete sections; place or move it in the correct lifecycle subfolder (`draft/`, `done/`, or `to_implement/`). After **user edits** to the evolution, apply [Evolution consistency (user edits)](#evolution-consistency-user-edits) before saving.
 6. Apply [Git workflow (evolution commits)](#git-workflow-evolution-commits): put the change on a dedicated branch and **commit** after the file is written—unless the user explicitly asks not to commit yet.
 7. Optional closing recap: one message listing **decisions**, **open risks**, and **recommended next implementation step**—each one line.
 
 ## Git workflow (evolution commits)
 
-Evolution markdown under `.evolution/` must be committed **on its own branch**, not on the integration branch. After saving the target `.evolution/*.md`, **create a git commit** for that change (Conventional Commits, e.g. `docs: add evolution <slug>` or `docs: update evolution <slug>`).
+Evolution markdown under `.evolution/` must be committed **on its own branch**, not on the integration branch. After saving the target file (for example `.evolution/draft/<slug>.md`), **create a git commit** for that change (Conventional Commits, e.g. `docs: add evolution <slug>` or `docs: update evolution <slug>`).
 
 **Branch name**: use **`evol/<evol_name>`**, matching the **`evol/<evol-description>`** branch pattern in [Git workflow — `AGENTS.md`](../../../AGENTS.md#git-workflow). Here `<evol_name>` is that description segment: usually the evolution markdown basename **without** `.md` (e.g. `evol-transparency-depth-layers.md` → `evol/evol-transparency-depth-layers`). Stay consistent with sibling `evol/*` branches; feature/chore branches remain `feat/` and `chore/` per the same section.
 
@@ -145,5 +146,5 @@ Use the repo’s default integration branch name if it is not `master`. If check
 - [ ] All template sections addressed or explicitly marked N/A with rationale.
 - [ ] Cross-section consistency checked after any user-driven scope or wording change ([Evolution consistency (user edits)](#evolution-consistency-user-edits)).
 - [ ] User could implement from the doc without re-asking fundamental scope questions.
-- [ ] File saved under `.evolution/` using repo-consistent naming.
+- [ ] File saved under `.evolution/<draft|done|to_implement>/` using repo-consistent naming.
 - [ ] Dedicated evolution branch and commit recorded after save ([Git workflow](#git-workflow-evolution-commits)), unless the user asked to skip committing.

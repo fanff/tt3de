@@ -2,7 +2,6 @@
 
 ```yaml
 id: evol-rust-core-pyo3-separation
-status: draft
 created: 2026-05-11
 authors: [fanf]
 supersedes: []
@@ -164,7 +163,6 @@ Restructure tt3de so the Rust rendering engine can be built, tested, and distrib
 
 ## Decision record
 
-- **Status**: draft
 - **Resolution**: Open. Initial direction is to separate native Rust engine code from PyO3 wrappers incrementally, preserving Python compatibility while enabling pure Rust builds.
 
 ## References
