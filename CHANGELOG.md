@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.1.0](https://github.com/fanff/tt3de/compare/v1.0.0...v1.1.0) (2026-05-16)
+
+
+### Features
+
+* add Textual demo launcher and standalone fixes ([9f4638e](https://github.com/fanff/tt3de/commit/9f4638e4893b4a03f0c856a155e109965512a2b3))
+* add TTSL shader math primitives — dot, normalize, length, max, clamp ([#36](https://github.com/fanff/tt3de/issues/36)) ([3d55181](https://github.com/fanff/tt3de/commit/3d551818dcfe12d49233a1b5347169c0cd2b0f31))
+* adding nice demo ([a972f72](https://github.com/fanff/tt3de/commit/a972f72b185fe80f339c399df6a98465f3c03be7))
+* adding the view ([7eb164a](https://github.com/fanff/tt3de/commit/7eb164ad893be49404d94008385f62e37c6a3f87))
+* **demos:** launcher widget factory and texture cube modes demo ([#45](https://github.com/fanff/tt3de/issues/45)) ([9b2144c](https://github.com/fanff/tt3de/commit/9b2144c35d3ca9af524e2aaa8aaabec67078ae0a))
+* extract low-poly UV sphere into Prefab3D.latlong_uv_sphere ([#44](https://github.com/fanff/tt3de/issues/44)) ([861d1d7](https://github.com/fanff/tt3de/commit/861d1d7a5363cb023d4f89b4be40eba72ca25dd0))
+* remove legacy_layers and finalize two-pass rendering ([#38](https://github.com/fanff/tt3de/issues/38)) ([4446c89](https://github.com/fanff/tt3de/commit/4446c89786e3ea49e3e981f3faa537207926b88c))
+* restyle demo launcher with side-by-side 2d/3d panels ([#30](https://github.com/fanff/tt3de/issues/30)) ([1aa79bd](https://github.com/fanff/tt3de/commit/1aa79bdeb9e901c2c0aec897258b9e06c5a8ee14))
+* TTSL shader return type is (vec4, vec4, int) ([6eedbc6](https://github.com/fanff/tt3de/commit/6eedbc65e908ed900e038f25cfbd1b60c6608982))
+* TTSL shader return type is (vec4, vec4, int) ([4120595](https://github.com/fanff/tt3de/commit/4120595ec42dbdd2a56a741592dd6ce12f3b1a67))
+
+
+### Bug Fixes
+
+* correct repeating UV wrap for custom textures ([#41](https://github.com/fanff/tt3de/issues/41)) ([de10572](https://github.com/fanff/tt3de/commit/de1057272b49e3c3f9c97b725212be40e1f7671a))
+* update dust demo download URL and add error handling ([#40](https://github.com/fanff/tt3de/issues/40)) ([33c1897](https://github.com/fanff/tt3de/commit/33c189780efd72d7addfef05c0fb6477982f4de1))
+
+
+### Documentation
+
+* add evolution evol-rust-core-pyo3-separation ([#31](https://github.com/fanff/tt3de/issues/31)) ([a12ebd9](https://github.com/fanff/tt3de/commit/a12ebd91e9ab8b39068d282bb0edcfbb0d51a341))
+* add shader math primitives evolution, update lighting evolution design ([#35](https://github.com/fanff/tt3de/issues/35)) ([773e3e9](https://github.com/fanff/tt3de/commit/773e3e978c801e26af58b5dc551272b273f89cbe))
+* clarify session-branch commit policy in AGENTS.md ([e27cd11](https://github.com/fanff/tt3de/commit/e27cd1146d81ddc5827f547407791e4ccb736212))
+* clarify terminal rendering focus ([7a29e04](https://github.com/fanff/tt3de/commit/7a29e04b7fbf8ba2e55d572521a8ec71a2323e9f))
+* clarify terminal rendering focus ([9fa2304](https://github.com/fanff/tt3de/commit/9fa2304ce54fa426de973644fc21b46751351ed8))
+* explain depth layer resolve ([987c736](https://github.com/fanff/tt3de/commit/987c73606193c5f761bf1cc4f5ab915e1d03676c))
+* explain depth layer resolve ([b52f797](https://github.com/fanff/tt3de/commit/b52f797a3648e8b6e9841652543988f92380651a))
+* rework transparency evolution for single-buffer path ([#34](https://github.com/fanff/tt3de/issues/34)) ([a14d19b](https://github.com/fanff/tt3de/commit/a14d19bafc59403a1645e2f33cc83fcae498f525))
+* update transparency depth layers evolution with configurable ASCII blending ([#37](https://github.com/fanff/tt3de/issues/37)) ([ae21e2b](https://github.com/fanff/tt3de/commit/ae21e2b0efbfd0bb9bea189f599c3a2caaaf9254))
+
 ## [1.0.0](https://github.com/fanff/tt3de/compare/v0.1.2...v1.0.0) (2026-05-10)
 
 
