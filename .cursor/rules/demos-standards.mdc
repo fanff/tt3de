@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Demos standards
 
-Applies to scripts under `demos/`. General Python rules: [.cursor/rules/python-standards.mdc](python-standards.mdc). TTSL semantics and compiler depth: [.cursor/skills/ttsl-implementation/SKILL.md](../skills/ttsl-implementation/SKILL.md), `source/ttsl.md`, `source/ttsl_compiler.md`.
+Applies to scripts under `demos/`. General Python rules: [.cursor/rules/python-standards.mdc](python-standards.mdc). **`SHADER_SRC` bodies** are authored by [.cursor/skills/ttsl-implementation/SKILL.md](../skills/ttsl-implementation/SKILL.md); [.cursor/skills/tt3de-demomaker/SKILL.md](../skills/tt3de-demomaker/SKILL.md) wires demos and delegates TTSL. Reference `source/ttsl.md`, `source/ttsl_compiler.md` for semantics when integrating.
 
 ## Layout and naming
 

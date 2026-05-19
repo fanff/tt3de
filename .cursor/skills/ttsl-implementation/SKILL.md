@@ -30,7 +30,7 @@ These files are the contract; prefer them over memory or GLSL habits:
 |------|------------|----------|
 | Write / fix shader `SHADER_SRC`, uniforms, sampling, fog, transparency | **Yes** | — |
 | Compile, seed registers, `ttsl_run` smoke tests | **Yes** | — |
-| Textual demos using `ShaderPy` | **Yes** (shader body); wiring checklist in [demos-standards](../../../.cursor/rules/demos-standards.mdc) | [tt3de-demomaker](../tt3de-demomaker/SKILL.md) for discovery |
+| Textual demos using `ShaderPy` | **Yes** — all `SHADER_SRC` bodies | [tt3de-demomaker](../tt3de-demomaker/SKILL.md) wires the demo only; it **delegates** shader source here |
 | New TTSL builtin needing texture buffer / raster / material bridge in Rust | Opcode + compiler here | [tt3de-low](../tt3de-low/SKILL.md) for engine hook |
 | Scene graph, prefabs, loaders (no TTSL) | — | [tt3de-high](../tt3de-high/SKILL.md) |
 
