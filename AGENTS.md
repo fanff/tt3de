@@ -19,6 +19,25 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 
 When running pytest directly (not via a wrapper that already sets paths), set `PYTHONPATH` to the repository root so imports like `tests.*` resolve correctly.
 
+`uv run pytest` collects only under `tests/`; performance benchmarks live in top-level `benchs/` and are **not** part of CI pytest.
+
+## Benchmarks
+
+Prerequisite: build the extension locally (`uv run maturin develop`).
+
+| Script | Measures | Timed unit |
+|--------|----------|------------|
+| `bash scripts/bench_material.sh` | Material apply serial vs Rayon thread pools | Per batch (1000 frame loops in one pytest-benchmark invocation) |
+| `bash scripts/bench_r_code.sh` | Triangle raster passes + `DrawingBufferPy.to_textual_2` | Per pytest-benchmark invocation (Textual bench includes inner round loops) |
+| `bash scripts/bench_ttsl.sh` | TTSL VM `ttsl_run` for compiled shader variants | Per VM invocation |
+| `bash scripts/bench_all.sh` | All three suites sequentially | — |
+
+Each script writes timestamped JSON under `benchmarks/` and prints a Rich summary table (~100 columns). Compare **relative** speedups on the same machine when reviewing perf PRs; do not treat absolute milliseconds as SLAs.
+
+Rust **Criterion** microbenches under `benches/` are separate: `cargo bench`.
+
+On Windows, run the bash scripts from Git Bash or WSL (see [Platform Notes](#platform-notes)).
+
 - **Windows (PowerShell)**:
 
 ```powershell

@@ -5,11 +5,11 @@ Each trial runs **1000** consecutive material passes on the same buffers (steady
 frame loop), so Rayon scheduling overhead does not dominate tiny single-pass timings.
 
 Compact tables (fewer columns, short names, sorted by mean) load automatically via
-``tests/benchs/r_code/conftest.py`` when these tests are collected.
+``benchs/r_code/conftest.py`` when these tests are collected.
 
 Example::
 
-    uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v
+    uv run pytest benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v
 
 Export JSON and render a terminal KPI report (Rich; see README)::
 
@@ -18,13 +18,13 @@ Export JSON and render a terminal KPI report (Rich; see README)::
     # or (repository root):
 
     mkdir -p benchmarks
-    PYTHONPATH=python uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \\
+    PYTHONPATH=python uv run pytest benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \\
       --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
     uv run --no-sync python scripts/dev_material_bench_report.py benchmarks/material_apply.json
 
 Group timings by canvas size (``n``)::
 
-    uv run pytest tests/benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v \\
+    uv run pytest benchs/r_code/test_bench_r_pix_shader.py --benchmark-only -v \\
       --benchmark-group-by=param:n
 """
 import pytest

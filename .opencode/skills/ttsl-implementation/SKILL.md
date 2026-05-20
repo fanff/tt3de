@@ -168,7 +168,7 @@ After implementation: `bash scripts/gen_opcodes.sh && cargo check --all-targets 
 
 **Rust VM tests** (`src/ttsl/mod.rs`) only for engine-coupled ops; pure math is covered by Python e2e.
 
-Run: `PYTHONPATH=. uv run pytest tests/tt3de/ttsl/ -v` (skip `tests/benchs/` unless needed).
+Run: `PYTHONPATH=. uv run pytest tests/tt3de/ttsl/ -v` (benchmarks: `bash scripts/bench_ttsl.sh`, not CI pytest).
 
 ## Verification checklist
 

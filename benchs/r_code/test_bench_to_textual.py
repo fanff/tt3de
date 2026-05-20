@@ -3,23 +3,20 @@
 
 Example::
 
-    PYTHONPATH=. uv run pytest tests/benchs/r_code/test_bench_to_textual.py --benchmark-only -v
+    PYTHONPATH=python uv run pytest benchs/r_code/test_bench_to_textual.py --benchmark-only -v
 
 Compare patterns at one size::
 
-    PYTHONPATH=. uv run pytest tests/benchs/r_code/test_bench_to_textual.py --benchmark-only -v \\
+    PYTHONPATH=python uv run pytest benchs/r_code/test_bench_to_textual.py --benchmark-only -v \\
       --benchmark-group-by=param:pattern
 
-JSON export (includes pytest-benchmark ``datetime``; run enrich for ``timestamp`` / ``timestamp_unix``)::
+JSON export and Rich summary::
+
+    ./scripts/bench_r_code.sh
+
+    # or textual export only (deprecated alias):
 
     ./scripts/bench_to_textual.sh
-
-    # equivalent manual steps:
-
-    mkdir -p benchmarks
-    PYTHONPATH=python uv run pytest tests/benchs/r_code/test_bench_to_textual.py \\
-      --benchmark-only -q --benchmark-json=benchmarks/to_textual.json
-    uv run python scripts/enrich_benchmark_json.py benchmarks/to_textual.json
 """
 
 from __future__ import annotations

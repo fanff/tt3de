@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Compact pytest-benchmark tables for tests collected under ``tests/benchs/r_code/``.
+"""Compact pytest-benchmark tables for tests collected under ``benchs/r_code/``.
 
 Loaded only when at least one test path under this directory is collected (including
 other modules in this folder such as triangle raster). Slanted columns only; we do not

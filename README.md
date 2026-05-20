@@ -118,31 +118,16 @@ uv run pytest
 ```
 
 
-8. **Material shading threading benchmark** (`test_bench_material_apply`): 
-
-captures serial vs Rayon (1/2/4/8 threads) over several canvas sizes, writes `benchmarks/material_apply.json`, and prints a compact Rich KPI report (~100-column friendly). From the repository root:
+8. **Performance benchmarks** (not collected by `uv run pytest`; see `AGENTS.md` for detail):
 
 ```bash
-./scripts/bench_material.sh
+bash scripts/bench_material.sh   # material apply threading
+bash scripts/bench_r_code.sh     # triangle raster + Textual export
+bash scripts/bench_ttsl.sh       # TTSL VM
+bash scripts/bench_all.sh        # all three suites
 ```
 
-On Windows PowerShell:
-
-```powershell
-.\scripts\bench_material.ps1
-```
-
-The report summarizes **speedup vs serial** (`×ser`), **per-thread efficiency** (`η/T`), **scaling loss** vs ideal linear speedup (`loss`), and a **throughput bar** per configuration. Expect roughly one minute on a typical CPU.
-
-Equivalent manual invocation:
-
-```bash
-mkdir -p benchmarks
-PYTHONPATH=python uv run pytest \
-    tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
-    --benchmark-only -q --benchmark-json=benchmarks/material_apply.json
-uv run --no-sync python scripts/dev_material_bench_report.py benchmarks/material_apply.json
-```
+Each script writes timestamped JSON under `benchmarks/` and prints a compact Rich KPI report (~100-column friendly). On Windows, use Git Bash or WSL. Material report columns: **speedup vs serial** (`×ser`), **per-thread efficiency** (`η/T`), **scaling loss** (`loss`), **throughput bar**.
 
 9. Regenerate TTSL opcode/ABI files after opcode definition changes:
 
