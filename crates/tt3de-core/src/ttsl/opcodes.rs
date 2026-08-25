@@ -281,8 +281,8 @@ pub fn exec_opcode(
 
         MUL_V3_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v3 = regs.v3.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v3.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v3.add(dst as usize) = a_val * b_val;
@@ -292,8 +292,8 @@ pub fn exec_opcode(
 
         DIV_V3_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v3 = regs.v3.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v3.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v3.add(dst as usize) = a_val / b_val;
@@ -303,8 +303,8 @@ pub fn exec_opcode(
 
         MUL_V4_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v4 = regs.v4.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v4.add(dst as usize) = a_val * b_val;
@@ -314,8 +314,8 @@ pub fn exec_opcode(
 
         DIV_V4_F32 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v4 = regs.v4.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 let b_val = *base_f32_.add(b as usize);
                 *base_v4.add(dst as usize) = a_val / b_val;
@@ -415,8 +415,8 @@ pub fn exec_opcode(
 
         DOT_V3 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v3 = regs.v3.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v3.add(a as usize);
                 let b_val = *base_v3.add(b as usize);
                 *base_f32_.add(dst as usize) = nalgebra_glm::dot(&a_val, &b_val);
@@ -426,8 +426,8 @@ pub fn exec_opcode(
 
         DOT_V4 => {
             unsafe {
-                let base_f32_ = regs.f32_.as_mut_ptr();
                 let base_v4 = regs.v4.as_mut_ptr();
+                let base_f32_ = regs.f32_.as_mut_ptr();
                 let a_val = *base_v4.add(a as usize);
                 let b_val = *base_v4.add(b as usize);
                 *base_f32_.add(dst as usize) = nalgebra_glm::dot(&a_val, &b_val);
