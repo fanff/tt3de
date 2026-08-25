@@ -239,6 +239,7 @@ with `tt3de.tt3de`.
 ## Decision record
 
 - **Resolution**: Adopt a Cargo workspace whose end state contains a published, PyO3-free `tt3de-core` crate and a non-published `tt3de-py` extension crate. Keep the PyPI distribution named `tt3de`, retain the pure-Python package under `python/tt3de`, and preserve `tt3de.tt3de` plus its existing submodule imports. Reach that end state incrementally by locking compatibility, extracting thin adapters subsystem by subsystem, then moving the already-separated code across the physical crate boundary. Rust facade redesign and non-Python bindings are follow-ups, not prerequisites.
+- **Implementation**: Completed in the workspace split that moved native engine code to `crates/tt3de-core`, moved PyO3 adapters to `crates/tt3de-py`, and updated maturin, CI, release, generation, tests, and documentation paths. Crates.io publication remains deferred until the repository declares a license.
 
 ## References
 
