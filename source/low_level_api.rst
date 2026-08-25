@@ -150,9 +150,9 @@ Material modes
 --------------
 
 Materials are entries in the **Material Buffer** that decide how each shaded
-cell is filled. The Rust enum lives in ``src/material/materials.rs`` and is
-exposed to Python through ``MaterialBufferPy`` (``src/material/mod.rs`` plus
-``src/material/materials_py.rs``).
+cell is filled. The Rust enum lives in
+``crates/tt3de-core/src/material/materials.rs`` and is exposed to Python
+through ``MaterialBufferPy`` in ``crates/tt3de-py/src/material/``.
 
 Most demos start from the bundled bank ``MaterialPerfab.rust_set_0()`` and
 then add custom slots on top — that helper pre-populates slots ``0..14`` with

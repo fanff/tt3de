@@ -127,8 +127,9 @@ At bytecode level, `OP_RET` returns **three values**:
 - `back: vec4`
 - `glyph: i32`
 
-The Rust VM implementation (`src/ttsl/opcodes.rs`) reads these from register files
-as `v4[a]`, `v4[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
+The generated Rust VM implementation
+(`crates/tt3de-core/src/ttsl/opcodes.rs`) reads these from register files as
+`v4[a]`, `v4[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
 
 ```python
 front_vec4, back_vec4, glyph_idx = ttsl_run(*regs, bytecode)

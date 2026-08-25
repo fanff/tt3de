@@ -16,9 +16,12 @@ powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
 
 Equivalent: **`make gen-opcodes`** (runs `bash scripts/gen_opcodes.sh`).
 
-## Rust unit tests (`cargo test` + PyO3)
+## Pure Rust core tests
 
-Plain `cargo test` must use **default** Cargo features (not Maturin’s `extension-module`), and PyO3 should target the same interpreter as your dev environment. Helpers under [`scripts/cargo_test.sh`](cargo_test.sh) and [`scripts/cargo_test.ps1`](cargo_test.ps1) set **`PYO3_PYTHON`** from `uv run python`; the PowerShell script also extends **`PATH`** on Windows so **`python3XY.dll`** resolves.
+The helpers under [`scripts/cargo_test.sh`](cargo_test.sh) and
+[`scripts/cargo_test.ps1`](cargo_test.ps1) default to
+`cargo test -p tt3de-core`. The core crate has no PyO3 dependency, so these
+commands need no Python interpreter, `uv`, or `PYO3_PYTHON` setup.
 
 ```bash
 bash scripts/cargo_test.sh
@@ -27,6 +30,12 @@ bash scripts/cargo_test.sh
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/cargo_test.ps1
 ```
+
+Arguments are forwarded to Cargo, for example
+`bash scripts/cargo_test.sh --lib`. Use
+`cargo check --workspace --all-targets` to check the complete workspace.
+Build the extension with `uv run maturin develop --uv`, then run its import and
+binding tests with `PYTHONPATH=. uv run pytest`.
 
 ## `dev_tt3de_screenshot.py`
 

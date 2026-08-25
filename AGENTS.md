@@ -4,15 +4,15 @@
 
 This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 
-- **Compile locally**: `uv run maturin develop` (dev profile) or `uv run maturin develop --profile release`
-- **Rust check (all targets)**: `cargo check --all-targets` — use this to surface all warnings, including from tests and benchmarks.
-- **Rust tests**: `cargo test`
+- **Compile Python extension locally**: `uv run maturin develop --uv` (dev profile) or `uv run maturin develop --uv --profile release`
+- **Rust check (all workspace targets)**: `cargo check --workspace --all-targets` — use this to surface all warnings, including from tests, examples, and benchmarks.
+- **Pure Rust core tests**: `cargo test -p tt3de-core` (or use `scripts/cargo_test.sh` / `.ps1`; these do not need Python or PyO3 setup)
 - **Python tests**: `uv run pytest` — see [Testing](#testing) for `PYTHONPATH` when running pytest directly.
-- **Regenerate TTSL opcodes**: `bash scripts/gen_opcodes.sh` or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` — this regenerates `src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. Equivalent: **`make gen-opcodes`** (invokes the shell script; requires `bash` on `PATH`). Development-only helpers under `scripts/` are not shipped in the published wheel.
+- **Regenerate TTSL opcodes**: `bash scripts/gen_opcodes.sh` or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` — this regenerates `crates/tt3de-core/src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. Equivalent: **`make gen-opcodes`** (invokes the shell script; requires `bash` on `PATH`). Development-only helpers under `scripts/` are not shipped in the published wheel.
 
 ## Platform Notes
 
-- On Windows/PowerShell, redirect cargo stderr with: `cmd /c "cargo check --all-targets 2> output.txt"` (PowerShell `2>&1` piping mangles cargo output).
+- On Windows/PowerShell, redirect cargo stderr with: `cmd /c "cargo check --workspace --all-targets 2> output.txt"` (PowerShell `2>&1` piping mangles cargo output).
 - Detect or confirm the operating system before suggesting or running commands. Use PowerShell syntax on Windows and bash/zsh on macOS or Linux; do not assume one shell works everywhere.
 
 ## Testing
@@ -45,7 +45,7 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 
  Optional: `uv run --no-sync python scripts/dev_regen_doc_screenshot.py` runs the same capture with `COLORTERM` set for truecolor-friendly exports.
 
- GitHub Actions documentation workflow regenerates these after `maturin develop`, before **`sphinx-build`**. Commit updated screenshots when you touch the dual-panel app so local **`sphinx-build`** stays accurate offline too.
+ GitHub Actions documentation workflow regenerates these after `maturin develop --uv`, before **`sphinx-build`**. Commit updated screenshots when you touch the dual-panel app so local **`sphinx-build`** stays accurate offline too.
 
 ## Dependencies
 
@@ -58,7 +58,9 @@ PYTHONPATH=. uv run pytest <test-path-or-args>
 - **Python GLM imports**: use `from pyglm import glm` (not `import glm` or `import pyglm as glm`). For TTSL shader source strings, the compiler injects the same prelude.
 - **Evolution documents** (`.evolution/`): one markdown per proposal. Use subfolders for lifecycle — `draft/` (active), `done/` (landed or closed narrative kept for history), `to_implement/` (queued follow-ups) — and **move files** between them instead of embedding a `status` field in the document. Authoring flow: `.cursor/skills/tt3de-evol/SKILL.md`.
 - Keep changes scoped; avoid unrelated refactors in the same edit.
-- Run `cargo check --all-targets` after Rust edits to verify zero warnings.
+- Keep engine logic in `crates/tt3de-core/`; keep PyO3 bindings thin under `crates/tt3de-py/`.
+- Run `cargo check --workspace --all-targets` after Rust edits to verify zero warnings.
+- Run `cargo test -p tt3de-core` for Python-independent engine behavior.
 - Run `uv run pytest` after changes that touch Python bindings.
 
 ## Git workflow

@@ -150,7 +150,7 @@ Do **not** jump to `low_level_def.py` or opcode work when the user only asked fo
 
 ### Generated vs manual
 
-- **`src/ttsl/opcodes.rs` is fully auto-generated** — never hand-edit.
+- **`crates/tt3de-core/src/ttsl/opcodes.rs` is fully auto-generated** — never hand-edit.
 - **`PassToByteCode.find_form`** matches unary/binary same-type ops generically; unusual layouts (`TT_TEXTURE`, `MIX`, `CLAMP`) need explicit `emit` paths in `compiler.py`.
 - Opcode indices are **sequential** across `generate_all_forms()` — always regenerate after ISA edits; never hand-edit `ttisa_opcodes.py`.
 
@@ -164,9 +164,9 @@ Pick a pattern by shape; full file-level steps apply when implementing:
 | **B — Binary same-type** | `mod`, `max` | Same + custom `Form` generator if not a Rust operator |
 | **C — Special** | `tt_texture`, `glm.mix` | Custom `Form` + `compile_expr` / `compile_glm_tool_call`; confirm Rust bridge with user if data leaves VM registers |
 
-After implementation: `bash scripts/gen_opcodes.sh && cargo check --all-targets && uv run maturin develop`, e2e tests in `tests/tt3de/ttsl/test_e2e.py`, compiler errors in `test_compiler.py`, update **`source/ttsl.md`** row **Planned → Shipped**.
+After implementation: `bash scripts/gen_opcodes.sh && cargo check --workspace --all-targets && cargo test -p tt3de-core && uv run maturin develop --uv`, e2e tests in `tests/tt3de/ttsl/test_e2e.py`, compiler errors in `test_compiler.py`, update **`source/ttsl.md`** row **Planned → Shipped**.
 
-**Rust VM tests** (`src/ttsl/mod.rs`) only for engine-coupled ops; pure math is covered by Python e2e.
+**Rust VM tests** (`crates/tt3de-core/src/ttsl/mod.rs`) only for engine-coupled ops; pure math is covered by Python e2e.
 
 Run: `PYTHONPATH=. uv run pytest tests/tt3de/ttsl/ -v` (skip `tests/benchs/` unless needed).
 
@@ -182,5 +182,5 @@ Run: `PYTHONPATH=. uv run pytest tests/tt3de/ttsl/ -v` (skip `tests/benchs/` unl
 **Compiler / opcode change**
 
 - [ ] `gen-opcodes` run; no hand-edited `opcodes.rs` / `ttisa_opcodes.py`
-- [ ] `cargo check --all-targets` clean; `uv run pytest tests/tt3de/ttsl/`
+- [ ] `cargo check --workspace --all-targets` and `cargo test -p tt3de-core` clean; `uv run pytest tests/tt3de/ttsl/`
 - [ ] `source/ttsl.md` (+ opcode reference via generator) updated

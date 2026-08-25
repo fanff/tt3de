@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Run `cargo test` with PyO3 pointed at the uv-managed interpreter.
+# Run the Python-independent Rust core tests.
 # Usage (from repo root): bash scripts/cargo_test.sh [cargo-args...]
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-if [[ ! -f "$root/pyproject.toml" ]]; then
-  echo "cargo_test.sh: expected pyproject.toml under $root" >&2
+if [[ ! -f "$root/crates/tt3de-core/Cargo.toml" ]]; then
+  echo "cargo_test.sh: expected crates/tt3de-core/Cargo.toml under $root" >&2
   exit 1
 fi
 
-export PYO3_PYTHON="$(uv run python -c 'import sys; print(sys.executable)')"
-exec cargo test "$@"
+exec cargo test -p tt3de-core "$@"

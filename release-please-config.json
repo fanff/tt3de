@@ -11,7 +11,12 @@
                 },
                 {
                     "type": "toml",
-                    "path": "Cargo.toml",
+                    "path": "crates/tt3de-core/Cargo.toml",
+                    "jsonpath": "$.package.version"
+                },
+                {
+                    "type": "toml",
+                    "path": "crates/tt3de-py/Cargo.toml",
                     "jsonpath": "$.package.version"
                 }
             ]

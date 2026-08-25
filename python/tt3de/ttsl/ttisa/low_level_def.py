@@ -1034,7 +1034,7 @@ def main() -> None:
         + RUST_EXEC_OPCODE_MATCH_ARMS_TEMPLATE % rust_execopcode_match_arms
     )
 
-    rust_opcode_path = "src/ttsl/opcodes.rs"
+    rust_opcode_path = "crates/tt3de-core/src/ttsl/opcodes.rs"
     with open(rust_opcode_path, "w") as f:
         f.write(rust_opcode_file_content)
 

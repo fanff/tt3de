@@ -46,9 +46,9 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
 name = "bytemuck"
-version = "1.16.1"
+version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b236fc92302c97ed75b38da1f4917b5cdda4984745740f153a5d3059e48d725e"
+checksum = "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797"
 
 [[package]]
 name = "cast"
@@ -758,7 +758,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tt3de"
+name = "tt3de-core"
 version = "0.1.2"
 dependencies = [
  "approx",
@@ -766,9 +766,18 @@ dependencies = [
  "fastnoise-lite",
  "nalgebra",
  "nalgebra-glm",
+ "rayon",
+]
+
+[[package]]
+name = "tt3de-py"
+version = "0.1.2"
+dependencies = [
+ "nalgebra-glm",
  "once_cell",
  "pyo3",
  "rayon",
+ "tt3de-core",
 ]
 
 [[package]]
