@@ -1,18 +1,17 @@
-//! Compares the TTSL interpreter loop against the Cranelift compile path.
+//! Compares the TTSL interpreter loop against the Cranelift-lowered path.
 //!
 //! Fixtures are demo shaders compiled to bytecode by
 //! `scripts/gen_ttsl_bench_fixtures.py` into `ttsl/fixtures.rs`.
 //!
-//! While `jit::LOWERS_BYTECODE` is `false`, `compile_ttsl` emits a dummy
-//! function instead of lowering opcodes, so its arm measures the native call
-//! floor rather than shader execution and output equivalence is not asserted.
+//! Both arms run the same `[Instr; 256]`. Equivalence of `(front, back, glyph)`
+//! is asserted before timing.
 
 use criterion::{Criterion, Throughput};
 use nalgebra_glm::{Vec2, Vec3, Vec4};
 use std::hint::black_box;
 
 use tt3de_core::material::shader_material::ShaderSeedRegisters;
-use tt3de_core::ttsl::jit::{self, compile_ttsl, CompiledShader};
+use tt3de_core::ttsl::jit::{compile_ttsl, CompiledShader};
 use tt3de_core::ttsl::{decode_instrs_256, run_ttsl, Instr, Registers, TtslTextureEnv};
 
 use super::fixtures::{TtslBenchFixture, FIXTURES};
@@ -60,47 +59,35 @@ fn texture_env(fixture: &TtslBenchFixture) -> Option<&'static dyn TtslTextureEnv
     }
 }
 
-/// Runs the compiled function the way a shading pass would: registers in, glyph out.
-fn call_jit(compiled: &CompiledShader, regs: &mut Registers) -> i32 {
-    unsafe { (compiled.as_fn())(regs as *mut Registers) }
+fn call_jit(
+    compiled: &CompiledShader,
+    regs: &mut Registers,
+    tex: Option<&dyn TtslTextureEnv>,
+) -> (Vec4, Vec4, i32) {
+    compiled.run(regs, tex)
 }
 
-/// Fails loudly if a lowered JIT ever disagrees with the interpreter.
-///
-/// Only the glyph is compared: `ShaderFn` returns `i32`, so the two `Vec4`
-/// colors `run_ttsl` yields have no place in the current ABI. Extend this once
-/// lowering settles how the front and back colors leave the compiled function.
+/// Fails loudly if the lowered JIT disagrees with the interpreter.
 fn check_equivalence(
     fixture: &TtslBenchFixture,
     instrs: &[Instr; 256],
     seed: &ShaderSeedRegisters,
     compiled: &CompiledShader,
 ) {
-    if !jit::LOWERS_BYTECODE {
-        return;
-    }
     let mut interp_regs = seed.clone_registers();
-    let (_front, _back, glyph) = run_ttsl(instrs, &mut interp_regs, texture_env(fixture));
+    let interp = run_ttsl(instrs, &mut interp_regs, texture_env(fixture));
 
     let mut jit_regs = seed.clone_registers();
-    let jit_glyph = call_jit(compiled, &mut jit_regs);
+    let jit = call_jit(compiled, &mut jit_regs, texture_env(fixture));
 
     assert_eq!(
-        glyph, jit_glyph,
-        "{}: JIT glyph output diverged from the interpreter",
+        interp, jit,
+        "{}: JIT output diverged from the interpreter",
         fixture.name
     );
 }
 
 pub fn bench_ttsl_exec(c: &mut Criterion) {
-    // `jit_stub_floor` is not comparable to the interpreter arms until opcode
-    // lowering lands; it only bounds how cheap a native call could ever be.
-    let jit_arm = if jit::LOWERS_BYTECODE {
-        "jit"
-    } else {
-        "jit_stub_floor"
-    };
-
     for fixture in FIXTURES {
         let instrs = decode_instrs_256(fixture.bytecode);
         let seed = seed_registers(fixture);
@@ -128,15 +115,15 @@ pub fn bench_ttsl_exec(c: &mut Criterion) {
         });
 
         let mut jit_regs = seed.clone_registers();
-        group.bench_function(jit_arm, |b| {
-            b.iter(|| black_box(call_jit(&compiled, &mut jit_regs)))
+        group.bench_function("jit", |b| {
+            b.iter(|| black_box(call_jit(&compiled, &mut jit_regs, tex)))
         });
 
         let mut jit_cell_regs = Registers::new();
-        group.bench_function(format!("{jit_arm}_cell"), |b| {
+        group.bench_function("jit_cell", |b| {
             b.iter(|| {
                 seed.copy_seed_into(&mut jit_cell_regs);
-                black_box(call_jit(&compiled, &mut jit_cell_regs))
+                black_box(call_jit(&compiled, &mut jit_cell_regs, tex))
             })
         });
 
