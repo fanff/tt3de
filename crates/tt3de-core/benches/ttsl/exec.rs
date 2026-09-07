@@ -151,9 +151,7 @@ pub fn bench_ttsl_compile(c: &mut Criterion) {
     for fixture in FIXTURES {
         let instrs = decode_instrs_256(fixture.bytecode);
         group.bench_function(fixture.name, |b| {
-            b.iter(|| {
-                black_box(compile_ttsl(black_box(&instrs)).expect("compile should succeed"))
-            })
+            b.iter(|| black_box(compile_ttsl(black_box(&instrs)).expect("compile should succeed")))
         });
     }
     group.finish();

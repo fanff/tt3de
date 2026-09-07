@@ -14,6 +14,7 @@ Run from the repository root::
 
     uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,7 +23,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "crates" / "tt3de-core" / "benches" / "ttsl" / "fixtures.rs"
@@ -221,11 +222,25 @@ def _seed(reg_settings: RegisterSettings, values: Dict[str, Any], module: Any) -
 
 def _f32(value: Any) -> str:
     text = repr(float(value))
-    return text if ("." in text or "e" in text or "inf" in text or "nan" in text) else text + ".0"
+    return (
+        text
+        if ("." in text or "e" in text or "inf" in text or "nan" in text)
+        else text + ".0"
+    )
+
+
+def _bool(value: Any) -> str:
+    return "true" if value else "false"
+
+
+def _i32(value: Any) -> str:
+    return str(int(value))
 
 
 def _scalar_entries(regs: Dict[int, Any], render) -> str:
-    items = ", ".join(f"({reg}, {render(value)})" for reg, value in sorted(regs.items()))
+    items = ", ".join(
+        f"({reg}, {render(value)})" for reg, value in sorted(regs.items())
+    )
     return f"&[{items}]"
 
 
@@ -273,17 +288,18 @@ def render_rust(fixtures: Sequence[CompiledFixture]) -> str:
 
     for fixture in fixtures:
         regs_bool, regs_f32, regs_i32, regs_v2, regs_v3, regs_v4 = fixture.registers
+        spec = fixture.spec
         lines.extend(
             [
                 "    TtslBenchFixture {",
-                f'        name: "{fixture.spec.name}",',
-                f'        summary: "{fixture.spec.summary}",',
-                f'        demo: "{fixture.spec.demo}",',
-                f"        needs_texture_env: {str(fixture.spec.needs_texture_env).lower()},",
+                f'        name: "{spec.name}",',
+                f'        summary: "{spec.summary}",',
+                f'        demo: "{spec.demo}",',
+                f"        needs_texture_env: {_bool(spec.needs_texture_env)},",
                 f"        bytecode: {_bytecode_literal(fixture.bytecode)},",
-                f"        seed_bool: {_scalar_entries(regs_bool, lambda v: str(bool(v)).lower())},",
+                f"        seed_bool: {_scalar_entries(regs_bool, _bool)},",
                 f"        seed_f32: {_scalar_entries(regs_f32, _f32)},",
-                f"        seed_i32: {_scalar_entries(regs_i32, lambda v: str(int(v)))},",
+                f"        seed_i32: {_scalar_entries(regs_i32, _i32)},",
                 f"        seed_v2: {_vector_entries(regs_v2, 2)},",
                 f"        seed_v3: {_vector_entries(regs_v3, 3)},",
                 f"        seed_v4: {_vector_entries(regs_v4, 4)},",
@@ -306,7 +322,10 @@ def format_rust(source: str) -> str:
             check=True,
         )
     except FileNotFoundError:
-        print("rustfmt not found on PATH; leaving generated file unformatted", file=sys.stderr)
+        print(
+            "rustfmt not found on PATH; leaving generated file unformatted",
+            file=sys.stderr,
+        )
         return source
     # `--emit stdout` prefixes the body with a `<stdin>:` banner line.
     out = done.stdout
@@ -328,7 +347,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     rendered = format_rust(render_rust(build_fixtures()))
 
     if args.check:
-        current = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else ""
+        current = (
+            OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else ""
+        )
         if current != rendered:
             print(
                 f"{OUTPUT_PATH.relative_to(REPO_ROOT)} is stale; "
