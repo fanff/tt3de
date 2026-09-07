@@ -166,6 +166,22 @@ On Windows PowerShell:
 powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
 ```
 
+10. **TTSL execution benchmark** (`cargo bench -p tt3de-core --bench all -- ttsl`):
+
+compares the `run_ttsl` interpreter against the Cranelift compile path on bytecode compiled from the demo shaders, reporting dispatch-only and per-cell costs plus one-time compilation. See [`crates/tt3de-core/README.md`](crates/tt3de-core/README.md) for how to read the arms.
+
+Its fixtures are generated from `demos/`, so regenerate them after editing a demo shader or the TTSL compiler:
+
+```bash
+make gen-ttsl-bench-fixtures
+```
+
+On Windows PowerShell:
+
+```powershell
+uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py
+```
+
 ## Build Documentation
 
 From the repository root, regenerate the Sphinx HTML docs with:
