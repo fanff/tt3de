@@ -9,6 +9,11 @@ keywords = ["terminal", "rendering", "graphics"]
 categories = ["graphics", "rendering"]
 
 [dependencies]
+cranelift-codegen = "0.134"
+cranelift-frontend = "0.134"
+cranelift-jit = "0.134"
+cranelift-module = "0.134"
+cranelift-native = "0.134"
 fastnoise-lite = "1.1.1"
 nalgebra = "0.34.1"
 nalgebra-glm = "0.20.0"
