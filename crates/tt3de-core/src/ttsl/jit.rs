@@ -11,6 +11,12 @@ use super::{Instr, Registers};
 /// The first implementation ignores the instruction stream and returns `0`.
 pub type ShaderFn = unsafe extern "C" fn(*mut Registers) -> i32;
 
+/// `false` while [`compile_ttsl`] emits a dummy function instead of lowering opcodes.
+///
+/// Benchmarks read this to decide whether the compiled function can be compared
+/// against [`super::run_ttsl`] output, or only timed as a native-call floor.
+pub const LOWERS_BYTECODE: bool = false;
+
 /// Owns JIT code pages for as long as the compiled shader is used.
 pub struct CompiledShader {
     _module: JITModule,
