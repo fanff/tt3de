@@ -11,23 +11,25 @@ permissions:
   contents: read
 
 jobs:
-  cargo-tests:
-    name: Cargo Test
+  rust-core:
+    name: Rust Workspace + Core
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        id: setup-py-cargo
-        with:
-          python-version: "3.12"
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      # Plain `cargo test` links libpython (extension-module is maturin-only). Pin the interpreter
-      # so pyo3-build-config resolves includes/libs consistently on the runner.
-      - name: Run cargo test
-        env:
-          PYO3_PYTHON: ${{ steps.setup-py-cargo.outputs.python-path }}
-        run: cargo test
+      - name: Check all workspace targets
+        run: cargo check --workspace --all-targets
+      - name: Test the Rust core
+        run: cargo test -p tt3de-core
+      - name: Verify the core dependency tree is PyO3-free
+        shell: bash
+        run: |
+          cargo tree -p tt3de-core | tee /tmp/tt3de-core-tree.txt
+          if grep -E '(^|[[:space:]])pyo3([[:space:]-]|$)' /tmp/tt3de-core-tree.txt; then
+            echo "tt3de-core must not depend on PyO3 packages" >&2
+            exit 1
+          fi
 
   python-build-and-tests:
     name: Maturin Develop + Pytest
@@ -49,6 +51,6 @@ jobs:
       - name: Install deps
         run: uv sync --group dev
       - name: Build extension in develop mode
-        run: uv run maturin develop
+        run: uv run maturin develop --uv
       - name: Run Python tests
         run: uv run pytest

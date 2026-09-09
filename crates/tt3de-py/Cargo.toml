@@ -1,0 +1,20 @@
+[package]
+name = "tt3de-py"
+version = "0.1.2"
+edition = "2021"
+publish = false
+
+[lib]
+name = "tt3de"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+nalgebra-glm = "0.20.0"
+once_cell = "1.20.3"
+pyo3 = "0.27.1"
+rayon = "1.11.0"
+tt3de-core = { path = "../tt3de-core" }
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]

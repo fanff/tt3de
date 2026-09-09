@@ -52,10 +52,10 @@ To set up a development version of this engine:
     ```bash
     uv sync --group dev
     ```
-4. Compile the Rust version locally:
+4. Compile the Python extension locally:
 
     ```bash
-    uv run maturin develop --profile release
+    uv run maturin develop --uv --profile release
     ```
 5. Check the demo:
     ```bash
@@ -68,11 +68,12 @@ To set up a development version of this engine:
     uv run python demos/all.py
     ```
 
-6. Run the Rust unit tests.
+6. Run the Python-independent Rust core tests.
 
-    Maturin builds enable the Cargo feature `extension-module` (see `pyproject.toml`), which links PyO3 like a normal Python extension and avoids linking `libpython`. **`cargo test` must not use that feature**: default crate features are correct so the test harness links against the Python shared library.
-
-    Pin which interpreter PyO3 uses (same idea as [`.github/workflows/fast-checks.yml`](.github/workflows/fast-checks.yml)) via **`PYO3_PYTHON`**—especially if several Python installs are on your machine.
+    The Cargo workspace separates the reusable engine in
+    [`crates/tt3de-core`](crates/tt3de-core/) from the PyO3 extension in
+    [`crates/tt3de-py`](crates/tt3de-py/). Core tests therefore need neither a
+    Python interpreter nor PyO3 configuration:
 
     **macOS / Linux (bash/zsh)**:
 
@@ -80,7 +81,8 @@ To set up a development version of this engine:
     bash scripts/cargo_test.sh
     ```
 
-    Pass-through arguments go to Cargo (for example `bash scripts/cargo_test.sh --lib`).
+    The helper defaults to `cargo test -p tt3de-core`; pass-through arguments
+    go to Cargo (for example `bash scripts/cargo_test.sh --lib`).
 
     **Windows (PowerShell)**:
 
@@ -88,7 +90,7 @@ To set up a development version of this engine:
     scripts/cargo_test.ps1
     ```
 
-    Example with Cargo arguments (extra tokens after the script path are forwarded to `cargo test`):
+    Example with Cargo arguments:
 
     ```powershell
     scripts/cargo_test.ps1 --lib
@@ -96,7 +98,15 @@ To set up a development version of this engine:
 
     If you are already in PowerShell: `.\scripts\cargo_test.ps1 --lib`.
 
-    Without `uv`, set **`PYO3_PYTHON`** yourself and run `cargo test`; on Windows, prepend **`PATH`** with the directory containing **`python.exe`**, and usually **`%base_prefix%\DLLs`** and **`base_prefix`**, as in [`scripts/cargo_test.ps1`](scripts/cargo_test.ps1).
+    The equivalent direct command on every platform is:
+
+    ```bash
+    cargo test -p tt3de-core
+    ```
+
+    To check every Rust target, including the binding crate, run
+    `cargo check --workspace --all-targets`. Build and test the Python surface
+    through Maturin and pytest as described in steps 4 and 7.
 
 7. Run the Python unit tests.
 
@@ -154,6 +164,22 @@ On Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1
+```
+
+10. **TTSL execution benchmark** (`cargo bench -p tt3de-core --bench all -- ttsl`):
+
+compares the `run_ttsl` interpreter against the Cranelift compile path on bytecode compiled from the demo shaders, reporting dispatch-only and per-cell costs plus one-time compilation. See [`crates/tt3de-core/README.md`](crates/tt3de-core/README.md) for how to read the arms.
+
+Its fixtures are generated from `demos/`, so regenerate them after editing a demo shader or the TTSL compiler:
+
+```bash
+make gen-ttsl-bench-fixtures
+```
+
+On Windows PowerShell:
+
+```powershell
+uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py
 ```
 
 ## Build Documentation

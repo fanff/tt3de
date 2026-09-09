@@ -45,7 +45,7 @@ jobs:
 
       - name: Build tt3de extension (required for screenshot script)
         run: |
-          uv run maturin develop --profile release
+          uv run maturin develop --uv --profile release
 
       - name: Regenerate Sphinx screenshot asset
         run: |

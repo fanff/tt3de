@@ -35,4 +35,6 @@ version = "1.0.0"
 [tool.maturin]
 # Links like a Python extension (no libpython); must stay off for plain `cargo test`.
 features = ["extension-module"]
+manifest-path = "crates/tt3de-py/Cargo.toml"
+module-name = "tt3de.tt3de"
 python-source = "python/"

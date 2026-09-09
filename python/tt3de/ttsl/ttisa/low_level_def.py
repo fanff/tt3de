@@ -106,7 +106,10 @@ class Rustgen:
                 )
             )
         else:
-            base_toload = set((irty_left, irty_right, target_type))
+            # Preserve operand order while removing duplicates. A set made the
+            # generated Rust vary with Python's hash seed, leaving regeneration
+            # checks nondeterministic.
+            base_toload = dict.fromkeys((irty_left, irty_right, target_type))
             bases = [Rustgen.let_base_register_be(base) for base in base_toload]
             return Rustgen.unsafe_block(
                 "\n".join(
@@ -668,7 +671,6 @@ def generate_length_forms() -> List[Form]:
     """
     forms = []
     for ir_type in [IRType.V2, IRType.V3, IRType.V4]:
-        regname = IRTYPE_TO_REGISTER_NAME[ir_type]
         rust_body = Rustgen.unsafe_block(
             "\n".join([
                 Rustgen.let_base_register_be(ir_type),
@@ -1034,7 +1036,7 @@ def main() -> None:
         + RUST_EXEC_OPCODE_MATCH_ARMS_TEMPLATE % rust_execopcode_match_arms
     )
 
-    rust_opcode_path = "src/ttsl/opcodes.rs"
+    rust_opcode_path = "crates/tt3de-core/src/ttsl/opcodes.rs"
     with open(rust_opcode_path, "w") as f:
         f.write(rust_opcode_file_content)
 

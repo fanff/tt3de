@@ -1,0 +1,28 @@
+[package]
+name = "tt3de-core"
+version = "0.1.2"
+edition = "2021"
+description = "Pure Rust rendering core for the Tiny Textual 3D Engine"
+readme = "README.md"
+repository = "https://github.com/fanff/tt3de"
+keywords = ["terminal", "rendering", "graphics"]
+categories = ["graphics", "rendering"]
+
+[dependencies]
+cranelift-codegen = "0.134"
+cranelift-frontend = "0.134"
+cranelift-jit = "0.134"
+cranelift-module = "0.134"
+cranelift-native = "0.134"
+fastnoise-lite = "1.1.1"
+nalgebra = "0.34.1"
+nalgebra-glm = "0.20.0"
+rayon = "1.11.0"
+
+[dev-dependencies]
+approx = "0.5.1"
+criterion = "0.7.0"
+
+[[bench]]
+name = "all"
+harness = false
