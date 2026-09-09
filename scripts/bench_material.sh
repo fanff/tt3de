@@ -14,7 +14,7 @@ json_out="${root}/benchmarks/material_apply_${run_timestamp}.json"
 mkdir -p "${root}/benchmarks"
 export PYTHONPATH="${root}/python"
 uv run --no-sync pytest \
-  tests/benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
+  benchs/r_code/test_bench_r_pix_shader.py::test_bench_material_apply \
   --benchmark-only -q \
   --benchmark-json="${json_out}"
 

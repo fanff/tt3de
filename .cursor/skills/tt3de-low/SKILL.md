@@ -79,7 +79,7 @@ For each, give a **specific** suggested answer grounded in current code, not a g
 9. **Public API & back-compat** — Is any existing Python signature changing? *If yes, surface it explicitly (workflow-guardrails) and propose a migration note.*
 10. **Tests** — `cargo test -p tt3de-core` for pure-Rust semantics, `tests/tt3de/test_r_*.py` for the binding round-trip, both? *Suggest "both" for anything user-callable; "Rust only" for internal helpers.*
 11. **Docs** — Does `source/*.md` or a README section mention this surface? *Suggest the file to update in the same change.*
-12. **Bench coverage** — Should this land with a `tests/benchs/r_code/` or `benches/*.rs` case? *Suggest "yes" only for hot paths or perf-motivated changes.*
+12. **Bench coverage** — Should this land with a `benchs/r_code/` (or `benchs/ttsl/`) or `benches/*.rs` case? *Suggest "yes" only for hot paths or perf-motivated changes.*
 
 Skip questions that don't apply; do not pad the discovery list.
 
@@ -96,7 +96,7 @@ Work through the sequence below; only collapse a step when it genuinely doesn't 
    - PowerShell: `$env:PYTHONPATH='.'; uv run pytest <path>`
    - bash/zsh: `PYTHONPATH=. uv run pytest <path>`
 7. **Docs sync** — update the closest canonical doc (`README.md`, `source/*.md`) in the same change when behavior or public API moves (`workflow-guardrails.mdc`, docs standard).
-8. **Benchmark** (only when motivated) — extend `benches/*.rs` or `tests/benchs/r_code/` so perf claims are reproducible.
+8. **Benchmark** (only when motivated) — extend `benches/*.rs` or `benchs/r_code/` so perf claims are reproducible.
 
 ## Common patterns to follow
 

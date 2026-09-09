@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from tt3de.ttsl.ttisa.ttisa_opcodes import OP_JMP_IF_FALSE, OP_RET, OP_JMP
-from tests.benchs.ttsl.test_bench_ttsl import SHADER_CODE
+from benchs.ttsl.test_bench_ttsl import SHADER_CODE
 from tt3de.ttsl.enrich import PassPrintConsole
 from textwrap import dedent
 import unittest

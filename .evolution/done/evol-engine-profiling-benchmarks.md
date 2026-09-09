@@ -12,7 +12,7 @@ related:
   - scripts/bench_to_textual.sh
   - scripts/dev_material_bench_report.py
   - scripts/enrich_benchmark_json.py
-  - tests/benchs/
+  - benchs/
   - benches/
   - .github/workflows/fast-checks.yml
   - AGENTS.md

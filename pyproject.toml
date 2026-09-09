@@ -32,6 +32,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 version = "1.0.0"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.maturin]
 # Links like a Python extension (no libpython); must stay off for plain `cargo test`.
 features = ["extension-module"]
