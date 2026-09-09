@@ -7,6 +7,7 @@ import unittest
 
 from pyglm import glm
 
+from tests.tt3de.ttsl.shade import shade
 from tt3de.tt3de import (
     DrawingBufferPy,
     MaterialBufferPy,
@@ -17,7 +18,6 @@ from tt3de.tt3de import (
     apply_material_py_parallel,
     find_glyph_indices_py,
     materials, # pyright: ignore
-    ttsl_run,
 )
 from tt3de.ttsl.compiler import (
     GLOBAL_VAR_TT_FAR,
@@ -59,7 +59,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.0, 0.0))
-        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, back, glyph = shade(reg_settings)
         self.assertEqual(glyph, 0)
         self.assertEqual(front, back)
 
@@ -90,7 +90,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(0.0, 0.0))
-        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, back, glyph = shade(reg_settings)
         self.assertEqual(glyph, 0)
         self.assertEqual(front, back)
 
@@ -383,7 +383,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
         regs = reg_settings.get_register_list()
 
-        front, _back, _glyph = ttsl_run(*regs, reg_settings.ssa_json())
+        front, _back, _glyph = shade(regs, reg_settings.ssa_json())
         self.assertAlmostEqual(
             front.x, 14.0, places=4,
             msg=(
@@ -393,7 +393,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         )
 
     def test_depth_floor_shader_vm_vs_python_reference(self):
-        """Compile depth_floor shader, run via ttsl_run with several tt_FragDepth
+        """Compile depth_floor shader, run via ShaderPy with several tt_FragDepth
         values, and compare against a pure-Python reference to catch compiler/JIT
         divergence."""
         src = dedent(
@@ -423,7 +423,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
             reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
             regs = reg_settings.get_register_list()
 
-            front, back, glyph = ttsl_run(*regs, reg_settings.ssa_json())
+            front, back, glyph = shade(regs, reg_settings.ssa_json())
             expected = python_reference(ndc)
 
             self.assertAlmostEqual(
@@ -532,7 +532,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
             reg_settings.set_variable(PIXELVAR_TT_TEXCOORD1, glm.vec2(0.0, 0.0))
             regs = reg_settings.get_register_list()
 
-            front, back, glyph = ttsl_run(*regs, reg_settings.ssa_json())
+            front, back, glyph = shade(regs, reg_settings.ssa_json())
             exp_front, exp_back, exp_g = python_reference(
                 frag_depth, near_f, far_f, albedo, g0, g1, g2, g3
             )
@@ -566,7 +566,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
                 msg=f"glyph @ tt_FragDepth={frag_depth}: VM={glyph}, ref={exp_g}",
             )
 
-    def test_user_uniforms_vec3_vec2_ttsl_run(self):
+    def test_user_uniforms_vec3_vec2_shader(self):
         """User globals from globals_dict occupy VM registers; seed via
         RegisterSettings."""
         src = dedent(
@@ -584,7 +584,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable("u_color", glm.vec4(0.1, 0.2, 0.3, 1.0))
         reg_settings.set_variable("u_uv_bias", glm.vec2(0.4, 0.5))
 
-        front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, back, glyph = shade(reg_settings)
         self.assertEqual(glyph, 0)
         want = glm.vec4(0.5, 0.7, 0.3, 1.0)
         self.assertAlmostEqual(front.x, want.x, places=5)
@@ -592,7 +592,7 @@ class Test_EndToEndCompilation(unittest.TestCase):
         self.assertAlmostEqual(front.z, want.z, places=5)
         self.assertEqual(back, front)
 
-    def test_user_uniform_material_apply_seed_matches_ttsl_run(self):
+    def test_user_uniform_material_apply_seed_matches_shader(self):
         """ShaderPy.register_seed must align user-uniform slots with the compiled shader."""
         src = dedent(
             """
@@ -606,8 +606,8 @@ class Test_EndToEndCompilation(unittest.TestCase):
         reg_settings.set_variable("u_color", glm.vec4(0.25, 0.5, 0.75, 1.0))
         seed = reg_settings.get_register_list()
 
-        vm_front, _, vm_g = ttsl_run(*seed, reg_settings.ssa_json())
-        self.assertEqual(vm_g, 0)
+        shader_front, _, shader_g = shade(seed, reg_settings.ssa_json())
+        self.assertEqual(shader_g, 0)
 
         mb = MaterialBufferPy()
         mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
@@ -642,10 +642,10 @@ class Test_EndToEndCompilation(unittest.TestCase):
             draw,
         )
         cell = draw.get_canvas_cell(0, 0)
-        # Canvas stores 8-bit channels; allow quantization slack vs float VM output.
-        self.assertAlmostEqual(cell["f_r"] / 255.0, vm_front.x, delta=2 / 255.0)
-        self.assertAlmostEqual(cell["f_g"] / 255.0, vm_front.y, delta=2 / 255.0)
-        self.assertAlmostEqual(cell["f_b"] / 255.0, vm_front.z, delta=2 / 255.0)
+        # Canvas stores 8-bit channels; allow quantization slack vs float shader output.
+        self.assertAlmostEqual(cell["f_r"] / 255.0, shader_front.x, delta=2 / 255.0)
+        self.assertAlmostEqual(cell["f_g"] / 255.0, shader_front.y, delta=2 / 255.0)
+        self.assertAlmostEqual(cell["f_b"] / 255.0, shader_front.z, delta=2 / 255.0)
 
 
 class Test_FloorCeilFractMod(unittest.TestCase):
@@ -661,7 +661,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
         regs = reg_settings.get_register_list()
-        front, _back, _glyph = ttsl_run(*regs, reg_settings.ssa_json())
+        front, _back, _glyph = shade(regs, reg_settings.ssa_json())
         self.assertAlmostEqual(front.x, 3.0, places=4)
 
     def test_floor_negative(self):
@@ -673,7 +673,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, -2.0, places=4)
 
     def test_ceil_f32(self):
@@ -685,7 +685,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 3.0, places=4)
 
     def test_fract_f32(self):
@@ -697,7 +697,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 0.75, places=4)
 
     def test_mod_f32_basic(self):
@@ -709,7 +709,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 1.5, places=4)
 
     def test_mod_f32_negative_glsl_semantics(self):
@@ -722,7 +722,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = -1.0 - 4.0 * (-1.0 / 4.0).__floor__()
         self.assertAlmostEqual(front.x, expected, places=4)
 
@@ -741,7 +741,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
         for depth, expected_band in [(0.0, 0.0), (0.3, 1.0), (0.5, 2.0), (0.8, 3.0)]:
             reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, depth)
             regs = reg_settings.get_register_list()
-            front, _, _ = ttsl_run(*regs, reg_settings.ssa_json())
+            front, _, _ = shade(regs, reg_settings.ssa_json())
             self.assertAlmostEqual(
                 front.x, expected_band, places=4,
                 msg=f"floor(depth={depth} * 4.0) should be {expected_band}, got {front.x}",
@@ -761,7 +761,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
 
         for depth, expected in [(0.0, 2.0), (0.25, 3.0), (0.5, 0.0), (0.75, 1.0)]:
             reg_settings.set_variable(PIXELVAR_TT_FRAG_DEPTH, depth)
-            front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+            front, _, _ = shade(reg_settings)
             self.assertAlmostEqual(
                 front.x, expected, places=4,
                 msg=f"mod(depth={depth}*4+2, 4) should be {expected}, got {front.x}",
@@ -777,7 +777,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 3.0, places=4)
 
     def test_glm_mod_spelling(self):
@@ -790,7 +790,7 @@ class Test_FloorCeilFractMod(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 1.5, places=4)
 
 
@@ -808,7 +808,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 1.0, places=5)
         self.assertAlmostEqual(front.y, 0.0, places=5)
         self.assertAlmostEqual(front.z, 0.0, places=5)
@@ -824,7 +824,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         ref = glm.vec3(2.0, 2.0, 1.0)
         expected = glm.normalize(ref)
         self.assertAlmostEqual(front.x, expected.x, places=5)
@@ -842,7 +842,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 0.0, places=5)
         self.assertAlmostEqual(front.y, 0.0, places=5)
         self.assertAlmostEqual(front.z, 0.0, places=5)
@@ -858,7 +858,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = glm.normalize(glm.vec2(3.0, 4.0))
         self.assertAlmostEqual(front.x, expected.x, places=5)
         self.assertAlmostEqual(front.y, expected.y, places=5)
@@ -874,7 +874,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = glm.normalize(glm.vec4(1.0, 2.0, 2.0, 0.0))
         self.assertAlmostEqual(front.x, expected.x, places=5)
         self.assertAlmostEqual(front.y, expected.y, places=5)
@@ -894,7 +894,7 @@ class Test_Normalize(unittest.TestCase):
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(3.0, 4.0))
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = glm.normalize(glm.vec3(3.0, 4.0, 0.0))
         self.assertAlmostEqual(front.x, expected.x, places=5)
         self.assertAlmostEqual(front.y, expected.y, places=5)
@@ -911,7 +911,7 @@ class Test_Normalize(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
 
@@ -930,7 +930,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 0.0, places=5)
 
     def test_dot_v3_parallel(self):
@@ -945,7 +945,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_dot_v3_opposite(self):
@@ -960,7 +960,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, -1.0, places=5)
 
     def test_dot_v2(self):
@@ -975,7 +975,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = glm.dot(glm.vec2(1.0, 2.0), glm.vec2(3.0, 4.0))
         self.assertAlmostEqual(front.x, expected, places=5)
 
@@ -991,7 +991,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         expected = glm.dot(glm.vec4(1.0, 2.0, 3.0, 4.0), glm.vec4(5.0, 6.0, 7.0, 8.0))
         self.assertAlmostEqual(front.x, expected, places=5)
 
@@ -1009,7 +1009,7 @@ class Test_Dot(unittest.TestCase):
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
         reg_settings.set_variable(PIXELVAR_TT_FRAGCOORD, glm.vec2(3.0, 4.0))
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 25.0, places=5)
 
     def test_glm_dot_spelling(self):
@@ -1024,7 +1024,7 @@ class Test_Dot(unittest.TestCase):
             """
         )
         bytecode, reg_settings = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
+        front, _, _ = shade(reg_settings)
         self.assertAlmostEqual(front.x, 6.0, places=5)
 
 
@@ -1040,7 +1040,7 @@ class Test_Length(unittest.TestCase):
             return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_length_v3_zero(self):
@@ -1052,7 +1052,7 @@ class Test_Length(unittest.TestCase):
             return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.0, places=5)
 
     def test_length_v2_v4(self):
@@ -1066,7 +1066,7 @@ class Test_Length(unittest.TestCase):
             return (vec4(l2, l4, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 5.0, places=5)
         self.assertAlmostEqual(front.y, 3.0, places=5)
 
@@ -1077,7 +1077,7 @@ class Test_Length(unittest.TestCase):
             return (vec4(l, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 5.0, places=5)
 
 
@@ -1091,7 +1091,7 @@ class Test_Max(unittest.TestCase):
             return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 7.0, places=5)
 
     def test_max_f32_negative(self):
@@ -1102,7 +1102,7 @@ class Test_Max(unittest.TestCase):
             return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, -2.0, places=5)
 
     def test_max_vec3(self):
@@ -1115,7 +1115,7 @@ class Test_Max(unittest.TestCase):
             return (vec4(m.x, m.y, m.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 4.0, places=5)
         self.assertAlmostEqual(front.y, 5.0, places=5)
         self.assertAlmostEqual(front.z, 6.0, places=5)
@@ -1127,7 +1127,7 @@ class Test_Max(unittest.TestCase):
             return (vec4(m, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 2.0, places=5)
 
 
@@ -1141,7 +1141,7 @@ class Test_Clamp(unittest.TestCase):
             return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.5, places=5)
 
     def test_clamp_f32_below_lo(self):
@@ -1151,7 +1151,7 @@ class Test_Clamp(unittest.TestCase):
             return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.0, places=5)
 
     def test_clamp_f32_above_hi(self):
@@ -1161,7 +1161,7 @@ class Test_Clamp(unittest.TestCase):
             return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 1.0, places=5)
 
     def test_clamp_vec3(self):
@@ -1175,7 +1175,7 @@ class Test_Clamp(unittest.TestCase):
             return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.0, places=5)
         self.assertAlmostEqual(front.y, 0.5, places=5)
         self.assertAlmostEqual(front.z, 1.0, places=5)
@@ -1187,7 +1187,7 @@ class Test_Clamp(unittest.TestCase):
             return (vec4(c, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
         """)
         bytecode, rs = all_passes_compilation(src, "shade", {})
-        front, _, _ = ttsl_run(*rs.get_register_list(), rs.ssa_json())
+        front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.5, places=5)
 
 

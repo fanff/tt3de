@@ -16,7 +16,7 @@ Applies to scripts under `demos/`. General Python rules: [.cursor/rules/python-s
 ## Shaders: compile first
 
 - **Preferred path for shaders**: write TTSL as source, then **`all_passes_compilation`** → **`materials.ShaderPy`**. Use this for the demo’s main effects, animation-driven shading, and anything that benefits from TTSL expressiveness.
-- **Built-in / non-TTSL materials** (for example `materials.StaticColorPy`, `materials.BaseTexturePy`, and other helpers that do **not** wrap compiled bytecode) **remain valid**. Reserve them for **background fills**, **static texturing**, slot-0 sentinel / cleared-sample behavior, and other baseline surfaces—not as a substitute for TTSL when the showcase is custom shading logic.
+- **Built-in / non-TTSL materials** (for example `materials.StaticColorPy`, `materials.BaseTexturePy`, and other helpers that do **not** wrap compiled TTSL) **remain valid**. Reserve them for **background fills**, **static texturing**, slot-0 sentinel / cleared-sample behavior, and other baseline surfaces—not as a substitute for TTSL when the showcase is custom shading logic.
 
 ## Module docstring and comments
 
@@ -49,7 +49,7 @@ Compiled TTSL materials (see **Shaders: compile first** above).
 
 1. **`bytecode, reg_settings = all_passes_compilation(SHADER_SRC, "<entry_fn>", globals_dict)`** — include `GLOBAL_VAR_TT_TIME: float` when the shader uses `tt_Time`.
 2. **Reserve material slot 0 for static fill** — same pattern as `demos/2d/ttsl_square.py`: `self.rc.material_buffer.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))` so sentinel / cleared samples do not run TTSL across the full framebuffer.
-3. **`materials.ShaderPy(bytecode, default_glyph=find_glyph_indices_py("█"), register_seed=reg_settings.get_register_list(), ...)`** — pass `time_f32_reg` when animating time; in `before_render_step`, call `material_buffer.set_shader_time(material_id, float(self.time_since_start()))` when needed.
+3. **`materials.ShaderPy(bytecode, default_glyph=find_glyph_indices_py("█"), register_seed=reg_settings.get_register_list(), ssa_json=reg_settings.ssa_json(), ...)`** — pass `time_f32_reg` when animating time; in `before_render_step`, call `material_buffer.set_shader_time(material_id, float(self.time_since_start()))` when needed. `ssa_json` is required for Cranelift execute.
 4. Attach the material id to **2D** nodes (`TT2DUnitSquare(..., material_id=...)`) or **3D** meshes (`prefab.material_id = ...`).
 
 ## Scene graph

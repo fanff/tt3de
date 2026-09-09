@@ -20,21 +20,21 @@ Built-in variables
 |--------------------|-------|----------------------------------------|-------------|--------------|
 | tt_FragCoord       | vec2  | x:[0..res.x-1], y:[0..res.y-1]         | Window-space cell coordinate of the current shaded cell. Equivalent to gl_FragCoord.xy (cell-level, integer-like). | Shipped |
 | tt_FragPos         | vec2  | [-1..1]                                | Normalized device-space position of the cell center. Equivalent to gl_Position → NDC mapping for fragments. Distinct from ``tt_ViewPos`` (view-space ``vec3`` surface point). | Shipped |
-| tt_Normal          | vec3  | view space (engine-defined length)     | Interpolated geometric normal after the normal matrix / vertex stage. For typical ``TriangleBuffer`` 3D submission each corner carries the same triangle normal, so interpolation matches **flat** shading until per-vertex normals vary in mesh data. Shaders should call ``normalize(tt_Normal)`` when a unit vector is required. Filled from ``PixInfo::normal`` / ``set_depth_content``; compiler seeds ``(0, 0, 1)`` like ``PixInfo`` default. VM: ``v3[2]`` (``v3[0..1]`` UV bridge, ``tt_ViewPos`` at ``v3[3]``). | Shipped |
-| tt_ViewPos         | vec3  | view space (eye at origin)             | Interpolated fragment position after the model-view transform, perspective-correct like texture coordinates. Filled from raster for 3D triangles; ``(0, 0, 0)`` when the engine does not supply view-space varyings (2D / rect / line paths). Use with ``tt_FragDepth`` / clip uniforms for fog; depth remains authoritative for the depth test. Optional host override: ``DrawingBufferPy.set_depth_content(..., view_pos=...)``. VM register bank: ``v3[3]`` (``v3[0..1]`` UV bridge, ``tt_Normal`` at ``v3[2]``). | Shipped |
+| tt_Normal          | vec3  | view space (engine-defined length)     | Interpolated geometric normal after the normal matrix / vertex stage. For typical ``TriangleBuffer`` 3D submission each corner carries the same triangle normal, so interpolation matches **flat** shading until per-vertex normals vary in mesh data. Shaders should call ``normalize(tt_Normal)`` when a unit vector is required. Filled from ``PixInfo::normal`` / ``set_depth_content``; compiler seeds ``(0, 0, 1)`` like ``PixInfo`` default. Register: ``v3[2]`` (``v3[0..1]`` UV bridge, ``tt_ViewPos`` at ``v3[3]``). | Shipped |
+| tt_ViewPos         | vec3  | view space (eye at origin)             | Interpolated fragment position after the model-view transform, perspective-correct like texture coordinates. Filled from raster for 3D triangles; ``(0, 0, 0)`` when the engine does not supply view-space varyings (2D / rect / line paths). Use with ``tt_FragDepth`` / clip uniforms for fog; depth remains authoritative for the depth test. Optional host override: ``DrawingBufferPy.set_depth_content(..., view_pos=...)``. Register bank: ``v3[3]`` (``v3[0..1]`` UV bridge, ``tt_Normal`` at ``v3[2]``). | Shipped |
 | tt_Resolution      | vec2  | (width_cells, height_cells)            | Size of the render target in cells. Pass ``'tt_Resolution': glm.vec2`` in ``globals_dict`` when referenced. Compiler seeds ``(1, 1)`` until the host writes via ``register_seed`` / ``ShaderPy.resolution_v2_reg`` or ``MaterialBufferPy.set_shader_resolution``. Non-positive dimensions are clamped to 1 in the Rust setter. On resize, ``tt_FragCoord`` and ``tt_Resolution`` may briefly disagree unless the host refreshes both together. | Shipped |
 | tt_PrimitiveID     | int   | [0..N-1]                               | Index of the primitive that generated this cell (depth winner). Mirrors gl_PrimitiveID. | Shipped |
-| tt_FrontFacing     | bool  | true / false                           | Front-facing under current winding rules. Mirrors gl_FrontFacing; optional ``ShaderPy.front_facing_bool_reg`` binds the VM bool the runtime fills each pixel. | Shipped |
+| tt_FrontFacing     | bool  | true / false                           | Front-facing under current winding rules. Mirrors gl_FrontFacing; optional ``ShaderPy.front_facing_bool_reg`` binds the bool register the runtime fills each pixel. | Shipped |
 | tt_TexCoord0       | vec2  | typically [0..1] (convention-defined)  | First interpolated texture coordinate set. Equivalent to a user-defined in vec2 or legacy gl_TexCoord[0]. | Shipped |
 | tt_TexCoord1       | vec2  | typically [0..1] (convention-defined)  | Second interpolated texture coordinate set. Equivalent to gl_TexCoord[1] / multi-UV workflows. | Shipped |
 | tt_Time            | float | seconds (>= 0)                         | Elapsed engine time. Pass ``'tt_Time': float`` in ``globals_dict`` when referenced; host updates via ``MaterialBufferPy.set_shader_time`` (and ``ShaderPy.time_f32_reg`` from compilation). | Shipped |
 | tt_DeltaTime       | float | seconds (>= 0)                         | Frame delta seconds. Pass ``'tt_DeltaTime': float`` when referenced; ``MaterialBufferPy.set_shader_delta_time``. | Shipped |
 | tt_Frame           | int   | [0..]                                  | Frame counter. Pass ``'tt_Frame': int`` when referenced. Compiler seeds ``0``; host uses ``MaterialBufferPy.set_shader_frame``; values saturate at ``i32::MAX`` (no wrap). | Shipped |
-| tt_FragDepth       | float | engine-defined (depth buffer units)    | Depth value for the shaded depth layer at this cell. Compiler seeds ``0.0``; ``ShaderMaterial`` writes ``ShaderPy.frag_depth_f32_reg`` from that layer each pixel when set (same pattern as ``tt_FrontFacing``). Standalone ``ttsl_run`` keeps the seed unless the host fills the register. | Shipped |
+| tt_FragDepth       | float | engine-defined (depth buffer units)    | Depth value for the shaded depth layer at this cell. Compiler seeds ``0.0``; ``ShaderMaterial`` writes ``ShaderPy.frag_depth_f32_reg`` from that layer each pixel when set (same pattern as ``tt_FrontFacing``). | Shipped |
 | tt_Near            | float | (> 0), engine clip distance            | **Near clip distance** for the active projection (same units as depth buffering). Pass ``'tt_Near': float`` in ``globals_dict`` when referenced; compiler seeds ``0.1`` until the host writes via ``register_seed`` / ``ShaderPy.near_f32_reg`` or ``MaterialBufferPy.set_shader_near``. Use values consistent with the projection that produces ``tt_FragDepth``. | Shipped |
 | tt_Far             | float | (> ``tt_Near``), engine clip distance    | **Far clip distance** for the active projection. Pass ``'tt_Far': float`` when referenced; compiler seeds ``100.0``; ``MaterialBufferPy.set_shader_far`` and ``ShaderPy.far_f32_reg`` mirror ``tt_Near``. Enables portable fog and linear depth without literals when paired with a documented ``tt_FragDepth`` mapping. | Shipped |
 | tt_LineCoord       | float | [0..1] along line segments             | Parametric coordinate from the line start toward the end for pixels produced by line rasterization; ``0.0`` for non-line primitives and when not supplied. Compiler seeds ``0.0``; optional ``ShaderPy.line_coord_f32_reg`` matches compilation (same pattern as ``tt_FragDepth``). Hosts may pass an explicit value through ``DrawingBufferPy.set_depth_content(..., line_coord=...)``. | Shipped |
-| tt_PointCoord      | vec2  | [0..1] typical                         | Coordinates within a rasterized point sprite. Mirrors ``gl_PointCoord``. Compiler seeds ``(0, 0)``; optional ``ShaderPy.point_coord_v2_reg`` matches compilation. Non-point raster paths and standalone ``ttsl_run`` leave ``(0, 0)`` unless the host sets ``DrawingBufferPy.set_depth_content(..., point_coord=...)``. Point rasterization sets ``(0.5, 0.5)`` for the single-cell path. | Shipped |
+| tt_PointCoord      | vec2  | [0..1] typical                         | Coordinates within a rasterized point sprite. Mirrors ``gl_PointCoord``. Compiler seeds ``(0, 0)``; optional ``ShaderPy.point_coord_v2_reg`` matches compilation. Non-point raster paths leave ``(0, 0)`` unless the host sets ``DrawingBufferPy.set_depth_content(..., point_coord=...)``. Point rasterization sets ``(0.5, 0.5)`` for the single-cell path. | Shipped |
 
 ### Texture sampling (`tt_texture`, `tt_texelFetch`)
 
@@ -61,9 +61,9 @@ TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_F
 
 ## Primitives
 
-The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for VM operations.
+The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for the ISA dump.
 
-**Availability** is **Shipped**, **Planned**, or **Missing** on the TTSL compiler surface. **Shipped** means at least one spelling in the row is accepted by `all_passes_compilation` today (see **Notes / ranges** for the subset). **Planned** names may still have VM opcodes reserved—check the opcode reference—but they are not wired through this language surface yet. **Missing** rows describe intended builtins that are **not** parsed, lowered, or opcode-backed yet (often paired with engine work in Rust).
+**Availability** is **Shipped**, **Planned**, or **Missing** on the TTSL compiler surface. **Shipped** means at least one spelling in the row is accepted by `all_passes_compilation` today (see **Notes / ranges** for the subset). **Planned** names may still have dump opcodes reserved—check the opcode reference—but they are not wired through this language surface yet. **Missing** rows describe intended builtins that are **not** parsed, lowered, or opcode-backed yet (often paired with engine work in Rust).
 
 | Availability | Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |
 |---|---|---|---|---|
@@ -86,9 +86,9 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 | Shipped | dot | dot(a,b)->float | Lighting, projections | Bare **`dot`** and **`glm.dot`**; works on vec2/vec3/vec4 |
 | Planned | cross | cross(a,b)->vec3 | Perpendicular vector | Only vec3 |
 | Shipped | length | length(v)->float | Vector magnitude | Bare **`length`** and **`glm.length`**; works on vec2/vec3/vec4 |
-| Shipped | normalize | normalize(v)->T | Unit-length vector | Bare **`normalize`** and **`glm.normalize`**; works on vec2/vec3/vec4. Zero-length input returns zero vector (guarded in Rust VM) |
+| Shipped | normalize | normalize(v)->T | Unit-length vector | Bare **`normalize`** and **`glm.normalize`**; works on vec2/vec3/vec4. Zero-length input returns zero vector (guarded in the Cranelift lowerer) |
 | Planned | distance | distance(a,b)->float | Metric distance | |
-| Missing | tt_linear_depth | ``tt_linear_depth(z: float) -> float`` | Linear eye-space / clip-distance factor for fog and depth grading | Intended to convert a **stored depth** (e.g. ``tt_FragDepth`` or a reconstructed linear depth in engine units) into a stable **[0..1]** scalar using the active **``tt_Near``** / **``tt_Far``** uniforms supplied by Rust—so shaders avoid ad‑hoc formulas that duplicate projection constants. Exact mapping (hyperbolic vs linear clip space) will match whatever the renderer documents for ``tt_FragDepth`` once ``tt_Near`` / ``tt_Far`` ship; until then demos keep manual math. Not in the compiler or VM. |
+| Missing | tt_linear_depth | ``tt_linear_depth(z: float) -> float`` | Linear eye-space / clip-distance factor for fog and depth grading | Intended to convert a **stored depth** (e.g. ``tt_FragDepth`` or a reconstructed linear depth in engine units) into a stable **[0..1]** scalar using the active **``tt_Near``** / **``tt_Far``** uniforms supplied by Rust—so shaders avoid ad‑hoc formulas that duplicate projection constants. Exact mapping (hyperbolic vs linear clip space) will match whatever the renderer documents for ``tt_FragDepth`` once ``tt_Near`` / ``tt_Far`` ship; until then demos keep manual math. Not in the compiler or runtime. |
 | Planned | reflect | reflect(I, N)->T | Reflection vector | `N` should be normalized |
 | Planned | refract | refract(I, N, eta)->T | Refraction vector | `eta` is n1/n2; returns 0-vector on total internal reflection (GLSL behavior) |
 | Planned | faceforward | faceforward(N, I, Nref)->T | Choose normal orientation | Helps ensure N faces viewer/light |
@@ -106,7 +106,7 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 ABI: Opcode Reference
 ---------------------
 
-The TTSL virtual machine uses a fixed set of typed opcodes that form its ABI.
+The compiler-explorer dump uses a fixed set of typed opcodes (ISA reference, not an execute format).
 The full list of opcodes with their numeric values, types, and input signatures
 is maintained in the [Opcode Reference](opcode_reference.md).
 
@@ -127,14 +127,11 @@ Compiled shaders (Cranelift) return **three values**:
 - `back: vec4`
 - `glyph: i32`
 
-`ttsl_run(...)` exposes them to Python as:
+`ShaderPy` compiles that IR with Cranelift; during material apply the native
+function writes the three values into the cell.
 
-```python
-front_vec4, back_vec4, glyph_idx = ttsl_run(*regs, reg_settings.ssa_json())
-```
-
-In practice today, most demos use `front_vec4` as the generated color and then
-write a material (often static color) into `MaterialBufferPy` each frame.
+In practice today, most demos pass `ssa_json` and `register_seed` into
+`ShaderPy` and let `apply_material` drive the cell.
 
 ### How rendering applies materials
 

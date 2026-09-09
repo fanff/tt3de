@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate Rust/Python opcode outputs and Sphinx opcode_reference.md from low_level_def.py.
+# Regenerate Python opcode tables and Sphinx opcode_reference.md from low_level_def.py.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"

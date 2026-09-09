@@ -722,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    fn test_shader_material_default_glyph_is_used_when_vm_returns_zero() {
+    fn test_shader_material_default_glyph_is_used_when_shader_returns_zero() {
         let mut canvas_cell = CanvasCell::default();
         let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();
         let pixinfo = PixInfo::new();
@@ -744,7 +744,7 @@ mod tests {
     }
 
     /// Two consecutive invocations on the same OS thread with the same `(shader, material_id)`
-    /// must still apply the second pixel's inputs (TLS fast path after post-VM seed restore).
+    /// must still apply the second pixel's inputs (TLS fast path after post-execute seed restore).
     #[test]
     fn test_shader_material_tls_cache_preserves_per_pixel_inputs() {
         let depth_cell: DepthBufferCell<f32, 2> = DepthBufferCell::new();

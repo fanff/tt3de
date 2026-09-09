@@ -32,7 +32,7 @@ pub struct JitOutputs {
 
 /// Packed `dyn TtslTextureEnv` fat pointer for the compiled calling convention.
 ///
-/// Pass a null `*const JitTextureEnv` when the interpreter would get `None`.
+/// Pass a null `*const JitTextureEnv` when no texture buffer is bound.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct JitTextureEnv {
@@ -62,8 +62,7 @@ impl CompiledShader {
         self.func
     }
 
-    /// Run the compiled shader against the same register file and texture env
-    /// the interpreter uses.
+    /// Run the compiled shader against the register file and optional texture env.
     pub fn run(&self, regs: &mut Registers, tex: Option<&dyn TtslTextureEnv>) -> (Vec4, Vec4, i32) {
         let env = tex.map(JitTextureEnv::from_ref);
         let env_ptr = env
@@ -191,9 +190,7 @@ mod bench_fixtures;
 
 #[cfg(test)]
 mod tests {
-    use super::bench_fixtures;
     use super::*;
-    use crate::ttsl::{decode_instrs_256, run_ttsl};
     use nalgebra_glm::{Vec2, Vec3};
     use std::mem::{align_of, offset_of, size_of};
 
@@ -323,23 +320,91 @@ mod tests {
     }
 
     #[test]
-    fn fixtures_match_interpreter() {
+    fn fixtures_compile_and_run() {
         let tex = ConstTextureEnv;
         for fixture in bench_fixtures::FIXTURES {
-            let instrs = decode_instrs_256(fixture.bytecode);
             let compiled = compile_ttsl_json(fixture.ssa_json)
                 .unwrap_or_else(|err| panic!("{}: compile failed: {err}", fixture.name));
-            let seed = seed_fixture(fixture);
+            let mut regs = seed_fixture(fixture);
             let env = if fixture.needs_texture_env {
                 Some(&tex as &dyn TtslTextureEnv)
             } else {
                 None
             };
-            let mut interp_regs = seed.clone();
-            let mut jit_regs = seed;
-            let interp = run_ttsl(&instrs, &mut interp_regs, env);
-            let jit = compiled.run(&mut jit_regs, env);
-            assert_eq!(interp, jit, "{}", fixture.name);
+            let (_front, _back, glyph) = compiled.run(&mut regs, env);
+            let _ = glyph;
         }
+    }
+
+    #[test]
+    fn tt_texture_samples_via_trait_env() {
+        struct MockTex;
+        impl TtslTextureEnv for MockTex {
+            fn sample_tt_texture(&self, _idx: i32, _uv: Vec2) -> Vec4 {
+                Vec4::new(0.25, 0.5, 0.75, 1.0)
+            }
+        }
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "inputs": [
+                {"name": "idx", "ty": "I32", "temp": 1, "reg": 10},
+                {"name": "uv", "ty": "V2", "temp": 2, "reg": 11}
+            ],
+            "temps": {"1": "I32", "2": "V2", "3": "V4", "4": "I32"},
+            "consts": [{"id": 0, "ty": "I32", "value": [0]}],
+            "blocks": [{
+                "id": 0,
+                "name": "entry",
+                "instrs": [
+                    {"op": "tt_texture", "ty": "V4", "dst": 3, "src": [1, 2]},
+                    {"op": "load_const", "ty": "I32", "dst": 4, "imm": 0},
+                    {"op": "ret", "src": [3, 3, 4]}
+                ]
+            }]
+        }"#;
+        let compiled = compile_ttsl_json(json).expect("tt_texture SSA should compile");
+        let mut regs = Registers::new();
+        regs.i32_[10] = 0;
+        regs.v2[11] = Vec2::new(0.25, 0.75);
+        let tex = MockTex;
+        let (front, _back, glyph) = compiled.run(&mut regs, Some(&tex as &dyn TtslTextureEnv));
+        assert!((front.x - 0.25).abs() < 1e-5);
+        assert!((front.y - 0.5).abs() < 1e-5);
+        assert!((front.z - 0.75).abs() < 1e-5);
+        assert!((front.w - 1.0).abs() < 1e-5);
+        assert_eq!(glyph, 0);
+    }
+
+    #[test]
+    fn tt_texture_without_env_is_opaque_black() {
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "inputs": [
+                {"name": "idx", "ty": "I32", "temp": 1, "reg": 0},
+                {"name": "uv", "ty": "V2", "temp": 2, "reg": 1}
+            ],
+            "temps": {"1": "I32", "2": "V2", "3": "V4", "4": "I32"},
+            "consts": [{"id": 0, "ty": "I32", "value": [0]}],
+            "blocks": [{
+                "id": 0,
+                "name": "entry",
+                "instrs": [
+                    {"op": "tt_texture", "ty": "V4", "dst": 3, "src": [1, 2]},
+                    {"op": "load_const", "ty": "I32", "dst": 4, "imm": 0},
+                    {"op": "ret", "src": [3, 3, 4]}
+                ]
+            }]
+        }"#;
+        let compiled = compile_ttsl_json(json).expect("tt_texture SSA should compile");
+        let mut regs = Registers::new();
+        regs.i32_[0] = 0;
+        regs.v2[1] = Vec2::new(0.5, 0.5);
+        let (front, _back, _glyph) = compiled.run(&mut regs, None);
+        assert!((front.x - 0.0).abs() < 1e-5);
+        assert!((front.y - 0.0).abs() < 1e-5);
+        assert!((front.z - 0.0).abs() < 1e-5);
+        assert!((front.w - 1.0).abs() < 1e-5);
     }
 }

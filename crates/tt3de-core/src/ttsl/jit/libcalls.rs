@@ -67,7 +67,7 @@ pub extern "C" fn ttsl_jit_length_v2(x: f32, y: f32) -> f32 {
     glm_length(&Vec2::new(x, y))
 }
 
-/// `env` is null when the interpreter would see `None`.
+/// `env` is null when no texture buffer is bound.
 pub unsafe extern "C" fn ttsl_jit_sample(
     env: *const JitTextureEnv,
     idx: i32,

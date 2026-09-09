@@ -16,20 +16,20 @@ from tt3de.ttsl.ttsl_assembly import IRType
 
 from pyglm import glm
 
-from tt3de.tt3de import ttsl_run
+from tests.tt3de.ttsl.shade import shade
 
 
 class Test_OPCodes(unittest.TestCase):
     def test_emptyshader(self):
         regs = [{}] * 6
-        run_result = ttsl_run(*regs, passthrough_ssa_json())
+        run_result = shade(regs, passthrough_ssa_json())
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
 
     def test_returnshader(self):
         regs = [{}] * 6
         regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}
-        run_result = ttsl_run(*regs, passthrough_ssa_json(front_reg=1, back_reg=1, glyph_reg=0))
+        run_result = shade(regs, passthrough_ssa_json(front_reg=1, back_reg=1, glyph_reg=0))
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
@@ -72,7 +72,7 @@ class Test_RunTTSL(unittest.TestCase):
             regs.append(reg)
         # prepare sample shader (identity: return seeded v4[0] / v4[0] / i32[0])
         ssa_json = passthrough_ssa_json()
-        run_result = ttsl_run(*regs, ssa_json)
+        run_result = shade(regs, ssa_json)
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
 
@@ -103,7 +103,7 @@ class Test_RunTTSL(unittest.TestCase):
         # from the rar, prepare the registers
         regs = reg_settings.get_register_list()
 
-        run_result = ttsl_run(*regs, reg_settings.ssa_json())
+        run_result = shade(regs, reg_settings.ssa_json())
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
@@ -124,7 +124,7 @@ class Test_RunTTSL(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_FRAGPOS, glm.vec2(0.25, -0.5))
 
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
+        front, back, glyphidx = shade(regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.25, -0.5, 0.0, 1.0)
         assert back == glm.vec4(0.25, -0.5, 0.0, 1.0)
         assert glyphidx == 0
@@ -143,7 +143,7 @@ class Test_RunTTSL(unittest.TestCase):
         )
         reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(10.0, 20.0))
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
+        front, back, glyphidx = shade(regs, reg_settings.ssa_json())
         assert front == glm.vec4(1.0, 2.0, 0.0, 1.0)
         assert back == glm.vec4(1.0, 2.0, 0.0, 1.0)
         assert glyphidx == 0
@@ -160,7 +160,7 @@ class Test_RunTTSL(unittest.TestCase):
         )
         reg_settings.set_variable(GLOBAL_VAR_TT_FRAME, 17)
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
+        front, back, glyphidx = shade(regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 17
@@ -178,14 +178,14 @@ class Test_RunTTSL(unittest.TestCase):
         bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 11)
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
+        front, back, glyphidx = shade(regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 11
 
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 200)
         regs = reg_settings.get_register_list()
-        _, _, glyphidx2 = ttsl_run(*regs, reg_settings.ssa_json())
+        _, _, glyphidx2 = shade(regs, reg_settings.ssa_json())
         assert glyphidx2 == 200
 
     def test_tt_FrontFacing_bool_register_colors_output(self):
@@ -202,12 +202,8 @@ class Test_RunTTSL(unittest.TestCase):
         )
         _, reg_settings = all_passes_compilation(shader_code, "facing_color", {})
         reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, True)
-        front, _back, _g = ttsl_run(
-            *reg_settings.get_register_list(), reg_settings.ssa_json()
-        )
+        front, _back, _g = shade(reg_settings)
         assert front.x > 0.99 and front.y < 0.01
         reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, False)
-        front, _back, _g = ttsl_run(
-            *reg_settings.get_register_list(), reg_settings.ssa_json()
-        )
+        front, _back, _g = shade(reg_settings)
         assert front.x < 0.01 and front.y > 0.99

@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """Guards the committed Criterion fixtures against demo shader drift.
 
-``crates/tt3de-core/benches/ttsl/fixtures.rs`` holds bytecode compiled from the
-TTSL demo shaders. Nothing in the Rust build recompiles it, so an edit to a demo
-would leave the benchmark silently measuring stale bytecode.
+``crates/tt3de-core/benches/ttsl/fixtures.rs`` holds SSA snapshots compiled from
+the TTSL demo shaders. Nothing in the Rust build recompiles them, so an edit to
+a demo would leave the benchmark silently measuring stale IR.
 """
 from __future__ import annotations
 
 import importlib.util
-import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -32,32 +31,6 @@ def _load_generator() -> Any:
 @pytest.fixture(scope="module")
 def generator() -> Any:
     return _load_generator()
-
-
-def _committed_bytecode(source: str) -> Dict[str, List[int]]:
-    """Pull ``name`` / ``bytecode`` pairs out of the generated Rust file."""
-    out: Dict[str, List[int]] = {}
-    pattern = re.compile(
-        r'name:\s*"(?P<name>[^"]+)".*?bytecode:\s*&\[(?P<bytes>[^\]]*)\]',
-        re.DOTALL,
-    )
-    for match in pattern.finditer(source):
-        digits = [int(tok) for tok in re.findall(r"\d+", match.group("bytes"))]
-        out[match.group("name")] = digits
-    return out
-
-
-def test_fixture_bytecode_matches_demo_shaders(generator: Any) -> None:
-    committed = _committed_bytecode(generator.OUTPUT_PATH.read_text(encoding="utf-8"))
-    assert committed, "no fixtures parsed out of the generated Rust file"
-
-    for fixture in generator.build_fixtures():
-        name = fixture.spec.name
-        assert name in committed, f"{name} is missing from the committed fixtures"
-        assert committed[name] == list(fixture.bytecode), (
-            f"{name} bytecode changed; regenerate with "
-            "`uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py`"
-        )
 
 
 def test_generated_fixture_file_is_up_to_date(generator: Any) -> None:

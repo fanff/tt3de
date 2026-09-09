@@ -1,12 +1,7 @@
-//! Compares the TTSL interpreter loop against the Cranelift-lowered path.
+//! Times the Cranelift-lowered TTSL path on demo shaders.
 //!
-//! Fixtures are demo shaders compiled by
-//! `scripts/gen_ttsl_bench_fixtures.py` into `ttsl/fixtures.rs` (bytecode) and
-//! `ttsl/ssa/*.json` (post-SSA CFG).
-//!
-//! Interpreter arms run `[Instr; 256]`. JIT arms lower the SSA snapshot
-//! (`compile_ttsl`). Equivalence of `(front, back, glyph)` is asserted before
-//! timing.
+//! Fixtures are compiled by `scripts/gen_ttsl_bench_fixtures.py` into
+//! `ttsl/ssa/*.json` (post-SSA CFG) plus register seeds in `ttsl/fixtures.rs`.
 
 use criterion::{Criterion, Throughput};
 use nalgebra_glm::{Vec2, Vec3, Vec4};
@@ -14,7 +9,7 @@ use std::hint::black_box;
 
 use tt3de_core::material::shader_material::ShaderSeedRegisters;
 use tt3de_core::ttsl::jit::{compile_ttsl_json, CompiledShader};
-use tt3de_core::ttsl::{decode_instrs_256, run_ttsl, Instr, Registers, TtslTextureEnv};
+use tt3de_core::ttsl::{Registers, TtslTextureEnv};
 
 use super::fixtures::{TtslBenchFixture, FIXTURES};
 
@@ -69,53 +64,15 @@ fn call_jit(
     compiled.run(regs, tex)
 }
 
-/// Fails loudly if the lowered JIT disagrees with the interpreter.
-fn check_equivalence(
-    fixture: &TtslBenchFixture,
-    instrs: &[Instr; 256],
-    seed: &ShaderSeedRegisters,
-    compiled: &CompiledShader,
-) {
-    let mut interp_regs = seed.clone_registers();
-    let interp = run_ttsl(instrs, &mut interp_regs, texture_env(fixture));
-
-    let mut jit_regs = seed.clone_registers();
-    let jit = call_jit(compiled, &mut jit_regs, texture_env(fixture));
-
-    assert_eq!(
-        interp, jit,
-        "{}: JIT output diverged from the interpreter",
-        fixture.name
-    );
-}
-
 pub fn bench_ttsl_exec(c: &mut Criterion) {
     for fixture in FIXTURES {
-        let instrs = decode_instrs_256(fixture.bytecode);
         let seed = seed_registers(fixture);
         let tex = texture_env(fixture);
         let compiled =
             compile_ttsl_json(fixture.ssa_json).expect("cranelift IR compile should succeed");
-        check_equivalence(fixture, &instrs, &seed, &compiled);
 
         let mut group = c.benchmark_group(format!("ttsl_exec/{}", fixture.name));
         group.throughput(Throughput::Elements(1));
-
-        // Dispatch cost alone: registers stay seeded across iterations.
-        let mut regs = seed.clone_registers();
-        group.bench_function("interp_vm", |b| {
-            b.iter(|| black_box(run_ttsl(black_box(&instrs), &mut regs, tex)))
-        });
-
-        // What a rendered cell actually costs: `ShaderMaterial` restores the
-        // seed banks before every pixel, and that copy is not free.
-        let mut cell_regs = Registers::new();
-        group.bench_function("interp_cell", |b| {
-            b.iter(|| {
-                seed.copy_seed_into(&mut cell_regs);
-                black_box(run_ttsl(black_box(&instrs), &mut cell_regs, tex))
-            })
-        });
 
         let mut jit_regs = seed.clone_registers();
         group.bench_function("jit", |b| {

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import subprocess
 from dataclasses import dataclass, field
 from typing import List
 
@@ -988,62 +987,6 @@ def generate_markdown(categories: List[CategoryGroup]) -> str:
 def main() -> None:
     categories = generate_all_forms()
     all_forms = [form for cat in categories for form in cat.forms]
-
-    RUST_OPCODE_FILE_PRELUDE = """
-    // Generated with Love <3.
-
-
-    use nalgebra_glm::{abs, ceil, cos, exp, floor, fract, length as glm_length,
-     log, log2, mix, sin, sqrt, tan, Vec2, Vec3, Vec4};
-
-    use crate::ttsl::{Registers, TtslTextureEnv};
-
-    """
-
-    op_code_definitions_statement = [
-        f"""pub const {form['name']}: u8 = {form['opcode_index']};"""
-        for form in all_forms
-    ]
-
-    RUST_EXEC_OPCODE_MATCH_ARMS_TEMPLATE = """
-
-    pub fn exec_opcode(
-        opcode: u8,
-        dst: u8,
-        a: u8,
-        b: u8,
-        c: u8,
-        d: u8,
-        regs: &mut Registers,
-        ip: &mut usize,
-        tex: Option<&dyn TtslTextureEnv>,
-    ) -> Option<(Vec4, Vec4, i32)> {
-        match opcode {
-    %s
-
-    _ => panic!("Unknown opcode: {}", opcode),
-        }
-    }
-    """
-
-    rust_execopcode_match_arms = "\n".join(
-        [form["rust_match_code"] for form in all_forms]
-    )
-
-    rust_opcode_file_content = (
-        RUST_OPCODE_FILE_PRELUDE
-        + "\n".join(op_code_definitions_statement)
-        + RUST_EXEC_OPCODE_MATCH_ARMS_TEMPLATE % rust_execopcode_match_arms
-    )
-
-    rust_opcode_path = "crates/tt3de-core/src/ttsl/opcodes.rs"
-    with open(rust_opcode_path, "w") as f:
-        f.write(rust_opcode_file_content)
-
-    subprocess.run(
-        ["rustfmt", rust_opcode_path],
-        check=True,
-    )
 
     op_code_definitions_statement_py = [
         f"""{form['name']} = {form['opcode_index']}""" for form in all_forms

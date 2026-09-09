@@ -8,7 +8,7 @@ This is a mixed Rust/Python project using [maturin](https://www.maturin.rs/).
 - **Rust check (all workspace targets)**: `cargo check --workspace --all-targets` — use this to surface all warnings, including from tests, examples, and benchmarks.
 - **Pure Rust core tests**: `cargo test -p tt3de-core` (or use `scripts/cargo_test.sh` / `.ps1`; these do not need Python or PyO3 setup)
 - **Python tests**: `uv run pytest` — see [Testing](#testing) for `PYTHONPATH` when running pytest directly.
-- **Regenerate TTSL opcodes**: `bash scripts/gen_opcodes.sh` or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` — this regenerates `crates/tt3de-core/src/ttsl/opcodes.rs` (auto-formatted with `rustfmt`), `python/tt3de/ttsl/ttisa/ttisa_opcodes.py`, and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. Equivalent: **`make gen-opcodes`** (invokes the shell script; requires `bash` on `PATH`). Development-only helpers under `scripts/` are not shipped in the published wheel.
+- **Regenerate TTSL opcodes**: `bash scripts/gen_opcodes.sh` or `powershell -ExecutionPolicy Bypass -File scripts/gen_opcodes.ps1` — this regenerates `python/tt3de/ttsl/ttisa/ttisa_opcodes.py` and `source/opcode_reference.md`. Run it after any change to `python/tt3de/ttsl/ttisa/low_level_def.py`. Equivalent: **`make gen-opcodes`** (invokes the shell script; requires `bash` on `PATH`). Development-only helpers under `scripts/` are not shipped in the published wheel.
 
 ## Platform Notes
 
