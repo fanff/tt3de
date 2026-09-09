@@ -68,6 +68,7 @@ class BaseTexturePy(MaterialPy):
 
 class ShaderPy(MaterialPy):
     bytecode: bytes
+    ssa_json: str | None
     time_f32_reg: int | None
     delta_time_f32_reg: int | None
     frame_i32_reg: int | None
@@ -96,4 +97,5 @@ class ShaderPy(MaterialPy):
         frame_i32_reg: int | None = ...,
         near_f32_reg: int | None = ...,
         far_f32_reg: int | None = ...,
+        ssa_json: str | None = ...,
     ) -> "ShaderPy": ...

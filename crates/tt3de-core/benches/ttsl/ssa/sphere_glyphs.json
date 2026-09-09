@@ -1,0 +1,847 @@
+{
+  "version": 1,
+  "entry": 0,
+  "inputs": [
+    {
+      "name": "tt_FragCoord",
+      "ty": "V2",
+      "temp": 16,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragDepth",
+      "ty": "F32",
+      "temp": 8,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragPos",
+      "ty": "V2",
+      "temp": 3,
+      "reg": 4
+    },
+    {
+      "name": "tt_FrontFacing",
+      "ty": "BOOL",
+      "temp": 7,
+      "reg": 1
+    },
+    {
+      "name": "tt_LineCoord",
+      "ty": "F32",
+      "temp": 9,
+      "reg": 2
+    },
+    {
+      "name": "tt_Normal",
+      "ty": "V3",
+      "temp": 4,
+      "reg": 2
+    },
+    {
+      "name": "tt_PointCoord",
+      "ty": "V2",
+      "temp": 6,
+      "reg": 5
+    },
+    {
+      "name": "tt_PrimitiveID",
+      "ty": "I32",
+      "temp": 10,
+      "reg": 0
+    },
+    {
+      "name": "tt_TexCoord0",
+      "ty": "V2",
+      "temp": 1,
+      "reg": 2
+    },
+    {
+      "name": "tt_TexCoord1",
+      "ty": "V2",
+      "temp": 2,
+      "reg": 3
+    },
+    {
+      "name": "tt_ViewPos",
+      "ty": "V3",
+      "temp": 5,
+      "reg": 3
+    },
+    {
+      "name": "u_albedo",
+      "ty": "V3",
+      "temp": 11,
+      "reg": 4
+    },
+    {
+      "name": "u_g_dot",
+      "ty": "I32",
+      "temp": 15,
+      "reg": 7
+    },
+    {
+      "name": "u_g_hash",
+      "ty": "I32",
+      "temp": 12,
+      "reg": 4
+    },
+    {
+      "name": "u_g_plus",
+      "ty": "I32",
+      "temp": 13,
+      "reg": 5
+    },
+    {
+      "name": "u_g_star",
+      "ty": "I32",
+      "temp": 14,
+      "reg": 6
+    }
+  ],
+  "temps": {
+    "1": "V2",
+    "2": "V2",
+    "3": "V2",
+    "4": "V3",
+    "5": "V3",
+    "6": "V2",
+    "7": "BOOL",
+    "8": "F32",
+    "9": "F32",
+    "10": "I32",
+    "11": "V3",
+    "12": "I32",
+    "13": "I32",
+    "14": "I32",
+    "15": "I32",
+    "16": "V2",
+    "18": "V3",
+    "20": "V3",
+    "21": "V3",
+    "23": "F32",
+    "24": "F32",
+    "25": "F32",
+    "26": "V3",
+    "27": "V3",
+    "29": "F32",
+    "30": "F32",
+    "31": "F32",
+    "33": "F32",
+    "34": "F32",
+    "35": "F32",
+    "36": "F32",
+    "37": "F32",
+    "38": "F32",
+    "39": "F32",
+    "40": "F32",
+    "42": "F32",
+    "44": "F32",
+    "45": "F32",
+    "46": "F32",
+    "47": "F32",
+    "48": "F32",
+    "49": "F32",
+    "51": "F32",
+    "52": "F32",
+    "53": "F32",
+    "54": "F32",
+    "55": "F32",
+    "56": "F32",
+    "57": "F32",
+    "59": "V3",
+    "61": "F32",
+    "62": "F32",
+    "63": "F32",
+    "64": "F32",
+    "65": "V4",
+    "67": "F32",
+    "68": "F32",
+    "69": "F32",
+    "70": "F32",
+    "71": "V4",
+    "72": "F32",
+    "73": "BOOL",
+    "74": "F32",
+    "75": "BOOL",
+    "76": "F32",
+    "77": "BOOL",
+    "78": "V3",
+    "79": "V3",
+    "80": "V3",
+    "81": "F32",
+    "82": "F32",
+    "83": "F32",
+    "84": "F32",
+    "85": "F32",
+    "86": "V3",
+    "87": "V4",
+    "88": "V4"
+  },
+  "consts": [
+    {
+      "id": 0,
+      "ty": "F32",
+      "value": [
+        0.35
+      ]
+    },
+    {
+      "id": 1,
+      "ty": "F32",
+      "value": [
+        0.72
+      ]
+    },
+    {
+      "id": 2,
+      "ty": "F32",
+      "value": [
+        0.48
+      ]
+    },
+    {
+      "id": 3,
+      "ty": "F32",
+      "value": [
+        0.0
+      ]
+    },
+    {
+      "id": 4,
+      "ty": "F32",
+      "value": [
+        1.0
+      ]
+    },
+    {
+      "id": 5,
+      "ty": "F32",
+      "value": [
+        0.42
+      ]
+    },
+    {
+      "id": 6,
+      "ty": "F32",
+      "value": [
+        0.12
+      ]
+    },
+    {
+      "id": 7,
+      "ty": "F32",
+      "value": [
+        0.88
+      ]
+    },
+    {
+      "id": 8,
+      "ty": "F32",
+      "value": [
+        0.74
+      ]
+    },
+    {
+      "id": 9,
+      "ty": "F32",
+      "value": [
+        0.22
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": 0,
+      "name": "_INIT_",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "jmp",
+          "target": 2
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "S_0",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "normalize",
+          "dst": 18,
+          "ty": "V3",
+          "src": [
+            4
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 78,
+          "ty": "V3",
+          "src": [
+            18
+          ]
+        },
+        {
+          "op": "neg",
+          "dst": 20,
+          "ty": "V3",
+          "src": [
+            5
+          ]
+        },
+        {
+          "op": "normalize",
+          "dst": 21,
+          "ty": "V3",
+          "src": [
+            20
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 79,
+          "ty": "V3",
+          "src": [
+            21
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 23,
+          "ty": "F32",
+          "imm": 0
+        },
+        {
+          "op": "load_const",
+          "dst": 24,
+          "ty": "F32",
+          "imm": 1
+        },
+        {
+          "op": "load_const",
+          "dst": 25,
+          "ty": "F32",
+          "imm": 2
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 26,
+          "ty": "V3",
+          "src": [
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "op": "normalize",
+          "dst": 27,
+          "ty": "V3",
+          "src": [
+            26
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 80,
+          "ty": "V3",
+          "src": [
+            27
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 29,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "dot",
+          "dst": 30,
+          "ty": "F32",
+          "src": [
+            78,
+            80
+          ]
+        },
+        {
+          "op": "max",
+          "dst": 31,
+          "ty": "F32",
+          "src": [
+            29,
+            30
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 81,
+          "ty": "F32",
+          "src": [
+            31
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 33,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "load_const",
+          "dst": 34,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "dot",
+          "dst": 35,
+          "ty": "F32",
+          "src": [
+            78,
+            79
+          ]
+        },
+        {
+          "op": "max",
+          "dst": 36,
+          "ty": "F32",
+          "src": [
+            34,
+            35
+          ]
+        },
+        {
+          "op": "sub",
+          "dst": 37,
+          "ty": "F32",
+          "src": [
+            33,
+            36
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 38,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "load_const",
+          "dst": 39,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "clamp",
+          "dst": 40,
+          "ty": "F32",
+          "src": [
+            37,
+            38,
+            39
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 82,
+          "ty": "F32",
+          "src": [
+            40
+          ]
+        },
+        {
+          "op": "mul",
+          "dst": 42,
+          "ty": "F32",
+          "src": [
+            82,
+            82
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 83,
+          "ty": "F32",
+          "src": [
+            42
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 44,
+          "ty": "F32",
+          "imm": 5
+        },
+        {
+          "op": "mul",
+          "dst": 45,
+          "ty": "F32",
+          "src": [
+            83,
+            44
+          ]
+        },
+        {
+          "op": "add",
+          "dst": 46,
+          "ty": "F32",
+          "src": [
+            81,
+            45
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 47,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "load_const",
+          "dst": 48,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "clamp",
+          "dst": 49,
+          "ty": "F32",
+          "src": [
+            46,
+            47,
+            48
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 84,
+          "ty": "F32",
+          "src": [
+            49
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 51,
+          "ty": "F32",
+          "imm": 6
+        },
+        {
+          "op": "load_const",
+          "dst": 52,
+          "ty": "F32",
+          "imm": 7
+        },
+        {
+          "op": "mul",
+          "dst": 53,
+          "ty": "F32",
+          "src": [
+            52,
+            84
+          ]
+        },
+        {
+          "op": "add",
+          "dst": 54,
+          "ty": "F32",
+          "src": [
+            51,
+            53
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 55,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "load_const",
+          "dst": 56,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "clamp",
+          "dst": 57,
+          "ty": "F32",
+          "src": [
+            54,
+            55,
+            56
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 85,
+          "ty": "F32",
+          "src": [
+            57
+          ]
+        },
+        {
+          "op": "mul",
+          "dst": 59,
+          "ty": "V3",
+          "src": [
+            11,
+            85
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 86,
+          "ty": "V3",
+          "src": [
+            59
+          ]
+        },
+        {
+          "op": "read_axis_x",
+          "dst": 61,
+          "ty": "F32",
+          "src": [
+            86
+          ]
+        },
+        {
+          "op": "read_axis_y",
+          "dst": 62,
+          "ty": "F32",
+          "src": [
+            86
+          ]
+        },
+        {
+          "op": "read_axis_z",
+          "dst": 63,
+          "ty": "F32",
+          "src": [
+            86
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 64,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 65,
+          "ty": "V4",
+          "src": [
+            61,
+            62,
+            63,
+            64
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 87,
+          "ty": "V4",
+          "src": [
+            65
+          ]
+        },
+        {
+          "op": "read_axis_x",
+          "dst": 67,
+          "ty": "F32",
+          "src": [
+            11
+          ]
+        },
+        {
+          "op": "read_axis_y",
+          "dst": 68,
+          "ty": "F32",
+          "src": [
+            11
+          ]
+        },
+        {
+          "op": "read_axis_z",
+          "dst": 69,
+          "ty": "F32",
+          "src": [
+            11
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 70,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 71,
+          "ty": "V4",
+          "src": [
+            67,
+            68,
+            69,
+            70
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 88,
+          "ty": "V4",
+          "src": [
+            71
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 72,
+          "ty": "F32",
+          "imm": 8
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 73,
+          "ty": "BOOL",
+          "src": [
+            84,
+            72
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            73
+          ],
+          "target": 4,
+          "fallthrough": 3
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "S_1",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            87,
+            88,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "S_2",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "load_const",
+          "dst": 74,
+          "ty": "F32",
+          "imm": 2
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 75,
+          "ty": "BOOL",
+          "src": [
+            84,
+            74
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            75
+          ],
+          "target": 6,
+          "fallthrough": 5
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "S_3",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            87,
+            88,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "S_4",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "load_const",
+          "dst": 76,
+          "ty": "F32",
+          "imm": 9
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 77,
+          "ty": "BOOL",
+          "src": [
+            84,
+            76
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            77
+          ],
+          "target": 8,
+          "fallthrough": 7
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "S_5",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            87,
+            88,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "S_6",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            87,
+            88,
+            12
+          ]
+        }
+      ]
+    }
+  ]
+}

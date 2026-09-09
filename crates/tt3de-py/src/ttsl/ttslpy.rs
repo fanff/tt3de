@@ -1,12 +1,11 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
 
-use pyo3::{
-    prelude::*,
-    types::{PyBytes, PyDict},
-};
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
 use crate::utils::{from_pydict_int_v2, from_pydict_int_v3, from_pydict_int_v4, vec4_to_pyglm};
-use tt3de_core::ttsl::{decode_instrs_256, run_ttsl as run_ttsl_vm, Registers};
+use tt3de_core::ttsl::jit::{compile_ttsl_json, CompiledShader};
+use tt3de_core::ttsl::Registers;
 
 pub fn convert_and_fill_register(
     regs: &mut Registers,
@@ -47,6 +46,24 @@ pub fn convert_and_fill_register(
     }
 }
 
+fn compiled_shader(ssa_json: &str) -> PyResult<Arc<CompiledShader>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, Arc<CompiledShader>>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = cache
+        .lock()
+        .map_err(|_| PyValueError::new_err("TTSL JIT cache lock poisoned"))?;
+    if let Some(compiled) = map.get(ssa_json) {
+        return Ok(Arc::clone(compiled));
+    }
+    let compiled = Arc::new(
+        compile_ttsl_json(ssa_json)
+            .map_err(|err| PyValueError::new_err(format!("TTSL JIT: {err}")))?,
+    );
+    map.insert(ssa_json.to_string(), Arc::clone(&compiled));
+    Ok(compiled)
+}
+
+/// Execute a compiled TTSL shader (Cranelift) against seeded register banks.
 #[pyfunction]
 pub fn ttsl_run(
     py: Python,
@@ -56,19 +73,12 @@ pub fn ttsl_run(
     regv2: Py<PyDict>,
     regv3: Py<PyDict>,
     regv4: Py<PyDict>,
-    bytecode: Py<PyBytes>, // the bytes drirectly from python.
-) -> (Py<PyAny>, Py<PyAny>, i32) {
+    ssa_json: &str,
+) -> PyResult<(Py<PyAny>, Py<PyAny>, i32)> {
     let mut regs = Registers::new();
-    // load regsetup into regs
     convert_and_fill_register(&mut regs, regbool, regf32, regi32, regv2, regv3, regv4, py);
 
-    // load bytes &[u8] from bytecode
-    let bytes: &[u8] = bytecode.extract(py).unwrap();
-    let instrs = decode_instrs_256(bytes);
-
-    let (v4a, v4b, iret) = run_ttsl_vm(&instrs, &mut regs, None);
-    let a = vec4_to_pyglm(py, v4a);
-    let b = vec4_to_pyglm(py, v4b);
-    let c = iret;
-    return (a, b, c);
+    let compiled = compiled_shader(ssa_json)?;
+    let (v4a, v4b, iret) = compiled.run(&mut regs, None);
+    Ok((vec4_to_pyglm(py, v4a), vec4_to_pyglm(py, v4b), iret))
 }

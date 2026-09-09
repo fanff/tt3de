@@ -2,12 +2,14 @@
 from dataclasses import dataclass
 from collections import defaultdict
 import ast
+import json
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Set
 
 from pyglm import glm
 
 from tt3de.ttsl.ttisa.low_level_def import generate_all_forms, Form
+from tt3de.ttsl.ssa_dump import attach_ssa_inputs, snapshot_ssa_cfg
 from tt3de.ttsl.ttsl_assembly import (
     CFG,
     STR_TO_IRTYPE,
@@ -2127,7 +2129,7 @@ class RegisterAllocatorPass(CompilationPass):
         allocated_registers: Dict[IRType, Set[int]] = {}
 
         # ``ShaderInputBinding`` defaults in ``shader_material.rs`` write PixInfo UVs into
-        # ``regs.v3[0]`` and ``regs.v3[1]`` before ``run_ttsl``. Reserve those indices so
+        # ``regs.v3[0]`` and ``regs.v3[1]`` before shader execution. Reserve those indices so
         # shader temps (e.g. ``vec3`` locals / ``OP_RET`` payloads) never alias them.
         allocated_registers[IRType.V3] = {0, 1, 2}
         # Mirror ``ShaderInputBinding::default()`` in ``shader_material.rs``: per-pixel
@@ -2623,6 +2625,7 @@ class RegisterSettings:
     def __init__(self, vars_to_registers: Dict[str, RegisterAddress]):
         self.regs: Dict[IRType, Dict[int, Any]] = {ty: {} for ty in IRType}
         self.var_name_to_registers: Dict[str, RegisterAddress] = vars_to_registers
+        self.ssa_module: Optional[Dict[str, Any]] = None
 
     def set_register(self, ty: IRType, reg_id: int, value: Any):
         self.regs[ty][reg_id] = value
@@ -2651,13 +2654,49 @@ class RegisterSettings:
         """
         Copy allocation maps so per-material ``set_variable`` calls do not alias state.
 
-        Used when one compiled bytecode is shared across multiple ``ShaderPy`` instances
+        Used when one compiled shader is shared across multiple ``ShaderPy`` instances
         with different register seeds (for example per-instance ``u_albedo``).
         """
         out = RegisterSettings(dict(self.var_name_to_registers))
         for ty in IRType:
             out.regs[ty] = dict(self.regs[ty])
+        out.ssa_module = self.ssa_module
         return out
+
+    def ssa_json(self) -> str:
+        """Serialize the post-SSA CFG for Cranelift (``ShaderPy.ssa_json``)."""
+        if self.ssa_module is None:
+            raise ValueError(
+                "RegisterSettings has no SSA module; compile with all_passes_compilation"
+            )
+        return json.dumps(self.ssa_module)
+
+
+def passthrough_ssa_json(
+    front_reg: int = 0, back_reg: int = 0, glyph_reg: int = 0
+) -> str:
+    """Identity shader for Cranelift: return the V4/V4/I32 values already in Registers."""
+    return json.dumps(
+        {
+            "version": 1,
+            "entry": 0,
+            "inputs": [
+                {"name": "front", "ty": "V4", "temp": 1, "reg": front_reg},
+                {"name": "back", "ty": "V4", "temp": 2, "reg": back_reg},
+                {"name": "glyph", "ty": "I32", "temp": 3, "reg": glyph_reg},
+            ],
+            "temps": {"1": "V4", "2": "V4", "3": "I32"},
+            "consts": [],
+            "blocks": [
+                {
+                    "id": 0,
+                    "name": "_INIT_",
+                    "phis": [],
+                    "instrs": [{"op": "ret", "src": [1, 2, 3]}],
+                }
+            ],
+        }
+    )
 
 
 def shader_py_frag_depth_clip_kwargs(reg_settings: RegisterSettings) -> Dict[str, int]:
@@ -2773,6 +2812,7 @@ class CompilationStateResult:
     final_byte_code: Optional[List[List[int]]] = None
     byte_array: Optional[bytes] = None
     register_settings: Optional[RegisterSettings] = None
+    ssa_module: Optional[Dict[str, Any]] = None
     error: Optional[Exception] = None
     traceback_text: str = ""
 
@@ -2817,6 +2857,9 @@ def all_passes_compilation_with_state(
         try:
             stage_fn()
             result.last_completed_stage = stage_name
+            if stage_name == "ssa":
+                # Snapshot before phi lowering mutates the CFG.
+                result.ssa_module = snapshot_ssa_cfg(cc)
         except Exception as exc:
             result.error = exc
             result.traceback_text = traceback.format_exc()
@@ -2826,6 +2869,8 @@ def all_passes_compilation_with_state(
         rar = RegisterAllocatorPass(cc).run()
         result.register_allocation = rar
         result.last_completed_stage = "reg_alloc"
+        if result.ssa_module is not None:
+            attach_ssa_inputs(result.ssa_module, cc, rar)
     except Exception as exc:
         result.error = exc
         result.traceback_text = traceback.format_exc()
@@ -2854,6 +2899,8 @@ def all_passes_compilation_with_state(
             reg_settings.set_register(ty, reg_id, value)
         apply_engine_uniform_register_defaults(reg_settings)
         result.register_settings = reg_settings
+        if result.ssa_module is not None:
+            reg_settings.ssa_module = result.ssa_module
 
         all_bytecode_instrs = []
         for bytecode_instr in final_byte_code:
@@ -2874,10 +2921,12 @@ def all_passes_compilation(
     cc = compile_ttsl(src, func_name, globals_dict)
     build_cfg_from_ir(cc)
     PassSSARenamer(cc).run()
+    ssa_module = snapshot_ssa_cfg(cc)
 
     PassPhiNodeLowering(cc).run()
     CFGSimplifyPass(cc).run()
     rar = RegisterAllocatorPass(cc).run()
+    attach_ssa_inputs(ssa_module, cc, rar)
 
     PassNormalizeTerminators(cc).run()
     final_byte_code = PassToByteCode(cc).run(rar)
@@ -2886,6 +2935,7 @@ def all_passes_compilation(
     for (ty, reg_id), value in rar.const_id_to_registers.values():
         reg_settings.set_register(ty, reg_id, value)
     apply_engine_uniform_register_defaults(reg_settings)
+    reg_settings.ssa_module = ssa_module
 
     all_bytecode_instrs = []
     for bytecode_instr in final_byte_code:

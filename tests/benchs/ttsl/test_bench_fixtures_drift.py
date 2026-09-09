@@ -70,3 +70,13 @@ def test_generated_fixture_file_is_up_to_date(generator: Any) -> None:
         "generated fixtures are stale; regenerate with "
         "`uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py`"
     )
+
+
+def test_ssa_json_matches_demo_shaders(generator: Any) -> None:
+    for fixture in generator.build_fixtures():
+        path = generator.SSA_DIR / f"{fixture.spec.name}.json"
+        assert path.is_file(), f"{path.name} is missing from the committed SSA fixtures"
+        assert path.read_text(encoding="utf-8") == fixture.ssa_json, (
+            f"{fixture.spec.name} SSA snapshot changed; regenerate with "
+            "`uv run --no-sync python scripts/gen_ttsl_bench_fixtures.py`"
+        )

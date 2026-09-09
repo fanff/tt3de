@@ -6,8 +6,8 @@ from tt3de.tt3de import ttsl_run
 from pyglm import glm
 
 
-def rversion(regs, bytecode: bytes):
-    ttsl_run(*regs, bytecode)
+def rversion(regs, ssa_json: str):
+    ttsl_run(*regs, ssa_json)
 
 
 SHADER_CODE = """
@@ -45,6 +45,6 @@ def test_simple(benchmark, shader_codeidx):
     # from the rar, prepare the registers
     regs = reg_settings.get_register_list()
     benchmark.extra_info["bytecode_size"] = len(bytecode)
-    benchmark(rversion, regs, bytecode)
+    benchmark(rversion, regs, reg_settings.ssa_json())
 
     print("Done benchmark for shader code idx:", benchmark)

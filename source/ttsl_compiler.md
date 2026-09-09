@@ -40,8 +40,8 @@ The shader entry function may still list `tt_FragCoord` (or other builtins above
 **Wiring user uniforms after `all_passes_compilation`**
 
 1. Put each uniform name and its **type object** in `globals_dict` (for example `{"u_color": glm.vec3, "u_uv_bias": glm.vec2}`).
-2. Call `reg_settings.set_variable("u_color", glm.vec3(0.2, 0.4, 0.6))` (and likewise for every uniform register you care about). Uniforms you never seed read as **numeric zero** / **false** in the VM (Rust register banks start cleared).
-3. Pass the snapshot into the renderer: `register_seed=reg_settings.get_register_list()` on `ShaderPy`, or the same six dicts plus `bytecode` into `ttsl_run`.
+2. Call `reg_settings.set_variable("u_color", glm.vec3(0.2, 0.4, 0.6))` (and likewise for every uniform register you care about). Uniforms you never seed read as **numeric zero** / **false** (Rust register banks start cleared).
+3. Pass the snapshot into the renderer: `register_seed=reg_settings.get_register_list()` and `ssa_json=reg_settings.ssa_json()` on `ShaderPy`, or the same six dicts plus `reg_settings.ssa_json()` into `ttsl_run`.
 4. Optional **engine** uniforms (`tt_Time`, …) still use `ShaderPy.time_f32_reg` (etc.) and `MaterialBufferPy.set_shader_time` so values can change every frame **without** rebuilding the material. User uniforms have **no** `MaterialBufferPy` setters today: `add_shader` copies the seed banks once, so changing a user uniform means rebuilding `ShaderPy` / re-`add_shader` (or adding a host API later).
 
 ```python
@@ -67,10 +67,10 @@ bytecode, reg_settings = all_passes_compilation(
 reg_settings.set_variable("u_color", glm.vec3(0.1, 0.2, 0.3))
 reg_settings.set_variable("u_uv_bias", glm.vec2(0.25, 0.5))
 
-front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
 assert glyph == 0
 
-# Full renderer: pass the same seed list into ShaderPy(..., register_seed=reg_settings.get_register_list()).
+# Full renderer: ShaderPy(..., register_seed=reg_settings.get_register_list(), ssa_json=reg_settings.ssa_json()).
 ```
 
 **Minimal compile example** (per-cell builtins need no `globals_dict` entry; only `tt_Time` is declared because the shader reads it):
@@ -120,7 +120,7 @@ def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
 
 Compile it with the same `globals_dict={"tt_Time": float}` shape as the minimal example (no alternate `"time"` key).
 
-**Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered to opcode `TT_TEXTURE`. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the VM; standalone `ttsl_run` from Python has no texture binding (samples behave as opaque black per spec). `tt_texelFetch` is not implemented yet.
+**Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered in the SSA IR. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the compiled function; standalone `ttsl_run` from Python has no texture binding (samples behave as opaque black per spec). `tt_texelFetch` is not implemented yet.
 
 Note: `glm.mix` is not yet typable in `type_of(...)`, so prefer arithmetic or other supported ops until mix is wired end-to-end.
 
@@ -132,8 +132,9 @@ The public entry point is:
 
 This function runs the whole pipeline and returns:
 
-- compiled bytecode as `bytes`
-- `RegisterSettings` preloaded with variable/register mapping and constants
+- compiled bytecode as `bytes` (compiler-explorer / ISA dump)
+- `RegisterSettings` preloaded with variable/register mapping, constants, and
+  the SSA snapshot (`ssa_json()`) used by `ShaderPy` / `ttsl_run` / Cranelift
 
 ## High-level pipeline
 
@@ -142,7 +143,11 @@ The compiler transforms Python-like TTSL source in several stages:
 1. Parse source to Python AST
 2. Compile AST nodes into typed IR instructions (`IRProgram`)
 3. Build a Control Flow Graph (CFG)
-4. Convert named variables to SSA form (`PassSSARenamer`)
+4. Convert named variables to SSA form (`PassSSARenamer`). The SSA CFG is
+   snapshotted here (`CompilationStateResult.ssa_module` /
+   `RegisterSettings.ssa_json()`) and Cranelift compiles it for
+   `ShaderMaterial` and `ttsl_run`. The bytecode pipeline continues for the
+   compiler explorer and opcode dumps:
 5. Lower phi nodes into explicit copies (`PassPhiNodeLowering`)
 6. Allocate typed virtual-machine registers (`RegisterAllocatorPass`)
 7. Normalize terminators / block layout
@@ -158,6 +163,9 @@ The compiler transforms Python-like TTSL source in several stages:
   - `python/tt3de/ttsl/ttsl_assembly.py` (`build_cfg_from_ir(...)`)
 - SSA conversion:
   - `python/tt3de/ttsl/compiler.py` (`PassSSARenamer`, `SSARenamer`)
+  - `python/tt3de/ttsl/ssa_dump.py` (`snapshot_ssa_cfg`, attached after register allocation)
+  - `crates/tt3de-core/src/ttsl/ir.rs` (`TtslSsaModule`)
+  - `crates/tt3de-core/src/ttsl/jit/ir_lower.rs` (`compile_ttsl`)
 - Phi lowering:
   - `python/tt3de/ttsl/compiler.py` (`PassPhiNodeLowering`)
 - Register allocation:
@@ -241,7 +249,9 @@ Finally, instructions are flattened and packed into a `bytes` object.
 
 - `python/tt3de/ttsl/compiler.py`: pipeline passes and orchestration
 - `python/tt3de/ttsl/ttsl_assembly.py`: IR types, instructions, CFG, analysis helpers
+- `python/tt3de/ttsl/ssa_dump.py`: post-SSA JSON snapshot for Cranelift
 - `tests/tt3de/ttsl/test_compiler.py`: tests for compiler behavior
+- `tests/tt3de/ttsl/test_ssa_dump.py`: SSA snapshot shape
 
 ## Quick extension guide
 

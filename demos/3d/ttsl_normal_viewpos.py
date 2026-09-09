@@ -101,6 +101,7 @@ def _add_sphere_material(
         bytecode,
         default_glyph=default_glyph,
         register_seed=reg_settings.get_register_list(),
+        ssa_json=reg_settings.ssa_json(),
     )
     return rc.material_buffer.add_shader(shader_mat)
 
@@ -123,6 +124,7 @@ def _add_sphere_glyphs_material(
         bytecode,
         default_glyph=default_glyph,
         register_seed=reg_settings.get_register_list(),
+        ssa_json=reg_settings.ssa_json(),
     )
     return rc.material_buffer.add_shader(shader_mat)
 

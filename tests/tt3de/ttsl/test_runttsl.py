@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from tt3de.ttsl.ttisa.ttisa_opcodes import OP_JMP_IF_FALSE, OP_RET, OP_JMP
-from tests.benchs.ttsl.test_bench_ttsl import SHADER_CODE
-from tt3de.ttsl.enrich import PassPrintConsole
 from textwrap import dedent
 import unittest
 
@@ -12,16 +9,10 @@ from tt3de.ttsl.compiler import (
     PIXELVAR_TT_FRONT_FACING,
     PIXELVAR_TT_PRIMITIVE_ID,
     PIXELVAR_TT_TEXCOORD0,
-    PassSSARenamer,
-    compile_ttsl,
-    PassPhiNodeLowering,
-    CFGSimplifyPass,
-    RegisterAllocatorPass,
-    PassNormalizeTerminators,
-    PassToByteCode,
     all_passes_compilation,
+    passthrough_ssa_json,
 )
-from tt3de.ttsl.ttsl_assembly import build_cfg_from_ir, IRType
+from tt3de.ttsl.ttsl_assembly import IRType
 
 from pyglm import glm
 
@@ -31,49 +22,14 @@ from tt3de.tt3de import ttsl_run
 class Test_OPCodes(unittest.TestCase):
     def test_emptyshader(self):
         regs = [{}] * 6
-        bytecode = b""
-        run_result = ttsl_run(*regs, bytecode)
+        run_result = ttsl_run(*regs, passthrough_ssa_json())
+        assert isinstance(run_result, tuple)
+        assert len(run_result) == 3
 
     def test_returnshader(self):
         regs = [{}] * 6
-
-        regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}  # setting register 1 = something not 0
-
-        bytecode = bytes(
-            [OP_RET, 0, 1, 1, 0, 0] + [OP_RET, 0, 0, 0, 0, 0]
-        )  # asking to immediately return register 1
-        run_result = ttsl_run(*regs, bytecode)
-        assert isinstance(run_result, tuple)
-        assert len(run_result) == 3
-        front, back, glyphidx = run_result
-        assert front == glm.vec4(0.5, 0.5, 0.0, 1.0)
-        assert back == glm.vec4(0.5, 0.5, 0.0, 1.0)
-        assert glyphidx == 0
-
-    def test_jump(self):
-        regs = [{}] * 6
-
-        regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}  # setting register 1 = something not 0
-
-        bytecode = bytes(
-            [
-                OP_JMP,
-                1,
-                0,
-                0,
-                0,
-                0,
-            ]  # jump to the instruction 1, (which is the next one)
-            + [
-                OP_RET,
-                0,
-                1,
-                1,
-                0,
-                0,
-            ]  # return reg 1
-        )
-        run_result = ttsl_run(*regs, bytecode)
+        regs[5] = {1: glm.vec4(0.5, 0.5, 0.0, 1.0)}
+        run_result = ttsl_run(*regs, passthrough_ssa_json(front_reg=1, back_reg=1, glyph_reg=0))
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
@@ -114,10 +70,9 @@ class Test_RunTTSL(unittest.TestCase):
                         float(i), float(i) + 1.0, float(i) + 2.0, float(i) + 3.0
                     )
             regs.append(reg)
-        # prepare sample bytecode
-        bytecode: bytes = b""
-        regs.append(bytecode)
-        run_result = ttsl_run(*regs)
+        # prepare sample shader (identity: return seeded v4[0] / v4[0] / i32[0])
+        ssa_json = passthrough_ssa_json()
+        run_result = ttsl_run(*regs, ssa_json)
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
 
@@ -148,7 +103,7 @@ class Test_RunTTSL(unittest.TestCase):
         # from the rar, prepare the registers
         regs = reg_settings.get_register_list()
 
-        run_result = ttsl_run(*regs, bytecode)
+        run_result = ttsl_run(*regs, reg_settings.ssa_json())
         assert isinstance(run_result, tuple)
         assert len(run_result) == 3
         front, back, glyphidx = run_result
@@ -169,7 +124,7 @@ class Test_RunTTSL(unittest.TestCase):
         reg_settings.set_variable(PIXELVAR_TT_FRAGPOS, glm.vec2(0.25, -0.5))
 
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.25, -0.5, 0.0, 1.0)
         assert back == glm.vec4(0.25, -0.5, 0.0, 1.0)
         assert glyphidx == 0
@@ -188,7 +143,7 @@ class Test_RunTTSL(unittest.TestCase):
         )
         reg_settings.set_variable(GLOBAL_VAR_TT_RESOLUTION, glm.vec2(10.0, 20.0))
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
         assert front == glm.vec4(1.0, 2.0, 0.0, 1.0)
         assert back == glm.vec4(1.0, 2.0, 0.0, 1.0)
         assert glyphidx == 0
@@ -205,7 +160,7 @@ class Test_RunTTSL(unittest.TestCase):
         )
         reg_settings.set_variable(GLOBAL_VAR_TT_FRAME, 17)
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 17
@@ -223,61 +178,36 @@ class Test_RunTTSL(unittest.TestCase):
         bytecode, reg_settings = all_passes_compilation(shader_code, "frag", {})
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 11)
         regs = reg_settings.get_register_list()
-        front, back, glyphidx = ttsl_run(*regs, bytecode)
+        front, back, glyphidx = ttsl_run(*regs, reg_settings.ssa_json())
         assert front == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert back == glm.vec4(0.0, 0.0, 0.0, 1.0)
         assert glyphidx == 11
 
         reg_settings.set_variable(PIXELVAR_TT_PRIMITIVE_ID, 200)
         regs = reg_settings.get_register_list()
-        _, _, glyphidx2 = ttsl_run(*regs, bytecode)
+        _, _, glyphidx2 = ttsl_run(*regs, reg_settings.ssa_json())
         assert glyphidx2 == 200
 
-    def test_tt_FrontFacing_bool_register_minimal_branch_bytecode(self):
-        """Branch on ``tt_FrontFacing`` without TTSL ``if`` codegen (phi lowering gap).
-
-        Uses the compiler only to resolve the allocated bool register for
-        ``tt_FrontFacing``, then hand-written jump bytecode (same shape as
-        ``ttsl::tests::jmp_if_false_routes_to_else_ret_without_phi``).
-        """
-        seed_src = dedent(
+    def test_tt_FrontFacing_bool_register_colors_output(self):
+        shader_code = dedent(
             """
-        def seed(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
-            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        def facing_color(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            if tt_FrontFacing:
+                c: vec4 = vec4(1.0, 0.0, 0.0, 1.0)
+                return (c, c, 0)
+            else:
+                c2: vec4 = vec4(0.0, 1.0, 0.0, 1.0)
+                return (c2, c2, 0)
         """
         )
-        _, reg_settings = all_passes_compilation(seed_src, "seed", {})
-        _, ff_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
-        red_v4_reg = 10
-        green_v4_reg = 11
-        bytecode = bytes(
-            [
-                OP_JMP_IF_FALSE,
-                2,
-                ff_reg,
-                0,
-                0,
-                0,
-                OP_RET,
-                0,
-                red_v4_reg,
-                red_v4_reg,
-                0,
-                0,
-                OP_RET,
-                0,
-                green_v4_reg,
-                green_v4_reg,
-                0,
-                0,
-            ]
+        _, reg_settings = all_passes_compilation(shader_code, "facing_color", {})
+        reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, True)
+        front, _back, _g = ttsl_run(
+            *reg_settings.get_register_list(), reg_settings.ssa_json()
         )
-        regs = [{}, {}, {}, {}, {}, {}]
-        regs[5][red_v4_reg] = glm.vec4(1.0, 0.0, 0.0, 1.0)
-        regs[5][green_v4_reg] = glm.vec4(0.0, 1.0, 0.0, 1.0)
-        regs[0][ff_reg] = True
-        front, _back, _g = ttsl_run(*regs, bytecode)
         assert front.x > 0.99 and front.y < 0.01
-        regs[0][ff_reg] = False
-        front, _back, _g = ttsl_run(*regs, bytecode)
+        reg_settings.set_variable(PIXELVAR_TT_FRONT_FACING, False)
+        front, _back, _g = ttsl_run(
+            *reg_settings.get_register_list(), reg_settings.ssa_json()
+        )
         assert front.x < 0.01 and front.y > 0.99

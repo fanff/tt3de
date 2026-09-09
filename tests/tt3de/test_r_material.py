@@ -30,7 +30,6 @@ from tt3de.ttsl.compiler import (
     all_passes_compilation,
 )
 from tt3de.ttsl.ttsl_assembly import IRType
-from tt3de.ttsl.ttisa.ttisa_opcodes import OP_JMP_IF_FALSE, OP_RET
 
 from tt3de.asset_fastloader import fast_load
 from tt3de.richtexture import ImageTexture
@@ -89,6 +88,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.line_coord_f32_reg)
         self.assertIsNone(mat.point_coord_v2_reg)
         self.assertEqual(mat.default_glyph, 219)
+        self.assertIsNone(mat.ssa_json)
 
     def test_optional_time_and_glyph_none(self):
         mat = materials.ShaderPy(b"\xaa\xbb", time_f32_reg=None, default_glyph=None)
@@ -100,6 +100,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertIsNone(mat.near_f32_reg)
         self.assertIsNone(mat.far_f32_reg)
         self.assertIsNone(mat.front_facing_bool_reg)
+        self.assertIsNone(mat.ssa_json)
 
     def test_register_seed_roundtrip(self):
         seed = [{}, {1: 0.5}, {}, {}, {}, {}]
@@ -120,6 +121,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         mat.line_coord_f32_reg = 7
         mat.point_coord_v2_reg = 8
         mat.default_glyph = 64
+        mat.ssa_json = '{"version": 1}'
         self.assertEqual(mat.bytecode, b"\x01\x02")
         self.assertEqual(mat.time_f32_reg, 5)
         self.assertEqual(mat.delta_time_f32_reg, 9)
@@ -132,6 +134,7 @@ class Test_ShaderPyAccessors(unittest.TestCase):
         self.assertEqual(mat.line_coord_f32_reg, 7)
         self.assertEqual(mat.point_coord_v2_reg, 8)
         self.assertEqual(mat.default_glyph, 64)
+        self.assertEqual(mat.ssa_json, '{"version": 1}')
 
         mat.time_f32_reg = None
         mat.delta_time_f32_reg = None
@@ -201,7 +204,10 @@ class Test_ShaderPySetShaderTimeCompiled(unittest.TestCase):
 
         mb = MaterialBufferPy()
         shader_mat = materials.ShaderPy(
-            bytecode, time_f32_reg=time_reg, default_glyph=None
+            bytecode,
+            time_f32_reg=time_reg,
+            default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -267,7 +273,10 @@ class Test_ShaderPySetShaderDeltaTimeCompiled(unittest.TestCase):
 
         mb = MaterialBufferPy()
         shader_mat = materials.ShaderPy(
-            bytecode, delta_time_f32_reg=dt_reg, default_glyph=None
+            bytecode,
+            delta_time_f32_reg=dt_reg,
+            default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -331,7 +340,10 @@ class Test_ShaderPySetShaderFrameCompiled(unittest.TestCase):
 
         mb = MaterialBufferPy()
         shader_mat = materials.ShaderPy(
-            bytecode, frame_i32_reg=frame_reg, default_glyph=None
+            bytecode,
+            frame_i32_reg=frame_reg,
+            default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -398,6 +410,7 @@ class Test_ShaderPySetShaderResolutionCompiled(unittest.TestCase):
             resolution_v2_reg=res_reg,
             default_glyph=None,
             register_seed=reg_settings.get_register_list(),
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -468,6 +481,7 @@ class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
             far_f32_reg=far_reg,
             default_glyph=None,
             register_seed=reg_settings.get_register_list(),
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -498,19 +512,17 @@ class Test_ShaderPySetShaderNearFarCompiled(unittest.TestCase):
 
 
 class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
-    """
-    ``ShaderPy.front_facing_bool_reg`` matches ``PixInfo.front_facing`` from
-    ``set_depth_content``.
+    """End-to-end: ``tt_FrontFacing`` from ``set_depth_content`` colors shader output."""
 
-    Uses hand-written branch bytecode (same minimal shape as ``test_runttsl`` and the Rust
-    ``jmp_if_false_routes_to_else_ret_without_phi`` test) because compiled TTSL ``if`` /
-    phi lowering for ``tt_FrontFacing`` is tracked separately.
-    """
-
-    _SEED_SRC = dedent(
+    _SRC = dedent(
         """
-        def seed_ff(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
-            return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        def facing_color(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+            if tt_FrontFacing:
+                c: vec4 = vec4(1.0, 0.0, 0.0, 1.0)
+                return (c, c, 0)
+            else:
+                c2: vec4 = vec4(0.0, 1.0, 0.0, 1.0)
+                return (c2, c2, 0)
         """
     )
 
@@ -540,42 +552,16 @@ class Test_ShaderPyFrontFacingMaterialBridge(unittest.TestCase):
         return draw.get_canvas_cell(0, 0)
 
     def test_front_facing_bool_register_colors_material_output(self):
-        _, reg_settings = all_passes_compilation(self._SEED_SRC, "seed_ff", {})
+        bytecode, reg_settings = all_passes_compilation(self._SRC, "facing_color", {})
         _, ff_reg = reg_settings.var_name_to_registers[PIXELVAR_TT_FRONT_FACING]
-        red_v4_reg = 10
-        green_v4_reg = 11
-        reg_settings.set_register(IRType.V4, red_v4_reg, glm.vec4(1.0, 0.0, 0.0, 1.0))
-        reg_settings.set_register(IRType.V4, green_v4_reg, glm.vec4(0.0, 1.0, 0.0, 1.0))
-        seed_regs = reg_settings.get_register_list()
 
-        bytecode = bytes(
-            [
-                OP_JMP_IF_FALSE,
-                2,
-                ff_reg,
-                0,
-                0,
-                0,
-                OP_RET,
-                0,
-                red_v4_reg,
-                red_v4_reg,
-                0,
-                0,
-                OP_RET,
-                0,
-                green_v4_reg,
-                green_v4_reg,
-                0,
-                0,
-            ]
-        )
         mb = MaterialBufferPy()
         shader_mat = materials.ShaderPy(
             bytecode,
             front_facing_bool_reg=ff_reg,
             default_glyph=None,
-            register_seed=seed_regs,
+            register_seed=reg_settings.get_register_list(),
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
         self.assertEqual(mat_idx, 0)
@@ -640,7 +626,9 @@ class Test_ShaderPyPrimitiveIDFlow(unittest.TestCase):
         self.assertEqual(pid_reg, 0)
 
         mb = MaterialBufferPy()
-        shader_mat = materials.ShaderPy(bytecode, default_glyph=None)
+        shader_mat = materials.ShaderPy(
+            bytecode, default_glyph=None, ssa_json=reg_settings.ssa_json()
+        )
         mat_idx = mb.add_shader(shader_mat)
 
         for primitive_id in (0, 5, 99, 200):
@@ -691,7 +679,9 @@ class Test_ShaderPyViewPosMaterialBridge(unittest.TestCase):
             view_pos=vp,
         )
         mb = MaterialBufferPy()
-        shader_mat = materials.ShaderPy(bytecode, default_glyph=None)
+        shader_mat = materials.ShaderPy(
+            bytecode, default_glyph=None, ssa_json=reg_settings.ssa_json()
+        )
         mat_idx = mb.add_shader(shader_mat)
         apply_material_py(
             mb,
@@ -744,7 +734,9 @@ class Test_ShaderPyNormalMaterialBridge(unittest.TestCase):
             0,
         )
         mb = MaterialBufferPy()
-        shader_mat = materials.ShaderPy(bytecode, default_glyph=None)
+        shader_mat = materials.ShaderPy(
+            bytecode, default_glyph=None, ssa_json=reg_settings.ssa_json()
+        )
         mat_idx = mb.add_shader(shader_mat)
         apply_material_py(
             mb,
@@ -804,6 +796,7 @@ class Test_ShaderPyFragDepthMaterialBridge(unittest.TestCase):
             bytecode,
             frag_depth_f32_reg=fd_reg,
             default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
 
@@ -859,6 +852,7 @@ class Test_ShaderPyLineCoordMaterialBridge(unittest.TestCase):
             bytecode,
             line_coord_f32_reg=lc_reg,
             default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
 
@@ -914,6 +908,7 @@ class Test_ShaderPyPointCoordMaterialBridge(unittest.TestCase):
             bytecode,
             point_coord_v2_reg=pc_reg,
             default_glyph=None,
+            ssa_json=reg_settings.ssa_json(),
         )
         mat_idx = mb.add_shader(shader_mat)
 
@@ -931,5 +926,11 @@ class Test_ShaderPySeedValidation(unittest.TestCase):
             bytes([83, 0, 0, 0, 0, 0]),
             register_seed=[{}, {}, {}],
         )
+        with self.assertRaises(ValueError):
+            mb.add_shader(bad)
+
+    def test_add_shader_rejects_missing_ssa_json(self):
+        mb = MaterialBufferPy()
+        bad = materials.ShaderPy(bytes([83, 0, 0, 0, 0, 0]))
         with self.assertRaises(ValueError):
             mb.add_shader(bad)

@@ -107,6 +107,7 @@ class TTSLTextureCubeModesDemo(TT3DViewStandAlone):
                         simple_bc,
                         default_glyph=full_block,
                         register_seed=regs.get_register_list(),
+                        ssa_json=regs.ssa_json(),
                     )
                 )
             )
@@ -119,6 +120,7 @@ class TTSLTextureCubeModesDemo(TT3DViewStandAlone):
                         double_bc,
                         default_glyph=half_block,
                         register_seed=regs.get_register_list(),
+                        ssa_json=regs.ssa_json(),
                     )
                 )
             )

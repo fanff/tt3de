@@ -91,6 +91,7 @@ class ConcentricWavesDemo(TT3DViewStandAlone):
             time_f32_reg=self._time_reg,
             default_glyph=find_glyph_indices_py("."),
             register_seed=self._reg_settings.get_register_list(),
+            ssa_json=self._reg_settings.ssa_json(),
         )
         self._shader_mat_id = self.rc.material_buffer.add_shader(shader_mat)
 

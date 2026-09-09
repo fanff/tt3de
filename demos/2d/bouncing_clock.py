@@ -115,6 +115,7 @@ class BouncingClock(TT3DViewStandAlone):
                     self._bytecode,
                     default_glyph=half_upper_block,
                     register_seed=shader_regs.get_register_list(),
+                    ssa_json=shader_regs.ssa_json(),
                 )
             )
             self.shader_mat_by_sprite[sprite] = mat_idx

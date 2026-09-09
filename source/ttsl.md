@@ -12,7 +12,7 @@ Built-in variables
 
 **Engine uniforms** — `tt_Time`, `tt_DeltaTime`, `tt_Frame`, `tt_Resolution`, `tt_Near`, and `tt_Far` are **host uniforms**: for each name the shader references, pass that key in `globals_dict` with the type shown below so compilation allocates the matching register and `ShaderPy` / `MaterialBufferPy` setters stay aligned.
 
-**User-defined uniforms** — Any other global you read in TTSL (for example ``u_color`` as ``glm.vec3``, ``u_uv_bias`` as ``glm.vec2``) must also appear in ``globals_dict`` with the correct **type object**. After ``all_passes_compilation``, call ``RegisterSettings.set_variable(name, value)`` and pass ``register_seed=reg_settings.get_register_list()`` into ``ShaderPy`` so bytecode and the material snapshot use the same register indices. See [TTSL Compiler](ttsl_compiler.md) for a full example and for how this differs from per-frame engine uniform setters.
+**User-defined uniforms** — Any other global you read in TTSL (for example ``u_color`` as ``glm.vec3``, ``u_uv_bias`` as ``glm.vec2``) must also appear in ``globals_dict`` with the correct **type object**. After ``all_passes_compilation``, call ``RegisterSettings.set_variable(name, value)`` and pass ``register_seed=reg_settings.get_register_list()`` plus ``ssa_json=reg_settings.ssa_json()`` into ``ShaderPy`` so the material snapshot and Cranelift use the same register indices. See [TTSL Compiler](ttsl_compiler.md) for a full example and for how this differs from per-frame engine uniform setters.
 
 **Availability** for built-ins is **Shipped** (compiler + material bridge), **Planned** (roadmap intent), or **Missing** (specified below for depth workflows but **not** implemented in the compiler or Rust renderer yet—no registers or setters today).
 
@@ -117,22 +117,20 @@ This reference is auto-generated from the opcode definitions in
 Low-Level Runtime/Material Bridge
 ---------------------------------
 
-This section documents how TTSL VM output is consumed by the Rust renderer.
+This section documents how compiled TTSL output is consumed by the Rust renderer.
 
-### VM return contract (`OP_RET`)
+### Shader return contract
 
-At bytecode level, `OP_RET` returns **three values**:
+Compiled shaders (Cranelift) return **three values**:
 
 - `front: vec4`
 - `back: vec4`
 - `glyph: i32`
 
-The generated Rust VM implementation
-(`crates/tt3de-core/src/ttsl/opcodes.rs`) reads these from register files as
-`v4[a]`, `v4[b]`, and `i32[c]`, and `ttsl_run(...)` exposes them to Python as:
+`ttsl_run(...)` exposes them to Python as:
 
 ```python
-front_vec4, back_vec4, glyph_idx = ttsl_run(*regs, bytecode)
+front_vec4, back_vec4, glyph_idx = ttsl_run(*regs, reg_settings.ssa_json())
 ```
 
 In practice today, most demos use `front_vec4` as the generated color and then
@@ -147,9 +145,10 @@ Material application happens after rasterization:
 3. material writes `CanvasCell` output (`front_color`, `back_color`, `glyph`)
 
 The final terminal cell is produced by material logic. In particular, when the
-material mode is `Shader`, the material owns compiled TTSL bytecode and executes
-it during material application so shader output directly drives final cell
-channels (`front_color`, `back_color`, `glyph`).
+material mode is `Shader`, the material compiles the post-SSA TTSL IR with
+Cranelift and runs that native function during material application so shader
+output directly drives final cell channels (`front_color`, `back_color`,
+`glyph`).
 
 ### Transparency in TTSL shaders
 
