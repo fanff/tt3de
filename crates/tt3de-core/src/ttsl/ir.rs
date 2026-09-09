@@ -1,8 +1,8 @@
 //! Post-SSA TTSL module dumped by the Python compiler for Cranelift.
 //!
-//! This is the CFG after `PassSSARenamer` and before phi lowering / VM
-//! register allocation. Seeded shader inputs still name a VM register so the
-//! host can write the same slots the interpreter uses.
+//! This is the CFG after `PassSSARenamer` and before phi lowering / bytecode
+//! dumps. Seeded shader inputs still name a register so the host can write the
+//! same slots `ShaderMaterial` uses.
 
 use std::collections::HashMap;
 use std::fmt;

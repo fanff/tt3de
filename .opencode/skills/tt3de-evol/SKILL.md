@@ -8,6 +8,7 @@ description: >-
   functionality, technical design, usability, testability, complexity, and
   a priori performance. Use when the user mentions evolution documents,
   `.evolution/`, roadmaps, design proposals, or `/create-skill tt3de-evol`.
+disable-model-invocation: true
 ---
 
 # tt3de evolution documents
@@ -62,7 +63,7 @@ When the **user updates** the evolution—directly in the file, via free-text re
 
 - **Re-read** the current evolution markdown path before emitting the next revision; do not assume an older in-chat snapshot is still accurate.
 - **Propagate** the change across dependent sections: Summary, Goals, Non-goals, User-visible functionality, Technical approach (baseline vs phases), Complexity and scope, Testability, Performance, Risks, **Decision record**, and frontmatter (`related`, `supersedes`, dates if policy requires).
-- **Resolve contradictions**: if one section claims "docs-only" and another still describes shipped API behavior, align wording or mark deferred work explicitly.
+- **Resolve contradictions**: if one section claims “docs-only” and another still describes shipped API behavior, align wording or mark deferred work explicitly.
 - **Phase alignment**: sequencing bullets (e.g. doc → metadata → optional pass) should match Complexity / Testability expectations for each slice.
 
 Treat mid-flight edits as authoritative; reconcile the whole doc rather than patching only the paragraph that changed.
@@ -71,7 +72,7 @@ Treat mid-flight edits as authoritative; reconcile the whole doc rather than pat
 
 **Cadence**: Ask **one or two** focused questions per message—never flood the user.
 
-**Suggestions**: For each question, give a **concise suggested answer** inferred from `source/`, any referenced evolution, and the user's stated intent.
+**Suggestions**: For each question, give a **concise suggested answer** inferred from `source/`, any referenced evolution, and the user’s stated intent.
 
 **Replies** (same convention as [`tt3de-high`](../tt3de-high/SKILL.md)):
 
@@ -82,11 +83,11 @@ Treat mid-flight edits as authoritative; reconcile the whole doc rather than pat
 
 When the **AskQuestion** tool is available, present the same choices as numbered options so clicks align with `n:y`.
 
-**Affirmation shorthand**: If the user writes **`1:y`** (or **`2:y`**), treat it as accepting that numbered suggestion for the current message's questions.
+**Affirmation shorthand**: If the user writes **`1:y`** (or **`2:y`**), treat it as accepting that numbered suggestion for the current message’s questions.
 
 ## Challenge dimensions (cover across the session)
 
-Ensure the evolution ends up stress-tested—not only "what we build," but **how we know it worked** and **what it costs**. Rotate through these lenses until each is adequately addressed for this proposal:
+Ensure the evolution ends up stress-tested—not only “what we build,” but **how we know it worked** and **what it costs**. Rotate through these lenses until each is adequately addressed for this proposal:
 
 | Lens | Challenge |
 |------|-----------|
@@ -95,7 +96,7 @@ Ensure the evolution ends up stress-tested—not only "what we build," but **how
 | **Usability** | API shape, demos, learning curve, error messages |
 | **Testability** | Unit/integration/e2e coverage, regressions, TTSL opcode tests if relevant |
 | **Complexity** | Scope sizing, sequencing, risky touchpoints, rollback story |
-| **A priori performance** | Hot paths (per-frame, rasterization, shader VM, pyo3), allocation/branching expectations, how to measure after implementation |
+| **A priori performance** | Hot paths (per-frame, rasterization, Cranelift per-cell shader, pyo3), allocation/branching expectations, how to measure after implementation |
 
 For performance, stay honest: **hypotheses and guardrails**, not fake benchmarks.
 
@@ -121,9 +122,9 @@ Evolution markdown under `.evolution/` must be committed **on its own branch**, 
 |-----------|--------|
 | Current branch is **`master`** (or repo default, e.g. `main`) | `git pull` on that branch (when safe), then `git checkout -b <branch>` for this evolution, then add + commit. |
 | Current branch is **unrelated** (not `master` / default, and not the branch for this evolution file) | `git checkout master` (or default), `git pull`, then `git checkout -b <branch>`, then add + commit. |
-| Already on **this evolution's branch** | Add + commit only (no new branch). |
+| Already on **this evolution’s branch** | Add + commit only (no new branch). |
 
-Use the repo's default integration branch name if it is not `master`. If checkout/pull fails (dirty tree, conflicts), stop and coordinate with the user rather than forcing.
+Use the repo’s default integration branch name if it is not `master`. If checkout/pull fails (dirty tree, conflicts), stop and coordinate with the user rather than forcing.
 
 **Anti-pattern**: committing evolution-only work directly on `master` / default while it should live on a PR branch.
 

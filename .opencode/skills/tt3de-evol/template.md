@@ -23,8 +23,8 @@ One tight paragraph: what changes, for whom, and why now. If the outcome is most
 - **Current behavior** — How the pipeline works today (buffers, ordering, hot path). Point to code or `source/` pages so readers can verify.
 - Problem or limitation today (symptoms, constraints).
 - **Reference comparison** *(when useful)* — Contrast with an industry-default or user expectation (e.g. single depth sample + global blend vs per-cell stack). One short paragraph avoids GL/generic engine rambling.
-- How this fits tt3de's scope (CPU rasterization, Textual integration, small scenes—see `source/index.rst`).
-- **Reasoning** — Why incremental change or "keep baseline + optional later path" beats a big-bang rewrite (correctness limits, ASCII final cell, etc.).
+- How this fits tt3de’s scope (CPU rasterization, Textual integration, small scenes—see `source/index.rst`).
+- **Reasoning** — Why incremental change or “keep baseline + optional later path” beats a big-bang rewrite (correctness limits, ASCII final cell, etc.).
 
 ## Goals
 
@@ -45,7 +45,7 @@ Explicit boundaries and deferred work. Call out correctness limits users should 
 Structure this section so implementers see **today vs tomorrow**:
 
 - **Baseline (current architecture)** — Submission order, buffer flows, resolve rules—facts, not proposals.
-- **Proposed change** — What actually changes in code or docs for this evolution's shipped slice.
+- **Proposed change** — What actually changes in code or docs for this evolution’s shipped slice.
 - **Future / optional phases** — Heavier or riskier pieces deferred; numbered steps welcome when order matters.
 - **Alternatives considered** — Short reject/defer list with one-line rationale each (cost, wrong for intersections, scope).
 - Affected subsystems (Rust core, Python API, TTSL/shaders, build/docs).
@@ -71,7 +71,7 @@ Structure this section so implementers see **today vs tomorrow**:
 
 ## A priori performance analysis
 
-- Hot paths (per-frame, per-triangle, shader VM, Python boundary).
+- Hot paths (per-frame, per-triangle, Cranelift shader per cell, Python boundary).
 - Expected allocation / branching / cache behavior.
 - **Relative ranking** *(when comparing approaches)* — Ordered list from likely-cheapest to likely-most-expensive for tt3de-scale workloads (hypotheses; validate after implementation).
 - How to validate later (benchmark ideas, profiling hooks, demo stress cases).

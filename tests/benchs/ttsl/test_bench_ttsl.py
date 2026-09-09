@@ -2,12 +2,12 @@
 from tt3de.ttsl.compiler import all_passes_compilation, PIXELVAR_TT_TEXCOORD0
 import pytest
 
-from tt3de.tt3de import ttsl_run
+from tests.tt3de.ttsl.shade import shade
 from pyglm import glm
 
 
 def rversion(regs, ssa_json: str):
-    ttsl_run(*regs, ssa_json)
+    shade(regs, ssa_json)
 
 
 SHADER_CODE = """
@@ -31,7 +31,7 @@ sizes = list(range(len(all_codes)))
 
 
 @pytest.mark.parametrize("shader_codeidx", sizes)
-@pytest.mark.benchmark(group="ttsl_run")
+@pytest.mark.benchmark(group="shader_py")
 def test_simple(benchmark, shader_codeidx):
     # compile the shader first
     bytecode, reg_settings = all_passes_compilation(

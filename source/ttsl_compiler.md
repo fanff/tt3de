@@ -24,7 +24,7 @@ Built-in names follow the OpenGL/GLSL `gl_<CamelCase>` convention as `tt_<CamelC
 
 The shader entry function may still list `tt_FragCoord` (or other builtins above) as parameters; that pins them to explicit parameter slots instead of the default implicit mapping.
 
-**Engine uniforms** — **include in `globals_dict` for each name the shader reads**. If the source references `tt_Time` but `globals_dict` omits `tt_Time`, compilation does not treat it as a declared uniform. When present, the entry maps the name to the host type and ties bytecode to the runtime hooks below:
+**Engine uniforms** — **include in `globals_dict` for each name the shader reads**. If the source references `tt_Time` but `globals_dict` omits `tt_Time`, compilation does not treat it as a declared uniform. When present, the entry maps the name to the host type and ties register allocation to the runtime hooks below:
 
 | Name | `globals_dict` value (type) | Runtime update / register |
 |------|----------------------------|---------------------------|
@@ -35,18 +35,18 @@ The shader entry function may still list `tt_FragCoord` (or other builtins above
 | `tt_Near` | `float` | seeds `0.1`; `set_shader_near`, `near_f32_reg` |
 | `tt_Far` | `float` | seeds `100.0`; `set_shader_far`, `far_f32_reg` |
 
-**User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`). They use the **same register banks** as engine uniforms; the compiler picks concrete indices, and you must **seed** those slots before running bytecode.
+**User uniforms** — any other name referenced from shader code is declared the same way (string key → type in `globals_dict`). They use the **same register banks** as engine uniforms; the compiler picks concrete indices, and you must **seed** those slots before Cranelift runs.
 
 **Wiring user uniforms after `all_passes_compilation`**
 
 1. Put each uniform name and its **type object** in `globals_dict` (for example `{"u_color": glm.vec3, "u_uv_bias": glm.vec2}`).
 2. Call `reg_settings.set_variable("u_color", glm.vec3(0.2, 0.4, 0.6))` (and likewise for every uniform register you care about). Uniforms you never seed read as **numeric zero** / **false** (Rust register banks start cleared).
-3. Pass the snapshot into the renderer: `register_seed=reg_settings.get_register_list()` and `ssa_json=reg_settings.ssa_json()` on `ShaderPy`, or the same six dicts plus `reg_settings.ssa_json()` into `ttsl_run`.
+3. Pass the snapshot into the renderer: `register_seed=reg_settings.get_register_list()` and `ssa_json=reg_settings.ssa_json()` on `ShaderPy`.
 4. Optional **engine** uniforms (`tt_Time`, …) still use `ShaderPy.time_f32_reg` (etc.) and `MaterialBufferPy.set_shader_time` so values can change every frame **without** rebuilding the material. User uniforms have **no** `MaterialBufferPy` setters today: `add_shader` copies the seed banks once, so changing a user uniform means rebuilding `ShaderPy` / re-`add_shader` (or adding a host API later).
 
 ```python
 from pyglm import glm
-from tt3de.tt3de import ttsl_run
+from tt3de.tt3de import find_glyph_indices_py, materials
 from tt3de.ttsl.compiler import all_passes_compilation
 
 SRC = """
@@ -67,10 +67,12 @@ bytecode, reg_settings = all_passes_compilation(
 reg_settings.set_variable("u_color", glm.vec3(0.1, 0.2, 0.3))
 reg_settings.set_variable("u_uv_bias", glm.vec2(0.25, 0.5))
 
-front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
-assert glyph == 0
-
-# Full renderer: ShaderPy(..., register_seed=reg_settings.get_register_list(), ssa_json=reg_settings.ssa_json()).
+shader = materials.ShaderPy(
+    bytecode,
+    default_glyph=find_glyph_indices_py("█"),
+    register_seed=reg_settings.get_register_list(),
+    ssa_json=reg_settings.ssa_json(),
+)
 ```
 
 **Minimal compile example** (per-cell builtins need no `globals_dict` entry; only `tt_Time` is declared because the shader reads it):
@@ -95,7 +97,7 @@ bytecode, reg_settings = all_passes_compilation(
         # "u_gain": float,             # user uniform: same pattern (name → type)
     },
 )
-# reg_settings holds register ids + defaults; pass into ShaderPy / ttsl_run as elsewhere in the docs
+# reg_settings holds register ids + defaults; pass into ShaderPy as elsewhere in the docs
 ```
 
 Per-pixel depth: `tt_FragDepth` is always predeclared as `float`. After compilation, set `ShaderPy.frag_depth_f32_reg` from `RegisterSettings` so `ShaderMaterial` writes the active depth layer’s stored depth into that register each pixel (see [TTSL](ttsl.md) builtins table).
@@ -105,7 +107,7 @@ Line interpolation: `tt_LineCoord` is always predeclared as `float` (compiler se
 Point sprites: `tt_PointCoord` is always predeclared as `vec2` (compiler seeds `(0, 0)`). Set `ShaderPy.point_coord_v2_reg` from `RegisterSettings` so `ShaderMaterial` writes `PixInfo.point_coord` each pixel (point rasterization sets `(0.5, 0.5)` for the single-cell path; see `DrawingBufferPy.set_depth_content(..., point_coord=...)`).
 
 Shader functions must **return a 3-tuple** `(front, back, glyph)` with types `(vec4, vec4, int)`:
-front/back are RGBA vectors (or any per-channel `vec4` payload); `glyph` is a glyph index carried as a 32-bit integer in the VM (non-negative by convention). If you annotate the function’s return type, use `tuple[vec4, vec4, int]` or `typing.Tuple[vec4, vec4, int]`.
+front/back are RGBA vectors (or any per-channel `vec4` payload); `glyph` is a glyph index carried as a 32-bit integer (non-negative by convention). If you annotate the function’s return type, use `tuple[vec4, vec4, int]` or `typing.Tuple[vec4, vec4, int]`.
 
 ```python
 def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
@@ -120,7 +122,7 @@ def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
 
 Compile it with the same `globals_dict={"tt_Time": float}` shape as the minimal example (no alternate `"time"` key).
 
-**Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered in the SSA IR. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the compiled function; standalone `ttsl_run` from Python has no texture binding (samples behave as opaque black per spec). `tt_texelFetch` is not implemented yet.
+**Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered in the SSA IR. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the compiled function. `tt_texelFetch` is not implemented yet.
 
 Note: `glm.mix` is not yet typable in `type_of(...)`, so prefer arithmetic or other supported ops until mix is wired end-to-end.
 
@@ -134,7 +136,7 @@ This function runs the whole pipeline and returns:
 
 - compiled bytecode as `bytes` (compiler-explorer / ISA dump)
 - `RegisterSettings` preloaded with variable/register mapping, constants, and
-  the SSA snapshot (`ssa_json()`) used by `ShaderPy` / `ttsl_run` / Cranelift
+  the SSA snapshot (`ssa_json()`) used by `ShaderPy` / Cranelift
 
 ## High-level pipeline
 
@@ -146,7 +148,7 @@ The compiler transforms Python-like TTSL source in several stages:
 4. Convert named variables to SSA form (`PassSSARenamer`). The SSA CFG is
    snapshotted here (`CompilationStateResult.ssa_module` /
    `RegisterSettings.ssa_json()`) and Cranelift compiles it for
-   `ShaderMaterial` and `ttsl_run`. The bytecode pipeline continues for the
+   `ShaderMaterial`. The bytecode pipeline continues for the
    compiler explorer and opcode dumps:
 5. Lower phi nodes into explicit copies (`PassPhiNodeLowering`)
 6. Allocate typed virtual-machine registers (`RegisterAllocatorPass`)
@@ -204,7 +206,7 @@ The current implementation supports a focused shader-style subset:
 - returns (must be a 3-tuple `(vec4, vec4, int)`; see example above)
 - vector constructors (`vec2`, `vec3`, `vec4`, including `glm.vec*`)
 - unary `-` on numeric / vector types
-- math calls: bare `sin`, `abs`; `glm.sin` (VM `SIN_*` / `ABS_*`). Bare `cos` / `glm.cos` fail at codegen today (`opcode_for_uniop` only maps `sin` and `abs`), though unary `COS_*` opcodes exist in the VM.
+- math calls: bare `sin`, `abs`; `glm.sin` (SSA `sin` / `abs`). Bare `cos` / `glm.cos` fail at IR emit today (`opcode_for_uniop` only maps `sin`, `abs`, `floor`, `ceil`, `fract`, `normalize`). Cranelift can lower an SSA `cos` op if one is emitted.
 - vector component reads (`.x`, `.y`, `.z`, `.w`)
 
 `compile_glm_tool_call` can lower `glm.mix` to `MIX_*`, but `glm.mix(...)` does not type-check yet because `type_of` does not handle the `mix` attribute path—use other expressions until that is fixed.
@@ -228,7 +230,7 @@ This gives a cleaner representation for optimization/lowering and for determinis
 `PassPhiNodeLowering` removes SSA phi instructions by inserting edge copies.
 It handles critical edges by splitting them when needed.
 
-`RegisterAllocatorPass` then maps each typed temp to the VM’s typed register banks
+`RegisterAllocatorPass` then maps each typed temp to the typed register banks
 (`[T; 256]` per kind in Rust; the allocator walks indices `1..255` and reserves slots that
 must not alias material-bridge inputs such as default UV extrusion `v3` indices).
 
@@ -236,7 +238,7 @@ Constants are also assigned registers, because final opcodes carry register ids 
 
 ## Back-end: bytecode emission
 
-`PassToByteCode` converts each typed IR instruction to a concrete VM opcode form:
+`PassToByteCode` converts each typed IR instruction to a concrete opcode form (explorer dump only):
 
 - picks an opcode form from `ttisa.low_level_def.generate_all_forms()`
 - rewrites operands from temps to register ids
@@ -259,8 +261,8 @@ To add a new language/operator feature:
 
 1. Add type inference support in `type_of(...)`
 2. Add IR emission in `compile_expr(...)` or `compile_stmt(...)`
-3. Ensure opcode mapping exists (or add one)
-4. Ensure bytecode form exists in low-level op definitions
-5. Add tests in `tests/tt3de/ttsl/test_compiler.py`
+3. Ensure SSA op mapping exists (or add one) and lower it in `crates/tt3de-core/src/ttsl/jit/ir_lower.rs` (and `libcalls.rs` if needed)
+4. Ensure a bytecode form exists in low-level op definitions if the explorer dump should show it
+5. Add tests in `tests/tt3de/ttsl/test_compiler.py` and a Cranelift path (`test_e2e.py` / `test_shader_run.py`)
 
-This order keeps front-end typing, IR generation, and back-end encoding consistent.
+This order keeps front-end typing, IR generation, Cranelift lowering, and the dump encoder consistent.

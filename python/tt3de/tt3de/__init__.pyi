@@ -865,14 +865,3 @@ def build_primitives_py(
     """
     ...
 
-def ttsl_run(*args) -> Tuple[glm.vec4, glm.vec4, int]:
-    """
-    Runs a compiled TTSL shader (Cranelift) with the provided register banks.
-
-    Args:
-        *args: Six register dicts (bool, f32, i32, v2, v3, v4) then SSA JSON.
-
-    Returns:
-        Tuple[glm.vec4, glm.vec4, int]: Front color, back color, and glyph index.
-    """
-    ...

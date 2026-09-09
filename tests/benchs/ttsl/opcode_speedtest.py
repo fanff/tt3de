@@ -6,12 +6,12 @@ from tt3de.ttsl.compiler import (
     RegisterSettings,
     passthrough_ssa_json,
 )
-from tt3de.tt3de import ttsl_run
+from tests.tt3de.ttsl.shade import shade
 from pyglm import glm
 
 
 def rversion(regs, ssa_json: str):
-    ttsl_run(*regs, ssa_json)
+    shade(regs, ssa_json)
 
 
 SHADER_CODE = """

@@ -71,7 +71,7 @@ Structure this section so implementers see **today vs tomorrow**:
 
 ## A priori performance analysis
 
-- Hot paths (per-frame, per-triangle, shader VM, Python boundary).
+- Hot paths (per-frame, per-triangle, Cranelift shader per cell, Python boundary).
 - Expected allocation / branching / cache behavior.
 - **Relative ranking** *(when comparing approaches)* — Ordered list from likely-cheapest to likely-most-expensive for tt3de-scale workloads (hypotheses; validate after implementation).
 - How to validate later (benchmark ideas, profiling hooks, demo stress cases).

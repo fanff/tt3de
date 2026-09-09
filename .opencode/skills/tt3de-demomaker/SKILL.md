@@ -18,11 +18,11 @@ Orchestrate **new or edited demos** in `demos/`: run discovery, then implement *
 
 You **own:** Textual app shell, `TT3DViewStandAlone` lifecycle, scene graph, camera, texture registration, material slot 0 sentinel, `all_passes_compilation` / `ShaderPy` / `set_shader_time` **wiring**, module docstrings, and demo checklists.
 
-You **do not own:** contents of `SHADER_SRC` (the TTSL function bodies), TTSL language fixes, compiler opcodes, or `source/ttsl.md` semantics. For any of that, **delegate** to [ttsl-implementation](../ttsl-implementation/SKILL.md) (invoke that skill or ask the user to run it)—do not draft or “quick fix” TTSL yourself.
+You **do not own:** contents of `SHADER_SRC` (the TTSL function bodies), TTSL language fixes, compiler opcodes, Cranelift lowering, or `source/ttsl.md` semantics. For any of that, **delegate** to [ttsl-implementation](../ttsl-implementation/SKILL.md) (invoke that skill or ask the user to run it)—do not draft or “quick fix” TTSL yourself.
 
-**Technical** (layout, ShaderPy integration patterns, checklist): [.cursor/rules/demos-standards.mdc](../../rules/demos-standards.mdc) (globs `demos/**/*.py`). **General Python**: [.cursor/rules/python-standards.mdc](../../rules/python-standards.mdc).
+**Technical** (layout, ShaderPy integration patterns, checklist): [.cursor/rules/demos-standards.mdc](../../../.cursor/rules/demos-standards.mdc) (globs `demos/**/*.py`). **General Python**: [.cursor/rules/python-standards.mdc](../../../.cursor/rules/python-standards.mdc).
 
-**Textual-heavy demos** (especially `demos/ttsl.py`): [.cursor/rules/textual-ui-helper.mdc](../../rules/textual-ui-helper.mdc).
+**Textual-heavy demos** (especially `demos/ttsl.py`): [.cursor/rules/textual-ui-helper.mdc](../../../.cursor/rules/textual-ui-helper.mdc).
 
 Read `source/ttsl.md` / `source/ttsl_compiler.md` only when wiring uniforms or choosing static vs shader materials—not to invent shader algorithms.
 
@@ -32,7 +32,7 @@ Read `source/ttsl.md` / `source/ttsl_compiler.md` only when wiring uniforms or c
 |---------|----------------|
 | Decide *whether* the demo uses `ShaderPy` vs static materials | Write or rewrite `SHADER_SRC` lines (entry function, builtins, math, transparency) |
 | Pass `SHADER_SRC` into `all_passes_compilation` after the TTSL skill supplies it | Patch compile errors by editing TTSL “just enough to compile” |
-| Wire `globals_dict`, `register_seed`, `time_f32_reg`, `set_shader_time` | Add opcodes, edit `compiler.py`, or change `low_level_def.py` |
+| Wire `globals_dict`, `register_seed`, `ssa_json`, `time_f32_reg`, `set_shader_time` | Add opcodes, edit `compiler.py`, `low_level_def.py`, or `ir_lower.rs` |
 | Copy an **existing** demo’s `SHADER_SRC` unchanged when mirroring that demo | Invent new TTSL beyond what **ttsl-implementation** produced |
 
 **Workflow when the demo needs custom shading:**
@@ -71,7 +71,7 @@ Use a subset that fits the request: primary showcase, 2D vs 3D, static vs animat
 
 ## After discovery
 
-Implement against [.cursor/rules/demos-standards.mdc](../../rules/demos-standards.mdc) and [.cursor/rules/python-standards.mdc](../../rules/python-standards.mdc). Use the **Checklist** at the bottom of `demos-standards.mdc`, and confirm discovery is settled (or explicitly waived with `1:y`-style confirmation to proceed).
+Implement against [.cursor/rules/demos-standards.mdc](../../../.cursor/rules/demos-standards.mdc) and [.cursor/rules/python-standards.mdc](../../../.cursor/rules/python-standards.mdc). Use the **Checklist** at the bottom of `demos-standards.mdc`, and confirm discovery is settled (or explicitly waived with `1:y`-style confirmation to proceed).
 
 If `SHADER_SRC` is still missing, complete all non-TTSL wiring and block on **ttsl-implementation** rather than writing placeholder shader logic beyond `pass`-level stubs.
 
@@ -83,5 +83,5 @@ If you need validation, ask the user to run the demo and report results.
 - [ ] Discovery settled; shader intent documented if using `ShaderPy`
 - [ ] `SHADER_SRC` authored by **ttsl-implementation** (or copied unchanged from an existing demo being mirrored)
 - [ ] No TTSL edits made in this skill for compile fixes or effect tweaks
-- [ ] Slot-0 static material, `ShaderPy`, `globals_dict` / `set_shader_time` wired per demos-standards
+- [ ] Slot-0 static material, `ShaderPy` with `ssa_json` / `register_seed`, `globals_dict` / `set_shader_time` wired per demos-standards
 - [ ] Module docstring with **Run:** line; user asked to run TUI if validation needed

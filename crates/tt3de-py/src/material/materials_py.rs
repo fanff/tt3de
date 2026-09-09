@@ -9,6 +9,7 @@ use pyo3::{
 
 use crate::texturebuffer::toglyph_methods_py::ToGlyphMethodPy;
 use crate::ttsl::ttslpy::convert_and_fill_register;
+use crate::utils::vec4_to_pyglm;
 use tt3de_core::drawbuffer::blend::{BlendMode, GlyphPolicy};
 use tt3de_core::material::materials::Material;
 use tt3de_core::material::shader_material::{ShaderMaterial, ShaderSeedRegisters};
@@ -569,6 +570,14 @@ impl ShaderPy {
     fn set_glyph_policy(&mut self, value: &str) -> PyResult<()> {
         self.glyph_policy = parse_glyph_policy(value)?;
         Ok(())
+    }
+
+    /// Run the compiled shader against the current seed registers (no texture env).
+    fn run_seeded(&self, py: Python<'_>) -> PyResult<(Py<PyAny>, Py<PyAny>, i32)> {
+        let mat = self.build_native(py)?;
+        let mut regs = mat.seed_regs.clone_registers();
+        let (front, back, glyph) = mat.compiled.run(&mut regs, None);
+        Ok((vec4_to_pyglm(py, front), vec4_to_pyglm(py, back), glyph))
     }
 }
 

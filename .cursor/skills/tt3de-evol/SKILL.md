@@ -96,7 +96,7 @@ Ensure the evolution ends up stress-tested—not only “what we build,” but *
 | **Usability** | API shape, demos, learning curve, error messages |
 | **Testability** | Unit/integration/e2e coverage, regressions, TTSL opcode tests if relevant |
 | **Complexity** | Scope sizing, sequencing, risky touchpoints, rollback story |
-| **A priori performance** | Hot paths (per-frame, rasterization, shader VM, pyo3), allocation/branching expectations, how to measure after implementation |
+| **A priori performance** | Hot paths (per-frame, rasterization, Cranelift per-cell shader, pyo3), allocation/branching expectations, how to measure after implementation |
 
 For performance, stay honest: **hypotheses and guardrails**, not fake benchmarks.
 

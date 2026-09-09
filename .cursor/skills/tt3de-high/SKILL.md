@@ -21,7 +21,7 @@ High-level Python-only changes under `python/tt3de/`, especially:
 - `asset_load.py`, `obj_loader.py`, and related Python loaders for OBJ, BMP, PNG, palette, texture, and sprite-sheet workflows.
 - Public Python interfaces intended for demos, examples, and application users.
 
-**Boundary**: do not edit Rust (`crates/**/src/**.rs`) while using this skill. If the requested feature needs a native primitive, binding, hot-path optimization, or pyo3 exposure, stop and switch to [`tt3de-low`](../tt3de-low/SKILL.md) for that part.
+**Boundary**: do not edit Rust (`crates/**/src/**.rs`) while using this skill. If the requested feature needs a native primitive, binding, hot-path optimization, or pyo3 exposure, stop and switch to [`tt3de-low`](../tt3de-low/SKILL.md) for that part. Native engine code lives in `tt3de-core`.
 
 ## Contract documents
 

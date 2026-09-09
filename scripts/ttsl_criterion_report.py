@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Summarize TTSL Criterion results as a table and gnuplot comparison charts.
+"""Summarize TTSL Criterion results as a table and a gnuplot chart.
 
 Reads ``target/criterion/ttsl_exec_*/**/new/estimates.json`` from a prior
 ``cargo bench -p tt3de-core --bench all -- ttsl`` run.
@@ -8,10 +8,6 @@ Typical workflow (repository root)::
 
     cargo bench -p tt3de-core --bench all -- ttsl --plotting-backend gnuplot
     uv run --no-sync python scripts/ttsl_criterion_report.py
-
-Criterion's own HTML index (violin plots per shader) is::
-
-    target/criterion/report/index.html
 """
 
 from __future__ import annotations
@@ -23,11 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ARMS = ("interp_vm", "jit", "interp_cell", "jit_cell")
-STUB_ARMS = {
-    "jit": "jit_stub_floor",
-    "jit_cell": "jit_stub_floor_cell",
-}
+ARMS = ("jit", "jit_cell")
 
 
 def repo_root() -> Path:
@@ -48,20 +40,10 @@ def collect_rows(criterion_dir: Path) -> list[dict[str, object]]:
         if not group_dir.is_dir():
             continue
         shader = group_dir.name.removeprefix("ttsl_exec_")
-        row: dict[str, object] = {"shader": shader, "stub": False}
+        row: dict[str, object] = {"shader": shader}
         for arm in ARMS:
             path = group_dir / arm / "new" / "estimates.json"
-            stub_name = STUB_ARMS.get(arm)
-            stub_path = (
-                group_dir / stub_name / "new" / "estimates.json" if stub_name else None
-            )
-            if path.is_file():
-                row[arm] = load_ns(path)
-            elif stub_path is not None and stub_path.is_file():
-                row[arm] = load_ns(stub_path)
-                row["stub"] = True
-            else:
-                row[arm] = None
+            row[arm] = load_ns(path) if path.is_file() else None
         if any(row[arm] is not None for arm in ARMS):
             rows.append(row)
     return rows
@@ -76,36 +58,15 @@ def fmt_ns(value: object) -> str:
     return f"{ns:.2f} ns"
 
 
-def fmt_x(num: object, den: object) -> str:
-    if num is None or den is None or float(den) == 0.0:
-        return "—"
-    return f"{float(num) / float(den):.2f}x"
-
-
 def print_table(rows: list[dict[str, object]]) -> None:
-    headers = (
-        "shader",
-        "interp_vm",
-        "jit",
-        "vm/jit",
-        "interp_cell",
-        "jit_cell",
-        "cell/jit",
-    )
+    headers = ("shader", "jit", "jit_cell")
     body: list[list[str]] = []
     for row in rows:
-        name = str(row["shader"])
-        if row["stub"]:
-            name += " (stub)"
         body.append(
             [
-                name,
-                fmt_ns(row["interp_vm"]),
+                str(row["shader"]),
                 fmt_ns(row["jit"]),
-                fmt_x(row["interp_vm"], row["jit"]),
-                fmt_ns(row["interp_cell"]),
                 fmt_ns(row["jit_cell"]),
-                fmt_x(row["interp_cell"], row["jit_cell"]),
             ]
         )
     widths = [len(h) for h in headers]
@@ -131,9 +92,8 @@ def write_gnuplot(
     dat = out_dir / "ttsl_exec_compare.dat"
     gp = out_dir / "ttsl_exec_compare.gp"
     times_svg = out_dir / "ttsl_exec_times.svg"
-    speedup_svg = out_dir / "ttsl_exec_speedup.svg"
 
-    lines = ["# shader  interp_vm  jit  interp_cell  jit_cell"]
+    lines = ["# shader  jit  jit_cell"]
     for row in rows:
         vals = []
         for arm in ARMS:
@@ -155,20 +115,12 @@ set xlabel "shader"
 set key top left
 set grid ytics
 set yrange [0:*]
-plot "{dat.as_posix()}" using 2:xtic(1) title "interp_vm", \\
-     "" using 3 title "jit", \\
-     "" using 4 title "interp_cell", \\
-     "" using 5 title "jit_cell"
-
-set output "{speedup_svg.as_posix()}"
-set ylabel "speedup (interp / jit)"
-set key top right
-plot "{dat.as_posix()}" using ($2/$3):xtic(1) title "dispatch (vm/jit)", \\
-     "" using ($4/$5) title "per cell (cell/jit_cell)"
+plot "{dat.as_posix()}" using 2:xtic(1) title "jit", \\
+     "" using 3 title "jit_cell"
 """
     gp.write_text(script, encoding="utf-8")
     subprocess.run([gnuplot, str(gp)], check=True)
-    return [times_svg, speedup_svg]
+    return [times_svg]
 
 
 def main() -> int:

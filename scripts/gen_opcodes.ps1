@@ -1,4 +1,4 @@
-# Regenerate Rust/Python opcode outputs and Sphinx opcode_reference.md from low_level_def.py.
+# Regenerate Python opcode tables and Sphinx opcode_reference.md from low_level_def.py.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root

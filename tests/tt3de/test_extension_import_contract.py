@@ -17,7 +17,6 @@ TOP_LEVEL_EXPORTS = (
     "apply_material_py_parallel",
     "find_glyph_indices_py",
     "get_glyph_set",
-    "ttsl_run",
     "materials",
     "toglyphmethod",
 )

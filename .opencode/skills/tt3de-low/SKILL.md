@@ -2,8 +2,9 @@
 name: tt3de-low
 description: >-
   Implements low-level operations in the tt3de engine — Rust core changes in
-  crates/tt3de-core/src/ (geometry, raster, materials, buffers, textures, VM
-  helpers) surfaced to Python via pyo3 thin bindings in crates/tt3de-py/src/
+  crates/tt3de-core/src/ (geometry, raster, materials, buffers, textures,
+  ShaderMaterial / Cranelift TTSL execute) surfaced to Python via pyo3 thin
+  bindings in crates/tt3de-py/src/
   (*_py.rs) and matching wrappers under
   python/tt3de/. Runs a thorough design discovery pass first to validate the
   approach (subsystem placement, ownership/lifetimes, hot-path impact,
@@ -12,9 +13,11 @@ description: >-
   changing native operations, when the user mentions "low-level", "Rust
   binding", "pyo3", "*_py.rs", "hot path", "raster", "geombuffer",
   "primitivbuffer", "primitiv_building", "vertexbuffer", "drawbuffer",
-  "texturebuffer", "material bridge", "MaterialBufferPy", "DrawingBufferPy",
+  "texturebuffer", "material bridge", "ShaderMaterial", "ShaderPy",
+  "MaterialBufferPy", "DrawingBufferPy",
   "render_primitive", "PixInfo", "maturin develop", or asks to expose a Rust
   function/class to Python.
+disable-model-invocation: true
 ---
 
 # tt3de low-level engine work
@@ -25,10 +28,10 @@ Native engine changes in `crates/tt3de-core/src/**.rs` whose behavior must be
 **callable from Python**, thin bindings in `crates/tt3de-py/src/**.rs`, plus
 matching `python/tt3de/` wrappers. Typical subsystems: `drawbuffer/`,
 `geombuffer/`, `primitivbuffer/`, `primitiv_building/`, `raster/`, `material/`,
-`texturebuffer/`, `vertexbuffer/`, and the non-language parts of `ttsl/`
-(VM/runtime, not opcode authoring — see *Boundary* below).
+`texturebuffer/`, `vertexbuffer/`, and TTSL execute (`ttsl/jit/`, `ShaderMaterial`;
+not shader-language authoring — see *Boundary* below).
 
-**Boundary**: TTSL language / compiler / opcode work is owned by [`.opencode/skills/ttsl-implementation/SKILL.md`](../ttsl-implementation/SKILL.md). New TTSL builtins that need a Rust hook (geometry, raster context, textures) call this skill from step 3 of that one.
+**Boundary**: TTSL language / compiler / SSA ops are owned by [`.opencode/skills/ttsl-implementation/SKILL.md`](../ttsl-implementation/SKILL.md). New TTSL builtins that need a Rust hook (geometry, raster context, textures, `ShaderMaterial` input binding) call this skill from that one. Do not add a bytecode interpreter or `run_ttsl`.
 
 ## Contract documents
 
@@ -36,14 +39,14 @@ These rules are the contract for the work; consult them while designing and befo
 
 | Topic | File |
 |-------|------|
-| Rust safety, hot-path, bindings shape | [`.cursor/rules/rust-standards.mdc`](../../.cursor/rules/rust-standards.mdc) |
-| Python API & wrapper conventions | [`.cursor/rules/python-standards.mdc`](../../.cursor/rules/python-standards.mdc) |
-| Scoped diffs, public-API + docs sync | [`.cursor/rules/workflow-guardrails.mdc`](../../.cursor/rules/workflow-guardrails.mdc) |
-| Test coverage expectations | [`.cursor/rules/testing-standards.mdc`](../../.cursor/rules/testing-standards.mdc) |
+| Rust safety, hot-path, bindings shape | [`.cursor/rules/rust-standards.mdc`](../../../.cursor/rules/rust-standards.mdc) |
+| Python API & wrapper conventions | [`.cursor/rules/python-standards.mdc`](../../../.cursor/rules/python-standards.mdc) |
+| Scoped diffs, public-API + docs sync | [`.cursor/rules/workflow-guardrails.mdc`](../../../.cursor/rules/workflow-guardrails.mdc) |
+| Test coverage expectations | [`.cursor/rules/testing-standards.mdc`](../../../.cursor/rules/testing-standards.mdc) |
 
 Repo-level build, test, and platform notes (`cargo check --workspace
 --all-targets`, `cargo test -p tt3de-core`, `uv run maturin develop --uv`,
-`PYTHONPATH=.` for pytest) live in [`AGENTS.md`](../../AGENTS.md). Treat its
+`PYTHONPATH=.` for pytest) live in [`AGENTS.md`](../../../AGENTS.md). Treat its
 commands as authoritative.
 
 ## Design discovery before implementation
@@ -68,7 +71,7 @@ If the user already stated the design unambiguously in their latest message, **s
 For each, give a **specific** suggested answer grounded in current code, not a generic one. Examples of what a good suggestion looks like — adapt, don't copy verbatim:
 
 1. **Subsystem placement** — Which `crates/tt3de-core/src/<module>/` owns this? *Suggest e.g. "extend `crates/tt3de-core/src/raster/raster_triangle_tomato.rs`; no new module".*
-2. **Pure-Rust core vs binding** — Will the logic live in a plain Rust module and the `*_py.rs` stay thin (per `rust-standards.mdc`)? *Suggest the split, naming the Rust function and the wrapper method.*
+2. **Pure-Rust core vs binding** — Will the logic live in a plain Rust module and the `*_py.rs` stay thin (per `rust-standards.mdc`)? *Suggest the split, naming the Rust function and the wrapper method. Engine logic in `tt3de-core`; PyO3 in `tt3de-py`.*
 3. **Python surface shape** — New `#[pyclass]`, new free `#[pyfunction]`, new method on an existing class, or a function added to a submodule (e.g. `materials`, `toglyphmethod`)? *Suggest the smallest addition; prefer extending an existing class.*
 4. **Argument & return types across FFI** — Plain `f32`/`usize`, `Py<PyAny>` glm matrix via `convert_pymat4`, `PyTuple` return, or a Rust struct exposed as `#[pyclass]`? *Suggest the convention used by neighbors (e.g. `convert_pymat4` + `mat4_to_pyglm` round-trip for matrices).*
 5. **Ownership & lifetimes** — Does the caller pass a buffer we mutate in place, or do we return a new owned value? Any `&mut` aliasing risk with the existing buffer types? *Suggest in-place mutation through the existing `*BufferPy` handle when one already exists.*
@@ -88,7 +91,7 @@ Work through the sequence below; only collapse a step when it genuinely doesn't 
 
 1. **Pure-Rust core** in the right `crates/tt3de-core/src/<module>/` file. Small composable functions, explicit ownership, validated indices. Keep `mod.rs` exports minimal. (`rust-standards.mdc`)
 2. **Rust unit tests** (`#[cfg(test)] mod tests`) for the new core function — at least one happy path and one boundary/invalid case. (`testing-standards.mdc`)
-3. **Thin binding under `crates/tt3de-py/src/`** — argument conversion (`convert_pymat4`, `find_glyph_indices_py`, etc.), error mapping to `PyResult`, no new business logic. Register the class/function in `crates/tt3de-py/src/lib.rs`'s `#[pymodule] fn tt3de` (and the appropriate submodule + `sys.modules` entry if you mirror the `materials` / `toglyphmethod` pattern).
+3. **Thin binding under `crates/tt3de-py/src/`** — argument conversion (`convert_pymat4`, `find_glyph_indices_py`, etc.), error mapping to `PyResult`, no new business logic. Register the class/function in `crates/tt3de-py/src/lib.rs`’s `#[pymodule] fn tt3de` (and the appropriate submodule + `sys.modules` entry if you mirror the `materials` / `toglyphmethod` pattern).
 4. **Build & sanity-check Rust** — `cargo check --workspace --all-targets` (treat warnings as failures), then `cargo test -p tt3de-core`. On Windows redirect Cargo stderr per `AGENTS.md`. Then `uv run maturin develop --uv` (add `--profile release` when benching).
 5. **Python wrapper** under `python/tt3de/` — keep argument names, defaults, and behavior aligned with the Rust-backed implementation (`python-standards.mdc`). Add typed signatures for new public APIs.
 6. **Python tests** — focused cases under `tests/tt3de/` (use the `tests/tt3de/test_r_*.py` neighbors as templates for binding tests). Run with `PYTHONPATH=.` per `AGENTS.md`:
@@ -99,8 +102,8 @@ Work through the sequence below; only collapse a step when it genuinely doesn't 
 
 ## Common patterns to follow
 
-- **Thin bindings**: see [`crates/tt3de-py/src/vertexbuffer/transform_pack_py.rs`](../../crates/tt3de-py/src/vertexbuffer/transform_pack_py.rs) — the `#[pymethods]` block only converts and dispatches.
-- **Submodule registration**: the `materials` and `toglyphmethod` blocks in [`crates/tt3de-py/src/lib.rs`](../../crates/tt3de-py/src/lib.rs) show the `PyModule::new` + `sys.modules.set_item` pattern needed for nested imports.
+- **Thin bindings**: see [`crates/tt3de-py/src/vertexbuffer/transform_pack_py.rs`](../../../crates/tt3de-py/src/vertexbuffer/transform_pack_py.rs) — the `#[pymethods]` block only converts and dispatches.
+- **Submodule registration**: the `materials` and `toglyphmethod` blocks in [`crates/tt3de-py/src/lib.rs`](../../../crates/tt3de-py/src/lib.rs) show the `PyModule::new` + `sys.modules.set_item` pattern needed for nested imports.
 - **Function exposure**: `wrap_pyfunction!(...)` entries in `crates/tt3de-py/src/lib.rs` for top-level `#[pyfunction]`s.
 - **Matrix interop**: `crate::utils::{convert_pymat4, mat4_to_pyglm, mat4_to_slicelist}` — do not re-roll matrix marshalling.
 - **Glyph indices**: reuse `find_glyph_indices_py` for any glyph-string input rather than parsing in the new binding.
