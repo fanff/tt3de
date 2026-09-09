@@ -1112,6 +1112,8 @@ dependencies = [
  "nalgebra",
  "nalgebra-glm",
  "rayon",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

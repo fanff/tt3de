@@ -98,6 +98,7 @@ def _add_depth_fog_material(
         bytecode,
         default_glyph=full_block,
         register_seed=reg_settings.get_register_list(),
+        ssa_json=reg_settings.ssa_json(),
         **shader_py_frag_depth_clip_kwargs(reg_settings),
     )
     mat_id = rc.material_buffer.add_shader(shader_mat)

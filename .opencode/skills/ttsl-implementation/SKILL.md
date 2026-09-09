@@ -133,7 +133,7 @@ from tt3de.ttsl.compiler import PIXELVAR_TT_TEXCOORD0
 
 reg_settings.set_variable(GLOBAL_VAR_TT_TIME, 1.0)
 reg_settings.set_variable(PIXELVAR_TT_TEXCOORD0, glm.vec2(0.5, 0.5))
-front, back, glyph = ttsl_run(*reg_settings.get_register_list(), bytecode)
+front, back, glyph = ttsl_run(*reg_settings.get_register_list(), reg_settings.ssa_json())
 ```
 
 5. **Integrate** into a demo/app: `materials.ShaderPy(..., register_seed=reg_settings.get_register_list())`, material slot 0 static sentinel, `set_shader_time` in `before_render_step`—see [demos-standards](../../../.cursor/rules/demos-standards.mdc) and `demos/2d/ttsl_square.py`.

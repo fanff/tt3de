@@ -5,6 +5,7 @@ pub trait TtslTextureEnv {
     fn sample_tt_texture(&self, idx: i32, uv: Vec2) -> Vec4;
 }
 
+pub mod ir;
 pub mod jit;
 pub mod opcodes;
 use opcodes::*;

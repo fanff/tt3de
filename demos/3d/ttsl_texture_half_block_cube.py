@@ -71,6 +71,7 @@ class TTSLHalfBlockTextureCubeDemo(TT3DViewStandAlone):
             self._bytecode,
             default_glyph=half_block,
             register_seed=self._reg_settings.get_register_list(),
+            ssa_json=self._reg_settings.ssa_json(),
         )
         self._shader_mat_id = self.rc.material_buffer.add_shader(shader_mat)
 

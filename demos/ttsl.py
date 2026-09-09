@@ -96,6 +96,7 @@ def _build_shader_py(bytecode: bytes, rs: RegisterSettings) -> Any:
     kwargs: dict[str, Any] = {
         "default_glyph": find_glyph_indices_py("█"),
         "register_seed": rs.get_register_list(),
+        "ssa_json": rs.ssa_json(),
     }
     try:
         kwargs.update(shader_py_frag_depth_clip_kwargs(rs))

@@ -1,14 +1,15 @@
-use cranelift_codegen::ir::{types, AbiParam, InstBuilder, UserFuncName};
+use cranelift_codegen::ir::{types, AbiParam, UserFuncName};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{default_libcall_names, Linkage, Module, ModuleError};
 use nalgebra_glm::Vec4;
 
-use super::{Instr, Registers, TtslTextureEnv};
+use super::{Registers, TtslTextureEnv};
+use crate::ttsl::ir::TtslSsaModule;
 
+mod ir_lower;
 mod libcalls;
-mod lower;
 mod mem;
 
 /// Compiled shader ABI: register file, optional texture env, output struct.
@@ -17,10 +18,10 @@ mod mem;
 pub type ShaderFn =
     unsafe extern "C" fn(*mut Registers, *const JitTextureEnv, *mut JitOutputs) -> i32;
 
-/// `true` once [`compile_ttsl`] lowers bytecode instead of emitting a dummy.
-pub const LOWERS_BYTECODE: bool = true;
+/// `true` once [`compile_ttsl`] lowers post-SSA IR to native code.
+pub const LOWERS_IR: bool = true;
 
-/// Front/back colors and glyph written by `OP_RET`.
+/// Front/back colors and glyph written by the IR `ret` terminator.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct JitOutputs {
@@ -79,13 +80,19 @@ impl CompiledShader {
     }
 }
 
+// Safety: after `finalize_definitions` the code pages are immutable. `run`
+// only executes that code against caller-provided register files.
+unsafe impl Send for CompiledShader {}
+unsafe impl Sync for CompiledShader {}
+
 #[derive(Debug)]
 pub enum JitError {
     Native(String),
     Settings(settings::SetError),
     Codegen(cranelift_codegen::CodegenError),
     Module(ModuleError),
-    Unsupported(u8),
+    UnsupportedIr(String),
+    Ir(String),
 }
 
 impl From<settings::SetError> for JitError {
@@ -113,29 +120,20 @@ impl std::fmt::Display for JitError {
             Self::Settings(err) => write!(f, "cranelift settings: {err}"),
             Self::Codegen(err) => write!(f, "cranelift codegen: {err}"),
             Self::Module(err) => write!(f, "cranelift module: {err}"),
-            Self::Unsupported(op) => write!(f, "unsupported TTSL opcode: {op}"),
+            Self::UnsupportedIr(op) => write!(f, "unsupported TTSL IR op: {op}"),
+            Self::Ir(msg) => write!(f, "TTSL IR: {msg}"),
         }
     }
 }
 
 impl std::error::Error for JitError {}
 
-fn check_supported(instrs: &[Instr; 256]) -> Result<(), JitError> {
-    for instr in instrs {
-        if !lower::opcode_supported(instr.opcode) {
-            return Err(JitError::Unsupported(instr.opcode));
-        }
-    }
-    Ok(())
-}
-
-/// Compile TTSL bytecode to a native function with the shader ABI.
-pub fn compile_ttsl(instrs: &[Instr; 256]) -> Result<CompiledShader, JitError> {
-    check_supported(instrs)?;
-
+/// Compile a post-SSA TTSL module to a native function with the shader ABI.
+pub fn compile_ttsl(ssa: &TtslSsaModule) -> Result<CompiledShader, JitError> {
     let mut flag_builder = settings::builder();
     flag_builder.set("use_colocated_libcalls", "false")?;
     flag_builder.set("is_pic", "false")?;
+    flag_builder.set("opt_level", "speed")?;
 
     let isa_builder =
         cranelift_native::builder().map_err(|msg| JitError::Native(msg.to_string()))?;
@@ -162,46 +160,7 @@ pub fn compile_ttsl(instrs: &[Instr; 256]) -> Result<CompiledShader, JitError> {
 
     {
         let mut builder = FunctionBuilder::new(&mut ctx.func, &mut func_ctx);
-        let blocks: Vec<_> = (0..256).map(|_| builder.create_block()).collect();
-        builder.append_block_params_for_function_params(blocks[0]);
-
-        let regs_var = builder.declare_var(ptr_ty);
-        let tex_var = builder.declare_var(ptr_ty);
-        let out_var = builder.declare_var(ptr_ty);
-
-        builder.switch_to_block(blocks[0]);
-        let params = {
-            let p = builder.block_params(blocks[0]);
-            [p[0], p[1], p[2]]
-        };
-        builder.def_var(regs_var, params[0]);
-        builder.def_var(tex_var, params[1]);
-        builder.def_var(out_var, params[2]);
-
-        for ip in 0..256 {
-            builder.switch_to_block(blocks[ip]);
-            let regs = builder.use_var(regs_var);
-            let tex = builder.use_var(tex_var);
-            let out = builder.use_var(out_var);
-            let mut cx = lower::LowerCx {
-                builder: &mut builder,
-                regs,
-                tex,
-                out,
-                blocks: &blocks,
-                libcalls: &libcalls,
-            };
-            let terminated = lower::lower_instr(&mut cx, ip, &instrs[ip])?;
-            if !terminated {
-                if ip + 1 < 256 {
-                    builder.ins().jump(blocks[ip + 1], &[]);
-                } else {
-                    let zero = builder.ins().iconst(types::I32, 0);
-                    builder.ins().return_(&[zero]);
-                }
-            }
-        }
-
+        ir_lower::lower_module(&mut builder, ssa, ptr_ty, &libcalls)?;
         builder.seal_all_blocks();
         builder.finalize(module.target_config());
     }
@@ -219,6 +178,12 @@ pub fn compile_ttsl(instrs: &[Instr; 256]) -> Result<CompiledShader, JitError> {
     })
 }
 
+/// Parse dumped SSA JSON and compile it.
+pub fn compile_ttsl_json(json: &str) -> Result<CompiledShader, JitError> {
+    let ssa = TtslSsaModule::from_json(json).map_err(JitError::Ir)?;
+    compile_ttsl(&ssa)
+}
+
 #[cfg(test)]
 #[allow(dead_code)]
 #[path = "../../../benches/ttsl/fixtures.rs"]
@@ -228,7 +193,6 @@ mod bench_fixtures;
 mod tests {
     use super::bench_fixtures;
     use super::*;
-    use crate::ttsl::opcodes::*;
     use crate::ttsl::{decode_instrs_256, run_ttsl};
     use nalgebra_glm::{Vec2, Vec3};
     use std::mem::{align_of, offset_of, size_of};
@@ -281,129 +245,89 @@ mod tests {
     }
 
     #[test]
-    fn compile_ttsl_succeeds_on_padded_ret_stream() {
-        let instrs = decode_instrs_256(&[]);
-        compile_ttsl(&instrs).expect("empty ret stream should compile");
+    fn unsupported_ir_op_fails_compile() {
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "temps": {"1": "F32"},
+            "consts": [{"id": 0, "ty": "F32", "value": [0.0]}],
+            "blocks": [{
+                "id": 0,
+                "name": "_INIT_",
+                "instrs": [
+                    {"op": "load_const", "ty": "F32", "dst": 1, "imm": 0},
+                    {"op": "sqrt", "ty": "F32", "dst": 1, "src": [1]},
+                    {"op": "ret", "src": [1, 1, 1]}
+                ]
+            }]
+        }"#;
+        match compile_ttsl_json(json) {
+            Err(JitError::UnsupportedIr(op)) => assert_eq!(op, "sqrt"),
+            Err(err) => panic!("expected UnsupportedIr(sqrt), got {err}"),
+            Ok(_) => panic!("expected compile to fail for sqrt"),
+        }
     }
 
     #[test]
-    fn compiled_empty_function_returns_zeros() {
-        let instrs = decode_instrs_256(&[]);
-        let compiled = compile_ttsl(&instrs).unwrap();
+    fn ir_phi_join_takes_true_branch() {
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "inputs": [],
+            "temps": {
+                "1": "F32", "2": "F32", "3": "BOOL",
+                "4": "F32", "5": "F32", "6": "F32",
+                "7": "F32", "8": "F32", "9": "F32", "10": "V4", "11": "I32"
+            },
+            "consts": [
+                {"id": 0, "ty": "F32", "value": [1.0]},
+                {"id": 1, "ty": "F32", "value": [0.5]},
+                {"id": 2, "ty": "F32", "value": [4.0]},
+                {"id": 3, "ty": "F32", "value": [5.0]},
+                {"id": 4, "ty": "F32", "value": [0.0]},
+                {"id": 5, "ty": "F32", "value": [1.0]},
+                {"id": 6, "ty": "I32", "value": [0]}
+            ],
+            "blocks": [
+                {"id": 0, "name": "entry", "phis": [], "instrs": [
+                    {"op": "load_const", "ty": "F32", "dst": 1, "imm": 0},
+                    {"op": "load_const", "ty": "F32", "dst": 2, "imm": 1},
+                    {"op": "cmp_gt", "ty": "BOOL", "dst": 3, "src": [1, 2]},
+                    {"op": "jmp_if_false", "src": [3], "target": 2, "fallthrough": 1}
+                ]},
+                {"id": 1, "name": "then", "phis": [], "instrs": [
+                    {"op": "load_const", "ty": "F32", "dst": 4, "imm": 2},
+                    {"op": "jmp", "target": 3}
+                ]},
+                {"id": 2, "name": "else", "phis": [], "instrs": [
+                    {"op": "load_const", "ty": "F32", "dst": 5, "imm": 3},
+                    {"op": "jmp", "target": 3}
+                ]},
+                {"id": 3, "name": "join", "phis": [
+                    {"dst": 6, "ty": "F32", "operands": [[1, 4], [2, 5]]}
+                ], "instrs": [
+                    {"op": "load_const", "ty": "F32", "dst": 7, "imm": 4},
+                    {"op": "load_const", "ty": "F32", "dst": 8, "imm": 4},
+                    {"op": "load_const", "ty": "F32", "dst": 9, "imm": 5},
+                    {"op": "store_vec_from_scalar", "ty": "V4", "dst": 10, "src": [6, 7, 8, 9]},
+                    {"op": "load_const", "ty": "I32", "dst": 11, "imm": 6},
+                    {"op": "ret", "src": [10, 10, 11]}
+                ]}
+            ]
+        }"#;
+        let compiled = compile_ttsl_json(json).expect("phi diamond should compile");
         let mut regs = Registers::new();
-        let out = compiled.run(&mut regs, None);
-        assert_eq!(out, (Vec4::zeros(), Vec4::zeros(), 0));
+        let (front, _back, glyph) = compiled.run(&mut regs, None);
+        assert!((front.x - 4.0).abs() < 1e-6, "front.x={}", front.x);
+        assert_eq!(glyph, 0);
     }
 
     #[test]
-    fn unsupported_opcode_fails_compile() {
-        let mut instrs = decode_instrs_256(&[]);
-        instrs[0].opcode = COS_F32;
-        match compile_ttsl(&instrs) {
-            Err(JitError::Unsupported(COS_F32)) => {}
-            Err(err) => panic!("expected Unsupported(COS_F32), got {err}"),
-            Ok(_) => panic!("expected compile to fail for COS_F32"),
-        }
-    }
-
-    #[test]
-    fn fixtures_only_use_supported_opcodes() {
-        for fixture in bench_fixtures::FIXTURES {
-            for chunk in fixture.bytecode.chunks_exact(6) {
-                let op = chunk[0];
-                assert!(
-                    lower::opcode_supported(op),
-                    "{} uses opcode {op} the JIT does not lower",
-                    fixture.name
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn add_f32_matches_interpreter() {
-        let instrs = decode_instrs_256(&[ADD_F32, 2, 0, 1, 0, 0, OP_RET, 0, 0, 0, 0, 0]);
-        let mut regs = Registers::new();
-        regs.f32_[0] = 1.5;
-        regs.f32_[1] = 2.25;
-        let compiled = compile_ttsl(&instrs).unwrap();
-        let mut jit_regs = regs.clone();
-        let interp = run_ttsl(&instrs, &mut regs, None);
-        let jit = compiled.run(&mut jit_regs, None);
-        assert_eq!(interp, jit);
-        assert!((jit_regs.f32_[2] - 3.75).abs() < 1e-6);
-    }
-
-    #[test]
-    fn jmp_if_false_matches_interpreter() {
-        let instrs = decode_instrs_256(&[
-            OP_JMP_IF_FALSE,
-            2,
-            5,
-            0,
-            0,
-            0,
-            OP_RET,
-            0,
-            1,
-            1,
-            0,
-            0,
-            OP_RET,
-            0,
-            2,
-            2,
-            0,
-            0,
-        ]);
-        let compiled = compile_ttsl(&instrs).unwrap();
-
-        let mut seed = Registers::new();
-        seed.v4[1] = Vec4::new(1.0, 0.0, 0.0, 1.0);
-        seed.v4[2] = Vec4::new(0.0, 1.0, 0.0, 1.0);
-
-        for flag in [true, false] {
-            let mut interp_regs = seed.clone();
-            interp_regs.bool_[5] = flag;
-            let mut jit_regs = interp_regs.clone();
-            let interp = run_ttsl(&instrs, &mut interp_regs, None);
-            let jit = compiled.run(&mut jit_regs, None);
-            assert_eq!(interp, jit, "bool={flag}");
-        }
-    }
-
-    #[test]
-    fn tt_texture_with_and_without_env_matches_interpreter() {
-        let instrs = decode_instrs_256(&[TT_TEXTURE, 12, 10, 11, 0, 0, OP_RET, 0, 12, 12, 0, 0]);
-        let compiled = compile_ttsl(&instrs).unwrap();
-        let mut seed = Registers::new();
-        seed.i32_[10] = 0;
-        seed.v2[11] = Vec2::new(0.25, 0.75);
-
-        let mut interp_regs = seed.clone();
-        let mut jit_regs = seed.clone();
-        let interp = run_ttsl(&instrs, &mut interp_regs, None);
-        let jit = compiled.run(&mut jit_regs, None);
-        assert_eq!(interp, jit);
-
-        let tex = ConstTextureEnv;
-        let env: &dyn TtslTextureEnv = &tex;
-        let mut interp_regs = seed.clone();
-        let mut jit_regs = seed.clone();
-        let interp = run_ttsl(&instrs, &mut interp_regs, Some(env));
-        let jit = compiled.run(&mut jit_regs, Some(env));
-        assert_eq!(interp, jit);
-        assert!((jit.0.x - 0.25).abs() < 1e-5);
-        assert!((jit.0.y - 0.75).abs() < 1e-5);
-        assert!((jit.0.z - 0.5).abs() < 1e-5);
-    }
-
-    #[test]
-    fn bench_fixtures_match_interpreter() {
+    fn fixtures_match_interpreter() {
         let tex = ConstTextureEnv;
         for fixture in bench_fixtures::FIXTURES {
             let instrs = decode_instrs_256(fixture.bytecode);
-            let compiled = compile_ttsl(&instrs)
+            let compiled = compile_ttsl_json(fixture.ssa_json)
                 .unwrap_or_else(|err| panic!("{}: compile failed: {err}", fixture.name));
             let seed = seed_fixture(fixture);
             let env = if fixture.needs_texture_env {

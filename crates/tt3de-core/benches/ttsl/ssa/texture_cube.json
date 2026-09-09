@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "entry": 0,
+  "inputs": [
+    {
+      "name": "tt_FragCoord",
+      "ty": "V2",
+      "temp": 0,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragDepth",
+      "ty": "F32",
+      "temp": 8,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragPos",
+      "ty": "V2",
+      "temp": 3,
+      "reg": 4
+    },
+    {
+      "name": "tt_FrontFacing",
+      "ty": "BOOL",
+      "temp": 7,
+      "reg": 1
+    },
+    {
+      "name": "tt_LineCoord",
+      "ty": "F32",
+      "temp": 9,
+      "reg": 2
+    },
+    {
+      "name": "tt_Normal",
+      "ty": "V3",
+      "temp": 4,
+      "reg": 2
+    },
+    {
+      "name": "tt_PointCoord",
+      "ty": "V2",
+      "temp": 6,
+      "reg": 5
+    },
+    {
+      "name": "tt_PrimitiveID",
+      "ty": "I32",
+      "temp": 10,
+      "reg": 0
+    },
+    {
+      "name": "tt_TexCoord0",
+      "ty": "V2",
+      "temp": 11,
+      "reg": 2
+    },
+    {
+      "name": "tt_TexCoord1",
+      "ty": "V2",
+      "temp": 2,
+      "reg": 3
+    },
+    {
+      "name": "tt_ViewPos",
+      "ty": "V3",
+      "temp": 5,
+      "reg": 3
+    }
+  ],
+  "temps": {
+    "0": "V2",
+    "2": "V2",
+    "3": "V2",
+    "4": "V3",
+    "5": "V3",
+    "6": "V2",
+    "7": "BOOL",
+    "8": "F32",
+    "9": "F32",
+    "10": "I32",
+    "11": "V2",
+    "13": "I32",
+    "14": "V4",
+    "16": "F32",
+    "17": "F32",
+    "18": "F32",
+    "19": "F32",
+    "20": "V4",
+    "21": "I32",
+    "22": "V4",
+    "23": "V4"
+  },
+  "consts": [
+    {
+      "id": 0,
+      "ty": "I32",
+      "value": [
+        0
+      ]
+    },
+    {
+      "id": 1,
+      "ty": "F32",
+      "value": [
+        1.0
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": 0,
+      "name": "_INIT_",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "jmp",
+          "target": 2
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "S_0",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "load_const",
+          "dst": 13,
+          "ty": "I32",
+          "imm": 0
+        },
+        {
+          "op": "tt_texture",
+          "dst": 14,
+          "ty": "V4",
+          "src": [
+            13,
+            11
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 22,
+          "ty": "V4",
+          "src": [
+            14
+          ]
+        },
+        {
+          "op": "read_axis_x",
+          "dst": 16,
+          "ty": "F32",
+          "src": [
+            22
+          ]
+        },
+        {
+          "op": "read_axis_y",
+          "dst": 17,
+          "ty": "F32",
+          "src": [
+            22
+          ]
+        },
+        {
+          "op": "read_axis_z",
+          "dst": 18,
+          "ty": "F32",
+          "src": [
+            22
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 19,
+          "ty": "F32",
+          "imm": 1
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 20,
+          "ty": "V4",
+          "src": [
+            16,
+            17,
+            18,
+            19
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 23,
+          "ty": "V4",
+          "src": [
+            20
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 21,
+          "ty": "I32",
+          "imm": 0
+        },
+        {
+          "op": "ret",
+          "src": [
+            23,
+            23,
+            21
+          ]
+        }
+      ]
+    }
+  ]
+}

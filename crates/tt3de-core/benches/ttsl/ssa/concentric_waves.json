@@ -1,0 +1,838 @@
+{
+  "version": 1,
+  "entry": 0,
+  "inputs": [
+    {
+      "name": "tt_FragCoord",
+      "ty": "V2",
+      "temp": 0,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragDepth",
+      "ty": "F32",
+      "temp": 8,
+      "reg": 1
+    },
+    {
+      "name": "tt_FragPos",
+      "ty": "V2",
+      "temp": 3,
+      "reg": 4
+    },
+    {
+      "name": "tt_FrontFacing",
+      "ty": "BOOL",
+      "temp": 7,
+      "reg": 1
+    },
+    {
+      "name": "tt_LineCoord",
+      "ty": "F32",
+      "temp": 9,
+      "reg": 2
+    },
+    {
+      "name": "tt_Normal",
+      "ty": "V3",
+      "temp": 4,
+      "reg": 2
+    },
+    {
+      "name": "tt_PointCoord",
+      "ty": "V2",
+      "temp": 6,
+      "reg": 5
+    },
+    {
+      "name": "tt_PrimitiveID",
+      "ty": "I32",
+      "temp": 10,
+      "reg": 0
+    },
+    {
+      "name": "tt_TexCoord0",
+      "ty": "V2",
+      "temp": 16,
+      "reg": 2
+    },
+    {
+      "name": "tt_TexCoord1",
+      "ty": "V2",
+      "temp": 2,
+      "reg": 3
+    },
+    {
+      "name": "tt_Time",
+      "ty": "F32",
+      "temp": 11,
+      "reg": 3
+    },
+    {
+      "name": "tt_ViewPos",
+      "ty": "V3",
+      "temp": 5,
+      "reg": 3
+    },
+    {
+      "name": "u_g0",
+      "ty": "I32",
+      "temp": 12,
+      "reg": 4
+    },
+    {
+      "name": "u_g1",
+      "ty": "I32",
+      "temp": 13,
+      "reg": 5
+    },
+    {
+      "name": "u_g2",
+      "ty": "I32",
+      "temp": 14,
+      "reg": 6
+    },
+    {
+      "name": "u_g3",
+      "ty": "I32",
+      "temp": 15,
+      "reg": 7
+    }
+  ],
+  "temps": {
+    "0": "V2",
+    "2": "V2",
+    "3": "V2",
+    "4": "V3",
+    "5": "V3",
+    "6": "V2",
+    "7": "BOOL",
+    "8": "F32",
+    "9": "F32",
+    "10": "I32",
+    "11": "F32",
+    "12": "I32",
+    "13": "I32",
+    "14": "I32",
+    "15": "I32",
+    "16": "V2",
+    "18": "F32",
+    "19": "F32",
+    "20": "F32",
+    "22": "F32",
+    "23": "F32",
+    "24": "F32",
+    "26": "V2",
+    "28": "F32",
+    "30": "F32",
+    "31": "F32",
+    "32": "F32",
+    "33": "F32",
+    "34": "F32",
+    "36": "F32",
+    "38": "F32",
+    "39": "F32",
+    "40": "F32",
+    "41": "V3",
+    "43": "F32",
+    "44": "F32",
+    "45": "F32",
+    "46": "V3",
+    "48": "F32",
+    "49": "F32",
+    "50": "F32",
+    "51": "F32",
+    "53": "F32",
+    "54": "F32",
+    "56": "V3",
+    "57": "V3",
+    "58": "V3",
+    "60": "F32",
+    "61": "F32",
+    "62": "F32",
+    "63": "F32",
+    "64": "V4",
+    "66": "F32",
+    "67": "F32",
+    "68": "F32",
+    "69": "BOOL",
+    "70": "F32",
+    "71": "BOOL",
+    "72": "F32",
+    "73": "BOOL",
+    "74": "F32",
+    "75": "F32",
+    "76": "V2",
+    "77": "F32",
+    "78": "F32",
+    "79": "F32",
+    "80": "V3",
+    "81": "V3",
+    "82": "F32",
+    "83": "F32",
+    "84": "V3",
+    "85": "V4",
+    "86": "F32"
+  },
+  "consts": [
+    {
+      "id": 0,
+      "ty": "F32",
+      "value": [
+        0.5
+      ]
+    },
+    {
+      "id": 1,
+      "ty": "F32",
+      "value": [
+        24.0
+      ]
+    },
+    {
+      "id": 2,
+      "ty": "F32",
+      "value": [
+        5.0
+      ]
+    },
+    {
+      "id": 3,
+      "ty": "F32",
+      "value": [
+        0.02
+      ]
+    },
+    {
+      "id": 4,
+      "ty": "F32",
+      "value": [
+        0.05
+      ]
+    },
+    {
+      "id": 5,
+      "ty": "F32",
+      "value": [
+        0.14
+      ]
+    },
+    {
+      "id": 6,
+      "ty": "F32",
+      "value": [
+        0.1
+      ]
+    },
+    {
+      "id": 7,
+      "ty": "F32",
+      "value": [
+        0.2
+      ]
+    },
+    {
+      "id": 8,
+      "ty": "F32",
+      "value": [
+        0.55
+      ]
+    },
+    {
+      "id": 9,
+      "ty": "F32",
+      "value": [
+        1.0
+      ]
+    },
+    {
+      "id": 10,
+      "ty": "F32",
+      "value": [
+        4.0
+      ]
+    },
+    {
+      "id": 11,
+      "ty": "F32",
+      "value": [
+        2.7
+      ]
+    },
+    {
+      "id": 12,
+      "ty": "F32",
+      "value": [
+        2.0
+      ]
+    },
+    {
+      "id": 13,
+      "ty": "F32",
+      "value": [
+        1.2
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": 0,
+      "name": "_INIT_",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "jmp",
+          "target": 2
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "S_0",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "read_axis_x",
+          "dst": 18,
+          "ty": "F32",
+          "src": [
+            16
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 19,
+          "ty": "F32",
+          "imm": 0
+        },
+        {
+          "op": "sub",
+          "dst": 20,
+          "ty": "F32",
+          "src": [
+            18,
+            19
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 74,
+          "ty": "F32",
+          "src": [
+            20
+          ]
+        },
+        {
+          "op": "read_axis_y",
+          "dst": 22,
+          "ty": "F32",
+          "src": [
+            16
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 23,
+          "ty": "F32",
+          "imm": 0
+        },
+        {
+          "op": "sub",
+          "dst": 24,
+          "ty": "F32",
+          "src": [
+            22,
+            23
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 75,
+          "ty": "F32",
+          "src": [
+            24
+          ]
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 26,
+          "ty": "V2",
+          "src": [
+            74,
+            75
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 76,
+          "ty": "V2",
+          "src": [
+            26
+          ]
+        },
+        {
+          "op": "length",
+          "dst": 28,
+          "ty": "F32",
+          "src": [
+            76
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 77,
+          "ty": "F32",
+          "src": [
+            28
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 30,
+          "ty": "F32",
+          "imm": 1
+        },
+        {
+          "op": "mul",
+          "dst": 31,
+          "ty": "F32",
+          "src": [
+            77,
+            30
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 32,
+          "ty": "F32",
+          "imm": 2
+        },
+        {
+          "op": "mul",
+          "dst": 33,
+          "ty": "F32",
+          "src": [
+            11,
+            32
+          ]
+        },
+        {
+          "op": "sub",
+          "dst": 34,
+          "ty": "F32",
+          "src": [
+            31,
+            33
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 78,
+          "ty": "F32",
+          "src": [
+            34
+          ]
+        },
+        {
+          "op": "sin",
+          "dst": 36,
+          "ty": "F32",
+          "src": [
+            78
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 79,
+          "ty": "F32",
+          "src": [
+            36
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 38,
+          "ty": "F32",
+          "imm": 3
+        },
+        {
+          "op": "load_const",
+          "dst": 39,
+          "ty": "F32",
+          "imm": 4
+        },
+        {
+          "op": "load_const",
+          "dst": 40,
+          "ty": "F32",
+          "imm": 5
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 41,
+          "ty": "V3",
+          "src": [
+            38,
+            39,
+            40
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 80,
+          "ty": "V3",
+          "src": [
+            41
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 43,
+          "ty": "F32",
+          "imm": 6
+        },
+        {
+          "op": "load_const",
+          "dst": 44,
+          "ty": "F32",
+          "imm": 7
+        },
+        {
+          "op": "load_const",
+          "dst": 45,
+          "ty": "F32",
+          "imm": 8
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 46,
+          "ty": "V3",
+          "src": [
+            43,
+            44,
+            45
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 81,
+          "ty": "V3",
+          "src": [
+            46
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 48,
+          "ty": "F32",
+          "imm": 0
+        },
+        {
+          "op": "load_const",
+          "dst": 49,
+          "ty": "F32",
+          "imm": 0
+        },
+        {
+          "op": "mul",
+          "dst": 50,
+          "ty": "F32",
+          "src": [
+            49,
+            79
+          ]
+        },
+        {
+          "op": "add",
+          "dst": 51,
+          "ty": "F32",
+          "src": [
+            48,
+            50
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 82,
+          "ty": "F32",
+          "src": [
+            51
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 53,
+          "ty": "F32",
+          "imm": 9
+        },
+        {
+          "op": "sub",
+          "dst": 54,
+          "ty": "F32",
+          "src": [
+            53,
+            82
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 83,
+          "ty": "F32",
+          "src": [
+            54
+          ]
+        },
+        {
+          "op": "mul",
+          "dst": 56,
+          "ty": "V3",
+          "src": [
+            80,
+            83
+          ]
+        },
+        {
+          "op": "mul",
+          "dst": 57,
+          "ty": "V3",
+          "src": [
+            81,
+            82
+          ]
+        },
+        {
+          "op": "add",
+          "dst": 58,
+          "ty": "V3",
+          "src": [
+            56,
+            57
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 84,
+          "ty": "V3",
+          "src": [
+            58
+          ]
+        },
+        {
+          "op": "read_axis_x",
+          "dst": 60,
+          "ty": "F32",
+          "src": [
+            84
+          ]
+        },
+        {
+          "op": "read_axis_y",
+          "dst": 61,
+          "ty": "F32",
+          "src": [
+            84
+          ]
+        },
+        {
+          "op": "read_axis_z",
+          "dst": 62,
+          "ty": "F32",
+          "src": [
+            84
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 63,
+          "ty": "F32",
+          "imm": 9
+        },
+        {
+          "op": "store_vec_from_scalar",
+          "dst": 64,
+          "ty": "V4",
+          "src": [
+            60,
+            61,
+            62,
+            63
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 85,
+          "ty": "V4",
+          "src": [
+            64
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 66,
+          "ty": "F32",
+          "imm": 10
+        },
+        {
+          "op": "mul",
+          "dst": 67,
+          "ty": "F32",
+          "src": [
+            82,
+            66
+          ]
+        },
+        {
+          "op": "store",
+          "dst": 86,
+          "ty": "F32",
+          "src": [
+            67
+          ]
+        },
+        {
+          "op": "load_const",
+          "dst": 68,
+          "ty": "F32",
+          "imm": 11
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 69,
+          "ty": "BOOL",
+          "src": [
+            86,
+            68
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            69
+          ],
+          "target": 4,
+          "fallthrough": 3
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "S_1",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            85,
+            85,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "S_2",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "load_const",
+          "dst": 70,
+          "ty": "F32",
+          "imm": 12
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 71,
+          "ty": "BOOL",
+          "src": [
+            86,
+            70
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            71
+          ],
+          "target": 6,
+          "fallthrough": 5
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "S_3",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            85,
+            85,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "S_4",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "load_const",
+          "dst": 72,
+          "ty": "F32",
+          "imm": 13
+        },
+        {
+          "op": "cmp_gte",
+          "dst": 73,
+          "ty": "BOOL",
+          "src": [
+            86,
+            72
+          ]
+        },
+        {
+          "op": "jmp_if_false",
+          "src": [
+            73
+          ],
+          "target": 8,
+          "fallthrough": 7
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "S_5",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            85,
+            85,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "S_6",
+      "phis": [],
+      "instrs": [
+        {
+          "op": "ret",
+          "src": [
+            85,
+            85,
+            12
+          ]
+        }
+      ]
+    }
+  ]
+}

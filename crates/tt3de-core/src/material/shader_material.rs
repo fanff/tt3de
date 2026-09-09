@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use nalgebra_glm::{vec2, vec3, Vec2, Vec3, Vec4};
 
@@ -10,7 +11,11 @@ use crate::{
     },
     primitivbuffer::primitivbuffer::PrimitiveElements,
     texturebuffer::texture_buffer::TextureBuffer,
-    ttsl::{decode_instrs_256, run_ttsl, Instr, Registers},
+    ttsl::{
+        ir::TtslSsaModule,
+        jit::{compile_ttsl, compile_ttsl_json, CompiledShader, JitError},
+        Registers,
+    },
     vertexbuffer::uv_buffer::UVBuffer,
 };
 
@@ -27,7 +32,7 @@ pub(super) fn bump_material_apply_generation() {
 
 #[derive(Clone)]
 pub struct ShaderMaterial {
-    pub instrs: [Instr; 256],
+    pub compiled: Arc<CompiledShader>,
     pub seed_regs: ShaderSeedRegisters,
     pub input_binding: ShaderInputBinding,
     pub default_glyph: Option<u8>,
@@ -234,9 +239,9 @@ pub(crate) fn write_per_pixel_inputs_to_registers<const DEPTHLAYER: usize>(
 }
 
 impl ShaderMaterial {
-    pub fn new(instrs: [Instr; 256]) -> Self {
+    fn with_compiled(compiled: CompiledShader) -> Self {
         Self {
-            instrs,
+            compiled: Arc::new(compiled),
             seed_regs: ShaderSeedRegisters::default(),
             input_binding: ShaderInputBinding::default(),
             default_glyph: None,
@@ -245,8 +250,22 @@ impl ShaderMaterial {
         }
     }
 
-    pub fn from_bytecode(bytecode: &[u8]) -> Self {
-        Self::new(decode_instrs_256(bytecode))
+    /// Compile a post-SSA module; this is the production shader execute path.
+    pub fn from_ssa(ssa: &TtslSsaModule) -> Result<Self, JitError> {
+        Ok(Self::with_compiled(compile_ttsl(ssa)?))
+    }
+
+    /// Parse dumped SSA JSON and compile it.
+    pub fn from_ssa_json(json: &str) -> Result<Self, JitError> {
+        Ok(Self::with_compiled(compile_ttsl_json(json)?))
+    }
+
+    /// Identity shader: return the V4/V4/I32 values already in the named register slots.
+    pub fn passthrough_ret(front_reg: u32, back_reg: u32, glyph_reg: u32) -> Self {
+        Self::from_ssa(&TtslSsaModule::passthrough_ret(
+            front_reg, back_reg, glyph_reg,
+        ))
+        .expect("passthrough SSA compiles")
     }
 
     pub fn with_seed_registers(mut self, seed_regs: ShaderSeedRegisters) -> Self {
@@ -372,7 +391,7 @@ impl ShaderMaterial {
 
 /// Thread-local TTSL register scratch + cache key for skipping redundant seed copies.
 ///
-/// After each [`run_ttsl`], we [`ShaderSeedRegisters::copy_seed_into`] the TLS buffer again so the
+/// After each compiled run, we [`ShaderSeedRegisters::copy_seed_into`] the TLS buffer again so the
 /// VM’s clobbered registers do not leak into the next pixel. When the next invocation targets the
 /// same `(material_id, ShaderMaterial)` as the previous one on this OS thread **within the same
 /// apply generation**, we can skip the initial seed reload and only patch per-pixel inputs.
@@ -449,8 +468,7 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
             let regs = &mut t.regs;
             write_per_pixel_inputs_to_registers(&bind, pixinfo, depth_cell, depth_layer, regs);
 
-            let (front, back, glyph) = run_ttsl(
-                &self.instrs,
+            let (front, back, glyph) = self.compiled.run(
                 regs,
                 Some(texture_buffer as &dyn crate::ttsl::TtslTextureEnv),
             );
@@ -480,7 +498,7 @@ mod tests {
         drawbuffer::drawbuffer::PixInfo,
         primitivbuffer::{primitiv_triangle::PTriangle3D, primitivbuffer::PrimitiveElements},
         texturebuffer::texture_buffer::TextureBuffer,
-        ttsl::{opcodes::OP_RET, Registers},
+        ttsl::Registers,
         vertexbuffer::uv_buffer::UVBuffer,
     };
 
@@ -500,7 +518,7 @@ mod tests {
         let mut regs = Registers::new();
         regs.v4[0] = vec4(0.5, 0.25, 0.0, 1.0);
         regs.v4[1] = vec4(0.25, 0.75, 0.0, 0.5);
-        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0])
+        let shader = ShaderMaterial::passthrough_ret(0, 1, 1)
             .with_seed_registers(ShaderSeedRegisters::from_registers(regs));
 
         shader.render_mat(
@@ -532,7 +550,7 @@ mod tests {
         regs.v4[7] = vec4(0.2, 0.4, 0.6, 1.0);
         regs.i32_[9] = 99;
 
-        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0])
+        let shader = ShaderMaterial::passthrough_ret(7, 7, 9)
             .with_seed_registers(ShaderSeedRegisters::from_registers(regs));
 
         shader.render_mat(
@@ -552,24 +570,21 @@ mod tests {
 
     #[test]
     fn test_shader_material_time_uniform_setter_updates_seed_register() {
-        let mut shader =
-            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_time_f32_reg(Some(12));
+        let mut shader = ShaderMaterial::passthrough_ret(0, 0, 0).with_time_f32_reg(Some(12));
         shader.set_time_seconds(3.25);
         assert_eq!(shader.seed_regs.get_f32(12), 3.25);
     }
 
     #[test]
     fn test_shader_material_delta_time_uniform_setter_updates_seed_register() {
-        let mut shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0])
-            .with_delta_time_f32_reg(Some(11));
+        let mut shader = ShaderMaterial::passthrough_ret(0, 0, 0).with_delta_time_f32_reg(Some(11));
         shader.set_delta_time_seconds(1.0 / 60.0);
         assert_eq!(shader.seed_regs.get_f32(11), 1.0 / 60.0);
     }
 
     #[test]
     fn test_shader_material_frame_uniform_setter_updates_seed_register() {
-        let mut shader =
-            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_frame_i32_reg(Some(6));
+        let mut shader = ShaderMaterial::passthrough_ret(0, 0, 0).with_frame_i32_reg(Some(6));
         shader.set_frame_counter(42);
         assert_eq!(shader.seed_regs.get_i32(6), 42);
         shader.set_frame_counter(u32::MAX);
@@ -578,8 +593,7 @@ mod tests {
 
     #[test]
     fn test_shader_material_resolution_uniform_setter_updates_seed_register() {
-        let mut shader =
-            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_resolution_v2_reg(Some(7));
+        let mut shader = ShaderMaterial::passthrough_ret(0, 0, 0).with_resolution_v2_reg(Some(7));
         shader.set_resolution_cells(80.0, 24.0);
         assert_eq!(shader.seed_regs.get_v2(7), vec2(80.0, 24.0));
         shader.set_resolution_cells(0.0, -5.0);
@@ -588,7 +602,7 @@ mod tests {
 
     #[test]
     fn test_shader_material_near_far_uniform_setters_update_seed_registers() {
-        let mut shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0])
+        let mut shader = ShaderMaterial::passthrough_ret(0, 0, 0)
             .with_near_f32_reg(Some(13))
             .with_far_f32_reg(Some(14));
         shader.set_near_clip_distance(0.25);
@@ -716,8 +730,7 @@ mod tests {
         let texture_buffer: TextureBuffer<16> = TextureBuffer::new(1);
         let uv_buffer: UVBuffer<f32> = UVBuffer::new(4);
 
-        let shader =
-            ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 0, 0, 0]).with_default_glyph(Some(219));
+        let shader = ShaderMaterial::passthrough_ret(0, 0, 0).with_default_glyph(Some(219));
         shader.render_mat(
             &mut canvas_cell,
             &depth_cell,
@@ -742,7 +755,7 @@ mod tests {
         let mut regs_a = Registers::new();
         regs_a.v4[0] = vec4(0.5, 0.25, 0.0, 1.0);
         regs_a.v4[1] = vec4(0.25, 0.75, 0.0, 1.0);
-        let shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 0, 1, 1, 0])
+        let shader = ShaderMaterial::passthrough_ret(0, 1, 1)
             .with_seed_registers(ShaderSeedRegisters::from_registers(regs_a));
 
         let mut pix_a = PixInfo::new();
@@ -796,7 +809,7 @@ mod tests {
         let mut regs = Registers::new();
         regs.v4[7] = vec4(0.2, 0.4, 0.6, 1.0);
         regs.i32_[9] = 99;
-        let mut shader = ShaderMaterial::from_bytecode(&[OP_RET, 0, 7, 7, 9, 0])
+        let mut shader = ShaderMaterial::passthrough_ret(7, 7, 9)
             .with_seed_registers(ShaderSeedRegisters::from_registers(regs));
 
         let mut cell = CanvasCell::default();

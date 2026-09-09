@@ -285,6 +285,7 @@ impl StaticColorPy {
 #[pyclass(extends=MaterialPy)]
 pub struct ShaderPy {
     pub bytecode: Vec<u8>,
+    pub ssa_json: Option<String>,
     pub time_f32_reg: Option<usize>,
     pub delta_time_f32_reg: Option<usize>,
     pub frame_i32_reg: Option<usize>,
@@ -337,7 +338,13 @@ impl ShaderPy {
             None
         };
 
-        let mut mat = ShaderMaterial::from_bytecode(&self.bytecode)
+        let json = self.ssa_json.as_deref().ok_or_else(|| {
+            PyValueError::new_err(
+                "ShaderPy.ssa_json is required to add a shader (TTSL IR for Cranelift)",
+            )
+        })?;
+        let mut mat = ShaderMaterial::from_ssa_json(json)
+            .map_err(|err| PyValueError::new_err(format!("TTSL JIT: {err}")))?
             .with_time_f32_reg(self.time_f32_reg)
             .with_delta_time_f32_reg(self.delta_time_f32_reg)
             .with_frame_i32_reg(self.frame_i32_reg)
@@ -361,7 +368,7 @@ impl ShaderPy {
 #[pymethods]
 impl ShaderPy {
     #[new]
-    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None, blend_mode=None, glyph_policy=None))]
+    #[pyo3(signature = (bytecode, time_f32_reg=None, delta_time_f32_reg=None, resolution_v2_reg=None, front_facing_bool_reg=None, frag_depth_f32_reg=None, line_coord_f32_reg=None, point_coord_v2_reg=None, default_glyph=None, register_seed=None, frame_i32_reg=None, near_f32_reg=None, far_f32_reg=None, blend_mode=None, glyph_policy=None, ssa_json=None))]
     fn new(
         bytecode: &Bound<'_, PyBytes>,
         time_f32_reg: Option<usize>,
@@ -378,6 +385,7 @@ impl ShaderPy {
         far_f32_reg: Option<usize>,
         blend_mode: Option<&str>,
         glyph_policy: Option<&str>,
+        ssa_json: Option<String>,
     ) -> PyClassInitializer<Self> {
         let parent = MaterialPy::new();
         let bytes = bytecode.as_bytes();
@@ -393,6 +401,7 @@ impl ShaderPy {
             .unwrap_or(GlyphPolicy::PreserveExisting);
         PyClassInitializer::from(parent).add_subclass(ShaderPy {
             bytecode: bytes.to_vec(),
+            ssa_json,
             time_f32_reg,
             delta_time_f32_reg,
             frame_i32_reg,
@@ -418,6 +427,16 @@ impl ShaderPy {
     #[setter]
     fn set_bytecode(&mut self, value: &Bound<'_, PyBytes>) {
         self.bytecode = value.as_bytes().to_vec();
+    }
+
+    #[getter]
+    fn ssa_json(&self) -> Option<&str> {
+        self.ssa_json.as_deref()
+    }
+
+    #[setter]
+    fn set_ssa_json(&mut self, value: Option<String>) {
+        self.ssa_json = value;
     }
 
     #[getter]

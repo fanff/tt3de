@@ -5,7 +5,7 @@ Compiles a TTSL shader once at startup, installs it as a Rust Shader material,
 and renders a UV + time animated pattern directly in the material pass.
 
 This validates the full path:
-    shader source -> bytecode -> Shader material -> per-pixel run_ttsl -> final cell
+    shader source -> SSA IR -> Cranelift -> Shader material -> per-pixel compiled run -> final cell
 
 Run:
     uv run python demos/2d/ttsl_square.py
@@ -64,6 +64,7 @@ class TTSLSquareDemo(TT3DViewStandAlone):
             time_f32_reg=self._time_reg,
             default_glyph=full_block_glyph,
             register_seed=self._reg_settings.get_register_list(),
+            ssa_json=self._reg_settings.ssa_json(),
         )
         self._shader_mat_id = self.rc.material_buffer.add_shader(shader_mat)
 

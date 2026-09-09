@@ -163,7 +163,7 @@ class MaterialBufferPy:
         Adds a shader material to the buffer.
 
         Args:
-            mat (ShaderPy): Shader material wrapping compiled TTSL bytecode.
+            mat (ShaderPy): Shader material wrapping compiled TTSL IR (`ssa_json`).
 
         Returns:
             int: The index of the material.
@@ -867,12 +867,12 @@ def build_primitives_py(
 
 def ttsl_run(*args) -> Tuple[glm.vec4, glm.vec4, int]:
     """
-    Runs the TTSL bytecode with the provided registers.
+    Runs a compiled TTSL shader (Cranelift) with the provided register banks.
 
     Args:
-        *args: The registers and bytecode to run.
+        *args: Six register dicts (bool, f32, i32, v2, v3, v4) then SSA JSON.
 
     Returns:
-        Tuple[glm.vec4, glm.vec4, int]: A tuple containing the front vector, back vector, and glyph index.
+        Tuple[glm.vec4, glm.vec4, int]: Front color, back color, and glyph index.
     """
     ...
