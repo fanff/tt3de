@@ -10,6 +10,7 @@ from pyglm import glm
 from tests.tt3de.ttsl.shade import shade
 from tt3de.tt3de import (
     DrawingBufferPy,
+    LightBufferPy,
     MaterialBufferPy,
     PrimitiveBufferPy,
     TextureBufferPy,
@@ -1189,6 +1190,64 @@ class Test_Clamp(unittest.TestCase):
         bytecode, rs = all_passes_compilation(src, "shade", {})
         front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.5, places=5)
+
+    def test_light_accessors_read_bound_buffer(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                t: int = tt_lightType(0)
+                n: int = tt_lightCount()
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(float(t), float(n), 0.0, 1.0), n)
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        lights = LightBufferPy(capacity=8)
+        lights.set_ambient(0, color=(0.25, 0.5, 0.75))
+        front, back, glyph = shade(rs, light_buffer=lights)
+        self.assertAlmostEqual(front.x, 0.25, places=5)
+        self.assertAlmostEqual(front.y, 0.5, places=5)
+        self.assertAlmostEqual(front.z, 0.75, places=5)
+        self.assertAlmostEqual(back.x, 1.0, places=5)
+        self.assertAlmostEqual(back.y, 1.0, places=5)
+        self.assertEqual(glyph, 1)
+
+    def test_light_accessors_without_buffer_are_zero(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                n: int = tt_lightCount()
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), n)
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        front, _, glyph = shade(rs)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+        self.assertEqual(glyph, 0)
+
+    def test_point_light_position_after_view_transform(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                p: vec3 = tt_lightPosition(0)
+                return (vec4(p.x, p.y, p.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        lights = LightBufferPy()
+        lights.set_point(
+            0,
+            color=(1.0, 1.0, 1.0),
+            position=(1.0, 0.0, 0.0),
+            attenuation=(1.0, 0.0, 0.0),
+        )
+        # Identity view: world == view
+        lights.update_view_space(glm.mat4(1.0))
+        front, _, _ = shade(rs, light_buffer=lights)
+        self.assertAlmostEqual(front.x, 1.0, places=4)
+        self.assertAlmostEqual(front.y, 0.0, places=4)
+        self.assertAlmostEqual(front.z, 0.0, places=4)
 
 
 if __name__ == "__main__":

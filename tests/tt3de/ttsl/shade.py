@@ -5,7 +5,7 @@ from tt3de.tt3de import materials
 from tt3de.ttsl.compiler import RegisterSettings
 
 
-def shade(regs, ssa_json: str | None = None, bytecode: bytes = b""):
+def shade(regs, ssa_json: str | None = None, bytecode: bytes = b"", light_buffer=None):
     """Execute SSA via ``ShaderPy`` against seeded registers.
 
     ``regs`` is either a ``RegisterSettings`` (uses ``ssa_json()``) or the six
@@ -24,4 +24,4 @@ def shade(regs, ssa_json: str | None = None, bytecode: bytes = b""):
         ssa_json=ssa_json,
         default_glyph=None,
     )
-    return shader.run_seeded()
+    return shader.run_seeded(light_buffer=light_buffer)

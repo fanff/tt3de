@@ -18,6 +18,7 @@ from tt3de.glm_camera import GLMCamera
 from tt3de.tt3de import (
     DrawingBufferPy,
     GeometryBufferPy,
+    LightBufferPy,
     MaterialBufferPy,
     PrimitiveBufferPy,
     TextureBufferPy,
@@ -59,6 +60,7 @@ class RustRenderContext:
         self._material_parallel_threads = material_parallel_threads
 
         self.texture_buffer = TextureBufferPy(texture_buffer_size)
+        self.light_buffer = LightBufferPy()
         self.material_buffer = MaterialBufferPy(material_buffer_size)
         self.vertex_buffer = VertexBufferPy(
             vertex_buffer_size, uv_buffer_size, vertex_2d_buffer_size
@@ -106,13 +108,13 @@ class RustRenderContext:
     def render(self, camera: GLMCamera):
         self.transform_buffer.set_view_matrix_glm(camera.view_matrix_2D)
 
-        self.transform_buffer.set_view_matrix_3d(
-            glm.inverse(camera._rot) * glm.translate(-camera._pos)
-        )
+        view_matrix_3d = glm.inverse(camera._rot) * glm.translate(-camera._pos)
+        self.transform_buffer.set_view_matrix_3d(view_matrix_3d)
         # transform_buffer.set_view_matrix_3d(glm.inverse(camera._rot)) # camera.view_matrix_3D())
         # node_id = transform_buffer.add_node_transform(glm.translate(-camera._pos))#glm.mat4(1.0) )
 
         self.transform_buffer.set_projection_matrix(camera.perspective_matrix)
+        self.light_buffer.update_view_space(view_matrix_3d)
 
         # build the primitives in the primitive buffer using the projected geometry
         self.primitive_buffer.clear()
@@ -140,6 +142,7 @@ class RustRenderContext:
                 self.primitive_buffer,
                 self.drawing_buffer,
                 pass_filter="opaque",
+                light_buffer=self.light_buffer,
             )
         else:
             apply_material_py_parallel(
@@ -149,6 +152,7 @@ class RustRenderContext:
                 self.primitive_buffer,
                 self.drawing_buffer,
                 pass_filter="opaque",
+                light_buffer=self.light_buffer,
             )
 
         raster_all_py(
@@ -164,6 +168,7 @@ class RustRenderContext:
             self.primitive_buffer,
             self.drawing_buffer,
             pass_filter="transparent",
+            light_buffer=self.light_buffer,
         )
 
     def to_textual_2(self, region: Region) -> List[Strip]:

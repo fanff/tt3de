@@ -1,5 +1,6 @@
 pub mod drawbuffer;
 pub mod geombuffer;
+pub mod lightbuffer;
 pub mod material;
 pub mod primitiv_building;
 pub mod primitivbuffer;
@@ -22,6 +23,7 @@ fn tt3de(m: &Bound<'_, PyModule>) -> PyResult<()> {
         vertexbuffer::{transform_pack_py::TransformPackPy, vertex_buffer_py::VertexBufferPy},
     };
     m.add_class::<texturebuffer::TextureBufferPy>()?;
+    m.add_class::<lightbuffer::LightBufferPy>()?;
     m.add_class::<material::MaterialBufferPy>()?;
     m.add_class::<geombuffer::GeometryBufferPy>()?;
     m.add_class::<drawbuffer::DrawingBufferPy>()?;

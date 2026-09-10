@@ -78,6 +78,22 @@ The same option applies to ``add_atlas_texture_from_iter``. Invalid values raise
 mode stored on each texture slot.
 
 
+Light Buffer
+^^^^^^^^^^^^
+Stores up to 32 light slots (Python ``capacity`` is a runtime cap, default 16).
+Each occupied slot is ambient (color), directional (color + world direction),
+or point (color + world position + constant/linear/quadratic attenuation).
+
+Users write **world-space** directions and positions. Before shading,
+``RustRenderContext.render`` calls ``LightBufferPy.update_view_space`` with
+``view_matrix_3d``. TTSL accessors return **view-space** direction/position
+(and space-independent color / attenuation). Empty or out-of-range indices
+read as zeros. ``tt_lightCount`` is the dense prefix (highest occupied index + 1).
+
+The apply path binds the buffer for both opaque and transparent material
+passes. Non-shader materials ignore it.
+
+
 Material Buffer
 ^^^^^^^^^^^^^^^
 Defines how each object should appear when rendered.

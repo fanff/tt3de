@@ -849,6 +849,90 @@ def generate_glm_tools_forms() -> List[Form]:
     return generate_glm_tool_mix_forms()
 
 
+def generate_tt_light_accessor_forms() -> List[Form]:
+    """ISA dump for TTSL light accessors (Cranelift libcalls execute these)."""
+    return [
+        Form(
+            {
+                "name": "TT_LIGHT_COUNT",
+                "type": IRType.I32,
+                "input_types": [],
+                "rust_match_code": """
+            TT_LIGHT_COUNT => {
+                // Cranelift libcall: ttsl_jit_light_count
+                None
+            }
+            """,
+            }
+        ),
+        Form(
+            {
+                "name": "TT_LIGHT_TYPE",
+                "type": IRType.I32,
+                "input_types": [IRType.I32],
+                "rust_match_code": """
+            TT_LIGHT_TYPE => {
+                // Cranelift libcall: ttsl_jit_light_type
+                None
+            }
+            """,
+            }
+        ),
+        Form(
+            {
+                "name": "TT_LIGHT_COLOR",
+                "type": IRType.V3,
+                "input_types": [IRType.I32],
+                "rust_match_code": """
+            TT_LIGHT_COLOR => {
+                // Cranelift libcall: ttsl_jit_light_color
+                None
+            }
+            """,
+            }
+        ),
+        Form(
+            {
+                "name": "TT_LIGHT_DIRECTION",
+                "type": IRType.V3,
+                "input_types": [IRType.I32],
+                "rust_match_code": """
+            TT_LIGHT_DIRECTION => {
+                // Cranelift libcall: ttsl_jit_light_direction
+                None
+            }
+            """,
+            }
+        ),
+        Form(
+            {
+                "name": "TT_LIGHT_POSITION",
+                "type": IRType.V3,
+                "input_types": [IRType.I32],
+                "rust_match_code": """
+            TT_LIGHT_POSITION => {
+                // Cranelift libcall: ttsl_jit_light_position
+                None
+            }
+            """,
+            }
+        ),
+        Form(
+            {
+                "name": "TT_LIGHT_ATTENUATION",
+                "type": IRType.V3,
+                "input_types": [IRType.I32],
+                "rust_match_code": """
+            TT_LIGHT_ATTENUATION => {
+                // Cranelift libcall: ttsl_jit_light_attenuation
+                None
+            }
+            """,
+            }
+        ),
+    ]
+
+
 def generate_tt_texture_form() -> Form:
     """Filtered 2D texture sample: vec4 = tt_texture(tex_index i32, uv vec2)."""
     return Form(
@@ -938,6 +1022,7 @@ def generate_all_forms() -> List[CategoryGroup]:
         CategoryGroup("Read Axis", generate_read_axis_forms()),
         CategoryGroup("GLM Builtins", generate_glm_tools_forms()),
         CategoryGroup("Texture", [generate_tt_texture_form()]),
+        CategoryGroup("Light Accessors", generate_tt_light_accessor_forms()),
         CategoryGroup("Control Flow", generate_jump_forms()),
         CategoryGroup("Return", [generate_return_form()]),
     ]

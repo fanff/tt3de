@@ -124,6 +124,8 @@ Compile it with the same `globals_dict={"tt_Time": float}` shape as the minimal 
 
 **Texture sampling:** `tt_texture(tex_index: int, coord: vec2) -> vec4` is lowered in the SSA IR. In `Shader` materials the Rust runtime passes the live `TextureBuffer` into the compiled function. `tt_texelFetch` is not implemented yet.
 
+**Light accessors:** `tt_lightCount()`, `tt_lightType(i)`, `tt_lightColor(i)`, `tt_lightDirection(i)`, `tt_lightPosition(i)`, and `tt_lightAttenuation(i)` are compiler built-ins (not `globals_dict` keys). Cranelift lowers them to libcalls against the bound `LightBuffer`. `RustRenderContext.render` updates view-space fields before material apply.
+
 Note: `glm.mix` is not yet typable in `type_of(...)`, so prefer arithmetic or other supported ops until mix is wired end-to-end.
 
 ## Where compilation starts

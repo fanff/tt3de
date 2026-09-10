@@ -5,18 +5,22 @@ use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{default_libcall_names, Linkage, Module, ModuleError};
 use nalgebra_glm::Vec4;
 
-use super::{Registers, TtslTextureEnv};
+use super::{Registers, TtslLightEnv, TtslTextureEnv};
 use crate::ttsl::ir::TtslSsaModule;
 
 mod ir_lower;
 mod libcalls;
 mod mem;
 
-/// Compiled shader ABI: register file, optional texture env, output struct.
+/// Compiled shader ABI: register file, optional texture env, optional light env, output struct.
 ///
 /// Returns the glyph index (also stored in [`JitOutputs::glyph`]).
-pub type ShaderFn =
-    unsafe extern "C" fn(*mut Registers, *const JitTextureEnv, *mut JitOutputs) -> i32;
+pub type ShaderFn = unsafe extern "C" fn(
+    *mut Registers,
+    *const JitTextureEnv,
+    *const JitLightEnv,
+    *mut JitOutputs,
+) -> i32;
 
 /// `true` once [`compile_ttsl`] lowers post-SSA IR to native code.
 pub const LOWERS_IR: bool = true;
@@ -51,6 +55,27 @@ impl JitTextureEnv {
     }
 }
 
+/// Packed `dyn TtslLightEnv` fat pointer for the compiled calling convention.
+///
+/// Pass a null `*const JitLightEnv` when no light buffer is bound.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct JitLightEnv {
+    data: *const (),
+    meta: *const (),
+}
+
+impl JitLightEnv {
+    pub fn from_ref(light: &dyn TtslLightEnv) -> Self {
+        unsafe { std::mem::transmute(light as *const dyn TtslLightEnv) }
+    }
+
+    unsafe fn as_ref(&self) -> &dyn TtslLightEnv {
+        let ptr: *const dyn TtslLightEnv = std::mem::transmute(*self);
+        unsafe { &*ptr }
+    }
+}
+
 /// Owns JIT code pages for as long as the compiled shader is used.
 pub struct CompiledShader {
     _module: JITModule,
@@ -62,15 +87,25 @@ impl CompiledShader {
         self.func
     }
 
-    /// Run the compiled shader against the register file and optional texture env.
-    pub fn run(&self, regs: &mut Registers, tex: Option<&dyn TtslTextureEnv>) -> (Vec4, Vec4, i32) {
-        let env = tex.map(JitTextureEnv::from_ref);
-        let env_ptr = env
+    /// Run the compiled shader against the register file and optional host envs.
+    pub fn run(
+        &self,
+        regs: &mut Registers,
+        tex: Option<&dyn TtslTextureEnv>,
+        light: Option<&dyn TtslLightEnv>,
+    ) -> (Vec4, Vec4, i32) {
+        let tex_env = tex.map(JitTextureEnv::from_ref);
+        let tex_ptr = tex_env
             .as_ref()
             .map(|e| e as *const JitTextureEnv)
             .unwrap_or(std::ptr::null());
+        let light_env = light.map(JitLightEnv::from_ref);
+        let light_ptr = light_env
+            .as_ref()
+            .map(|e| e as *const JitLightEnv)
+            .unwrap_or(std::ptr::null());
         let mut out = JitOutputs::default();
-        let glyph = unsafe { (self.func)(regs, env_ptr, &mut out) };
+        let glyph = unsafe { (self.func)(regs, tex_ptr, light_ptr, &mut out) };
         (
             Vec4::new(out.front[0], out.front[1], out.front[2], out.front[3]),
             Vec4::new(out.back[0], out.back[1], out.back[2], out.back[3]),
@@ -146,6 +181,7 @@ pub fn compile_ttsl(ssa: &TtslSsaModule) -> Result<CompiledShader, JitError> {
 
     let ptr_ty = module.target_config().pointer_type();
     let mut sig = module.make_signature();
+    sig.params.push(AbiParam::new(ptr_ty));
     sig.params.push(AbiParam::new(ptr_ty));
     sig.params.push(AbiParam::new(ptr_ty));
     sig.params.push(AbiParam::new(ptr_ty));
@@ -239,6 +275,10 @@ mod tests {
             size_of::<JitTextureEnv>(),
             size_of::<*const dyn TtslTextureEnv>()
         );
+        assert_eq!(
+            size_of::<JitLightEnv>(),
+            size_of::<*const dyn TtslLightEnv>()
+        );
     }
 
     #[test]
@@ -314,7 +354,7 @@ mod tests {
         }"#;
         let compiled = compile_ttsl_json(json).expect("phi diamond should compile");
         let mut regs = Registers::new();
-        let (front, _back, glyph) = compiled.run(&mut regs, None);
+        let (front, _back, glyph) = compiled.run(&mut regs, None, None);
         assert!((front.x - 4.0).abs() < 1e-6, "front.x={}", front.x);
         assert_eq!(glyph, 0);
     }
@@ -331,7 +371,7 @@ mod tests {
             } else {
                 None
             };
-            let (_front, _back, glyph) = compiled.run(&mut regs, env);
+            let (_front, _back, glyph) = compiled.run(&mut regs, env, None);
             let _ = glyph;
         }
     }
@@ -368,7 +408,7 @@ mod tests {
         regs.i32_[10] = 0;
         regs.v2[11] = Vec2::new(0.25, 0.75);
         let tex = MockTex;
-        let (front, _back, glyph) = compiled.run(&mut regs, Some(&tex as &dyn TtslTextureEnv));
+        let (front, _back, glyph) = compiled.run(&mut regs, Some(&tex as &dyn TtslTextureEnv), None);
         assert!((front.x - 0.25).abs() < 1e-5);
         assert!((front.y - 0.5).abs() < 1e-5);
         assert!((front.z - 0.75).abs() < 1e-5);
@@ -401,10 +441,123 @@ mod tests {
         let mut regs = Registers::new();
         regs.i32_[0] = 0;
         regs.v2[1] = Vec2::new(0.5, 0.5);
-        let (front, _back, _glyph) = compiled.run(&mut regs, None);
+        let (front, _back, _glyph) = compiled.run(&mut regs, None, None);
         assert!((front.x - 0.0).abs() < 1e-5);
         assert!((front.y - 0.0).abs() < 1e-5);
         assert!((front.z - 0.0).abs() < 1e-5);
         assert!((front.w - 1.0).abs() < 1e-5);
+    }
+
+    struct MockLights;
+    impl TtslLightEnv for MockLights {
+        fn light_count(&self) -> i32 {
+            3
+        }
+        fn light_type(&self, index: i32) -> i32 {
+            match index {
+                0 => 1,
+                1 => 2,
+                2 => 3,
+                _ => 0,
+            }
+        }
+        fn light_color(&self, index: i32) -> Vec3 {
+            match index {
+                0 => Vec3::new(0.2, 0.2, 0.2),
+                1 => Vec3::new(0.8, 0.7, 0.6),
+                _ => Vec3::zeros(),
+            }
+        }
+        fn light_direction(&self, _index: i32) -> Vec3 {
+            Vec3::new(0.0, 1.0, 0.0)
+        }
+        fn light_position(&self, _index: i32) -> Vec3 {
+            Vec3::new(1.0, 2.0, 3.0)
+        }
+        fn light_attenuation(&self, _index: i32) -> Vec3 {
+            Vec3::new(1.0, 0.09, 0.032)
+        }
+    }
+
+    #[test]
+    fn tt_light_accessors_read_trait_env() {
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "inputs": [{"name": "idx", "ty": "I32", "temp": 1, "reg": 4}],
+            "temps": {
+                "1": "I32", "2": "I32", "3": "I32", "4": "V3",
+                "5": "V3", "6": "V3", "7": "V3", "8": "F32",
+                "9": "F32", "10": "F32", "11": "F32", "12": "V4", "13": "I32"
+            },
+            "consts": [
+                {"id": 0, "ty": "F32", "value": [0.0]},
+                {"id": 1, "ty": "F32", "value": [1.0]},
+                {"id": 2, "ty": "I32", "value": [0]}
+            ],
+            "blocks": [{
+                "id": 0,
+                "name": "entry",
+                "instrs": [
+                    {"op": "tt_lightCount", "ty": "I32", "dst": 2},
+                    {"op": "tt_lightType", "ty": "I32", "dst": 3, "src": [1]},
+                    {"op": "tt_lightColor", "ty": "V3", "dst": 4, "src": [1]},
+                    {"op": "tt_lightDirection", "ty": "V3", "dst": 5, "src": [1]},
+                    {"op": "tt_lightPosition", "ty": "V3", "dst": 6, "src": [1]},
+                    {"op": "tt_lightAttenuation", "ty": "V3", "dst": 7, "src": [1]},
+                    {"op": "load_const", "ty": "F32", "dst": 8, "imm": 0},
+                    {"op": "read_axis_x", "ty": "F32", "dst": 9, "src": [4]},
+                    {"op": "read_axis_y", "ty": "F32", "dst": 10, "src": [5]},
+                    {"op": "load_const", "ty": "F32", "dst": 11, "imm": 1},
+                    {"op": "store_vec_from_scalar", "ty": "V4", "dst": 12, "src": [9, 10, 8, 11]},
+                    {"op": "load_const", "ty": "I32", "dst": 13, "imm": 2},
+                    {"op": "ret", "src": [12, 12, 2]}
+                ]
+            }]
+        }"#;
+        let compiled = compile_ttsl_json(json).expect("light accessors should compile");
+        let mut regs = Registers::new();
+        regs.i32_[4] = 1;
+        let lights = MockLights;
+        let (front, _back, glyph) =
+            compiled.run(&mut regs, None, Some(&lights as &dyn TtslLightEnv));
+        // color.x of directional = 0.8, direction.y = 1.0
+        assert!((front.x - 0.8).abs() < 1e-5, "front.x={}", front.x);
+        assert!((front.y - 1.0).abs() < 1e-5, "front.y={}", front.y);
+        assert_eq!(glyph, 3);
+    }
+
+    #[test]
+    fn tt_light_without_env_is_zero() {
+        let json = r#"{
+            "version": 1,
+            "entry": 0,
+            "temps": {"1": "I32", "2": "V3", "3": "F32", "4": "F32", "5": "F32", "6": "F32", "7": "V4", "8": "I32"},
+            "consts": [
+                {"id": 0, "ty": "I32", "value": [0]},
+                {"id": 1, "ty": "F32", "value": [0.0]},
+                {"id": 2, "ty": "F32", "value": [1.0]}
+            ],
+            "blocks": [{
+                "id": 0,
+                "name": "entry",
+                "instrs": [
+                    {"op": "tt_lightCount", "ty": "I32", "dst": 1},
+                    {"op": "load_const", "ty": "I32", "dst": 8, "imm": 0},
+                    {"op": "tt_lightColor", "ty": "V3", "dst": 2, "src": [8]},
+                    {"op": "read_axis_x", "ty": "F32", "dst": 3, "src": [2]},
+                    {"op": "load_const", "ty": "F32", "dst": 4, "imm": 1},
+                    {"op": "load_const", "ty": "F32", "dst": 5, "imm": 1},
+                    {"op": "load_const", "ty": "F32", "dst": 6, "imm": 2},
+                    {"op": "store_vec_from_scalar", "ty": "V4", "dst": 7, "src": [3, 4, 5, 6]},
+                    {"op": "ret", "src": [7, 7, 1]}
+                ]
+            }]
+        }"#;
+        let compiled = compile_ttsl_json(json).expect("light accessors should compile");
+        let mut regs = Registers::new();
+        let (front, _back, glyph) = compiled.run(&mut regs, None, None);
+        assert!((front.x - 0.0).abs() < 1e-5);
+        assert_eq!(glyph, 0);
     }
 }
