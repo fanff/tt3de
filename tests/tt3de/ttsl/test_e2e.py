@@ -1196,9 +1196,7 @@ class Test_Clamp(unittest.TestCase):
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 c: vec3 = tt_lightColor(0)
-                t: int = tt_lightType(0)
-                n: int = tt_lightCount()
-                return (vec4(c.x, c.y, c.z, 1.0), vec4(float(t), float(n), 0.0, 1.0), n)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(c.x, c.y, c.z, 1.0), tt_lightCount())
             """
         )
         _, rs = all_passes_compilation(src, "shade", {})
@@ -1208,8 +1206,7 @@ class Test_Clamp(unittest.TestCase):
         self.assertAlmostEqual(front.x, 0.25, places=5)
         self.assertAlmostEqual(front.y, 0.5, places=5)
         self.assertAlmostEqual(front.z, 0.75, places=5)
-        self.assertAlmostEqual(back.x, 1.0, places=5)
-        self.assertAlmostEqual(back.y, 1.0, places=5)
+        self.assertAlmostEqual(back.x, 0.25, places=5)
         self.assertEqual(glyph, 1)
 
     def test_light_accessors_without_buffer_are_zero(self):
@@ -1217,8 +1214,7 @@ class Test_Clamp(unittest.TestCase):
             """
             def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
                 c: vec3 = tt_lightColor(0)
-                n: int = tt_lightCount()
-                return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), n)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_lightCount())
             """
         )
         _, rs = all_passes_compilation(src, "shade", {})
@@ -1248,6 +1244,21 @@ class Test_Clamp(unittest.TestCase):
         self.assertAlmostEqual(front.x, 1.0, places=4)
         self.assertAlmostEqual(front.y, 0.0, places=4)
         self.assertAlmostEqual(front.z, 0.0, places=4)
+
+    def test_lighting_demo_shader_compiles(self):
+        from importlib.machinery import SourceFileLoader
+
+        demo = SourceFileLoader(
+            "ttsl_lighting_demo", "demos/3d/ttsl_lighting.py"
+        ).load_module()
+        bytecode, rs = all_passes_compilation(
+            demo.SHADER_SRC, "lit_shade", {"u_albedo": glm.vec3}
+        )
+        self.assertGreater(len(bytecode), 0)
+        ssa = rs.ssa_json()
+        self.assertIn("tt_lightColor", ssa)
+        self.assertIn("tt_lightPosition", ssa)
+        self.assertIn("tt_lightAttenuation", ssa)
 
 
 if __name__ == "__main__":

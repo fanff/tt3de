@@ -35,29 +35,30 @@ SHADER_SRC = dedent(
     def lit_shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
         n: vec3 = normalize(tt_Normal)
         frag_pos: vec3 = tt_ViewPos
-        base_color: vec3 = u_albedo
-        result: vec3 = vec3(0.0, 0.0, 0.0)
+        amb: vec3 = tt_lightColor(0)
+        lit: vec3 = vec3(u_albedo.x * amb.x, u_albedo.y * amb.y, u_albedo.z * amb.z)
 
-        amb_color: vec3 = tt_lightColor(0)
-        result = result + base_color * amb_color
-
-        dir_color: vec3 = tt_lightColor(1)
         light_dir: vec3 = tt_lightDirection(1)
         diff: float = max(dot(n, light_dir), 0.0)
-        result = result + base_color * dir_color * diff
+        dir_c: vec3 = tt_lightColor(1)
+        lit = lit + vec3(
+            u_albedo.x * dir_c.x * diff,
+            u_albedo.y * dir_c.y * diff,
+            u_albedo.z * dir_c.z * diff,
+        )
 
-        pt_color: vec3 = tt_lightColor(2)
-        pt_pos: vec3 = tt_lightPosition(2)
-        pt_atten: vec3 = tt_lightAttenuation(2)
-        to_light: vec3 = pt_pos - frag_pos
+        to_light: vec3 = tt_lightPosition(2) - frag_pos
         dist: float = length(to_light)
         l_dir: vec3 = normalize(to_light)
         pt_diff: float = max(dot(n, l_dir), 0.0)
-        atten: float = 1.0 / (pt_atten.x + pt_atten.y * dist + pt_atten.z * dist * dist)
-        result = result + base_color * pt_color * pt_diff * atten
+        att: vec3 = tt_lightAttenuation(2)
+        atten: float = 1.0 / (att.x + att.y * dist + att.z * dist * dist)
+        pt_c: vec3 = tt_lightColor(2)
+        k: float = pt_diff * atten
+        lit = lit + vec3(u_albedo.x * pt_c.x * k, u_albedo.y * pt_c.y * k, u_albedo.z * pt_c.z * k)
 
-        result = clamp(result, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0))
-        c: vec4 = vec4(result.x, result.y, result.z, 1.0)
+        lit = clamp(lit, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0))
+        c: vec4 = vec4(lit.x, lit.y, lit.z, 1.0)
         return (c, c, 0)
     """
 )
