@@ -7,8 +7,8 @@ use crate::{
     texturebuffer::TextureBufferPy,
     vertexbuffer::{TransformPackPy, VertexBufferPy},
 };
-use tt3de_core::lightbuffer::{bind_frame_lights, LightBuffer};
 use pyo3::{exceptions::PyValueError, pyfunction, PyRefMut, PyResult};
+use tt3de_core::lightbuffer::{bind_frame_lights, LightBuffer};
 use tt3de_core::{
     drawbuffer::drawbuffer::{
         apply_material_on, apply_material_on_parallel, apply_material_transparent_on,

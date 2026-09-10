@@ -1,8 +1,6 @@
 use pyo3::{
-    exceptions::PyValueError,
-    pyclass, pymethods,
-    types::PyAnyMethods,
-    Bound, Py, PyAny, PyResult, Python,
+    exceptions::PyValueError, pyclass, pymethods, types::PyAnyMethods, Bound, Py, PyAny, PyResult,
+    Python,
 };
 use tt3de_core::lightbuffer::{LightBuffer, LightError, LightType, MAX_LIGHTS};
 use tt3de_core::ttsl::TtslLightEnv;
@@ -48,7 +46,12 @@ impl LightBufferPy {
         MAX_LIGHTS
     }
 
-    fn set_ambient(&mut self, py: Python<'_>, index: usize, color: Bound<'_, PyAny>) -> PyResult<()> {
+    fn set_ambient(
+        &mut self,
+        py: Python<'_>,
+        index: usize,
+        color: Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let color = parse_vec3(py, color)?;
         self.data.set_ambient(index, color).map_err(light_err)
     }

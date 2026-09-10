@@ -408,7 +408,8 @@ mod tests {
         regs.i32_[10] = 0;
         regs.v2[11] = Vec2::new(0.25, 0.75);
         let tex = MockTex;
-        let (front, _back, glyph) = compiled.run(&mut regs, Some(&tex as &dyn TtslTextureEnv), None);
+        let (front, _back, glyph) =
+            compiled.run(&mut regs, Some(&tex as &dyn TtslTextureEnv), None);
         assert!((front.x - 0.25).abs() < 1e-5);
         assert!((front.y - 0.5).abs() < 1e-5);
         assert!((front.z - 0.75).abs() < 1e-5);

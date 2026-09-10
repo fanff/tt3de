@@ -125,11 +125,7 @@ pub unsafe extern "C" fn ttsl_jit_light_type(env: *const JitLightEnv, idx: i32) 
     light_env(env).map(|l| l.light_type(idx)).unwrap_or(0)
 }
 
-pub unsafe extern "C" fn ttsl_jit_light_color(
-    env: *const JitLightEnv,
-    idx: i32,
-    out_v3: *mut f32,
-) {
+pub unsafe extern "C" fn ttsl_jit_light_color(env: *const JitLightEnv, idx: i32, out_v3: *mut f32) {
     write_v3(
         out_v3,
         light_env(env)
@@ -263,7 +259,8 @@ pub fn declare(
     let light_color_id = module.declare_function(LIGHT_COLOR, Linkage::Import, &light_v3_sig)?;
     let light_dir_id = module.declare_function(LIGHT_DIRECTION, Linkage::Import, &light_v3_sig)?;
     let light_pos_id = module.declare_function(LIGHT_POSITION, Linkage::Import, &light_v3_sig)?;
-    let light_att_id = module.declare_function(LIGHT_ATTENUATION, Linkage::Import, &light_v3_sig)?;
+    let light_att_id =
+        module.declare_function(LIGHT_ATTENUATION, Linkage::Import, &light_v3_sig)?;
 
     Ok(Libcalls {
         sin_f32: module.declare_func_in_func(sin_id, func),

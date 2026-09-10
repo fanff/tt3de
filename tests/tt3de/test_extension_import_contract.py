@@ -5,6 +5,7 @@ import pytest
 
 TOP_LEVEL_EXPORTS = (
     "TextureBufferPy",
+    "LightBufferPy",
     "MaterialBufferPy",
     "GeometryBufferPy",
     "DrawingBufferPy",

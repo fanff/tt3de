@@ -81,7 +81,10 @@ impl std::fmt::Display for LightError {
                 write!(f, "light capacity {requested} exceeds MAX_LIGHTS ({max})")
             }
             Self::IndexOutOfRange { index, capacity } => {
-                write!(f, "light index {index} is out of range for capacity {capacity}")
+                write!(
+                    f,
+                    "light index {index} is out of range for capacity {capacity}"
+                )
             }
         }
     }
@@ -280,7 +283,10 @@ static FRAME_LIGHTS: AtomicPtr<LightBuffer> = AtomicPtr::new(std::ptr::null_mut(
 /// Parallel material workers all read the same pointer. The guard must outlive
 /// the pass (including Rayon work).
 pub fn bind_frame_lights(buf: &LightBuffer) -> FrameLightsGuard<'_> {
-    FRAME_LIGHTS.store(buf as *const LightBuffer as *mut LightBuffer, Ordering::Release);
+    FRAME_LIGHTS.store(
+        buf as *const LightBuffer as *mut LightBuffer,
+        Ordering::Release,
+    );
     FrameLightsGuard {
         _marker: PhantomData,
     }
@@ -314,8 +320,13 @@ mod tests {
     fn set_and_clear_updates_count() {
         let mut buf = LightBuffer::new();
         buf.set_ambient(0, vec3(0.1, 0.1, 0.1)).unwrap();
-        buf.set_point(2, vec3(1.0, 0.0, 0.0), vec3(3.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0))
-            .unwrap();
+        buf.set_point(
+            2,
+            vec3(1.0, 0.0, 0.0),
+            vec3(3.0, 0.0, 0.0),
+            vec3(1.0, 0.0, 0.0),
+        )
+        .unwrap();
         assert_eq!(buf.count(), 3);
         assert_eq!(buf.light_type(1), LightType::Empty as i32);
         buf.clear(2).unwrap();

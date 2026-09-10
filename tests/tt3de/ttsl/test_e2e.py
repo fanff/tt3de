@@ -288,6 +288,64 @@ class Test_EndToEndCompilation(unittest.TestCase):
             self.assertGreater(b, 40, msg=f"expected blue channel from texture ({apply_fn})")
             self.assertLess(b, 120, msg=f"expected bounded blue ({apply_fn})")
 
+    def test_tt_light_shader_reads_bound_light_buffer_on_apply(self):
+        """``tt_lightColor`` must see the frame-bound ``LightBuffer`` in apply_material."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(c.x, c.y, c.z, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        mb = MaterialBufferPy()
+        mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                default_glyph=None,
+                register_seed=reg_settings.get_register_list(),
+                ssa_json=reg_settings.ssa_json(),
+            )
+        )
+        lights = LightBufferPy()
+        lights.set_ambient(0, color=(0.5, 0.25, 0.0))
+
+        def sample_rgb(apply_fn, light_buffer) -> tuple[int, int, int]:
+            draw = DrawingBufferPy(4, 4)
+            draw.hard_clear(10.0)
+            draw.set_depth_content(
+                0,
+                0,
+                glm.vec3(0.0, 0.0, 1.0),
+                1.0,
+                glm.vec2(0.5, 0.5),
+                glm.vec2(0.0, 0.0),
+                0,
+                0,
+                mat_idx,
+                0,
+            )
+            apply_fn(
+                mb,
+                TextureBufferPy(4),
+                VertexBufferPy(16, 16, 16),
+                PrimitiveBufferPy(8),
+                draw,
+                light_buffer=light_buffer,
+            )
+            cell = draw.get_canvas_cell(0, 0)
+            return (cell["f_r"], cell["f_g"], cell["f_b"])
+
+        for apply_fn in (apply_material_py, apply_material_py_parallel):
+            r, g, b = sample_rgb(apply_fn, lights)
+            self.assertEqual(r, 128, msg=f"ambient red via {apply_fn}")
+            self.assertEqual(g, 64, msg=f"ambient green via {apply_fn}")
+            self.assertEqual(b, 0, msg=f"ambient blue via {apply_fn}")
+            dark = sample_rgb(apply_fn, None)
+            self.assertEqual(dark, (0, 0, 0), msg=f"unbound lights are black ({apply_fn})")
+
     def test_tt_texture_nearest_filter_samples_single_texel(self):
         """``tt_texture`` uses the texture's filter mode (nearest = no blending)."""
         src = dedent(
@@ -1246,11 +1304,13 @@ class Test_Clamp(unittest.TestCase):
         self.assertAlmostEqual(front.z, 0.0, places=4)
 
     def test_lighting_demo_shader_compiles(self):
-        from importlib.machinery import SourceFileLoader
+        import importlib.util
+        from pathlib import Path
 
-        demo = SourceFileLoader(
-            "ttsl_lighting_demo", "demos/3d/ttsl_lighting.py"
-        ).load_module()
+        path = Path("demos/3d/ttsl_lighting.py")
+        spec = importlib.util.spec_from_file_location("ttsl_lighting_demo", path)
+        demo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(demo)
         bytecode, rs = all_passes_compilation(
             demo.SHADER_SRC, "lit_shade", {"u_albedo": glm.vec3}
         )
