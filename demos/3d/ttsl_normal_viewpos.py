@@ -3,8 +3,9 @@
 
 Two **low-poly spheres**: the left uses smooth Lambert + rim color. The right
 uses the same varyings but the **glyph** shader (``sphere_glyphs``) — a
-**diffuse-biased** scalar (``diff`` plus a little rim) maps onto a 10-step
-ASCII density ramp `` .:-=+*#%@`` (space = no shading, ``@`` = heaviest).
+**diffuse-biased** scalar (``diff`` plus rim), contrast-stretched so mid-tones
+snap toward the ends of a 10-step ASCII density ramp `` .:-=+*#%@``
+(space = no shading, ``@`` = heaviest).
 Glyph uniforms are ``u_g0`` … ``u_g9``; all characters are ASCII so
 ``find_glyph_indices_py`` ``i8`` stays valid (bullet ``•`` is index ``> 127``
 and would mis-encode). Background is flat ``u_albedo``; **front** (ink) color
@@ -92,14 +93,16 @@ SHADER_SPHERE_GLYPHS_SRC = dedent(
         diff: float = glm.max(0.0, glm.dot(n, ldir))
         edge: float = glm.clamp(1.0 - glm.max(0.0, glm.dot(n, vdir)), 0.0, 1.0)
         rim: float = edge * edge
-        # Band on diffuse (+ rim); ``shade`` also scales ink for front color depth.
-        shade: float = glm.clamp(diff + rim * 0.42, 0.0, 1.0)
-        ink_w: float = glm.clamp(0.12 + 0.88 * shade, 0.0, 1.0)
+        # Band on diffuse (+ rim); ``amp`` also scales ink for front color depth.
+        shade: float = glm.clamp(diff + rim * 0.55, 0.0, 1.0)
+        # Contrast stretch so mid-tones snap toward space / ``@``.
+        amp: float = glm.clamp(0.5 + (shade - 0.5) * 1.7, 0.0, 1.0)
+        ink_w: float = glm.clamp(0.05 + 0.95 * amp, 0.0, 1.0)
         ink: vec3 = u_albedo * ink_w
         fr: vec4 = vec4(ink.x, ink.y, ink.z, 1.0)
         bg: vec4 = vec4(u_albedo.x, u_albedo.y, u_albedo.z, 1.0)
-        # 10 even bands; lit (high shade) → space, shadowed → ``@``.
-        inv: float = glm.clamp(1.0 - shade, 0.0, 0.999)
+        # 10 even bands; lit (high amp) → space, shadowed → ``@``.
+        inv: float = glm.clamp(1.0 - amp, 0.0, 0.999)
         band: float = floor(inv * 10.0)
         if band >= 9.0:
             return (fr, bg, u_g9)
@@ -172,7 +175,7 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
             dist_max=CAM_FAR,
             fov_radians=glm.radians(72.0),
         )
-        self.camera.move_at(glm.vec3(0.0, 0.85, -4.6))
+        self.camera.move_at(glm.vec3(0.0, 0.55, -5.2))
         self.camera.point_at(glm.vec3(0.0, 0.05, 0.0))
 
         self.rc.material_buffer.add_static(
@@ -209,15 +212,15 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
 
         self.spin_root = TT3DNode()
 
-        sphere = Prefab3D.latlong_uv_sphere(0.42, stacks=4, slices=10)
+        sphere = Prefab3D.latlong_uv_sphere(0.75, stacks=5, slices=12)
         sphere.material_id = mat_sphere
-        sphere.local_transform = glm.translate(glm.vec3(-1.05, 0.0, 0.0))
+        sphere.local_transform = glm.translate(glm.vec3(-1.85, 0.0, 0.0))
         self.spin_root.add_child(sphere)
 
         # Denser tessellation so the 10-step ramp can show mid-tones.
-        glyph_sphere = Prefab3D.latlong_uv_sphere(0.5, stacks=8, slices=16)
+        glyph_sphere = Prefab3D.latlong_uv_sphere(0.90, stacks=10, slices=20)
         glyph_sphere.material_id = mat_glyphs
-        glyph_sphere.local_transform = glm.translate(glm.vec3(1.05, 0.0, 0.0))
+        glyph_sphere.local_transform = glm.translate(glm.vec3(1.85, 0.0, 0.0))
         self.spin_root.add_child(glyph_sphere)
 
         self.rc.append_root(self.spin_root)

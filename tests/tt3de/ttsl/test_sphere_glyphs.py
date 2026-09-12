@@ -42,12 +42,13 @@ def _python_reference(
     diff = max(0.0, float(glm.dot(n, ldir)))
     edge = min(1.0, max(0.0, 1.0 - max(0.0, float(glm.dot(n, vdir)))))
     rim = edge * edge
-    shade_v = min(1.0, max(0.0, diff + rim * 0.42))
-    ink_w = min(1.0, max(0.0, 0.12 + 0.88 * shade_v))
+    shade_v = min(1.0, max(0.0, diff + rim * 0.55))
+    amp = min(1.0, max(0.0, 0.5 + (shade_v - 0.5) * 1.7))
+    ink_w = min(1.0, max(0.0, 0.05 + 0.95 * amp))
     ink = albedo * ink_w
     fr = glm.vec4(ink.x, ink.y, ink.z, 1.0)
     bg = glm.vec4(albedo.x, albedo.y, albedo.z, 1.0)
-    inv = min(0.999, max(0.0, 1.0 - shade_v))
+    inv = min(0.999, max(0.0, 1.0 - amp))
     band = int(math.floor(inv * 10.0))
     band = min(9, max(0, band))
     return (fr, bg, glyphs[band])
