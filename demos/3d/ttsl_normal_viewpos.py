@@ -3,11 +3,14 @@
 
 Two **low-poly spheres**: the left uses smooth Lambert + rim color. The right
 uses the same varyings but the **glyph** shader (``sphere_glyphs``) — a
-**diffuse-biased** scalar (``diff`` plus a little rim) maps to ``#``, ``+``, ``*``,
-``.`` (glyph uniforms ``u_g_hash`` … ``u_g_dot``; bullet ``•`` is index ``> 127``
-so ``find_glyph_indices_py`` ``i8`` would mis-encode it). Background is flat
-``u_albedo``; **front** (ink) color is ``u_albedo * ink_w`` with ``ink_w`` from
-``shade`` (see ``demos/3d/ttsl_fog_glyph_shadows.py`` for glyph index returns).
+**diffuse-biased** scalar (``diff`` plus rim), contrast-stretched so mid-tones
+snap toward the ends of a 10-step ASCII density ramp `` .:-=+*#%@``
+(space = no shading, ``@`` = heaviest).
+Glyph uniforms are ``u_g0`` … ``u_g9``; all characters are ASCII so
+``find_glyph_indices_py`` ``i8`` stays valid (bullet ``•`` is index ``> 127``
+and would mis-encode). Background is flat ``u_albedo``; **front** (ink) color
+is ``u_albedo * ink_w`` with ``ink_w`` from ``shade`` (see
+``demos/3d/ttsl_fog_glyph_shadows.py`` for glyph index returns).
 
 
 Run:
@@ -34,12 +37,32 @@ SPIN_SPEED = 0.5  # radians per second
 ALBEDO_SPHERE = glm.vec3(0.55, 0.72, 0.95)
 ALBEDO_GLYPH_SPHERE = glm.vec3(0.95, 0.62, 0.38)
 
-# Glyph-band characters (darkest → lightest): #, +, *, . — indices < 128 for
-# ``find_glyph_indices_py`` (``i8``); bullet ``•`` is index 241.
-GLYPH_HASH = find_glyph_indices_py("#")
-GLYPH_PLUS = find_glyph_indices_py("+")
-GLYPH_STAR = find_glyph_indices_py("*")
-GLYPH_DOT = find_glyph_indices_py(".")
+# Lightest (no shading) → darkest. Classic 10-level ASCII density; all < 128.
+GLYPH_RAMP_CHARS = " .:-=+*#%@"
+GLYPH_G0 = find_glyph_indices_py(" ")
+GLYPH_G1 = find_glyph_indices_py(".")
+GLYPH_G2 = find_glyph_indices_py(":")
+GLYPH_G3 = find_glyph_indices_py("-")
+GLYPH_G4 = find_glyph_indices_py("=")
+GLYPH_G5 = find_glyph_indices_py("+")
+GLYPH_G6 = find_glyph_indices_py("*")
+GLYPH_G7 = find_glyph_indices_py("#")
+GLYPH_G8 = find_glyph_indices_py("%")
+GLYPH_G9 = find_glyph_indices_py("@")
+GLYPH_RAMP = (
+    GLYPH_G0,
+    GLYPH_G1,
+    GLYPH_G2,
+    GLYPH_G3,
+    GLYPH_G4,
+    GLYPH_G5,
+    GLYPH_G6,
+    GLYPH_G7,
+    GLYPH_G8,
+    GLYPH_G9,
+)
+GLYPH_UNIFORM_NAMES = tuple(f"u_g{i}" for i in range(len(GLYPH_RAMP)))
+GLYPH_GLOBALS = {name: int for name in GLYPH_UNIFORM_NAMES}
 
 SHADER_SPHERE_SRC = dedent(
     """
@@ -70,19 +93,36 @@ SHADER_SPHERE_GLYPHS_SRC = dedent(
         diff: float = glm.max(0.0, glm.dot(n, ldir))
         edge: float = glm.clamp(1.0 - glm.max(0.0, glm.dot(n, vdir)), 0.0, 1.0)
         rim: float = edge * edge
-        # Band on diffuse (+ rim); ``shade`` also scales ink for front color depth.
-        shade: float = glm.clamp(diff + rim * 0.42, 0.0, 1.0)
-        ink_w: float = glm.clamp(0.12 + 0.88 * shade, 0.0, 1.0)
+        # Band on diffuse (+ rim); ``amp`` also scales ink for front color depth.
+        shade: float = glm.clamp(diff + rim * 0.55, 0.0, 1.0)
+        # Contrast stretch so mid-tones snap toward space / ``@``.
+        amp: float = glm.clamp(0.5 + (shade - 0.5) * 1.7, 0.0, 1.0)
+        ink_w: float = glm.clamp(0.05 + 0.95 * amp, 0.0, 1.0)
         ink: vec3 = u_albedo * ink_w
         fr: vec4 = vec4(ink.x, ink.y, ink.z, 1.0)
         bg: vec4 = vec4(u_albedo.x, u_albedo.y, u_albedo.z, 1.0)
-        if shade >= 0.74:
-            return (fr, bg, u_g_dot)
-        if shade >= 0.48:
-            return (fr, bg, u_g_star)
-        if shade >= 0.22:
-            return (fr, bg, u_g_plus)
-        return (fr, bg, u_g_hash)
+        # 10 even bands; lit (high amp) → space, shadowed → ``@``.
+        inv: float = glm.clamp(1.0 - amp, 0.0, 0.999)
+        band: float = floor(inv * 10.0)
+        if band >= 9.0:
+            return (fr, bg, u_g9)
+        if band >= 8.0:
+            return (fr, bg, u_g8)
+        if band >= 7.0:
+            return (fr, bg, u_g7)
+        if band >= 6.0:
+            return (fr, bg, u_g6)
+        if band >= 5.0:
+            return (fr, bg, u_g5)
+        if band >= 4.0:
+            return (fr, bg, u_g4)
+        if band >= 3.0:
+            return (fr, bg, u_g3)
+        if band >= 2.0:
+            return (fr, bg, u_g2)
+        if band >= 1.0:
+            return (fr, bg, u_g1)
+        return (fr, bg, u_g0)
     """
 )
 
@@ -116,10 +156,8 @@ def _add_sphere_glyphs_material(
 ) -> int:
     reg_settings = reg_template.fork()
     reg_settings.set_variable("u_albedo", u_albedo)
-    reg_settings.set_variable("u_g_hash", int(GLYPH_HASH))
-    reg_settings.set_variable("u_g_plus", int(GLYPH_PLUS))
-    reg_settings.set_variable("u_g_star", int(GLYPH_STAR))
-    reg_settings.set_variable("u_g_dot", int(GLYPH_DOT))
+    for name, glyph in zip(GLYPH_UNIFORM_NAMES, GLYPH_RAMP, strict=True):
+        reg_settings.set_variable(name, int(glyph))
     shader_mat = materials.ShaderPy(
         bytecode,
         default_glyph=default_glyph,
@@ -137,7 +175,7 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
             dist_max=CAM_FAR,
             fov_radians=glm.radians(72.0),
         )
-        self.camera.move_at(glm.vec3(0.0, 0.85, -4.6))
+        self.camera.move_at(glm.vec3(0.0, 0.55, -5.2))
         self.camera.point_at(glm.vec3(0.0, 0.05, 0.0))
 
         self.rc.material_buffer.add_static(
@@ -154,13 +192,7 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
         sphere_glyphs_bc, sphere_glyphs_reg = all_passes_compilation(
             SHADER_SPHERE_GLYPHS_SRC,
             "sphere_glyphs",
-            {
-                "u_albedo": glm.vec3,
-                "u_g_hash": int,
-                "u_g_plus": int,
-                "u_g_star": int,
-                "u_g_dot": int,
-            },
+            {"u_albedo": glm.vec3, **GLYPH_GLOBALS},
         )
         full_block = find_glyph_indices_py("█")
         mat_sphere = _add_sphere_material(
@@ -175,20 +207,20 @@ class TTSLNormalViewPosDemo(TT3DViewStandAlone):
             bytecode=sphere_glyphs_bc,
             reg_template=sphere_glyphs_reg,
             u_albedo=ALBEDO_GLYPH_SPHERE,
-            default_glyph=int(GLYPH_HASH),
+            default_glyph=int(GLYPH_G9),
         )
 
         self.spin_root = TT3DNode()
 
-        sphere = Prefab3D.latlong_uv_sphere(0.42, stacks=4, slices=10)
+        sphere = Prefab3D.latlong_uv_sphere(0.75, stacks=5, slices=12)
         sphere.material_id = mat_sphere
-        sphere.local_transform = glm.translate(glm.vec3(-1.05, 0.0, 0.0))
+        sphere.local_transform = glm.translate(glm.vec3(-1.85, 0.0, 0.0))
         self.spin_root.add_child(sphere)
 
-        # Second mesh: same low-poly sphere with ``sphere_glyphs`` TTSL.
-        glyph_sphere = Prefab3D.latlong_uv_sphere(0.5, stacks=6, slices=12)
+        # Denser tessellation so the 10-step ramp can show mid-tones.
+        glyph_sphere = Prefab3D.latlong_uv_sphere(0.90, stacks=10, slices=20)
         glyph_sphere.material_id = mat_glyphs
-        glyph_sphere.local_transform = glm.translate(glm.vec3(1.05, 0.0, 0.0))
+        glyph_sphere.local_transform = glm.translate(glm.vec3(1.85, 0.0, 0.0))
         self.spin_root.add_child(glyph_sphere)
 
         self.rc.append_root(self.spin_root)
