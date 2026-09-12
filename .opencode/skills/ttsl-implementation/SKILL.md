@@ -101,6 +101,7 @@ Use this when writing shaders today. If something fails with `CompileError` or `
 | Binary / n-ary | `mod`, `dot`, `length`, `max`, `clamp` (3 args) |
 | GLM tools | **`glm.mix(a, b, t)`** — `vec2/3/4` × same × `float` `t`; bare `mix(...)` is **not** wired |
 | Texture | `tt_texture` |
+| Lights | `tt_lightCount`, `tt_lightType`, `tt_lightColor`, `tt_lightDirection`, `tt_lightPosition`, `tt_lightAttenuation` |
 | Constructors | `vec2`, `vec3`, `vec4`, `glm.vec2`, `glm.vec3`, `glm.vec4` |
 | Swizzles | `.x`, `.y`, `.z`, `.w` on vectors |
 

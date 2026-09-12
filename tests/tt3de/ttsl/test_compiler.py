@@ -179,6 +179,44 @@ class Test_ReturnTripleContract(unittest.TestCase):
         self.assertIn("tuple[vec4, vec4, int]", str(ctx.exception))
 
 
+class Test_tt_light_frontend(unittest.TestCase):
+    def test_light_accessors_compile(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                d: vec3 = tt_lightDirection(1)
+                p: vec3 = tt_lightPosition(2)
+                a: vec3 = tt_lightAttenuation(2)
+                return (vec4(c.x, d.y, p.z, 1.0), vec4(a.x, a.y, a.z, 1.0), tt_lightType(0))
+            """
+        )
+        bytecode, rs = all_passes_compilation(src, "shade", {})
+        self.assertIsInstance(bytecode, bytes)
+        self.assertGreater(len(bytecode), 0)
+        self.assertIn("tt_lightColor", rs.ssa_json())
+        count_src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_lightCount())
+            """
+        )
+        count_bc, count_rs = all_passes_compilation(count_src, "shade", {})
+        self.assertGreater(len(count_bc), 0)
+        self.assertIn("tt_lightCount", count_rs.ssa_json())
+
+    def test_tt_lightColor_rejects_non_int_index(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0.5)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        with self.assertRaises(Exception):
+            all_passes_compilation(src, "shade", {})
+
+
 class Test_tt_texture_frontend(unittest.TestCase):
     def test_tt_texture_compiles_full_pipeline(self):
         src = dedent(

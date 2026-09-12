@@ -48,6 +48,16 @@ ALLOWED_IR_TYPES = {
 
 VECTOR_CONSTRUCTORS = {"vec2": IRType.V2, "vec3": IRType.V3, "vec4": IRType.V4}
 
+# TTSL light accessors: (arg_count, return_type, opcode). Index args are int.
+LIGHT_ACCESSORS: Dict[str, Tuple[int, IRType, OpCodes]] = {
+    "tt_lightCount": (0, IRType.I32, OpCodes.TT_LIGHT_COUNT),
+    "tt_lightType": (1, IRType.I32, OpCodes.TT_LIGHT_TYPE),
+    "tt_lightColor": (1, IRType.V3, OpCodes.TT_LIGHT_COLOR),
+    "tt_lightDirection": (1, IRType.V3, OpCodes.TT_LIGHT_DIRECTION),
+    "tt_lightPosition": (1, IRType.V3, OpCodes.TT_LIGHT_POSITION),
+    "tt_lightAttenuation": (1, IRType.V3, OpCodes.TT_LIGHT_ATTENUATION),
+}
+
 # TTSL names follow the OpenGL/GLSL convention `gl_<CamelCase>` as `tt_<CamelCase>`.
 # Pixel inputs (`PIXEL_VARIABLES_STR_TYPE`) are always predeclared; engine uniforms such as
 # `GLOBAL_VAR_TT_TIME`, `GLOBAL_VAR_TT_DELTA_TIME`, `GLOBAL_VAR_TT_FRAME`,
@@ -670,6 +680,37 @@ class TTSLCompilerContext:
                         ),
                     )
                     return result_reg
+                elif func.id in LIGHT_ACCESSORS:
+                    argc, ret_ty, opcode = LIGHT_ACCESSORS[func.id]
+                    if len(args) != argc:
+                        raise CompileError(
+                            node,
+                            f"{func.id} expects {argc} argument(s), got {len(args)}",
+                        )
+                    idx_reg = None
+                    if argc == 1:
+                        i_ty = self.type_of(args[0])
+                        if i_ty != IRType.I32:
+                            raise CompileError(
+                                node,
+                                f"{func.id} argument must be int, got {i_ty}",
+                            )
+                        idx_reg = self.compile_expr(args[0], IRType.I32)
+                    result_reg = self.alloc_temp_for_type(ret_ty)
+                    self.emit(
+                        opcode,
+                        idx_reg,
+                        None,
+                        None,
+                        None,
+                        result_reg,
+                        comment=(
+                            f"{func.id} -> r{result_reg.id}"
+                            if idx_reg is None
+                            else f"{func.id} r{idx_reg.id} -> r{result_reg.id}"
+                        ),
+                    )
+                    return result_reg
                 raise CompileError(node, f"Unsupported function call '{func.id}'")
             elif "attr" in func._fields:
                 if "value" in func._fields and "id" in func.value._fields:
@@ -1286,6 +1327,24 @@ class TTSLCompilerContext:
                         node,
                         "Cannot determine return type of tt_texture (need int, vec2 arguments)",
                     )
+                elif node.id in LIGHT_ACCESSORS:
+                    argc, ret_ty, _opcode = LIGHT_ACCESSORS[node.id]
+                    if type_args is None:
+                        raise CompileError(
+                            node,
+                            f"Cannot determine return type of {node.id}",
+                        )
+                    if len(type_args) != argc:
+                        raise CompileError(
+                            node,
+                            f"{node.id} expects {argc} argument(s), got {len(type_args)}",
+                        )
+                    if argc == 1 and type_args[0] != IRType.I32:
+                        raise CompileError(
+                            node,
+                            f"{node.id} argument must be int, got {type_args[0]}",
+                        )
+                    return ret_ty
                 elif node.id in PIXEL_VARIABLES_STR_TYPE:  #
                     return PIXEL_VARIABLES_STR_TYPE[node.id]
                 elif node.id in STR_TO_IRTYPE:  #

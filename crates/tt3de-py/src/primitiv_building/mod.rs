@@ -1,12 +1,14 @@
 use crate::{
     drawbuffer::DrawingBufferPy,
     geombuffer::GeometryBufferPy,
+    lightbuffer::LightBufferPy,
     material::MaterialBufferPy,
     primitivbuffer::PrimitiveBufferPy,
     texturebuffer::TextureBufferPy,
     vertexbuffer::{TransformPackPy, VertexBufferPy},
 };
 use pyo3::{exceptions::PyValueError, pyfunction, PyRefMut, PyResult};
+use tt3de_core::lightbuffer::{bind_frame_lights, LightBuffer};
 use tt3de_core::{
     drawbuffer::drawbuffer::{
         apply_material_on, apply_material_on_parallel, apply_material_transparent_on,
@@ -37,7 +39,7 @@ pub fn build_primitives_py(
 }
 
 #[pyfunction]
-#[pyo3(signature = (material_buffer, texturebuffer, vertex_buffer, primitivbuffer, draw_buffer_py, pass_filter=None))]
+#[pyo3(signature = (material_buffer, texturebuffer, vertex_buffer, primitivbuffer, draw_buffer_py, pass_filter=None, light_buffer=None))]
 pub fn apply_material_py(
     material_buffer: &MaterialBufferPy,
     texturebuffer: &TextureBufferPy,
@@ -45,7 +47,11 @@ pub fn apply_material_py(
     primitivbuffer: &PrimitiveBufferPy,
     mut draw_buffer_py: PyRefMut<'_, DrawingBufferPy>,
     pass_filter: Option<&str>,
+    light_buffer: Option<&LightBufferPy>,
 ) {
+    let empty = LightBuffer::new();
+    let lights = light_buffer.map(|b| &b.data).unwrap_or(&empty);
+    let _guard = bind_frame_lights(lights);
     let draw_buf: &mut DrawingBufferPy = &mut draw_buffer_py;
 
     match pass_filter {
@@ -72,7 +78,7 @@ pub fn apply_material_py(
 }
 
 #[pyfunction]
-#[pyo3(signature = (material_buffer, texturebuffer, vertex_buffer, primitivbuffer, draw_buffer_py, pass_filter=None))]
+#[pyo3(signature = (material_buffer, texturebuffer, vertex_buffer, primitivbuffer, draw_buffer_py, pass_filter=None, light_buffer=None))]
 pub fn apply_material_py_parallel(
     material_buffer: &MaterialBufferPy,
     texturebuffer: &TextureBufferPy,
@@ -80,7 +86,11 @@ pub fn apply_material_py_parallel(
     primitivbuffer: &PrimitiveBufferPy,
     mut draw_buffer_py: PyRefMut<'_, DrawingBufferPy>,
     pass_filter: Option<&str>,
+    light_buffer: Option<&LightBufferPy>,
 ) -> PyResult<()> {
+    let empty = LightBuffer::new();
+    let lights = light_buffer.map(|b| &b.data).unwrap_or(&empty);
+    let _guard = bind_frame_lights(lights);
     let draw_buf: &mut DrawingBufferPy = &mut draw_buffer_py;
     let material_pool = &draw_buf.material_pool;
     let pool = material_pool.as_ref().ok_or_else(|| {

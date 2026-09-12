@@ -573,10 +573,16 @@ impl ShaderPy {
     }
 
     /// Run the compiled shader against the current seed registers (no texture env).
-    fn run_seeded(&self, py: Python<'_>) -> PyResult<(Py<PyAny>, Py<PyAny>, i32)> {
+    #[pyo3(signature = (light_buffer=None))]
+    fn run_seeded(
+        &self,
+        py: Python<'_>,
+        light_buffer: Option<&crate::lightbuffer::LightBufferPy>,
+    ) -> PyResult<(Py<PyAny>, Py<PyAny>, i32)> {
         let mat = self.build_native(py)?;
         let mut regs = mat.seed_regs.clone_registers();
-        let (front, back, glyph) = mat.compiled.run(&mut regs, None);
+        let light = light_buffer.map(|b| &b.data as &dyn tt3de_core::ttsl::TtslLightEnv);
+        let (front, back, glyph) = mat.compiled.run(&mut regs, None, light);
         Ok((vec4_to_pyglm(py, front), vec4_to_pyglm(py, back), glyph))
     }
 }

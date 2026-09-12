@@ -59,6 +59,28 @@ TTSL names kernel operations with the **`tt_`** prefix (same convention as `tt_F
 - **Combining with varyings**: Using `tt_texture(albedo_ix, tt_TexCoord0)` is the direct analogue of sampling in a fragment shader with an interpolated `in vec2 texcoord` and a bound `sampler2D`.
 - **Channels**: Return type is **`vec4`** with RGBA in **linear** float components.
 
+### Lighting (`tt_light*`)
+
+Lights live in a host **`LightBuffer`**. Author them in **world space**; the engine
+transforms directions (`w=0`) and positions (`w=1`) by `view_matrix_3d` each frame.
+Shaders read **view-space** values, matching `tt_Normal` and `tt_ViewPos` (OpenGL
+`glLightfv` convention). `tt_lightDirection` points **toward** the light.
+
+These are global built-ins, not `globals_dict` uniforms. An empty or unbound buffer
+returns zero / type `0` (empty).
+
+| TTSL | Signature | Result | Tests |
+|------|-----------|--------|-------|
+| `tt_lightCount()` | `() → int` | Dense prefix of occupied slots | yes |
+| `tt_lightType(i)` | `(int) → int` | `0` empty, `1` ambient, `2` directional, `3` point | yes |
+| `tt_lightColor(i)` | `(int) → vec3` | RGB intensity | yes |
+| `tt_lightDirection(i)` | `(int) → vec3` | View-space direction toward the light (unit) | yes |
+| `tt_lightPosition(i)` | `(int) → vec3` | View-space position | yes |
+| `tt_lightAttenuation(i)` | `(int) → vec3` | `(constant, linear, quadratic)` | yes |
+
+Spot lights, shadows, and engine-side Phong are out of scope; implement extra
+terms in TTSL if needed.
+
 ## Primitives
 
 The table below is the intended GLSL-style surface for math and utilities. **Texture lookups use TTSL-prefixed names** (`tt_texture`, `tt_texelFetch`) even though most scalar/vector helpers mirror bare GLSL (`mix`, `clamp`, …). See [TTSL Compiler](ttsl_compiler.md) for what actually compiles and [Opcode Reference](opcode_reference.md) for the ISA dump.
@@ -68,6 +90,7 @@ The table below is the intended GLSL-style surface for math and utilities. **Tex
 | Availability | Function (GLSL-style) | Typical signatures (examples) | What it’s for | Notes / ranges |
 |---|---|---|---|---|
 | Shipped | tt_texture | `tt_texture(tex_index: int, coord: vec2) -> vec4` | 2D texture sample (filtered) | OpenGL **`texture(sampler2D, vec2)`**; pair `coord` with **`tt_TexCoord0`** / **`tt_TexCoord1`** like a varying |
+| Shipped | tt_lightCount / tt_lightType / tt_lightColor / tt_lightDirection / tt_lightPosition / tt_lightAttenuation | see **Lighting** above | Scene lights from `LightBuffer` | View-space after host `update_view_space`; not `globals_dict` keys |
 | Planned | tt_texelFetch | `tt_texelFetch(tex_index: int, texel: vec2) -> vec4` | Integer texel read (base mip) | Same role as **`texelFetch(..., ivec2 P, 0)`**; no lod parameter in TTSL; not implemented end-to-end in the compiler yet |
 | Shipped | mix | mix(a, b, t) -> T | Linear interpolation (lerp) | `t` usually [0..1]; TTSL: **`glm.mix`** (vec2/vec3/vec4 × vec2/vec3/vec4 × f32 → vecN). Bare **`mix`** not wired yet. |
 | Shipped | clamp | clamp(x, lo, hi) -> T | Clamp into a range | Bare **`clamp`** and **`glm.clamp`**; works on float/vec2/vec3/vec4 |

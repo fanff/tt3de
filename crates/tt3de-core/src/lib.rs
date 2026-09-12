@@ -1,5 +1,6 @@
 pub mod drawbuffer;
 pub mod geombuffer;
+pub mod lightbuffer;
 pub mod material;
 pub mod primitiv_building;
 pub mod primitivbuffer;
