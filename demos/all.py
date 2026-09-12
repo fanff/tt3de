@@ -10,8 +10,9 @@ Run from the repository root (``models/`` and other assets are cwd-relative):
 
     uv run python demos/all.py
 
-The launcher changes the process working directory to the repo root on startup
-so asset paths resolve.
+The launcher lists demo files immediately and imports a module only when you
+select it, so a slow or failing import cannot block the menu. The process
+working directory is set to the repo root on startup so asset paths resolve.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import importlib.util
 import inspect
 import os
 import statistics
+import sys
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,11 +57,20 @@ def discover_demo_paths(repo_root: Path) -> list[tuple[Literal["2d", "3d"], Path
 def load_demo_module(category: str, path: Path):
     """Load a demo file as a module (no ``demos`` package required)."""
     module_name = f"tt3de_demo_launcher.{category}.{path.stem}"
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        return existing
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load module spec for {path}")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    # Register before exec so dataclasses / Textual widgets can resolve ``__module__``.
+    sys.modules[module_name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
     return mod
 
 
@@ -132,7 +143,18 @@ def analyze_demo(category: Literal["2d", "3d"], path: Path) -> DemoEntry:
         return DemoEntry(category, path, label, None, None, str(exc))
 
 
+def stub_demo_entry(category: Literal["2d", "3d"], path: Path) -> DemoEntry:
+    """Menu row that has not imported the demo file yet."""
+    return DemoEntry(category, path, f"{category}/{path.name}", None, None, None)
+
+
+def list_demo_entries(repo_root: Path) -> list[DemoEntry]:
+    """File list only — imports happen when a demo is selected or analyzed."""
+    return [stub_demo_entry(cat, p) for cat, p in discover_demo_paths(repo_root)]
+
+
 def build_demo_entries(repo_root: Path) -> list[DemoEntry]:
+    """Import every demo (used by tests). Prefer ``list_demo_entries`` at startup."""
     return [analyze_demo(cat, p) for cat, p in discover_demo_paths(repo_root)]
 
 
@@ -185,16 +207,24 @@ class DemoRunnerPane(Container):
         yield Container(id="demo-slot")
 
     async def on_mount(self) -> None:
-        if self._entry.widget_factory is not None:
-            root_widget = self._entry.widget_factory()
-        else:
-            assert self._entry.view_cls is not None
-            root_widget = self._entry.view_cls()
-        slot = self.query_one("#demo-slot")
-        await slot.mount(root_widget)
-        root_widget.focus()
-        self._primed = True
-        self.set_interval(1 / 120.0, self._tick_fps)
+        try:
+            if self._entry.widget_factory is not None:
+                root_widget = self._entry.widget_factory()
+            else:
+                assert self._entry.view_cls is not None
+                root_widget = self._entry.view_cls()
+            slot = self.query_one("#demo-slot")
+            await slot.mount(root_widget)
+            root_widget.focus()
+            self._primed = True
+            self.set_interval(1 / 120.0, self._tick_fps)
+        except Exception as exc:  # noqa: BLE001 — surface init failures in the TUI
+            self.app.notify(
+                str(exc),
+                title=f"Failed to start {self._entry.label}",
+                severity="error",
+                timeout=12,
+            )
 
     def _tick_fps(self) -> None:
         if not self._primed:
@@ -314,11 +344,11 @@ class DemoMenuScreen(Screen):
             Option(
                 (
                     f"[dim]{e.label}[/] — {e.load_error}"
-                    if e.view_cls is None and e.widget_factory is None
+                    if e.load_error
                     else e.label
                 ),
                 id=str(i),
-                disabled=(e.view_cls is None and e.widget_factory is None),
+                disabled=e.load_error is not None,
             )
             for i, e in enumerate(entries)
         ]
@@ -375,13 +405,34 @@ class DemoMenuScreen(Screen):
             return
         entry = entries[event.option_index]
         if entry.view_cls is None and entry.widget_factory is None:
-            self.app.notify(
-                entry.load_error or "Demo unavailable",
-                title="Cannot load demo",
-                severity="error",
-                timeout=8,
-            )
-            return
+            if entry.load_error:
+                self.app.notify(
+                    entry.load_error,
+                    title="Cannot load demo",
+                    severity="error",
+                    timeout=8,
+                )
+                return
+            loaded = analyze_demo(entry.category, entry.path)
+            if ol.id == "demo-options-2d":
+                self._entries_2d[event.option_index] = loaded
+            else:
+                self._entries_3d[event.option_index] = loaded
+            if loaded.view_cls is None and loaded.widget_factory is None:
+                self.app.notify(
+                    loaded.load_error or "Demo unavailable",
+                    title="Cannot load demo",
+                    severity="error",
+                    timeout=8,
+                )
+                # Refresh the option label so a persistent import error stays visible.
+                ol.replace_option_prompt_at_index(
+                    event.option_index,
+                    f"[dim]{loaded.label}[/] — {loaded.load_error}",
+                )
+                ol.disable_option_at_index(event.option_index)
+                return
+            entry = loaded
         self.app.push_screen(DemoRunScreen(entry))
 
 
@@ -403,7 +454,9 @@ class DemoLauncherApp(App):
 
 
 def main() -> None:
-    entries = build_demo_entries(REPO_ROOT)
+    # List files only. Importing every demo at startup used to hang the menu
+    # when a script had import-time side effects (network, asset downloads).
+    entries = list_demo_entries(REPO_ROOT)
     app = DemoLauncherApp(entries)
     app._disable_tooltips = True
     app.run()
