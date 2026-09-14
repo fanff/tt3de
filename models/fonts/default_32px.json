@@ -1,0 +1,18 @@
+{
+  "tile_size": 32,
+  "columns": 8,
+  "rows": 8,
+  "transparent_rgb": [0, 0, 255],
+  "fallback": "space",
+  "comments": {
+    "mouse_pointer": "Hotspot is the top-left pixel.",
+    "cross": "Hotspot is the center; also usable as a crosshair.",
+    "mouse_pointer_square_04": "Largest square pointer frame.",
+    "mouse_pointer_square_01": "Smallest square pointer frame."
+  },
+  "grid": [
+    ["0", "1", "2", "3", "4", "5", "6", "7"],
+    ["8", "9", "mouse_pointer_square_04", "mouse_pointer_square_03", "mouse_pointer_square_02", "mouse_pointer_square_01", "mouse_pointer", "cross"],
+    ["space", ".", ":"]
+  ]
+}

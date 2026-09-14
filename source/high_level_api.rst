@@ -143,7 +143,9 @@ Engine uniforms such as ``tt_Time`` update without recompiling via
 
 Working references: ``demos/2d/ttsl_square.py``, ``demos/3d/ttsl_texture_cube.py``,
 ``demos/3d/ttsl_fog.py``, ``demos/3d/ttsl_lighting.py``, and the compiler playground
-``demos/ttsl.py``.
+``demos/ttsl.py``. For sprite-sheet glyph text, prefer ``RasterFont`` (see
+`Raster sprite-sheet fonts`_ under 2D world) instead of repeating per-glyph
+texture and ``ShaderPy`` wiring.
 
 
 Lighting
@@ -270,6 +272,48 @@ Use ``update_step`` on the same view class to update transforms or materials eac
             y = glm.cos(t)
             self.some_node.set_local_transform(glm.translate(glm.vec3(x, y, 0.0)))
 
+Raster sprite-sheet fonts
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``RasterFont`` loads a chroma-keyed glyph atlas, uploads one texture per
+tile, and builds one ``ShaderPy`` material per glyph. It is an asset-loading
+helper, not a text layout engine (no kerning, wrapping, baseline, or shaping).
+
+The bundled example sheet is ``models/fonts/default_32px.png`` with layout
+in ``models/fonts/default_32px.json``. The JSON ``grid`` is row-major: first
+row digits ``0``–``7``, then ``8`` / ``9`` and pointer sprites, then
+``space`` / ``.`` / ``:``. Pure blue ``(0, 0, 255)`` is transparent. Add a
+new glyph by drawing a tile and naming that cell in the JSON; no Python
+enum edit is required. Named sprites (``mouse_pointer``, ``cross``, …)
+are looked up with ``material_named``. Pass ``char_to_tile`` only to
+override the sidecar.
+
+Reserve material slot 0 as a static fill before loading the font (cleared
+depth samples use ``material_id=0``). Advanced users can still upload tiles
+and create materials by hand; see :doc:`ttsl` for the two-UV key-color
+shader pattern.
+
+.. code-block:: python
+
+    from pathlib import Path
+    from tt3de.raster_font import RasterFont
+    from tt3de.tt3de import find_glyph_indices_py
+
+    self.rc.material_buffer.add_static(
+        (0, 0, 0), (0, 0, 0), find_glyph_indices_py(" ")
+    )
+    font = RasterFont.load(
+        self.rc.texture_buffer,
+        self.rc.material_buffer,
+        Path("models/fonts/default_32px.png"),
+    )
+    mat_ids = font.material_ids("12:34")
+    cursor_mat = font.material_named("mouse_pointer")
+    # assign mat_ids[i] on each TT2DUnitSquare; set ``node.transparent = True``
+    # so keyed (blue) half-cells composite over the background.
+
+Working reference: ``demos/2d/bouncing_clock.py``.
+
 
 3D world
 --------
@@ -374,5 +418,6 @@ Recommended reading order
 1. ``demos/2d/standalone.py`` (smallest setup)
 2. ``demos/2d/material_test.py`` (materials and geometry variety)
 3. ``demos/2d/ttsl_square.py`` (compiled TTSL + ``ShaderPy`` on a quad)
-4. ``demos/3d/triangle_test.py`` (basic 3D primitives)
-5. ``demos/3d/some_models.py`` (assets, texture materials, interaction)
+4. ``demos/2d/bouncing_clock.py`` (``RasterFont`` glyph sprites)
+5. ``demos/3d/triangle_test.py`` (basic 3D primitives)
+6. ``demos/3d/some_models.py`` (assets, texture materials, interaction)

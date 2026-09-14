@@ -35,8 +35,9 @@ from tt3de.ttsl.compiler import (
 class Test_EndToEndCompilation(unittest.TestCase):
     def test_bouncing_clock_shader_and_condition_compiles(self):
         """
-        Regression: mirrors demos/2d/bouncing_clock.py `clock_tex` where the
-        condition uses boolean `and` between two comparisons.
+        Regression: mirrors the former bouncing_clock `clock_tex` (now
+        ``RasterFont.DEFAULT_GLYPH_SHADER``) where the condition uses boolean
+        `and` between two comparisons.
         """
         src = dedent(
             """
@@ -66,7 +67,8 @@ class Test_EndToEndCompilation(unittest.TestCase):
 
     def test_bouncing_clock_shader_branch_assign_then_return_compiles(self):
         """
-        Regression: mirrors demos/2d/bouncing_clock.py `clock_tex`.
+        Regression: mirrors the former bouncing_clock `clock_tex`
+        (now ``RasterFont.DEFAULT_GLYPH_SHADER``).
         A branch with an early return followed by an assignment+return in the
         fallthrough path previously crashed SSA rename with:
         "no current version for var 'rgb' when filling phi operand".

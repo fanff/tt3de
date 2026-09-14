@@ -172,21 +172,25 @@ output directly drives final cell channels (`front_color`, `back_color`,
 
 ### Transparency in TTSL shaders
 
-Shader materials write final terminal cell channels directly. There is no extra
-alpha compositing pass after your shader returns `(front, back, glyph)`.
-Because of that, transparent texels must be handled in shader code by masking
-their output color (for example, returning black background color).
+Shader materials write ``(front, back, glyph)`` per cell. On the **opaque**
+pass those values replace the destination. On the **transparent** pass they
+are blended with the opaque canvas (front *and* back halves), so keyed texels
+must return **alpha 0** rather than painting the sheet's key color.
+
+Put sprite quads on the transparent pass (``node.transparent = True``) and
+use ``ShaderPy(..., blend_mode="alpha_blend", glyph_policy="replace_from_shader")``.
+``RasterFont`` does this for glyph materials.
 
 #### 1) Single raster path (one UV, no double raster)
 
-Use one sampled texel and apply one alpha test. If transparent, zero both
-returned colors.
+Use one sampled texel and apply one alpha test. If transparent, return zero
+alpha on both halves.
 
 ```python
 def sprite_single(tt_TexCoord0: vec2) -> tuple[vec4, vec4, int]:
     sampled: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
     if sampled.w < 0.5:
-        return (vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+        return (vec4(0.0, 0.0, 0.0, 0.0), vec4(0.0, 0.0, 0.0, 0.0), 0)
     rgb: vec4 = vec4(sampled.x, sampled.y, sampled.z, 1.0)
     return (rgb, rgb, 0)
 ```
@@ -204,22 +208,20 @@ condition, or key-color fringes can appear at transparent boundaries.
 def clock_tex(tt_TexCoord0: vec2, tt_TexCoord1: vec2) -> tuple[vec4, vec4, int]:
     sampled_top: vec4 = tt_texture(u_TextureIndex, tt_TexCoord0)
     sampled_bottom: vec4 = tt_texture(u_TextureIndex, tt_TexCoord1)
-    # Shader materials write final colors directly (no alpha compositing pass), so
-    # each half-cell must black out its own transparent texels to avoid key-color
-    # fringes from the sprite sheet at glyph boundaries.
     if sampled_top.w < 0.5:
-        top_rgb: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
+        top_rgb: vec4 = vec4(0.0, 0.0, 0.0, 0.0)
     else:
         top_rgb: vec4 = vec4(sampled_top.x, sampled_top.y, sampled_top.z, 1.0)
     if sampled_bottom.w < 0.5:
-        bottom_rgb: vec4 = vec4(0.0, 0.0, 0.0, 1.0)
+        bottom_rgb: vec4 = vec4(0.0, 0.0, 0.0, 0.0)
     else:
         bottom_rgb: vec4 = vec4(sampled_bottom.x, sampled_bottom.y, sampled_bottom.z, 1.0)
     return (top_rgb, bottom_rgb, 0)
 ```
 
 This is the recommended pattern whenever your material uses two raster samples
-per terminal cell.
+per terminal cell. Upload chroma-keyed glyph tiles with ``filter_mode="nearest"``
+so bilinear filtering does not mix the key color into opaque texels.
 
 ### TTSL Python compiler surface syntax
 

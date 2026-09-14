@@ -12,7 +12,7 @@ use nalgebra_glm::Vec3;
 use nalgebra_glm::Vec4;
 
 use super::super::texturebuffer::texture_buffer::TextureBuffer;
-use super::blend::{blend_front, GlyphPolicy};
+use super::blend::{blend_front, BlendMode, GlyphPolicy};
 use crate::material::MaterialBuffer;
 use crate::material::{apply_material, bump_material_apply_generation_for_pass};
 use crate::primitivbuffer::primitivbuffer::PrimitiveBuffer;
@@ -795,6 +795,29 @@ fn color_to_vec4(color: &Color) -> Vec4 {
     )
 }
 
+/// Composite a transparent shader/material cell onto the opaque canvas.
+///
+/// Both half-block channels (front = top, back = bottom) use the same
+/// ``BlendMode``. ``ReplaceFromShader`` copies the source glyph only when
+/// either half is mostly opaque, so fully keyed sprite cells leave the
+/// destination glyph in place.
+pub fn composite_transparent_cell(
+    dst: &mut CanvasCell,
+    src: &CanvasCell,
+    mode: BlendMode,
+    glyph_policy: GlyphPolicy,
+) {
+    let src_front = color_to_vec4(&src.front_color);
+    let src_back = color_to_vec4(&src.back_color);
+    dst.front_color = blend_front(&dst.front_color, &src_front, mode);
+    dst.back_color = blend_front(&dst.back_color, &src_back, mode);
+    if glyph_policy == GlyphPolicy::ReplaceFromShader
+        && (src_front.w > 0.5 || src_back.w > 0.5)
+    {
+        dst.glyph = src.glyph;
+    }
+}
+
 pub fn apply_material_transparent_on<const TEXTURESIZE: usize, const DEPTHLAYER: usize>(
     transparent_buffer: &DrawBuffer<DEPTHLAYER, f32>,
     opaque_buffer: &mut DrawBuffer<1, f32>,
@@ -828,11 +851,64 @@ pub fn apply_material_transparent_on<const TEXTURESIZE: usize, const DEPTHLAYER:
                 &mut src_cell,
             );
             let mat = &material_buffer.mats[pixinfo.material_id];
-            let src_front = color_to_vec4(&src_cell.front_color);
-            dst_cell.front_color = blend_front(&dst_cell.front_color, &src_front, mat.blend_mode());
-            if mat.glyph_policy() == GlyphPolicy::ReplaceFromShader {
-                dst_cell.glyph = src_cell.glyph;
-            }
+            composite_transparent_cell(
+                dst_cell,
+                &src_cell,
+                mat.blend_mode(),
+                mat.glyph_policy(),
+            );
         }
+    }
+}
+
+#[cfg(test)]
+mod test_transparent_composite {
+    use super::*;
+    use crate::drawbuffer::blend::{BlendMode, GlyphPolicy};
+
+    #[test]
+    fn alpha_zero_keeps_both_halves_and_glyph() {
+        let mut dst = CanvasCell::new(
+            Color::new(10, 20, 30, 255),
+            Color::new(40, 50, 60, 255),
+            7,
+        );
+        let src = CanvasCell::new(
+            Color::new(255, 0, 0, 0),
+            Color::new(0, 0, 255, 0),
+            219,
+        );
+        composite_transparent_cell(
+            &mut dst,
+            &src,
+            BlendMode::AlphaBlend,
+            GlyphPolicy::ReplaceFromShader,
+        );
+        assert_eq!(dst.front_color, Color::new(10, 20, 30, 255));
+        assert_eq!(dst.back_color, Color::new(40, 50, 60, 255));
+        assert_eq!(dst.glyph, 7);
+    }
+
+    #[test]
+    fn opaque_top_blends_front_and_replaces_glyph() {
+        let mut dst = CanvasCell::new(
+            Color::new(255, 255, 255, 255),
+            Color::new(0, 0, 0, 255),
+            32,
+        );
+        let src = CanvasCell::new(
+            Color::new(0, 255, 0, 255),
+            Color::new(0, 0, 0, 0),
+            219,
+        );
+        composite_transparent_cell(
+            &mut dst,
+            &src,
+            BlendMode::AlphaBlend,
+            GlyphPolicy::ReplaceFromShader,
+        );
+        assert_eq!(dst.front_color, Color::new(0, 255, 0, 255));
+        assert_eq!(dst.back_color, Color::new(0, 0, 0, 255));
+        assert_eq!(dst.glyph, 219);
     }
 }
