@@ -101,6 +101,7 @@ Use this when writing shaders today. If something fails with `CompileError` or `
 | Binary / n-ary | `mod`, `dot`, `length`, `max`, `clamp` (3 args) |
 | GLM tools | **`glm.mix(a, b, t)`** — `vec2/3/4` × same × `float` `t`; bare `mix(...)` is **not** wired |
 | Texture | `tt_texture` |
+| Lights | `tt_lightCount`, `tt_lightType`, `tt_lightColor`, `tt_lightDirection`, `tt_lightPosition`, `tt_lightAttenuation` |
 | Constructors | `vec2`, `vec3`, `vec4`, `glm.vec2`, `glm.vec3`, `glm.vec4` |
 | Swizzles | `.x`, `.y`, `.z`, `.w` on vectors |
 
@@ -169,7 +170,7 @@ Do **not** jump to `low_level_def.py` or opcode work when the user only asked fo
 |---------|----------|-------------------|
 | **A — Unary same-type** | `sin`, `floor`, `abs` | `ttsl_assembly.py`, `low_level_def.py`, `compiler.py`, `ir_lower.rs` / libcalls, gen-opcodes |
 | **B — Binary same-type** | `mod`, `max` | Same + custom `Form` generator if not a Rust operator |
-| **C — Special** | `tt_texture`, `glm.mix` | Custom `Form` + `compile_expr`; confirm Rust bridge with [tt3de-low](../tt3de-low/SKILL.md) if data leaves registers |
+| **C — Special** | `tt_texture`, `tt_light*`, `glm.mix` | Custom `Form` + `compile_expr`; confirm Rust bridge with [tt3de-low](../tt3de-low/SKILL.md) if data leaves registers |
 
 After implementation: `bash scripts/gen_opcodes.sh && cargo check --workspace --all-targets && cargo test -p tt3de-core && uv run maturin develop --uv`, e2e tests in `tests/tt3de/ttsl/test_e2e.py`, compiler errors in `test_compiler.py`, update **`source/ttsl.md`** row **Planned → Shipped**.
 

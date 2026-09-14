@@ -10,6 +10,7 @@ from pyglm import glm
 from tests.tt3de.ttsl.shade import shade
 from tt3de.tt3de import (
     DrawingBufferPy,
+    LightBufferPy,
     MaterialBufferPy,
     PrimitiveBufferPy,
     TextureBufferPy,
@@ -286,6 +287,64 @@ class Test_EndToEndCompilation(unittest.TestCase):
             self.assertLess(g, 80, msg=f"expected low green ({apply_fn})")
             self.assertGreater(b, 40, msg=f"expected blue channel from texture ({apply_fn})")
             self.assertLess(b, 120, msg=f"expected bounded blue ({apply_fn})")
+
+    def test_tt_light_shader_reads_bound_light_buffer_on_apply(self):
+        """``tt_lightColor`` must see the frame-bound ``LightBuffer`` in apply_material."""
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(c.x, c.y, c.z, 1.0), 0)
+            """
+        )
+        bytecode, reg_settings = all_passes_compilation(src, "shade", {})
+
+        mb = MaterialBufferPy()
+        mb.add_static((0, 0, 0), (0, 0, 0), find_glyph_indices_py(" "))
+        mat_idx = mb.add_shader(
+            materials.ShaderPy(
+                bytecode,
+                default_glyph=None,
+                register_seed=reg_settings.get_register_list(),
+                ssa_json=reg_settings.ssa_json(),
+            )
+        )
+        lights = LightBufferPy()
+        lights.set_ambient(0, color=(0.5, 0.25, 0.0))
+
+        def sample_rgb(apply_fn, light_buffer) -> tuple[int, int, int]:
+            draw = DrawingBufferPy(4, 4)
+            draw.hard_clear(10.0)
+            draw.set_depth_content(
+                0,
+                0,
+                glm.vec3(0.0, 0.0, 1.0),
+                1.0,
+                glm.vec2(0.5, 0.5),
+                glm.vec2(0.0, 0.0),
+                0,
+                0,
+                mat_idx,
+                0,
+            )
+            apply_fn(
+                mb,
+                TextureBufferPy(4),
+                VertexBufferPy(16, 16, 16),
+                PrimitiveBufferPy(8),
+                draw,
+                light_buffer=light_buffer,
+            )
+            cell = draw.get_canvas_cell(0, 0)
+            return (cell["f_r"], cell["f_g"], cell["f_b"])
+
+        for apply_fn in (apply_material_py, apply_material_py_parallel):
+            r, g, b = sample_rgb(apply_fn, lights)
+            self.assertEqual(r, 128, msg=f"ambient red via {apply_fn}")
+            self.assertEqual(g, 64, msg=f"ambient green via {apply_fn}")
+            self.assertEqual(b, 0, msg=f"ambient blue via {apply_fn}")
+            dark = sample_rgb(apply_fn, None)
+            self.assertEqual(dark, (0, 0, 0), msg=f"unbound lights are black ({apply_fn})")
 
     def test_tt_texture_nearest_filter_samples_single_texel(self):
         """``tt_texture`` uses the texture's filter mode (nearest = no blending)."""
@@ -1189,6 +1248,77 @@ class Test_Clamp(unittest.TestCase):
         bytecode, rs = all_passes_compilation(src, "shade", {})
         front, _, _ = shade(rs)
         self.assertAlmostEqual(front.x, 0.5, places=5)
+
+    def test_light_accessors_read_bound_buffer(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(c.x, c.y, c.z, 1.0), tt_lightCount())
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        lights = LightBufferPy(capacity=8)
+        lights.set_ambient(0, color=(0.25, 0.5, 0.75))
+        front, back, glyph = shade(rs, light_buffer=lights)
+        self.assertAlmostEqual(front.x, 0.25, places=5)
+        self.assertAlmostEqual(front.y, 0.5, places=5)
+        self.assertAlmostEqual(front.z, 0.75, places=5)
+        self.assertAlmostEqual(back.x, 0.25, places=5)
+        self.assertEqual(glyph, 1)
+
+    def test_light_accessors_without_buffer_are_zero(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                c: vec3 = tt_lightColor(0)
+                return (vec4(c.x, c.y, c.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), tt_lightCount())
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        front, _, glyph = shade(rs)
+        self.assertAlmostEqual(front.x, 0.0, places=5)
+        self.assertEqual(glyph, 0)
+
+    def test_point_light_position_after_view_transform(self):
+        src = dedent(
+            """
+            def shade(tt_FragCoord: vec2) -> tuple[vec4, vec4, int]:
+                p: vec3 = tt_lightPosition(0)
+                return (vec4(p.x, p.y, p.z, 1.0), vec4(0.0, 0.0, 0.0, 1.0), 0)
+            """
+        )
+        _, rs = all_passes_compilation(src, "shade", {})
+        lights = LightBufferPy()
+        lights.set_point(
+            0,
+            color=(1.0, 1.0, 1.0),
+            position=(1.0, 0.0, 0.0),
+            attenuation=(1.0, 0.0, 0.0),
+        )
+        # Identity view: world == view
+        lights.update_view_space(glm.mat4(1.0))
+        front, _, _ = shade(rs, light_buffer=lights)
+        self.assertAlmostEqual(front.x, 1.0, places=4)
+        self.assertAlmostEqual(front.y, 0.0, places=4)
+        self.assertAlmostEqual(front.z, 0.0, places=4)
+
+    def test_lighting_demo_shader_compiles(self):
+        import importlib.util
+        from pathlib import Path
+
+        path = Path("demos/3d/ttsl_lighting.py")
+        spec = importlib.util.spec_from_file_location("ttsl_lighting_demo", path)
+        demo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(demo)
+        bytecode, rs = all_passes_compilation(
+            demo.SHADER_SRC, "lit_shade", {"u_albedo": glm.vec3}
+        )
+        self.assertGreater(len(bytecode), 0)
+        ssa = rs.ssa_json()
+        self.assertIn("tt_lightColor", ssa)
+        self.assertIn("tt_lightPosition", ssa)
+        self.assertIn("tt_lightAttenuation", ssa)
 
 
 if __name__ == "__main__":

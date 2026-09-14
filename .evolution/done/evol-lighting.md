@@ -388,9 +388,9 @@ This is a one-time migration but future-proof against additional env types (simp
 - **Normals**: `tt_Normal` from `.evolution/evol-ttsl-fragment-normal.md`; flat vs smooth caveats documented there and in `source/ttsl.md` once shipped.
 - **Direction convention**: `tt_lightDirection` returns the direction **toward** the light source (positive `dot(N, L)` = lit surface).
 - **LightBuffer capacity**: Fixed compile-time `MAX_LIGHTS = 32` (no const generic). Python `capacity` is a runtime validation cap.
-- **Env bundling**: `TtslEnv` struct bundles `tex` + `light` to avoid signature churn. One-time migration of **five** Rust call sites (current tree), then stable.
-- **Material dispatch untouched**: LightBuffer is consumed only inside the TTSL VM (`run_ttsl`). No changes to `RenderMaterial`, `apply_material_on`, or `apply_material`.
-- **Resolution**: *(to be filled when closing)*
+- **Env bundling**: After the bytecode VM was dropped, texture and light are separate Cranelift ABI pointers (`JitTextureEnv`, `JitLightEnv`) plus `TtslLightEnv` libcalls—not a `run_ttsl` / `TtslEnv` fold.
+- **Material dispatch untouched**: `RenderMaterial` / `apply_material_on` signatures stay the same. The apply Py entry binds the frame `LightBuffer`; `ShaderMaterial` reads it when running Cranelift.
+- **Resolution**: Shipped. `LightBuffer` + `LightBufferPy`, TTSL `tt_light*` built-ins, Cranelift libcalls, per-frame view-space update in `RustRenderContext.render`, reference demo `demos/3d/ttsl_lighting.py`.
 
 ## References
 

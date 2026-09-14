@@ -5,6 +5,18 @@ pub trait TtslTextureEnv {
     fn sample_tt_texture(&self, idx: i32, uv: Vec2) -> Vec4;
 }
 
+/// Host-provided light table for TTSL ``tt_light*`` accessors.
+///
+/// Positions and directions are **view space** (after [`crate::lightbuffer::LightBuffer::update_view_space`]).
+pub trait TtslLightEnv {
+    fn light_count(&self) -> i32;
+    fn light_type(&self, index: i32) -> i32;
+    fn light_color(&self, index: i32) -> Vec3;
+    fn light_direction(&self, index: i32) -> Vec3;
+    fn light_position(&self, index: i32) -> Vec3;
+    fn light_attenuation(&self, index: i32) -> Vec3;
+}
+
 pub mod ir;
 pub mod jit;
 

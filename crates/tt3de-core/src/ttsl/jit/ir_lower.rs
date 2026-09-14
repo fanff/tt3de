@@ -26,9 +26,11 @@ pub struct IrLowerCx<'a, 'b> {
     builder: &'a mut FunctionBuilder<'b>,
     regs: Option<Value>,
     tex: Option<Value>,
+    light: Option<Value>,
     out: Option<Value>,
     regs_var: cranelift_frontend::Variable,
     tex_var: cranelift_frontend::Variable,
+    light_var: cranelift_frontend::Variable,
     out_var: cranelift_frontend::Variable,
     ptr_ty: Type,
     libcalls: &'a Libcalls,
@@ -100,15 +102,18 @@ pub fn lower_module(
 
     let regs_var = builder.declare_var(ptr_ty);
     let tex_var = builder.declare_var(ptr_ty);
+    let light_var = builder.declare_var(ptr_ty);
     let out_var = builder.declare_var(ptr_ty);
 
     let mut cx = IrLowerCx {
         builder,
         regs: None,
         tex: None,
+        light: None,
         out: None,
         regs_var,
         tex_var,
+        light_var,
         out_var,
         ptr_ty,
         libcalls,
@@ -144,6 +149,7 @@ impl IrLowerCx<'_, '_> {
     fn refresh_abi(&mut self) {
         self.regs = Some(self.builder.use_var(self.regs_var));
         self.tex = Some(self.builder.use_var(self.tex_var));
+        self.light = Some(self.builder.use_var(self.light_var));
         self.out = Some(self.builder.use_var(self.out_var));
     }
 
@@ -155,6 +161,11 @@ impl IrLowerCx<'_, '_> {
     fn tex(&self) -> Result<Value, JitError> {
         self.tex
             .ok_or_else(|| JitError::Ir("ABI tex used before entry bind".into()))
+    }
+
+    fn light(&self) -> Result<Value, JitError> {
+        self.light
+            .ok_or_else(|| JitError::Ir("ABI light used before entry bind".into()))
     }
 
     fn out(&self) -> Result<Value, JitError> {
@@ -287,14 +298,16 @@ impl IrLowerCx<'_, '_> {
         if id == self.module.entry {
             let params = {
                 let p = self.builder.block_params(clif);
-                [p[0], p[1], p[2]]
+                [p[0], p[1], p[2], p[3]]
             };
             self.builder.def_var(self.regs_var, params[0]);
             self.builder.def_var(self.tex_var, params[1]);
-            self.builder.def_var(self.out_var, params[2]);
+            self.builder.def_var(self.light_var, params[2]);
+            self.builder.def_var(self.out_var, params[3]);
             self.regs = Some(params[0]);
             self.tex = Some(params[1]);
-            self.out = Some(params[2]);
+            self.light = Some(params[2]);
+            self.out = Some(params[3]);
             self.load_inputs()?;
         } else {
             self.refresh_abi();
@@ -427,6 +440,27 @@ impl IrLowerCx<'_, '_> {
             "read_axis_w" => self.read_axis(instr, 3),
             "store_vec_from_scalar" => self.store_vec_from_scalar(instr),
             "tt_texture" => self.tt_texture(instr),
+            "tt_lightCount" => self.tt_light_count(instr),
+            "tt_lightType" => {
+                let f = self.libcalls.light_type;
+                self.tt_light_i32(instr, f)
+            }
+            "tt_lightColor" => {
+                let f = self.libcalls.light_color;
+                self.tt_light_v3(instr, f)
+            }
+            "tt_lightDirection" => {
+                let f = self.libcalls.light_direction;
+                self.tt_light_v3(instr, f)
+            }
+            "tt_lightPosition" => {
+                let f = self.libcalls.light_position;
+                self.tt_light_v3(instr, f)
+            }
+            "tt_lightAttenuation" => {
+                let f = self.libcalls.light_attenuation;
+                self.tt_light_v3(instr, f)
+            }
             other => Err(JitError::UnsupportedIr(other.into())),
         }
     }
@@ -640,6 +674,51 @@ impl IrLowerCx<'_, '_> {
         let z = self.builder.ins().load(types::F32, mem_flags(), ptr, 8);
         let w = self.builder.ins().load(types::F32, mem_flags(), ptr, 12);
         self.def_temp(dst, &[x, y, z, w])?;
+        Ok(false)
+    }
+
+    fn tt_light_count(&mut self, instr: &SsaInstr) -> Result<bool, JitError> {
+        let dst = dst_of(instr)?;
+        let light = self.light()?;
+        let call = self.builder.ins().call(self.libcalls.light_count, &[light]);
+        let val = self.builder.inst_results(call)[0];
+        self.def_temp(dst, &[val])?;
+        Ok(false)
+    }
+
+    fn tt_light_i32(
+        &mut self,
+        instr: &SsaInstr,
+        func: cranelift_codegen::ir::FuncRef,
+    ) -> Result<bool, JitError> {
+        let dst = dst_of(instr)?;
+        let idx = scalar(self.use_temp(src_at(instr, 0)?)?)?;
+        let light = self.light()?;
+        let call = self.builder.ins().call(func, &[light, idx]);
+        let val = self.builder.inst_results(call)[0];
+        self.def_temp(dst, &[val])?;
+        Ok(false)
+    }
+
+    fn tt_light_v3(
+        &mut self,
+        instr: &SsaInstr,
+        func: cranelift_codegen::ir::FuncRef,
+    ) -> Result<bool, JitError> {
+        let dst = dst_of(instr)?;
+        let idx = scalar(self.use_temp(src_at(instr, 0)?)?)?;
+        let slot = self.builder.create_sized_stack_slot(StackSlotData::new(
+            StackSlotKind::ExplicitSlot,
+            12,
+            2,
+        ));
+        let ptr = self.builder.ins().stack_addr(self.ptr_ty, slot, 0);
+        let light = self.light()?;
+        self.builder.ins().call(func, &[light, idx, ptr]);
+        let x = self.builder.ins().load(types::F32, mem_flags(), ptr, 0);
+        let y = self.builder.ins().load(types::F32, mem_flags(), ptr, 4);
+        let z = self.builder.ins().load(types::F32, mem_flags(), ptr, 8);
+        self.def_temp(dst, &[x, y, z])?;
         Ok(false)
     }
 

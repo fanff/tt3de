@@ -142,7 +142,42 @@ Engine uniforms such as ``tt_Time`` update without recompiling via
         )
 
 Working references: ``demos/2d/ttsl_square.py``, ``demos/3d/ttsl_texture_cube.py``,
-``demos/3d/ttsl_fog.py``, and the compiler playground ``demos/ttsl.py``.
+``demos/3d/ttsl_fog.py``, ``demos/3d/ttsl_lighting.py``, and the compiler playground
+``demos/ttsl.py``.
+
+
+Lighting
+--------
+
+``RustRenderContext`` owns a ``LightBufferPy`` (default empty, capacity 16, max 32).
+Author lights in **world space**; each frame ``render()`` transforms them to
+**view space** with the active 3D view matrix (OpenGL ``glLightfv`` convention).
+TTSL shaders then query slots with ``tt_lightCount``, ``tt_lightType``,
+``tt_lightColor``, ``tt_lightDirection``, ``tt_lightPosition``, and
+``tt_lightAttenuation``. Direction is **toward** the light (positive
+``dot(N, L)`` means lit). Lighting is shader-only: StaticColor / texture
+materials are unchanged.
+
+.. code-block:: python
+
+    from tt3de.tt3de import LightBufferPy
+
+    lights = self.rc.light_buffer  # or LightBufferPy(capacity=16)
+    lights.set_ambient(0, color=(0.15, 0.15, 0.15))
+    lights.set_directional(
+        1,
+        color=(0.8, 0.8, 0.7),
+        direction=(0.0, -1.0, -0.5),
+    )
+    lights.set_point(
+        2,
+        color=(1.0, 0.6, 0.3),
+        position=(3.0, 2.0, 0.0),
+        attenuation=(1.0, 0.09, 0.032),
+    )
+
+Pair accessors with ``tt_Normal`` and ``tt_ViewPos`` for Lambert + point
+attenuation. See ``demos/3d/ttsl_lighting.py`` and :doc:`ttsl`.
 
 
 2D world

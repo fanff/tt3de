@@ -19,6 +19,50 @@ from tt3de.textual_widget import TT3DFpsView
 from tt3de.tt_3dnodes import TT3DNode
 
 _DEMO_DIR = Path(__file__).resolve().parent
+_DUST_URL = (
+    "https://models.spriters-resource.com/media/assets/308/310948.zip"
+    "?updated=1755502951"
+)
+_DUST_OBJ = _DEMO_DIR / "Dust" / "Dust.obj"
+
+
+def download_extract(url, dest, folder_name="Dust"):
+    import io
+    import zipfile
+
+    import requests
+
+    target_obj = os.path.join(dest, folder_name, "Dust.obj")
+    if os.path.exists(target_obj):
+        return
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://models.spriters-resource.com/",
+    }
+    r = requests.get(url, headers=headers, timeout=30)
+    r.raise_for_status()
+
+    content_type = r.headers.get("Content-Type", "")
+    if "zip" not in content_type and r.content[:4] != b"PK\x03\x04":
+        raise RuntimeError(
+            f"Download from {url} did not return a zip file "
+            f"(Content-Type: {content_type}). "
+            "The URL may have changed. Please update the download link."
+        )
+
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    z.extractall(dest)
+
+
+def ensure_dust_assets() -> Path:
+    """Fetch Dust.obj on first run. Must not run at import time (``all.py``)."""
+    if _DUST_OBJ.is_file():
+        return _DUST_OBJ
+    download_extract(_DUST_URL, str(_DEMO_DIR))
+    if not _DUST_OBJ.is_file():
+        raise FileNotFoundError(f"Dust assets missing after download: {_DUST_OBJ}")
+    return _DUST_OBJ
 
 
 class GLMTester(TT3DFpsView):
@@ -38,7 +82,7 @@ class GLMTester(TT3DFpsView):
         # create a root 3D node
         self.root3Dnode = TT3DNode()
 
-        obj_file = str(_DEMO_DIR / "Dust" / "Dust.obj")
+        obj_file = str(ensure_dust_assets())
 
         polys = load_obj(obj_file, self.rc.texture_buffer, self.rc.material_buffer)
 
@@ -88,45 +132,8 @@ class Demo3dView(App):
         yield Content()
 
 
-def download_extract(url, dest, folder_name="Dust"):
-    import requests
-    import zipfile
-    import io
-
-    target_obj = os.path.join(dest, folder_name, "Dust.obj")
-    if os.path.exists(target_obj):
-        return
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": "https://models.spriters-resource.com/",
-    }
-    r = requests.get(url, headers=headers)
-    r.raise_for_status()
-
-    content_type = r.headers.get("Content-Type", "")
-    if "zip" not in content_type and not r.content[:4] == b"PK\x03\x04":
-        raise RuntimeError(
-            f"Download from {url} did not return a zip file "
-            f"(Content-Type: {content_type}). "
-            "The URL may have changed. Please update the download link."
-        )
-
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    z.extractall(dest)
-
-
-download_extract(
-    "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
-    str(_DEMO_DIR),
-)
-
-download_extract(
-    "https://models.spriters-resource.com/media/assets/308/310948.zip?updated=1755502951",
-    str(_DEMO_DIR),
-)
-
 if __name__ == "__main__":
+    ensure_dust_assets()
     app = Demo3dView()
     app._disable_tooltips = True
     app.run()

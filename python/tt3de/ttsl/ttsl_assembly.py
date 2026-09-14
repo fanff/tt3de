@@ -102,6 +102,12 @@ class OpCodes(Enum):
     MAX = "max"
     CLAMP = "clamp"
     TT_TEXTURE = "tt_texture"
+    TT_LIGHT_COUNT = "tt_lightCount"
+    TT_LIGHT_TYPE = "tt_lightType"
+    TT_LIGHT_COLOR = "tt_lightColor"
+    TT_LIGHT_DIRECTION = "tt_lightDirection"
+    TT_LIGHT_POSITION = "tt_lightPosition"
+    TT_LIGHT_ATTENUATION = "tt_lightAttenuation"
 
 
 @dataclass

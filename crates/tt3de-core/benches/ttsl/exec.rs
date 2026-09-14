@@ -61,7 +61,7 @@ fn call_jit(
     regs: &mut Registers,
     tex: Option<&dyn TtslTextureEnv>,
 ) -> (Vec4, Vec4, i32) {
-    compiled.run(regs, tex)
+    compiled.run(regs, tex, None)
 }
 
 pub fn bench_ttsl_exec(c: &mut Criterion) {

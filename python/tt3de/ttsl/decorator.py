@@ -28,6 +28,30 @@ tt_PointCoord: glm.vec2 = glm.vec2(0.0, 0.0)  # noqa: N816 — point sprite coor
 tt_PrimitiveID: int = 0  # noqa: N816 — per-pixel index of depth-winning primitive
 
 
+def tt_lightCount() -> int:  # noqa: N802 — TTSL builtin
+    return 0
+
+
+def tt_lightType(index: int) -> int:  # noqa: N802 — TTSL builtin
+    return 0
+
+
+def tt_lightColor(index: int) -> glm.vec3:  # noqa: N802 — TTSL builtin
+    return glm.vec3(0.0, 0.0, 0.0)
+
+
+def tt_lightDirection(index: int) -> glm.vec3:  # noqa: N802 — TTSL builtin
+    return glm.vec3(0.0, 0.0, 0.0)
+
+
+def tt_lightPosition(index: int) -> glm.vec3:  # noqa: N802 — TTSL builtin
+    return glm.vec3(0.0, 0.0, 0.0)
+
+
+def tt_lightAttenuation(index: int) -> glm.vec3:  # noqa: N802 — TTSL builtin
+    return glm.vec3(0.0, 0.0, 0.0)
+
+
 class ShaderDescriptor:
     def __init__(self, fn, globals):
         self.fn = fn

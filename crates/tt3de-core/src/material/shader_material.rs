@@ -468,9 +468,12 @@ impl<const TEXTURE_BUFFER_SIZE: usize, const DEPTHLAYER: usize>
             let regs = &mut t.regs;
             write_per_pixel_inputs_to_registers(&bind, pixinfo, depth_cell, depth_layer, regs);
 
+            let lights = crate::lightbuffer::current_frame_lights()
+                .map(|b| b as &dyn crate::ttsl::TtslLightEnv);
             let (front, back, glyph) = self.compiled.run(
                 regs,
                 Some(texture_buffer as &dyn crate::ttsl::TtslTextureEnv),
+                lights,
             );
             cell.front_color = Color::new_from_vec4(&front);
             cell.back_color = Color::new_from_vec4(&back);
