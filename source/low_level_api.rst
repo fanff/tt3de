@@ -136,7 +136,10 @@ Depth layer resolve
 2. **Opaque material resolve** writes full ``CanvasCell`` state (front/back/glyph).
 3. **Transparent pass** rasterizes transparent primitives into another
    ``DrawBuffer<1, f32>``.
-4. **Transparent composite** blends only ``front_color`` onto the opaque canvas.
+4. **Transparent composite** blends ``front_color`` **and** ``back_color``
+   onto the opaque canvas (same ``BlendMode``). ``GlyphPolicy::replace_from_shader``
+   copies the source glyph only when either half has alpha above 0.5, so fully
+   keyed sprite cells leave the destination glyph in place.
 
 Blend/composite is centralized through ``BlendMode`` (``replace``,
 ``alpha_blend``, ``additive``, ``glyph_dither``, ``half_block_composite``),

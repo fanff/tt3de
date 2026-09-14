@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import struct
-from typing import List, Tuple
+from pathlib import Path
+from typing import BinaryIO, List, Tuple
+
+import png
 
 from tt3de.points import Point2D, Point3D
 
@@ -74,6 +77,50 @@ def load_bmp(
         f.read(row_padded - width * 3)  # Skip padding
 
     return list(reversed(image_rows))
+
+
+def load_png(
+    source: str | Path | BinaryIO,
+    alpha: int = 255,
+    transparent_colors: List[Tuple[int, int, int]] | None = None,
+) -> List[List[Tuple[int, int, int, int]]]:
+    """Load an RGB or RGBA PNG as bottom-origin rows of ``(r, g, b, a)``.
+
+    Row 0 is the visual bottom of the image, matching ``load_bmp``. Pure-key
+    colors in ``transparent_colors`` get alpha 0.
+    """
+    if isinstance(source, (str, Path)):
+        reader = png.Reader(filename=str(source))
+    else:
+        reader = png.Reader(file=source)
+
+    width, _height, rows, info = reader.read()
+    planes = int(info["planes"])
+    if planes not in (3, 4):
+        raise ValueError(
+            f"Only RGB and RGBA PNG files are supported (got {planes} planes)"
+        )
+
+    trans = set(transparent_colors) if transparent_colors else None
+    image_rows: List[List[Tuple[int, int, int, int]]] = []
+    for raw in rows:
+        row: List[Tuple[int, int, int, int]] = []
+        for col in range(width):
+            base = col * planes
+            r = int(raw[base])
+            g = int(raw[base + 1])
+            b = int(raw[base + 2])
+            if trans is not None and (r, g, b) in trans:
+                a = 0
+            elif planes == 4:
+                a = int(raw[base + 3])
+            else:
+                a = alpha
+            row.append((r, g, b, a))
+        image_rows.append(row)
+
+    image_rows.reverse()
+    return image_rows
 
 
 def round_to_palette(

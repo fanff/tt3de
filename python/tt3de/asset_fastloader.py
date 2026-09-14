@@ -74,13 +74,14 @@ class DefaultSpriteSheet32px(Enum):
     EIGHT: int = 8
     NINE: int = 9
 
-    BOX_LARGE: int = 10
-    BOX_MEDIUM: int = 11
-    BOX_SMALL: int = 12
-    BOX_TINY: int = 13
+    # Indices match models/fonts/default_32px.json (and the BMP atlas copy).
+    MOUSE_POINTER_SQUARE_04: int = 10
+    MOUSE_POINTER_SQUARE_03: int = 11
+    MOUSE_POINTER_SQUARE_02: int = 12
+    MOUSE_POINTER_SQUARE_01: int = 13
 
-    MOUSE_CURSOR: int = 14
-    MOUSE_CROSS: int = 15
+    MOUSE_POINTER: int = 14
+    CROSS: int = 15
 
     SPACE: int = 16
     DOT: int = 17

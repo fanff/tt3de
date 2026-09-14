@@ -6,6 +6,9 @@ supersedes: []
 superseded-by: ""
 related:
   - demos/2d/bouncing_clock.py
+  - python/tt3de/raster_font.py
+  - models/fonts/default_32px.png
+  - models/fonts/default_32px.json
   - source/high_level_api.rst
   - source/low_level_api.rst
   - source/index.rst
@@ -115,11 +118,11 @@ The `bouncing_clock` demo currently proves that TT3DE can render sprite-sheet gl
 - API shape risk: too narrow (clock-only) versus too broad (premature generic text framework).
 - Asset lifecycle ownership and cache invalidation rules need explicit definition if caching lands.
 - Helper should remain transparent enough that advanced users can still drop to low-level APIs when needed.
-- Open question: whether character-to-sprite mapping should rely directly on `DefaultSpriteSheet32px` or support pluggable mappings from day one.
 
 ## Decision record
 
 - **Resolution**: Accepted direction for extracting reusable raster-glyph loading helpers in Python and applying them first to `bouncing_clock`, while preserving existing rendering behavior in the initial slice.
+- **Character mapping**: Glyph names and character lookup live in a JSON sidecar beside the sheet (`models/fonts/default_32px.json`). `RasterFont.load` reads that grid by default; `char_to_tile` remains an optional override. `DefaultSpriteSheet32px` stays only for the existing BMP atlas path in `MaterialPerfab`.
 
 ## References
 
@@ -127,3 +130,6 @@ The `bouncing_clock` demo currently proves that TT3DE can render sprite-sheet gl
 - `source/high_level_api.rst`
 - `source/low_level_api.rst`
 - `demos/2d/bouncing_clock.py`
+- `python/tt3de/raster_font.py`
+- `models/fonts/default_32px.png`
+- `models/fonts/default_32px.json`
